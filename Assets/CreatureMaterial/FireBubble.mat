@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FireBubble
+  m_Shader: {fileID: 4800000, guid: 6da348fc57925a94ba3298970190c835, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 2
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Transparent
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BaseAlpha: 0.72
+    - _Distortion: 0.035
+    - _EmissionStrength: 1.3
+    - _FlowTime: 0
+    - _FresnelAlpha: 0.25
+    - _FresnelPower: 2.5
+    - _Heat: 13
+    - _MaximumHeat: 25
+    - _PatternContrast: 2
+    - _PatternScale: 2.5
+    - _StillHeat: 13
+    m_Colors:
+    - _HighHeatColor: {r: 2.8, g: 0.035, b: 0.01, a: 1}
+    - _LowHeatColor: {r: 0.22, g: 0.005, b: 0.015, a: 1}
+    - _VeinColor: {r: 4, g: 0.12, b: 0.015, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
