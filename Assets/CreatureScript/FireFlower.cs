@@ -43,8 +43,8 @@ public sealed class FireFlower : Creature
     [Tooltip("Future Bubble creature prefab produced when this flower blooms.")]
     [SerializeField] private FireBubble bubblePrefab;
 
-    [Tooltip("Locations from which future Bubble creatures can be released.")]
-    [SerializeField] private Transform[] bubbleSpawnPoints;
+    [Tooltip("Transform that determines where every Bubble is released. Uses the Fire Flower position when left empty.")]
+    [SerializeField] private Transform bubbleSpawnPoint;
 
     [Tooltip("Maximum number of Bubble creatures released by one bloom.")]
     [Min(0)]
@@ -207,7 +207,6 @@ public sealed class FireFlower : Creature
             return;
         }
 
-        int validSpawnPointCount = bubbleSpawnPoints == null ? 0 : bubbleSpawnPoints.Length;
         // The Heat that triggered this bloom is conserved and moved into the bubbles.
         float transferredHeat = SpendHeat(bloomHeatThreshold);
 
@@ -220,17 +219,9 @@ public sealed class FireFlower : Creature
 
         for (int index = 0; index < bubbleCount; index++)
         {
-            Vector3 spawnPosition = transform.position;
-
-            if (validSpawnPointCount > 0)
-            {
-                Transform spawnPoint = bubbleSpawnPoints[index % validSpawnPointCount];
-
-                if (spawnPoint != null)
-                {
-                    spawnPosition = spawnPoint.position;
-                }
-            }
+            Vector3 spawnPosition = bubbleSpawnPoint != null
+                ? bubbleSpawnPoint.position
+                : transform.position;
 
             FireBubble bubble = Instantiate(bubblePrefab, spawnPosition, Quaternion.identity);
             bubble.AddHeat(heatPerBubble);

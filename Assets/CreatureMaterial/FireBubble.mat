@@ -34,9 +34,10 @@ Material:
     - _FresnelPower: 2.5
     - _Heat: 13
     - _MaximumHeat: 25
-    - _PatternContrast: 2
+    - _PatternContrast: 4
     - _PatternScale: 2.5
     - _StillHeat: 13
+    - _UseLighting: 1
     m_Colors:
     - _HighHeatColor: {r: 2.8, g: 0.035, b: 0.01, a: 1}
     - _LowHeatColor: {r: 0.22, g: 0.005, b: 0.015, a: 1}

@@ -59,18 +59,20 @@ MonoBehaviour:
   creatureName: Fire Bubble
   simulationEnabled: 1
   heat: 0
-  upwardSpeed: 0.5
-  swayDistance: 0.25
-  swayFrequency: 0.35
+  upwardSpeed: 0.2
+  minimumRiseDistance: 0.75
+  maximumRiseDistance: 1.75
+  swayDistance: 1.25
+  swayFrequency: 0.22
   rotationSpeed: 20
-  minimumInitialDriftSpeed: 0.5
-  maximumInitialDriftSpeed: 1.5
-  driftDamping: 0.8
+  minimumInitialDriftSpeed: 0.8
+  maximumInitialDriftSpeed: 1.8
+  driftDamping: 0.45
   coolingPerSecond: 1
   interactionMinimumHeat: 13
   interactionMaximumHeat: 17
-  fireSourcePrefab: {fileID: 0}
-  burstHeatDropPerMetre: 3
+  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
+  burstHeatDropPerMetre: 1
   burstReceiverLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -80,6 +82,7 @@ MonoBehaviour:
   currentState: 0
   bubbleBody: {fileID: 4566537563883852650}
   bubbleCollider: {fileID: 4488284502573638848}
+  logPlayerInteraction: 1
 --- !u!23 &8706553103238526404
 MeshRenderer:
   m_ObjectHideFlags: 0

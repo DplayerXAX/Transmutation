@@ -59,9 +59,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FireSource
   creatureName: Fire Source
   simulationEnabled: 1
-  heat: 100
-  radiationPerSecond: 5
-  heatDropPerMetre: 1
+  heat: 4000
+  radiationPerSecond: 15
+  heatDropPerMetre: 10
   heatReceiverLayers:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -136,8 +136,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 5
-  m_Center: {x: 0, y: 0.015293121, z: 0}
+  m_Radius: 1.5
+  m_Center: {x: 0, y: 0, z: 0.16837692}
 --- !u!54 &8921371036882868935
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -184,5 +184,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 5
-  m_Center: {x: 0.0006942749, y: 0, z: -0.002200961}
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}

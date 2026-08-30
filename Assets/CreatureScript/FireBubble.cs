@@ -19,25 +19,36 @@ public sealed class FireBubble : Creature
     [Min(0f)]
     [SerializeField] private float upwardSpeed = 0.5f;
 
+    [Tooltip("Minimum height this Bubble rises before it stops moving upward.")]
+    [Min(0f)]
+    [SerializeField] private float minimumRiseDistance = 0.75f;
+
+    [Tooltip("Maximum height this Bubble rises before it stops moving upward.")]
+    [Min(0f)]
+    [SerializeField] private float maximumRiseDistance = 1.75f;
+
     [Tooltip("Maximum horizontal distance from the Bubble's central upward path.")]
     [Min(0f)]
-    [SerializeField] private float swayDistance = 0.25f;
+    [SerializeField] private float swayDistance = 1.25f;
 
     [Tooltip("Number of complete side-to-side sway cycles per second.")]
     [Min(0f)]
-    [SerializeField] private float swayFrequency = 0.35f;
+    [SerializeField] private float swayFrequency = 0.22f;
 
     [SerializeField] private float rotationSpeed = 20f;
 
-    [Header("Initial Drift")]
+    [Header("Wind Drift")]
+    [Tooltip("Minimum initial horizontal wind speed.")]
     [Min(0f)]
-    [SerializeField] private float minimumInitialDriftSpeed = 0.5f;
+    [SerializeField] private float minimumInitialDriftSpeed = 0.8f;
 
+    [Tooltip("Maximum initial horizontal wind speed.")]
     [Min(0f)]
-    [SerializeField] private float maximumInitialDriftSpeed = 1.5f;
+    [SerializeField] private float maximumInitialDriftSpeed = 1.8f;
 
+    [Tooltip("How quickly the initial wind loses strength. Lower values carry the Bubble farther.")]
     [Min(0f)]
-    [SerializeField] private float driftDamping = 0.8f;
+    [SerializeField] private float driftDamping = 0.45f;
 
     [Header("Cooling and Interaction")]
     [Tooltip("Heat lost every second while this Bubble is floating.")]
@@ -88,6 +99,8 @@ public sealed class FireBubble : Creature
     private float swayPhase;
     private float previousSwayOffset;
     private float elapsedTime;
+    private float targetRiseDistance;
+    private float risenDistance;
     private Vector3 driftVelocity;
     private float visualFlowTime;
     private MaterialPropertyBlock visualProperties;
@@ -96,7 +109,7 @@ public sealed class FireBubble : Creature
     private static readonly int MaximumHeatShaderId = Shader.PropertyToID("_MaximumHeat");
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
-    /// <summary>Whether this Bubble has cooled completely and can be eaten later.</summary>
+    /// <summary>Whether this Bubble has reached its lower Heat bound and can be eaten later.</summary>
     public bool IsInanimate => currentState == BubbleState.Inanimate;
 
     /// <summary>Sets up random motion and keeps the floating Bubble outside gravity simulation.</summary>
@@ -116,15 +129,20 @@ public sealed class FireBubble : Creature
             randomDirection = Vector2.right;
         }
 
-        swayDirection = new Vector3(randomDirection.x, 0f, randomDirection.y);
+        Vector3 windDirection = new Vector3(randomDirection.x, 0f, randomDirection.y);
+        // Sway crosses the main wind direction instead of retracing the same line.
+        swayDirection = new Vector3(-windDirection.z, 0f, windDirection.x);
         swayPhase = Random.Range(0f, Mathf.PI * 2f);
         previousSwayOffset = CalculateSwayOffset(0f);
 
+        float minimumHeight = Mathf.Min(minimumRiseDistance, maximumRiseDistance);
+        float maximumHeight = Mathf.Max(minimumRiseDistance, maximumRiseDistance);
+        targetRiseDistance = Random.Range(minimumHeight, maximumHeight);
+
         float minimumSpeed = Mathf.Min(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
         float maximumSpeed = Mathf.Max(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
-        driftVelocity = swayDirection * Random.Range(minimumSpeed, maximumSpeed);
+        driftVelocity = windDirection * Random.Range(minimumSpeed, maximumSpeed);
 
-        transform.position += swayDirection * previousSwayOffset;
         UpdateHeatVisual(0f);
     }
 
@@ -171,13 +189,27 @@ public sealed class FireBubble : Creature
         }
     }
 
-    /// <summary>Removes Heat while floating and makes the Bubble inanimate at zero.</summary>
+    /// <summary>
+    /// Removes Heat while floating. At the lower interaction bound, cooling stops and
+    /// the Bubble becomes inanimate while preserving that remaining Heat.
+    /// </summary>
     private void CoolDown(float deltaTime)
     {
-        SpendHeat(coolingPerSecond * deltaTime);
+        float heatAboveLowerBound = Heat - interactionMinimumHeat;
 
-        if (Heat <= 0f)
+        if (heatAboveLowerBound <= 0f)
         {
+            BecomeInanimate();
+            return;
+        }
+
+        float coolingThisFrame = Mathf.Min(coolingPerSecond * deltaTime, heatAboveLowerBound);
+        SpendHeat(coolingThisFrame);
+
+        if (Heat <= interactionMinimumHeat)
+        {
+            // Remove any tiny floating-point remainder without cooling below the bound.
+            SetHeat(interactionMinimumHeat);
             BecomeInanimate();
         }
     }
@@ -258,7 +290,16 @@ public sealed class FireBubble : Creature
 
     private void FloatUpward(float deltaTime)
     {
-        transform.position += Vector3.up * (upwardSpeed * deltaTime);
+        float remainingRise = targetRiseDistance - risenDistance;
+
+        if (remainingRise <= 0f)
+        {
+            return;
+        }
+
+        float riseThisFrame = Mathf.Min(upwardSpeed * deltaTime, remainingRise);
+        transform.position += Vector3.up * riseThisFrame;
+        risenDistance += riseThisFrame;
     }
 
     private void ApplyInitialDrift(float deltaTime)
@@ -360,6 +401,8 @@ public sealed class FireBubble : Creature
     private void OnValidate()
     {
         coolingPerSecond = Mathf.Max(0f, coolingPerSecond);
+        minimumRiseDistance = Mathf.Max(0f, minimumRiseDistance);
+        maximumRiseDistance = Mathf.Max(0f, maximumRiseDistance);
         interactionMinimumHeat = Mathf.Max(0f, interactionMinimumHeat);
         interactionMaximumHeat = Mathf.Max(interactionMinimumHeat, interactionMaximumHeat);
         burstHeatDropPerMetre = Mathf.Max(0.001f, burstHeatDropPerMetre);
