@@ -197,7 +197,7 @@ public sealed class FireSource : Creature
     /// <summary>Shows the current radiation range when selected in the Scene view.</summary>
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = new Color(1f, 0.3f, 0.05f, 0.25f);
+        Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, RadiationRadius);
     }
 
