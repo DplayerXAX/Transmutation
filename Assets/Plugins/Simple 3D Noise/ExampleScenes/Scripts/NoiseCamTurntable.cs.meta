@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b2a1e016650837b4a99169ba8b0d8742
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 79407
+  packageName: Simple 3D Noise
+  packageVersion: 1.1
+  assetPath: Assets/Simple 3D Noise/ExampleScenes/Scripts/NoiseCamTurntable.cs
+  uploadId: 310304

@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7244987243072473398
+--- !u!1 &4702101864647544357
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,73 +8,37 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6342294243449890601}
-  - component: {fileID: 5696169340019470587}
-  - component: {fileID: 3959365805291875168}
-  - component: {fileID: 4736546346981618730}
-  - component: {fileID: 1091521392603036995}
-  - component: {fileID: 8921371036882868935}
-  - component: {fileID: 2303167142865417911}
+  - component: {fileID: 754278885397797280}
+  - component: {fileID: 3262625467374789446}
   m_Layer: 0
-  m_Name: FireSource
+  m_Name: Visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6342294243449890601
+--- !u!4 &754278885397797280
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7244987243072473398}
+  m_GameObject: {fileID: 4702101864647544357}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 25.70406, y: -82.16, z: -0.98937}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.46, y: 0.46, z: 0.46}
+  m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 6342294243449890601}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &5696169340019470587
-MeshFilter:
+--- !u!137 &3262625467374789446
+SkinnedMeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7244987243072473398}
-  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &3959365805291875168
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7244987243072473398}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 39b4c61854a5c174abfc328a9a488153, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireSource
-  creatureName: Fire Source
-  simulationEnabled: 1
-  heat: 4000
-  radiationPerSecond: 15
-  heatDropPerMetre: 10
-  heatReceiverLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  bodyCollider: {fileID: 2303167142865417911}
-  radiationTrigger: {fileID: 1091521392603036995}
-  sourceBody: {fileID: 8921371036882868935}
---- !u!23 &4736546346981618730
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7244987243072473398}
+  m_GameObject: {fileID: 4702101864647544357}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -83,7 +47,7 @@ MeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
+  m_RayTracingMode: 3
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
@@ -116,7 +80,78 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
+  serializedVersion: 2
+  m_Quality: 0
+  m_UpdateWhenOffscreen: 0
+  m_SkinnedMotionVectors: 1
+  m_Mesh: {fileID: 289301614986012343, guid: 2784525535c3245e2b22a8f3dbc49ab6, type: 3}
+  m_Bones: []
+  m_BlendShapeWeights:
+  - 0
+  m_RootBone: {fileID: 0}
+  m_AABB:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0.5, y: 0.5, z: 0.5}
+  m_DirtyAABB: 0
+--- !u!1 &7244987243072473398
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6342294243449890601}
+  - component: {fileID: 3959365805291875168}
+  - component: {fileID: 1091521392603036995}
+  - component: {fileID: 8921371036882868935}
+  - component: {fileID: 2303167142865417911}
+  m_Layer: 0
+  m_Name: FireSource
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6342294243449890601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7244987243072473398}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 25.70406, y: -82.16, z: -0.98937}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 754278885397797280}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3959365805291875168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7244987243072473398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39b4c61854a5c174abfc328a9a488153, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FireSource
+  creatureName: Fire Source
+  simulationEnabled: 1
+  heat: 4000
+  radiationPerSecond: 15
+  heatDropPerMetre: 10
+  heatReceiverLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  bodyCollider: {fileID: 2303167142865417911}
+  radiationTrigger: {fileID: 1091521392603036995}
+  sourceBody: {fileID: 8921371036882868935}
 --- !u!135 &1091521392603036995
 SphereCollider:
   m_ObjectHideFlags: 0

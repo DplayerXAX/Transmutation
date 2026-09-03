@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5dcfe7d3edf869f4692089dde7a5d0e9
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 79407
+  packageName: Simple 3D Noise
+  packageVersion: 1.1
+  assetPath: Assets/Simple 3D Noise/ExampleScenes/Scripts/NoiseCompare.cs
+  uploadId: 310304
