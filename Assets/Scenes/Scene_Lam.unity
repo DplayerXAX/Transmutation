@@ -16,7 +16,7 @@ RenderSettings:
   serializedVersion: 10
   m_Fog: 1
   m_FogColor: {r: 1, g: 0, b: 0.94140434, a: 1}
-  m_FogMode: 3
+  m_FogMode: 2
   m_FogDensity: 0.045
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: c6036ba92dc174e9cbb01c08fc58256c, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -1278,36 +1278,27 @@ MonoBehaviour:
   frustumCullNearOffset: -3
   frustumCullEdgeOffset: -1
   frustumCullBypassDistance: 18
+  maxSlopeAngle: 45
   clumpTextureHeight: 512
   clumpTextureWidth: 512
   clumpingVoronoiMaterial: {fileID: 2100000, guid: c253f987537ff43c091f7557fcc25889, type: 2}
   clumpScale: 0.2
   clumpParameters:
-  - pullToCentre: 0.05
-    pointInSameDirection: 0.5
-    baseHeight: 0.6
-    heightRandom: 0.2
-    baseWidth: 0.05
-    widthRandom: 0.02
-    baseTilt: 0.3
-    tiltRandom: 0.02
-    baseBend: 0.2
-    bendRandom: 0.05
-  - pullToCentre: 0.05
-    pointInSameDirection: 0.4
-    baseHeight: 0.5
-    heightRandom: 0.2
-    baseWidth: 0.06
-    widthRandom: 0.02
-    baseTilt: 0.3
-    tiltRandom: 0.02
-    baseBend: 0.2
+  - pullToCentre: 0
+    pointInSameDirection: 1
+    baseHeight: 0.8
+    heightRandom: 0.5
+    baseWidth: 0.1
+    widthRandom: 0
+    baseTilt: 0
+    tiltRandom: 0
+    baseBend: 0
     bendRandom: 0.05
   localWindTex: {fileID: 2800000, guid: d0715a34b2a0840eda1cf92cd1056381, type: 3}
-  localWindStrength: 0.5
+  localWindStrength: 0
   localWindScale: 0.01
   localWindSpeed: 0.1
-  localWindRotateAmount: 0.3
+  localWindRotateAmount: 0
 --- !u!4 &793705924
 Transform:
   m_ObjectHideFlags: 0
@@ -1620,7 +1611,7 @@ Terrain:
   m_StaticShadowCaster: 0
   m_IgnoreQualitySettings: 0
   m_ReflectionProbeUsage: 1
-  m_MaterialTemplate: {fileID: 2100000, guid: 594ea882c5a793440b60ff72d896021e, type: 2}
+  m_MaterialTemplate: {fileID: 2100000, guid: a91d3e6f2c8b4f7e9a0b1c2d3e4f5061, type: 2}
   m_BakeLightProbesForTrees: 1
   m_PreserveTreePrototypeLayers: 0
   m_DeringLightProbesForTrees: 1

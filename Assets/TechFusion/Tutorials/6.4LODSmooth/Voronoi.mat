@@ -104,7 +104,7 @@ Material:
     - _JitterAmount: 0.9
     - _Metallic: 0
     - _NumCells: 20
-    - _NumClumpTypes: 2
+    - _NumClumpTypes: 1
     - _NumClumps: 32
     - _OcclusionStrength: 1
     - _Parallax: 0.005

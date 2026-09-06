@@ -32,6 +32,9 @@ namespace Tutorial604
         public float frustumCullEdgeOffset;
         [Tooltip("Grass within this horizontal distance from the camera skips frustum culling (fixes missing grass at your feet when looking forward).")]
         public float frustumCullBypassDistance = 15f;
+        [Tooltip("Skip spawning grass when the terrain slope from world up exceeds this angle (degrees).")]
+        [Range(0f, 90f)]
+        public float maxSlopeAngle = 45f;
 
         [Header("Clumping")]
         public int clumpTextureHeight;
@@ -70,6 +73,7 @@ namespace Tutorial604
             frustumCullNearOffsetID = Shader.PropertyToID("_FrustumCullNearOffset"),
             frustumCullEdgeOffsetID = Shader.PropertyToID("_FrustumCullEdgeOffset"),
             frustumCullBypassDistanceID = Shader.PropertyToID("_FrustumCullBypassDistance"),
+            maxSlopeAngleID = Shader.PropertyToID("_MaxSlopeAngle"),
             clumpParametersID = Shader.PropertyToID("_ClumpParameters"),
             numClumpParametersID = Shader.PropertyToID("_NumClumpParameters"),
             clumpTexID = Shader.PropertyToID("ClumpTex"),
@@ -498,6 +502,7 @@ namespace Tutorial604
             
             computeShader.SetFloat(frustumCullNearOffsetID, frustumCullNearOffset);
             computeShader.SetFloat(frustumCullEdgeOffsetID, frustumCullEdgeOffset);
+            computeShader.SetFloat(maxSlopeAngleID, maxSlopeAngle);
 
             UpdateClumpParametersBuffer();
             computeShader.SetBuffer(0, clumpParametersID, clumpParametersBuffer);

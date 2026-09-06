@@ -25,7 +25,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _FACECAMERA_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -106,6 +107,7 @@ Material:
     - _AlphaToMask: 0
     - _AmbientBoost: 1
     - _BladeWidth: 0.03
+    - _BladeWorldXAngle: 29
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BlendSurfaceNormalDistLower: 30
@@ -122,6 +124,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _FaceCamera: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0

@@ -10,23 +10,27 @@ namespace Tutorial604
         {
             Mesh mesh = new Mesh();
 
+            // 8 height levels × 2 sides = 16 vertices; constant half-width (square blade)
+            const float halfWidth = 0.03444f;
+
             mesh.vertices = new Vector3[]
             {
-            new Vector3(0.000000f, 0.15599f, 0.03445f),
-            new Vector3(0.000000f, 0.00000f, -0.03444f),
-            new Vector3(0.000000f, 0.00000f, 0.03444f),
-            new Vector3(0.000000f, 0.15599f, -0.03445f),
-            new Vector3(0.000000f, 0.27249f, -0.03193f),
-            new Vector3(0.000000f, 0.27249f, 0.03193f),
-            new Vector3(0.000000f, 0.38111f, -0.02942f),
-            new Vector3(0.000000f, 0.38111f, 0.02942f),
-            new Vector3(0.000000f, 0.47325f, -0.02620f),
-            new Vector3(0.000000f, 0.47325f, 0.02620f),
-            new Vector3(0.000000f, 0.55531f, -0.02338f),
-            new Vector3(0.000000f, 0.55531f, 0.02338f),
-            new Vector3(0.000000f, 0.63064f, -0.01728f),
-            new Vector3(0.000000f, 0.63064f, 0.01728f),
-            new Vector3(0.000000f, 0.70819f, 0.00000f)
+            new Vector3(0.000000f, 0.15599f,  halfWidth),
+            new Vector3(0.000000f, 0.00000f, -halfWidth),
+            new Vector3(0.000000f, 0.00000f,  halfWidth),
+            new Vector3(0.000000f, 0.15599f, -halfWidth),
+            new Vector3(0.000000f, 0.27249f, -halfWidth),
+            new Vector3(0.000000f, 0.27249f,  halfWidth),
+            new Vector3(0.000000f, 0.38111f, -halfWidth),
+            new Vector3(0.000000f, 0.38111f,  halfWidth),
+            new Vector3(0.000000f, 0.47325f, -halfWidth),
+            new Vector3(0.000000f, 0.47325f,  halfWidth),
+            new Vector3(0.000000f, 0.55531f, -halfWidth),
+            new Vector3(0.000000f, 0.55531f,  halfWidth),
+            new Vector3(0.000000f, 0.63064f, -halfWidth),
+            new Vector3(0.000000f, 0.63064f,  halfWidth),
+            new Vector3(0.000000f, 0.70819f, -halfWidth),
+            new Vector3(0.000000f, 0.70819f,  halfWidth)
             };
 
             mesh.triangles = new int[]
@@ -43,7 +47,8 @@ namespace Tutorial604
             9, 11, 10,
             12, 10, 11,
             11, 13, 12,
-            13, 14, 12
+            13, 14, 12,
+            13, 15, 14
             };
 
             mesh.colors = new Color[]
@@ -62,26 +67,28 @@ namespace Tutorial604
             new Color(0.713726f, 0.000000f, 0.000000f, 1.000000f),
             new Color(0.858824f, 1.000000f, 0.000000f, 1.000000f),
             new Color(0.858824f, 0.000000f, 0.000000f, 1.000000f),
-            new Color(1.000000f, 0.498039f, 0.000000f, 1.000000f)
+            new Color(1.000000f, 1.000000f, 0.000000f, 1.000000f),
+            new Color(1.000000f, 0.000000f, 0.000000f, 1.000000f)
             };
 
             mesh.uv = new Vector2[]
             {
-            new Vector2(0.450011f, 0.220262f),
+            new Vector2(0.450038f, 0.220262f),
             new Vector2(0.550490f, 0.000000f),
             new Vector2(0.450038f, 0.000000f),
-            new Vector2(0.550516f, 0.220262f),
-            new Vector2(0.546832f, 0.354773f),
-            new Vector2(0.453695f, 0.354773f),
-            new Vector2(0.543177f, 0.508140f),
-            new Vector2(0.457350f, 0.508140f),
-            new Vector2(0.538472f, 0.628258f),
-            new Vector2(0.462055f, 0.628258f),
-            new Vector2(0.534360f, 0.744132f),
-            new Vector2(0.466167f, 0.744132f),
-            new Vector2(0.525474f, 0.850497f),
-            new Vector2(0.475053f, 0.850497f),
-            new Vector2(0.500264f, 0.90000f)
+            new Vector2(0.550490f, 0.220262f),
+            new Vector2(0.550490f, 0.354773f),
+            new Vector2(0.450038f, 0.354773f),
+            new Vector2(0.550490f, 0.508140f),
+            new Vector2(0.450038f, 0.508140f),
+            new Vector2(0.550490f, 0.628258f),
+            new Vector2(0.450038f, 0.628258f),
+            new Vector2(0.550490f, 0.744132f),
+            new Vector2(0.450038f, 0.744132f),
+            new Vector2(0.550490f, 0.850497f),
+            new Vector2(0.450038f, 0.850497f),
+            new Vector2(0.550490f, 0.900000f),
+            new Vector2(0.450038f, 0.900000f)
             };
 
             mesh.RecalculateBounds();

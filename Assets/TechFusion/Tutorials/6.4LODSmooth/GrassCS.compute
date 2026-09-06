@@ -61,6 +61,7 @@ float4x4 _VP_MATRIX;
 float _FrustumCullNearOffset;
 float _FrustumCullEdgeOffset;
 float _FrustumCullBypassDistance;
+float _MaxSlopeAngle;
 
 float _ClumpScale;
 float _NumClumpParameters;
@@ -106,6 +107,22 @@ float SampleGrass(float2 normalizedPos)
 {
     float value = _DetailMap.SampleLevel(LinearClampSampler, normalizedPos, 0).r;
     return value;
+}
+
+float3 SampleSurfaceNormal(float3 position)
+{
+    float3 vertexBitangent = FitTerrainPosition(position + float3(0.01, 0, 0));
+    float3 vertexTangent = FitTerrainPosition(position + float3(0, 0, 0.01));
+    float3 newBitangent = vertexBitangent - position;
+    float3 newTangent = vertexTangent - position;
+    return normalize(cross(newTangent, newBitangent));
+}
+
+uint SlopeCull(float3 surfaceNorm)
+{
+    float upDot = saturate(dot(surfaceNorm, float3(0, 1, 0)));
+    float slopeAngle = degrees(acos(upDot));
+    return slopeAngle <= _MaxSlopeAngle ? 1 : 0;
 }
 
 uint DistanceCull(float3 worldPos, float hash)
@@ -156,9 +173,10 @@ void Main(uint3 id : SV_DispatchThreadID)
 
         position.y = _TerrainPosition.y + SampleHeight(normalizedPos);
 
-        uint distanceCull = 1;
-        
-        distanceCull = DistanceCull(position, hash.x);
+        float3 surfaceNorm = SampleSurfaceNormal(position);
+        if (SlopeCull(surfaceNorm) == 0) return;
+
+        uint distanceCull = DistanceCull(position, hash.x);
 
         float horizontalCameraDist = distance(position.xz, _WSpaceCameraPos.xz);
         uint frustumCull = horizontalCameraDist <= _FrustumCullBypassDistance
@@ -199,16 +217,8 @@ void Main(uint3 id : SV_DispatchThreadID)
             blade.bend = bladeParameters.baseBend + Remap(Rand(id.xyy * float3(12.32, 0.23, 3.39))) * bladeParameters.bendRandom;
 
             blade.bend += localWind * _LocalWindStrength;
-            
-            float3 bitangent = float3(1, 0, 0);
-            float3 tangent = float3(0, 0, 1);
-            float3 vertexBitangent = FitTerrainPosition(position + bitangent * 0.01);
-            float3 vertexTangent = FitTerrainPosition(position + tangent * 0.01);
-            float3 newBitangent = (vertexBitangent - position).xyz;
-            float3 newTangent = (vertexTangent - position).xyz;
-            float3 norm = normalize(cross(newTangent, newBitangent));
-            blade.surfaceNorm = norm;
-            
+            blade.surfaceNorm = surfaceNorm;
+
             float3 posToCam = normalize(_WSpaceCameraPos - position);
             float viewAlignment = abs(dot(bladeFacing, normalize(posToCam.xz)));
             blade.sideBend = smoothstep(0.3, 0, viewAlignment) * 1.5;
