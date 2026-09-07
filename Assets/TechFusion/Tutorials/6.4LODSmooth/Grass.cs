@@ -36,6 +36,15 @@ namespace Tutorial604
         [Range(0f, 90f)]
         public float maxSlopeAngle = 45f;
 
+        [Header("Noise Mask")]
+        [Tooltip("Only spawn grass where Perlin noise is above this threshold (0 = densest, 1 = almost none).")]
+        [Range(0f, 1f)]
+        public float noiseThreshold = 0.4f;
+        [Tooltip("World-space frequency of the Perlin mask. Smaller = larger patches.")]
+        public float noiseScale = 0.05f;
+        [Tooltip("Shifts the noise pattern in world XZ.")]
+        public Vector2 noiseOffset = Vector2.zero;
+
         [Header("Clumping")]
         public int clumpTextureHeight;
         public int clumpTextureWidth;
@@ -74,6 +83,9 @@ namespace Tutorial604
             frustumCullEdgeOffsetID = Shader.PropertyToID("_FrustumCullEdgeOffset"),
             frustumCullBypassDistanceID = Shader.PropertyToID("_FrustumCullBypassDistance"),
             maxSlopeAngleID = Shader.PropertyToID("_MaxSlopeAngle"),
+            noiseThresholdID = Shader.PropertyToID("_NoiseThreshold"),
+            noiseScaleID = Shader.PropertyToID("_NoiseScale"),
+            noiseOffsetID = Shader.PropertyToID("_NoiseOffset"),
             clumpParametersID = Shader.PropertyToID("_ClumpParameters"),
             numClumpParametersID = Shader.PropertyToID("_NumClumpParameters"),
             clumpTexID = Shader.PropertyToID("ClumpTex"),
@@ -503,6 +515,9 @@ namespace Tutorial604
             computeShader.SetFloat(frustumCullNearOffsetID, frustumCullNearOffset);
             computeShader.SetFloat(frustumCullEdgeOffsetID, frustumCullEdgeOffset);
             computeShader.SetFloat(maxSlopeAngleID, maxSlopeAngle);
+            computeShader.SetFloat(noiseThresholdID, noiseThreshold);
+            computeShader.SetFloat(noiseScaleID, noiseScale);
+            computeShader.SetVector(noiseOffsetID, noiseOffset);
 
             UpdateClumpParametersBuffer();
             computeShader.SetBuffer(0, clumpParametersID, clumpParametersBuffer);

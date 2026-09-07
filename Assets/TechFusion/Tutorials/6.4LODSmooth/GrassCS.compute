@@ -62,6 +62,9 @@ float _FrustumCullNearOffset;
 float _FrustumCullEdgeOffset;
 float _FrustumCullBypassDistance;
 float _MaxSlopeAngle;
+float _NoiseThreshold;
+float _NoiseScale;
+float2 _NoiseOffset;
 
 float _ClumpScale;
 float _NumClumpParameters;
@@ -125,6 +128,38 @@ uint SlopeCull(float3 surfaceNorm)
     return slopeAngle <= _MaxSlopeAngle ? 1 : 0;
 }
 
+float2 Hash22(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return frac((p3.xx + p3.yz) * p3.zy) * 2.0 - 1.0;
+}
+
+// Classic 2D gradient (Perlin-style) noise, remapped to 0-1
+float PerlinNoise01(float2 p)
+{
+    float2 i = floor(p);
+    float2 f = frac(p);
+    float2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    float n00 = dot(Hash22(i + float2(0, 0)), f - float2(0, 0));
+    float n10 = dot(Hash22(i + float2(1, 0)), f - float2(1, 0));
+    float n01 = dot(Hash22(i + float2(0, 1)), f - float2(0, 1));
+    float n11 = dot(Hash22(i + float2(1, 1)), f - float2(1, 1));
+
+    float nx0 = lerp(n00, n10, u.x);
+    float nx1 = lerp(n01, n11, u.x);
+    float n = lerp(nx0, nx1, u.y);
+    return saturate(n * 0.5 + 0.5);
+}
+
+uint NoiseMaskCull(float3 worldPos)
+{
+    float2 noiseUV = (worldPos.xz + _NoiseOffset) * _NoiseScale;
+    float noise = PerlinNoise01(noiseUV);
+    return noise > _NoiseThreshold ? 1 : 0;
+}
+
 uint DistanceCull(float3 worldPos, float hash)
 {
     float d = distance(worldPos, _WSpaceCameraPos);
@@ -170,6 +205,7 @@ void Main(uint3 id : SV_DispatchThreadID)
 
         float2 normalizedPos = (position.xz - _TerrainPosition.xz) / _HeightMapScale;
         if (SampleGrass(normalizedPos) < 0.1) return;
+        if (NoiseMaskCull(float3(position.x, 0, position.z)) == 0) return;
 
         position.y = _TerrainPosition.y + SampleHeight(normalizedPos);
 

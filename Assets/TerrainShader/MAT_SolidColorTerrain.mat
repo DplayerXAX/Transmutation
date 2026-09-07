@@ -27,23 +27,33 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _FresnelNormalMap:
-        m_Texture: {fileID: 2800000, guid: eb98012cf087e44b196b229f620d4fc9, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
     - _TerrainHolesTexture:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _FresnelIntensity: 1.07
-    - _FresnelNormalScale: 0.16
-    - _FresnelNormalStrength: 0.24
-    - _FresnelPower: 2.16
+    - _FloorBlendWidth: 9.08
+    - _FloorFreq: 12.33
+    - _FloorHeight: -5
+    - _FloorTravel: 0.96
+    - _FloorTriplanarSharpness: 1
+    - _FloorViewFalloff: 0.2
+    - _FloorViewInfluence: 1
+    - _PolarScale: 0.02
+    - _RayPhaseProximityBoost: 50
+    - _RayPhaseProximityFalloff: 0.15
+    - _RayPhaseScale: 29.25
+    - _RaySpeed: 1
+    - _RingDistort: 4
+    - _RingFreq: 46
+    - _RingKeepMix: 1
+    - _RingKeepThreshold: 1
+    - _RingSqrtBoost: 6
+    - _RingTravel: 7
     m_Colors:
-    - _Color: {r: 0, g: 0.5858184, b: 0.6603774, a: 1}
-    - _FresnelColor: {r: 0.55, g: 0.75, b: 1, a: 1}
-    - _FresnelScrollSpeed: {r: 0.05, g: 0.02, b: 0, a: 0}
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
+    - _Color: {r: 0.08, g: 0.1, b: 0.12, a: 1}
+    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
