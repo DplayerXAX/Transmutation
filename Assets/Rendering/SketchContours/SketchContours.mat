@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SketchContours
+  m_Shader: {fileID: 4800000, guid: 890538f8ac4749deaa1393f60b607398, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _DepthRange: 20
+    - _DepthSensitivity: 1.29
+    - _ErrorPeriod: 30
+    - _ErrorRange: 0.00599
+    - _NoiseAmount: 0.02
+    - _NoiseScale: 7
+    - _NormalSensitivity: 0.12
+    - _Opacity: 1
+    - _StrokeSpeed: 0.9
+    - _Thickness: 0.5
+    m_Colors:
+    - _LineColor: {r: 0.2, g: 0.2, b: 0.15, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
