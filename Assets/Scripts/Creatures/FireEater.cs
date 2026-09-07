@@ -124,15 +124,13 @@ public sealed class FireEater : Creature
         }
 
         direction.Normalize();
-        Vector3 velocity = eaterBody.linearVelocity;
-        eaterBody.linearVelocity = new Vector3(direction.x * moveSpeed, velocity.y, direction.z * moveSpeed);
-        transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+        SetCreatureHorizontalVelocity(direction * moveSpeed);
+        FaceCreature(Quaternion.LookRotation(direction, Vector3.up));
     }
 
     private void StopMoving()
     {
-        Vector3 velocity = eaterBody.linearVelocity;
-        eaterBody.linearVelocity = new Vector3(0f, velocity.y, 0f);
+        SetCreatureHorizontalVelocity(Vector3.zero);
     }
 
     private void OnCollisionEnter(Collision collision) => TryEat(collision.collider);

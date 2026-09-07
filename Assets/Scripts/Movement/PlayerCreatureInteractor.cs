@@ -38,7 +38,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     }
 
     /// <summary>Raycasts through screen centre and notifies the first Creature hit.</summary>
-    private void TryInteract()
+    public void TryInteract()
     {
         if (interactionCamera == null)
         {
