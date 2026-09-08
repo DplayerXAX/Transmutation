@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Mouse dig / grow brush for MarchingCubesSphere using the new Input System.
+/// Mouse dig / grow brush for MarchingCubesVolume using the new Input System.
 ///
 /// Left mouse  → dig   (subtract density)
 /// Right mouse → grow  (add density)
@@ -11,7 +11,7 @@ using UnityEngine.InputSystem;
 /// </summary>
 public class MarchingCubesBrush : MonoBehaviour
 {
-	[SerializeField] MarchingCubesSphere terrain;
+	[SerializeField] MarchingCubesVolume terrain;
 
 	[Tooltip("Only colliders on these layers can be hit by the brush ray (exclude Player).")]
 	[SerializeField] LayerMask brushLayers = ~0;
@@ -28,13 +28,19 @@ public class MarchingCubesBrush : MonoBehaviour
 	[Tooltip("Minimum seconds between modifications while holding the mouse.")]
 	[SerializeField] float modificationInterval = 0.05f;
 
+	[Tooltip("Grow is blocked when the hit point is closer than this to the camera (or Grow Distance Origin). Dig is unaffected.")]
+	[SerializeField] float minGrowDistance = 3f;
+
+	[Tooltip("Optional origin for the grow distance check. Uses Camera.main when empty.")]
+	[SerializeField] Transform growDistanceOrigin;
+
 	float nextModificationTime;
 
 	void Awake()
 	{
 		if (terrain == null)
 		{
-			terrain = GetComponent<MarchingCubesSphere>();
+			terrain = GetComponent<MarchingCubesVolume>();
 		}
 	}
 
@@ -71,7 +77,28 @@ public class MarchingCubesBrush : MonoBehaviour
 			return;
 		}
 
+		// Chunk colliders live on children of the terrain root.
+		if (!hit.collider.transform.IsChildOf(terrain.transform) &&
+		    hit.collider.transform != terrain.transform)
+		{
+			return;
+		}
+
+		// Prevent growing into the player / camera; digging stays unrestricted.
+		if (grow && !dig && minGrowDistance > 0f)
+		{
+			Vector3 origin = growDistanceOrigin != null
+				? growDistanceOrigin.position
+				: Camera.main.transform.position;
+
+			if (Vector3.Distance(origin, hit.point) < minGrowDistance)
+			{
+				return;
+			}
+		}
+
 		// ModifyTerrain subtracts strength; pass negative strength to grow.
+		// If both buttons are held, prefer dig.
 		float signedStrength = dig ? strength : -strength;
 		terrain.ModifyTerrain(hit.point, brushRadius, signedStrength);
 		nextModificationTime = Time.time + modificationInterval;

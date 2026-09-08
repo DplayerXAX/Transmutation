@@ -1,43 +1,50 @@
 using UnityEngine;
 
 /// <summary>
-/// Spherical density overlay for MarchingCubesSphere.
+/// Spherical density injector for MarchingCubesVolume.
 ///
-/// Inside the sphere (center = transform.position, given radius), effective density is
-/// base densities[,,] + densityOffset. This does not bake into the stored field:
-/// moving or disabling the overlay restores the underlying density.
-///
-/// densityOffset &lt; 0 → lower density (carve)
-/// densityOffset &gt; 0 → raise density (grow)
+/// Each simulation tick writes into the stored density field (not a sample-time offset):
+/// densities += injectRate * falloff * dt, clamped to maxDensity.
+/// Falloff is 1 at the center and 0 at the radius edge (smoothstep).
 /// </summary>
 public class DensitySphereOverlay : MonoBehaviour
 {
-	[SerializeField] MarchingCubesSphere terrain;
+	[SerializeField] MarchingCubesVolume terrain;
 
 	[Tooltip("Sphere radius in world units (matches the Scene gizmo).")]
 	[SerializeField] float radius = 2f;
 
-	[Tooltip("Fixed density added inside the sphere. Negative lowers, positive raises.")]
-	[SerializeField] float densityOffset = -2f;
+	[Tooltip("Density added per second at the center. Edge receives less via falloff.")]
+	[SerializeField] float injectRate = 2f;
+
+	[Tooltip("Maximum density this injector will raise samples to.")]
+	[SerializeField] float maxDensity = 2f;
 
 	[Tooltip("Gizmo color for the overlay radius.")]
 	[SerializeField] Color gizmoColor = new Color(1f, 0.45f, 0.15f, 0.9f);
 
 	public float Radius => radius;
-	public float DensityOffset => densityOffset;
-
-	Vector3 lastPosition;
-	float lastRadius;
-	float lastOffset;
+	public float InjectRate => injectRate;
+	public float MaxDensity => maxDensity;
 
 	void OnEnable()
 	{
 		ResolveTerrain();
-		CacheState();
 		if (terrain != null)
 		{
 			terrain.RegisterOverlay(this);
 		}
+	}
+
+	void Start()
+	{
+		ResolveTerrain();
+		if (terrain == null || !terrain.gameObject.scene.IsValid())
+		{
+			return;
+		}
+
+		terrain.RegisterOverlay(this);
 	}
 
 	void OnDisable()
@@ -50,32 +57,22 @@ public class DensitySphereOverlay : MonoBehaviour
 
 	void Update()
 	{
-		bool wasMissingTerrain = terrain == null;
-		ResolveTerrain();
-		if (terrain == null)
+		if (terrain != null)
 		{
 			return;
 		}
 
-		if (wasMissingTerrain)
+		ResolveTerrain();
+		if (terrain != null)
 		{
 			terrain.RegisterOverlay(this);
-			CacheState();
-			return;
 		}
-
-		if (!HasChanged())
-		{
-			return;
-		}
-
-		CacheState();
-		terrain.RequestMeshUpdate();
 	}
 
 	void OnValidate()
 	{
 		radius = Mathf.Max(0.01f, radius);
+		maxDensity = Mathf.Max(0f, maxDensity);
 	}
 
 	void OnDrawGizmos()
@@ -93,16 +90,19 @@ public class DensitySphereOverlay : MonoBehaviour
 	}
 
 	/// <summary>
-	/// Fixed offset if <paramref name="worldSample"/> is inside this sphere; otherwise 0.
+	/// Smooth falloff weight: 1 at center, 0 at/ beyond radius.
 	/// </summary>
-	public float EvaluateOffset(Vector3 worldSample)
+	public float EvaluateFalloff(Vector3 worldSample)
 	{
-		if (Vector3.Distance(worldSample, transform.position) > radius)
+		float distance = Vector3.Distance(worldSample, transform.position);
+		if (distance >= radius)
 		{
 			return 0f;
 		}
 
-		return densityOffset;
+		float t = 1f - distance / radius;
+		t = Mathf.Clamp01(t);
+		return t * t * (3f - 2f * t);
 	}
 
 	void ResolveTerrain()
@@ -112,24 +112,10 @@ public class DensitySphereOverlay : MonoBehaviour
 			return;
 		}
 
-		terrain = GetComponentInParent<MarchingCubesSphere>();
+		terrain = GetComponentInParent<MarchingCubesVolume>();
 		if (terrain == null)
 		{
-			terrain = FindObjectOfType<MarchingCubesSphere>();
+			terrain = FindObjectOfType<MarchingCubesVolume>();
 		}
-	}
-
-	void CacheState()
-	{
-		lastPosition = transform.position;
-		lastRadius = radius;
-		lastOffset = densityOffset;
-	}
-
-	bool HasChanged()
-	{
-		return lastPosition != transform.position ||
-		       !Mathf.Approximately(lastRadius, radius) ||
-		       !Mathf.Approximately(lastOffset, densityOffset);
 	}
 }

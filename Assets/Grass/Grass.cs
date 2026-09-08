@@ -37,13 +37,22 @@ namespace Tutorial604
         public float maxSlopeAngle = 45f;
 
         [Header("Noise Mask")]
-        [Tooltip("Only spawn grass where Perlin noise is above this threshold (0 = densest, 1 = almost none).")]
+        [Tooltip("Only spawn grass where FBM Perlin noise is above this threshold (0 = densest, 1 = almost none).")]
         [Range(0f, 1f)]
         public float noiseThreshold = 0.4f;
-        [Tooltip("World-space frequency of the Perlin mask. Smaller = larger patches.")]
+        [Tooltip("World-space frequency of the base Perlin octave. Smaller = larger patches.")]
         public float noiseScale = 0.05f;
         [Tooltip("Shifts the noise pattern in world XZ.")]
         public Vector2 noiseOffset = Vector2.zero;
+        [Tooltip("Number of Perlin layers. More octaves = finer detail / more natural edges.")]
+        [Range(1, 8)]
+        public int noiseOctaves = 4;
+        [Tooltip("Amplitude falloff per octave (typically ~0.5).")]
+        [Range(0.1f, 1f)]
+        public float noisePersistence = 0.5f;
+        [Tooltip("Frequency multiplier per octave (typically ~2).")]
+        [Range(1.1f, 4f)]
+        public float noiseLacunarity = 2f;
 
         [Header("Clumping")]
         public int clumpTextureHeight;
@@ -86,6 +95,9 @@ namespace Tutorial604
             noiseThresholdID = Shader.PropertyToID("_NoiseThreshold"),
             noiseScaleID = Shader.PropertyToID("_NoiseScale"),
             noiseOffsetID = Shader.PropertyToID("_NoiseOffset"),
+            noiseOctavesID = Shader.PropertyToID("_NoiseOctaves"),
+            noisePersistenceID = Shader.PropertyToID("_NoisePersistence"),
+            noiseLacunarityID = Shader.PropertyToID("_NoiseLacunarity"),
             clumpParametersID = Shader.PropertyToID("_ClumpParameters"),
             numClumpParametersID = Shader.PropertyToID("_NumClumpParameters"),
             clumpTexID = Shader.PropertyToID("ClumpTex"),
@@ -518,6 +530,9 @@ namespace Tutorial604
             computeShader.SetFloat(noiseThresholdID, noiseThreshold);
             computeShader.SetFloat(noiseScaleID, noiseScale);
             computeShader.SetVector(noiseOffsetID, noiseOffset);
+            computeShader.SetInt(noiseOctavesID, noiseOctaves);
+            computeShader.SetFloat(noisePersistenceID, noisePersistence);
+            computeShader.SetFloat(noiseLacunarityID, noiseLacunarity);
 
             UpdateClumpParametersBuffer();
             computeShader.SetBuffer(0, clumpParametersID, clumpParametersBuffer);
