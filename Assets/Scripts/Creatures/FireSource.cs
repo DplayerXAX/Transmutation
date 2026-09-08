@@ -66,9 +66,8 @@ public sealed class FireSource : Creature
     {
         FindPhysicsReferences();
 
-        sourceBody.isKinematic = false;
-        sourceBody.useGravity = true;
-        sourceBody.linearVelocity = initialVelocity;
+        SetMovementPhysics(false, true);
+        if (!IsCarried) sourceBody.linearVelocity = initialVelocity;
 
     }
 

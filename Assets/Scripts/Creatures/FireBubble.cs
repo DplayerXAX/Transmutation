@@ -272,9 +272,8 @@ public sealed class FireBubble : Creature
     {
         ChangeState(BubbleState.Inanimate);
 
-        bubbleBody.isKinematic = false;
-        bubbleBody.useGravity = true;
-        bubbleBody.linearVelocity = driftVelocity;
+        SetMovementPhysics(false, true);
+        if (!IsCarried) bubbleBody.linearVelocity = driftVelocity;
     }
 
     /// <summary>Changes the Bubble's current behavior state.</summary>
@@ -298,13 +297,13 @@ public sealed class FireBubble : Creature
         }
 
         float riseThisFrame = Mathf.Min(upwardSpeed * deltaTime, remainingRise);
-        transform.position += Vector3.up * riseThisFrame;
+        MoveCreature(Vector3.up * riseThisFrame);
         risenDistance += riseThisFrame;
     }
 
     private void ApplyInitialDrift(float deltaTime)
     {
-        transform.position += driftVelocity * deltaTime;
+        MoveCreature(driftVelocity * deltaTime);
         driftVelocity *= Mathf.Exp(-driftDamping * deltaTime);
     }
 
@@ -313,7 +312,7 @@ public sealed class FireBubble : Creature
         float currentSwayOffset = CalculateSwayOffset(elapsedTime);
         float swayDelta = currentSwayOffset - previousSwayOffset;
 
-        transform.position += swayDirection * swayDelta;
+        MoveCreature(swayDirection * swayDelta);
         previousSwayOffset = currentSwayOffset;
     }
 
@@ -325,7 +324,7 @@ public sealed class FireBubble : Creature
 
     private void RotateSlowly(float deltaTime)
     {
-        transform.Rotate(Vector3.up, rotationSpeed * deltaTime, Space.World);
+        FaceCreature(Quaternion.AngleAxis(rotationSpeed * deltaTime, Vector3.up) * transform.rotation);
     }
 
     /// <summary>
