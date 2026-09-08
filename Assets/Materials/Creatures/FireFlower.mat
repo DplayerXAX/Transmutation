@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: FireBubble
-  m_Shader: {fileID: 4800000, guid: 6da348fc57925a94ba3298970190c835, type: 3}
+  m_Name: FireFlower
+  m_Shader: {fileID: 4800000, guid: 5c0071e8d1a44afdab3aee053face9d1, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -26,10 +26,17 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BaseAlpha: 0.74
+    - _BaseAlpha: 1
+    - _Growth: 0
+    - _LineStretch: 100
+    - _LineWarp: 1.1
     - _StaticContrast: 4
-    - _StaticScale: 17
-    - _StaticSpeed: 60
-    m_Colors: []
+    - _StaticScale: 8
+    - _StaticSpeed: 5.8
+    - _WarpFrequency: 1.4
+    - _WaveDetail: 0.5
+    - _WaveSpeed: 0.59
+    m_Colors:
+    - _GrowthDirection: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

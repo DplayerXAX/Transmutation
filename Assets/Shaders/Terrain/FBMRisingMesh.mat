@@ -34,20 +34,20 @@ Material:
     m_Ints: []
     m_Floats:
     - _ColorSoftness: 0.3
-    - _EdgeWidth: 0.17
-    - _Frequency: 2.74
+    - _EdgeWidth: 0.066
+    - _Frequency: 3.22
     - _GroundGray: 1
-    - _Motion: 0.58
+    - _Motion: 0.504
     - _PeakGray: 0
     - _Phase: 0
     - _Posterize: 2
-    - _RiseHeight: 1
-    - _Roughness: 0.132
+    - _RiseHeight: 0.2
+    - _Roughness: 0.187
     - _SideGray: 0.45
     - _Speed: 2
     - _Terracing: 0.59
     - _TerrainMode: 0
-    - _Threshold: 0.532
+    - _Threshold: 0.62
     - _Warp: 4
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}

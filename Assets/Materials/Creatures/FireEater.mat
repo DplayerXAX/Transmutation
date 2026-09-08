@@ -7,18 +7,17 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: FireBubble
-  m_Shader: {fileID: 4800000, guid: 6da348fc57925a94ba3298970190c835, type: 3}
+  m_Name: FireEater
+  m_Shader: {fileID: 4800000, guid: 14e6a7a26b9840f7b6f14ad3869cb315, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
-  m_LightmapFlags: 2
-  m_EnableInstancingVariants: 1
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
-  stringTagMap:
-    RenderType: Transparent
+  stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -26,10 +25,19 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BaseAlpha: 0.74
-    - _StaticContrast: 4
-    - _StaticScale: 17
-    - _StaticSpeed: 60
+    - _CellDensity: 6
+    - _DotAmount: 0.571
+    - _DotSize: 0.48
+    - _EdgeSoftness: 0
+    - _GroundGray: 0.932
+    - _InkGray: 0
+    - _Motion: 1
+    - _PlateBlend: 0.661
+    - _SeamWidth: 0.048
+    - _Seed: 0
+    - _Speed: 3
+    - _Variation: 0.369
+    - _Warp: 0.21
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
