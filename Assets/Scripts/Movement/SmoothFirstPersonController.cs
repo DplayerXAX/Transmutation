@@ -27,6 +27,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Header("Feature Toggles")]
     [SerializeField] private bool allowCrouch;
     [SerializeField] private bool allowDoubleJump;
+    [Tooltip("When enabled, jump ignores the grounded check (can jump while airborne, still respects jump cooldown).")]
+    [SerializeField] private bool allowUngroundedJump;
     [SerializeField] private bool allowSliding;
     [SerializeField] private bool enableCameraFovAndTilt;
 
@@ -63,6 +65,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Header("Ground Check — FullMovement Values")]
     [SerializeField] private float playerHeight = 2f;
     [SerializeField] private LayerMask whatIsGround;
+    [Tooltip("How far the ground BoxCast travels downward from its origin.")]
+    [SerializeField] private float groundCheckDistance = 0.2f;
+    [Tooltip("Half-extents of the ground BoxCast. Keep Y thin; X/Z slightly smaller than the player collider.")]
+    [SerializeField] private Vector3 groundCheckHalfExtents = new Vector3(0.35f, 0.05f, 0.35f);
+    [Tooltip("Extra vertical offset added on top of the feet-centered origin (-playerHeight/2 + halfExtents.y).")]
+    [SerializeField] private float groundCheckOriginYOffset = 0f;
 
     [Header("Slope Handling — FullMovement Values")]
     [SerializeField] private float maxSlopeAngle = 40f;
@@ -185,11 +193,26 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void GroundCheck()
     {
-        grounded = Physics.Raycast(
-            transform.position,
+        grounded = CastGround(out _);
+    }
+
+    private Vector3 GetGroundCheckOrigin()
+    {
+        float feetY = -playerHeight * 0.5f + groundCheckHalfExtents.y + groundCheckOriginYOffset;
+        return transform.position + Vector3.up * feetY;
+    }
+
+    private bool CastGround(out RaycastHit hit)
+    {
+        return Physics.BoxCast(
+            GetGroundCheckOrigin(),
+            groundCheckHalfExtents,
             Vector3.down,
-            playerHeight * 0.5f + 0.2f,
-            whatIsGround);
+            out hit,
+            Quaternion.identity,
+            groundCheckDistance,
+            whatIsGround,
+            QueryTriggerInteraction.Ignore);
     }
 
     private void ReadMovementInput()
@@ -205,7 +228,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         horizontalInput = ReadAxis(keyboard, Key.A, Key.D);
         verticalInput = ReadAxis(keyboard, Key.S, Key.W);
 
-        if (keyboard[jumpKey].isPressed && readyToJump && grounded)
+        if (keyboard[jumpKey].isPressed && readyToJump && (grounded || allowUngroundedJump))
         {
             readyToJump = false;
             Jump();
@@ -490,7 +513,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public bool OnSlope()
     {
-        if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, playerHeight * 0.5f + 0.2f) && grounded)
+        if (CastGround(out slopeHit) && grounded)
         {
             float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
             if (angle < maxSlopeAngle && angle != 0f)
@@ -554,5 +577,26 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private static float NormalizeAngle(float angle)
     {
         return angle > 180f ? angle - 360f : angle;
+    }
+
+    private void OnValidate()
+    {
+        playerHeight = Mathf.Max(0.1f, playerHeight);
+        groundCheckDistance = Mathf.Max(0.01f, groundCheckDistance);
+        groundCheckHalfExtents.x = Mathf.Max(0.01f, groundCheckHalfExtents.x);
+        groundCheckHalfExtents.y = Mathf.Max(0.01f, groundCheckHalfExtents.y);
+        groundCheckHalfExtents.z = Mathf.Max(0.01f, groundCheckHalfExtents.z);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Vector3 origin = Application.isPlaying ? GetGroundCheckOrigin()
+            : transform.position + Vector3.up * (-playerHeight * 0.5f + groundCheckHalfExtents.y + groundCheckOriginYOffset);
+        Vector3 end = origin + Vector3.down * groundCheckDistance;
+
+        Gizmos.color = grounded ? new Color(0.2f, 1f, 0.35f, 0.9f) : new Color(1f, 0.55f, 0.15f, 0.9f);
+        Gizmos.DrawWireCube(origin, groundCheckHalfExtents * 2f);
+        Gizmos.DrawWireCube(end, groundCheckHalfExtents * 2f);
+        Gizmos.DrawLine(origin, end);
     }
 }

@@ -14,11 +14,13 @@ public class MarchingCubesChunk : MonoBehaviour
 	MeshFilter meshFilter;
 	MeshCollider meshCollider;
 	Mesh mesh;
+	bool collidersEnabled = true;
 
-	public void Initialize(Vector3Int coord, Material material, int layer)
+	public void Initialize(Vector3Int coord, Material material, int layer, bool enableColliders)
 	{
 		Coord = coord;
 		Dirty = true;
+		collidersEnabled = enableColliders;
 		gameObject.hideFlags = HideFlags.DontSave;
 		gameObject.layer = layer;
 		gameObject.name = $"Chunk_{coord.x}_{coord.y}_{coord.z}";
@@ -36,10 +38,14 @@ public class MarchingCubesChunk : MonoBehaviour
 			mesh = new Mesh { name = gameObject.name };
 			mesh.hideFlags = HideFlags.DontSave;
 		}
+
+		ApplyColliderState();
 	}
 
-	public void ApplyMesh(List<Vector3> vertices, List<int> triangles)
+	public void ApplyMesh(List<Vector3> vertices, List<int> triangles, bool enableColliders)
 	{
+		collidersEnabled = enableColliders;
+
 		if (meshFilter == null)
 		{
 			meshFilter = GetComponent<MeshFilter>();
@@ -63,9 +69,41 @@ public class MarchingCubesChunk : MonoBehaviour
 		mesh.RecalculateBounds();
 
 		meshFilter.sharedMesh = mesh;
-		meshCollider.sharedMesh = null;
-		meshCollider.sharedMesh = vertices.Count > 0 ? mesh : null;
+		ApplyColliderState();
 		Dirty = false;
+	}
+
+	/// <summary>Enable or disable this chunk's MeshCollider without rebuilding the render mesh.</summary>
+	public void SetCollidersEnabled(bool enableColliders)
+	{
+		collidersEnabled = enableColliders;
+		ApplyColliderState();
+	}
+
+	void ApplyColliderState()
+	{
+		if (meshCollider == null)
+		{
+			meshCollider = GetComponent<MeshCollider>();
+		}
+
+		if (meshCollider == null)
+		{
+			return;
+		}
+
+		if (!collidersEnabled)
+		{
+			meshCollider.sharedMesh = null;
+			meshCollider.enabled = false;
+			return;
+		}
+
+		Mesh renderMesh = meshFilter != null ? meshFilter.sharedMesh : mesh;
+		bool hasTriangles = renderMesh != null && renderMesh.vertexCount > 0;
+		meshCollider.enabled = true;
+		meshCollider.sharedMesh = null;
+		meshCollider.sharedMesh = hasTriangles ? renderMesh : null;
 	}
 
 	void OnDestroy()

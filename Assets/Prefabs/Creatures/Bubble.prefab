@@ -31,9 +31,10 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 23.17, y: -80.81, z: 1.47}
-  m_LocalScale: {x: 0.60126185, y: 0.60126185, z: 0.60126185}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 1
+  m_Children:
+  - {fileID: 6960998702909440734}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &2063951176150548884
@@ -59,9 +60,12 @@ MonoBehaviour:
   creatureName: Fire Bubble
   simulationEnabled: 1
   heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
   upwardSpeed: 0.2
-  minimumRiseDistance: 0.75
-  maximumRiseDistance: 1.75
+  fallStartWorldY: 10
   swayDistance: 1.25
   swayFrequency: 0.22
   rotationSpeed: 20
@@ -90,7 +94,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1877137198347345606}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -180,3 +184,52 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+--- !u!1 &4634989449379782267
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6960998702909440734}
+  - component: {fileID: 3353290112592412923}
+  m_Layer: 0
+  m_Name: DensitySphereOverlay (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6960998702909440734
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4634989449379782267}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 1
+  m_Children: []
+  m_Father: {fileID: 3580256470100839556}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3353290112592412923
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4634989449379782267}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
+  terrain: {fileID: 0}
+  radius: 0.5
+  injectRate: 0.25
+  maxDensity: 0.5
+  gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}

@@ -25,6 +25,9 @@ public class MarchingCubesVolume : MonoBehaviour
 	[Tooltip("Material assigned to lazily created chunk renderers.")]
 	[SerializeField] Material chunkMaterial;
 
+	[Tooltip("When off, chunk MeshColliders are cleared/disabled (visual mesh only). Useful if Volume is parented under a Dynamic Rigidbody.")]
+	[SerializeField] bool generateChunkColliders = true;
+
 	[Tooltip("When grid size changes in the Inspector, reset density to zeros and clear chunks.")]
 	[SerializeField] bool resetOnValidate = true;
 
@@ -37,6 +40,12 @@ public class MarchingCubesVolume : MonoBehaviour
 
 	[Tooltip("Densities with |d| <= this are treated as 0 and skipped during decay.")]
 	[SerializeField] float densityEpsilon = 0.0001f;
+
+	[Tooltip("Force every sample on the volume shell to a large negative density so the isosurface never reaches the grid edge.")]
+	[SerializeField] bool forceBoundaryEmpty = true;
+
+	[Tooltip("Effective density used for shell samples when Force Boundary Empty is on. Keep strongly negative (positive = solid).")]
+	[SerializeField] float boundaryDensity = -1e6f;
 
 	[Header("Gizmos")]
 	[Tooltip("Always draw the density volume bounds in the Scene view.")]
@@ -54,6 +63,45 @@ public class MarchingCubesVolume : MonoBehaviour
 	public int NumPointsPerAxis => numPointsPerAxis;
 	public float Spacing => spacing;
 	public int ChunkSizeCubes => chunkSizeCubes;
+
+	/// <summary>Half-size of the grid along one axis in local units.</summary>
+	public float GridHalfExtent => (numPointsPerAxis - 1) * spacing * 0.5f;
+
+	/// <summary>
+	/// Sample index (0..N-1) → local position, with the grid centered on this transform.
+	/// </summary>
+	public Vector3 IndexToLocal(int x, int y, int z)
+	{
+		float half = GridHalfExtent;
+		return new Vector3(x, y, z) * spacing - new Vector3(half, half, half);
+	}
+
+	/// <summary>
+	/// Convert a local-space axis-aligned sphere/box into clamped sample indices.
+	/// </summary>
+	void LocalBoundsToIndices(
+		Vector3 localCenter,
+		float localRadius,
+		out int minX, out int maxX,
+		out int minY, out int maxY,
+		out int minZ, out int maxZ)
+	{
+		float half = GridHalfExtent;
+
+		minX = Mathf.FloorToInt((localCenter.x - localRadius + half) / spacing);
+		maxX = Mathf.CeilToInt((localCenter.x + localRadius + half) / spacing);
+		minY = Mathf.FloorToInt((localCenter.y - localRadius + half) / spacing);
+		maxY = Mathf.CeilToInt((localCenter.y + localRadius + half) / spacing);
+		minZ = Mathf.FloorToInt((localCenter.z - localRadius + half) / spacing);
+		maxZ = Mathf.CeilToInt((localCenter.z + localRadius + half) / spacing);
+
+		minX = Mathf.Clamp(minX, 0, numPointsPerAxis - 1);
+		maxX = Mathf.Clamp(maxX, 0, numPointsPerAxis - 1);
+		minY = Mathf.Clamp(minY, 0, numPointsPerAxis - 1);
+		maxY = Mathf.Clamp(maxY, 0, numPointsPerAxis - 1);
+		minZ = Mathf.Clamp(minZ, 0, numPointsPerAxis - 1);
+		maxZ = Mathf.Clamp(maxZ, 0, numPointsPerAxis - 1);
+	}
 
 	/// <summary>
 	/// Global density field. Starts at 0.
@@ -133,16 +181,22 @@ public class MarchingCubesVolume : MonoBehaviour
 		decaySpeed = Mathf.Max(0f, decaySpeed);
 		simulationInterval = Mathf.Max(0.01f, simulationInterval);
 		densityEpsilon = Mathf.Max(0f, densityEpsilon);
-
-#if UNITY_EDITOR
-		if (!resetOnValidate || !isActiveAndEnabled)
+		if (boundaryDensity >= 0f)
 		{
-			return;
+			boundaryDensity = -1e6f;
 		}
 
+#if UNITY_EDITOR
 		UnityEditor.EditorApplication.delayCall += () =>
 		{
 			if (this == null)
+			{
+				return;
+			}
+
+			ApplyColliderSettingToExistingChunks();
+
+			if (!resetOnValidate || !isActiveAndEnabled)
 			{
 				return;
 			}
@@ -163,7 +217,20 @@ public class MarchingCubesVolume : MonoBehaviour
 			InitializeDensity();
 			DisableRootMeshComponents();
 		};
+#else
+		ApplyColliderSettingToExistingChunks();
 #endif
+	}
+
+	void ApplyColliderSettingToExistingChunks()
+	{
+		foreach (KeyValuePair<Vector3Int, MarchingCubesChunk> pair in chunks)
+		{
+			if (pair.Value != null)
+			{
+				pair.Value.SetCollidersEnabled(generateChunkColliders);
+			}
+		}
 	}
 
 	public void RegisterOverlay(DensitySphereOverlay overlay)
@@ -221,8 +288,18 @@ public class MarchingCubesVolume : MonoBehaviour
 		RebuildDirtyChunks();
 	}
 
+	static bool IsBoundarySample(int x, int y, int z, int n)
+	{
+		return x == 0 || y == 0 || z == 0 || x == n - 1 || y == n - 1 || z == n - 1;
+	}
+
 	float GetEffectiveDensity(int x, int y, int z)
 	{
+		if (forceBoundaryEmpty && IsBoundarySample(x, y, z, numPointsPerAxis))
+		{
+			return boundaryDensity;
+		}
+
 		return densities[x, y, z];
 	}
 
@@ -251,6 +328,11 @@ public class MarchingCubesVolume : MonoBehaviour
 			{
 				for (int z = 0; z < numPointsPerAxis; z++)
 				{
+					if (forceBoundaryEmpty && IsBoundarySample(x, y, z, numPointsPerAxis))
+					{
+						continue;
+					}
+
 					float d = densities[x, y, z];
 					if (Mathf.Abs(d) <= densityEpsilon)
 					{
@@ -334,19 +416,12 @@ public class MarchingCubesVolume : MonoBehaviour
 		float scale = Mathf.Max(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z);
 		float localRadius = worldRadius / Mathf.Max(0.0001f, scale);
 
-		int minX = Mathf.FloorToInt((localCenter.x - localRadius) / spacing);
-		int maxX = Mathf.CeilToInt((localCenter.x + localRadius) / spacing);
-		int minY = Mathf.FloorToInt((localCenter.y - localRadius) / spacing);
-		int maxY = Mathf.CeilToInt((localCenter.y + localRadius) / spacing);
-		int minZ = Mathf.FloorToInt((localCenter.z - localRadius) / spacing);
-		int maxZ = Mathf.CeilToInt((localCenter.z + localRadius) / spacing);
-
-		minX = Mathf.Clamp(minX, 0, numPointsPerAxis - 1);
-		maxX = Mathf.Clamp(maxX, 0, numPointsPerAxis - 1);
-		minY = Mathf.Clamp(minY, 0, numPointsPerAxis - 1);
-		maxY = Mathf.Clamp(maxY, 0, numPointsPerAxis - 1);
-		minZ = Mathf.Clamp(minZ, 0, numPointsPerAxis - 1);
-		maxZ = Mathf.Clamp(maxZ, 0, numPointsPerAxis - 1);
+		LocalBoundsToIndices(
+			localCenter,
+			localRadius,
+			out int minX, out int maxX,
+			out int minY, out int maxY,
+			out int minZ, out int maxZ);
 
 		bool any = false;
 		int dirtyMinX = numPointsPerAxis;
@@ -362,7 +437,12 @@ public class MarchingCubesVolume : MonoBehaviour
 			{
 				for (int z = minZ; z <= maxZ; z++)
 				{
-					Vector3 localSample = new Vector3(x, y, z) * spacing;
+					if (forceBoundaryEmpty && IsBoundarySample(x, y, z, numPointsPerAxis))
+					{
+						continue;
+					}
+
+					Vector3 localSample = IndexToLocal(x, y, z);
 					Vector3 worldSample = transform.TransformPoint(localSample);
 					float falloff = overlay.EvaluateFalloff(worldSample);
 					if (falloff <= 0f)
@@ -428,19 +508,12 @@ public class MarchingCubesVolume : MonoBehaviour
 
 		Vector3 localPosition = transform.InverseTransformPoint(worldPosition);
 
-		int minX = Mathf.FloorToInt((localPosition.x - brushRadius) / spacing);
-		int maxX = Mathf.CeilToInt((localPosition.x + brushRadius) / spacing);
-		int minY = Mathf.FloorToInt((localPosition.y - brushRadius) / spacing);
-		int maxY = Mathf.CeilToInt((localPosition.y + brushRadius) / spacing);
-		int minZ = Mathf.FloorToInt((localPosition.z - brushRadius) / spacing);
-		int maxZ = Mathf.CeilToInt((localPosition.z + brushRadius) / spacing);
-
-		minX = Mathf.Clamp(minX, 0, numPointsPerAxis - 1);
-		maxX = Mathf.Clamp(maxX, 0, numPointsPerAxis - 1);
-		minY = Mathf.Clamp(minY, 0, numPointsPerAxis - 1);
-		maxY = Mathf.Clamp(maxY, 0, numPointsPerAxis - 1);
-		minZ = Mathf.Clamp(minZ, 0, numPointsPerAxis - 1);
-		maxZ = Mathf.Clamp(maxZ, 0, numPointsPerAxis - 1);
+		LocalBoundsToIndices(
+			localPosition,
+			brushRadius,
+			out int minX, out int maxX,
+			out int minY, out int maxY,
+			out int minZ, out int maxZ);
 
 		for (int x = minX; x <= maxX; x++)
 		{
@@ -448,7 +521,12 @@ public class MarchingCubesVolume : MonoBehaviour
 			{
 				for (int z = minZ; z <= maxZ; z++)
 				{
-					Vector3 samplePosition = new Vector3(x, y, z) * spacing;
+					if (forceBoundaryEmpty && IsBoundarySample(x, y, z, numPointsPerAxis))
+					{
+						continue;
+					}
+
+					Vector3 samplePosition = IndexToLocal(x, y, z);
 					float distance = Vector3.Distance(samplePosition, localPosition);
 					if (distance > brushRadius)
 					{
@@ -575,19 +653,12 @@ public class MarchingCubesVolume : MonoBehaviour
 		float scale = Mathf.Max(transform.lossyScale.x, transform.lossyScale.y, transform.lossyScale.z);
 		float localRadius = worldRadius / Mathf.Max(0.0001f, scale);
 
-		int minX = Mathf.FloorToInt((localCenter.x - localRadius) / spacing);
-		int maxX = Mathf.CeilToInt((localCenter.x + localRadius) / spacing);
-		int minY = Mathf.FloorToInt((localCenter.y - localRadius) / spacing);
-		int maxY = Mathf.CeilToInt((localCenter.y + localRadius) / spacing);
-		int minZ = Mathf.FloorToInt((localCenter.z - localRadius) / spacing);
-		int maxZ = Mathf.CeilToInt((localCenter.z + localRadius) / spacing);
-
-		minX = Mathf.Clamp(minX, 0, numPointsPerAxis - 1);
-		maxX = Mathf.Clamp(maxX, 0, numPointsPerAxis - 1);
-		minY = Mathf.Clamp(minY, 0, numPointsPerAxis - 1);
-		maxY = Mathf.Clamp(maxY, 0, numPointsPerAxis - 1);
-		minZ = Mathf.Clamp(minZ, 0, numPointsPerAxis - 1);
-		maxZ = Mathf.Clamp(maxZ, 0, numPointsPerAxis - 1);
+		LocalBoundsToIndices(
+			localCenter,
+			localRadius,
+			out int minX, out int maxX,
+			out int minY, out int maxY,
+			out int minZ, out int maxZ);
 
 		MarkSamplesDirty(minX, maxX, minY, maxY, minZ, maxZ);
 	}
@@ -672,7 +743,7 @@ public class MarchingCubesVolume : MonoBehaviour
 		go.transform.localScale = Vector3.one;
 
 		var chunk = go.AddComponent<MarchingCubesChunk>();
-		chunk.Initialize(coord, material, gameObject.layer);
+		chunk.Initialize(coord, material, gameObject.layer, generateChunkColliders);
 		chunks[coord] = chunk;
 		return chunk;
 	}
@@ -724,7 +795,7 @@ public class MarchingCubesVolume : MonoBehaviour
 			}
 		}
 
-		chunk.ApplyMesh(vertices, triangles);
+		chunk.ApplyMesh(vertices, triangles, generateChunkColliders);
 	}
 
 	void ProcessCube(
@@ -739,7 +810,7 @@ public class MarchingCubesVolume : MonoBehaviour
 		for (int i = 0; i < 8; i++)
 		{
 			Vector3Int sampleCoord = cubePosition + CornerOffsets[i];
-			cornerPositions[i] = new Vector3(sampleCoord.x, sampleCoord.y, sampleCoord.z) * spacing;
+			cornerPositions[i] = IndexToLocal(sampleCoord.x, sampleCoord.y, sampleCoord.z);
 			cornerDensities[i] = GetEffectiveDensity(sampleCoord.x, sampleCoord.y, sampleCoord.z);
 		}
 
@@ -832,7 +903,7 @@ public class MarchingCubesVolume : MonoBehaviour
 		{
 			float extent = (numPointsPerAxis - 1) * spacing;
 			Gizmos.color = volumeGizmoColor;
-			Gizmos.DrawWireCube(Vector3.one * (extent * 0.5f), Vector3.one * extent);
+			Gizmos.DrawWireCube(Vector3.zero, Vector3.one * extent);
 		}
 
 		if (!drawChunkBounds)
@@ -857,8 +928,8 @@ public class MarchingCubesVolume : MonoBehaviour
 			int y1 = Mathf.Min(y0 + chunkSizeCubes, Mathf.Max(1, numPointsPerAxis - 1));
 			int z1 = Mathf.Min(z0 + chunkSizeCubes, Mathf.Max(1, numPointsPerAxis - 1));
 
-			Vector3 min = new Vector3(x0, y0, z0) * spacing;
-			Vector3 max = new Vector3(x1, y1, z1) * spacing;
+			Vector3 min = IndexToLocal(x0, y0, z0);
+			Vector3 max = IndexToLocal(x1, y1, z1);
 			Gizmos.DrawWireCube((min + max) * 0.5f, max - min);
 		}
 	}

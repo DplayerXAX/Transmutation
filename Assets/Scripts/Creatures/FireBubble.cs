@@ -19,13 +19,8 @@ public sealed class FireBubble : Creature
     [Min(0f)]
     [SerializeField] private float upwardSpeed = 0.5f;
 
-    [Tooltip("Minimum height this Bubble rises before it stops moving upward.")]
-    [Min(0f)]
-    [SerializeField] private float minimumRiseDistance = 0.75f;
-
-    [Tooltip("Maximum height this Bubble rises before it stops moving upward.")]
-    [Min(0f)]
-    [SerializeField] private float maximumRiseDistance = 1.75f;
+    [Tooltip("World-space Y height at which this Bubble stops rising and begins falling under gravity.")]
+    [SerializeField] private float fallStartWorldY = 10f;
 
     [Tooltip("Maximum horizontal distance from the Bubble's central upward path.")]
     [Min(0f)]
@@ -99,8 +94,7 @@ public sealed class FireBubble : Creature
     private float swayPhase;
     private float previousSwayOffset;
     private float elapsedTime;
-    private float targetRiseDistance;
-    private float risenDistance;
+    private bool descending;
     private Vector3 driftVelocity;
     private float visualFlowTime;
     private MaterialPropertyBlock visualProperties;
@@ -134,10 +128,7 @@ public sealed class FireBubble : Creature
         swayDirection = new Vector3(-windDirection.z, 0f, windDirection.x);
         swayPhase = Random.Range(0f, Mathf.PI * 2f);
         previousSwayOffset = CalculateSwayOffset(0f);
-
-        float minimumHeight = Mathf.Min(minimumRiseDistance, maximumRiseDistance);
-        float maximumHeight = Mathf.Max(minimumRiseDistance, maximumRiseDistance);
-        targetRiseDistance = Random.Range(minimumHeight, maximumHeight);
+        descending = false;
 
         float minimumSpeed = Mathf.Min(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
         float maximumSpeed = Mathf.Max(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
@@ -157,8 +148,12 @@ public sealed class FireBubble : Creature
         elapsedTime += deltaTime;
 
         FloatUpward(deltaTime);
-        ApplyInitialDrift(deltaTime);
-        ApplySway();
+        if (!descending)
+        {
+            ApplyInitialDrift(deltaTime);
+            ApplySway();
+        }
+
         RotateSlowly(deltaTime);
         CoolDown(deltaTime);
         UpdateHeatVisual(deltaTime);
@@ -271,9 +266,7 @@ public sealed class FireBubble : Creature
     private void BecomeInanimate()
     {
         ChangeState(BubbleState.Inanimate);
-
-        SetMovementPhysics(false, true);
-        if (!IsCarried) bubbleBody.linearVelocity = driftVelocity;
+        StartFalling();
     }
 
     /// <summary>Changes the Bubble's current behavior state.</summary>
@@ -287,18 +280,60 @@ public sealed class FireBubble : Creature
         currentState = nextState;
     }
 
-    private void FloatUpward(float deltaTime)
+    /// <summary>
+    /// Stops scripted float motion and enables gravity so the Bubble descends.
+    /// Heat cooling and interaction remain active while still Floating.
+    /// </summary>
+    private void StartFalling()
     {
-        float remainingRise = targetRiseDistance - risenDistance;
-
-        if (remainingRise <= 0f)
+        if (descending)
         {
             return;
         }
 
-        float riseThisFrame = Mathf.Min(upwardSpeed * deltaTime, remainingRise);
+        descending = true;
+        SetMovementPhysics(false, true);
+        if (!IsCarried && bubbleBody != null)
+        {
+            bubbleBody.linearVelocity = driftVelocity;
+        }
+    }
+
+    private void FloatUpward(float deltaTime)
+    {
+        if (descending)
+        {
+            return;
+        }
+
+        float currentY = transform.position.y;
+        if (currentY >= fallStartWorldY)
+        {
+            StartFalling();
+            return;
+        }
+
+        float riseThisFrame = Mathf.Min(upwardSpeed * deltaTime, fallStartWorldY - currentY);
+        if (riseThisFrame <= 0f)
+        {
+            StartFalling();
+            return;
+        }
+
         MoveCreature(Vector3.up * riseThisFrame);
-        risenDistance += riseThisFrame;
+
+        if (transform.position.y >= fallStartWorldY)
+        {
+            // Snap to the ceiling so we do not overshoot when frame spikes are large.
+            Vector3 position = transform.position;
+            position.y = fallStartWorldY;
+            if (!IsCarried)
+            {
+                transform.position = position;
+            }
+
+            StartFalling();
+        }
     }
 
     private void ApplyInitialDrift(float deltaTime)
@@ -388,20 +423,25 @@ public sealed class FireBubble : Creature
         }
     }
 
-    /// <summary>Shows the current too-hot burst radius while the Bubble is selected.</summary>
+    /// <summary>Shows the fall-start height and current too-hot burst radius while selected.</summary>
     private void OnDrawGizmosSelected()
     {
         float burstRadius = Heat / Mathf.Max(0.001f, burstHeatDropPerMetre);
 
         Gizmos.color = new Color(1f, 0.15f, 0f, 0.3f);
         Gizmos.DrawWireSphere(transform.position, burstRadius);
+
+        Vector3 center = transform.position;
+        center.y = fallStartWorldY;
+        Gizmos.color = new Color(0.3f, 0.85f, 1f, 0.9f);
+        Gizmos.DrawWireCube(center, new Vector3(2f, 0.02f, 2f));
+        Gizmos.DrawLine(transform.position, center);
     }
 
     private void OnValidate()
     {
         coolingPerSecond = Mathf.Max(0f, coolingPerSecond);
-        minimumRiseDistance = Mathf.Max(0f, minimumRiseDistance);
-        maximumRiseDistance = Mathf.Max(0f, maximumRiseDistance);
+        upwardSpeed = Mathf.Max(0f, upwardSpeed);
         interactionMinimumHeat = Mathf.Max(0f, interactionMinimumHeat);
         interactionMaximumHeat = Mathf.Max(interactionMinimumHeat, interactionMaximumHeat);
         burstHeatDropPerMetre = Mathf.Max(0.001f, burstHeatDropPerMetre);
