@@ -38,11 +38,11 @@ Material:
     - _FloorHeight: -5
     - _FloorTravel: 0.96
     - _FloorTriplanarSharpness: 1
-    - _FloorViewFalloff: 0.2
+    - _FloorViewFalloff: 0.15
     - _FloorViewInfluence: 1
     - _PolarScale: 0.02
-    - _RayPhaseProximityBoost: 50
-    - _RayPhaseProximityFalloff: 0.15
+    - _RayPhaseProximityBoost: 100
+    - _RayPhaseProximityFalloff: 0.12
     - _RayPhaseScale: 29.25
     - _RaySpeed: 1
     - _RingDistort: 4

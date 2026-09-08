@@ -53,6 +53,79 @@ public class MarchingCubesSphere : MonoBehaviour
 	/// </summary>
 	float[,,] densities;
 
+	readonly List<DensitySphereOverlay> densityOverlays = new List<DensitySphereOverlay>();
+
+	public void RegisterOverlay(DensitySphereOverlay overlay)
+	{
+		if (overlay == null || densityOverlays.Contains(overlay))
+		{
+			return;
+		}
+
+		densityOverlays.Add(overlay);
+		RequestMeshUpdate();
+	}
+
+	public void UnregisterOverlay(DensitySphereOverlay overlay)
+	{
+		if (overlay == null)
+		{
+			return;
+		}
+
+		if (densityOverlays.Remove(overlay))
+		{
+			RequestMeshUpdate();
+		}
+	}
+
+	/// <summary>
+	/// Rebuild the mesh so overlay / density changes become visible.
+	/// </summary>
+	public void RequestMeshUpdate()
+	{
+		if (!isActiveAndEnabled)
+		{
+			return;
+		}
+
+		if (densities == null)
+		{
+			InitializeDensity();
+		}
+
+		GenerateMesh();
+	}
+
+	/// <summary>
+	/// Base densities[,,] plus any active spherical overlays at this sample.
+	/// Overlays do not write into the stored field.
+	/// </summary>
+	float GetEffectiveDensity(int x, int y, int z)
+	{
+		float value = densities[x, y, z];
+		if (densityOverlays.Count == 0)
+		{
+			return value;
+		}
+
+		Vector3 localSample = new Vector3(x, y, z) * spacing;
+		Vector3 worldSample = transform.TransformPoint(localSample);
+
+		for (int i = 0; i < densityOverlays.Count; i++)
+		{
+			DensitySphereOverlay overlay = densityOverlays[i];
+			if (overlay == null || !overlay.isActiveAndEnabled)
+			{
+				continue;
+			}
+
+			value += overlay.EvaluateOffset(worldSample);
+		}
+
+		return value;
+	}
+
 	// -------------------------------------------------------------------------
 	// Corner numbering (matches the educational diagram and standard MC tables):
 	//
@@ -321,12 +394,12 @@ public class MarchingCubesSphere : MonoBehaviour
 		var cornerPositions = new Vector3[8];
 		var cornerDensities = new float[8];
 
-		// Sample Point = position + stored density at each of the 8 cube corners.
+		// Sample Point = position + effective density (base + overlays) at each corner.
 		for (int i = 0; i < 8; i++)
 		{
 			Vector3Int sampleCoord = cubePosition + CornerOffsets[i];
 			cornerPositions[i] = new Vector3(sampleCoord.x, sampleCoord.y, sampleCoord.z) * spacing;
-			cornerDensities[i] = densities[sampleCoord.x, sampleCoord.y, sampleCoord.z];
+			cornerDensities[i] = GetEffectiveDensity(sampleCoord.x, sampleCoord.y, sampleCoord.z);
 		}
 
 		// cubeIndex is an 8-bit mask: bit i is set if corner i is inside (density > 0).
