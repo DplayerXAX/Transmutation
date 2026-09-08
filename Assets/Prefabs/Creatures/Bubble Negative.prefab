@@ -10,12 +10,11 @@ GameObject:
   m_Component:
   - component: {fileID: 3580256470100839556}
   - component: {fileID: 2063951176150548884}
-  - component: {fileID: 2077643943965342362}
   - component: {fileID: 8706553103238526404}
-  - component: {fileID: 4488284502573638848}
-  - component: {fileID: 4566537563883852650}
+  - component: {fileID: 5822673138804042119}
+  - component: {fileID: 6051108172106951639}
   m_Layer: 0
-  m_Name: Bubble
+  m_Name: Bubble Negative
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -31,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 23.17, y: -80.81, z: 1.47}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 3, y: 3, z: 3}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6960998702909440734}
@@ -45,48 +44,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1877137198347345606}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &2077643943965342362
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1877137198347345606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a0372bdefd2bcae43b41f9bae45bb335, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FireBubble
-  creatureName: Fire Bubble
-  simulationEnabled: 1
-  heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
-  upwardSpeed: 0.2
-  fallStartWorldY: 10
-  swayDistance: 1.25
-  swayFrequency: 0.22
-  rotationSpeed: 20
-  minimumInitialDriftSpeed: 0.8
-  maximumInitialDriftSpeed: 1.8
-  driftDamping: 0.45
-  coolingPerSecond: 1
-  interactionMinimumHeat: 13
-  interactionMaximumHeat: 17
-  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
-  burstHeatDropPerMetre: 1
-  burstReceiverLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  bubbleRenderer: {fileID: 8706553103238526404}
-  maximumVisualHeat: 25
-  maximumVisualFlowSpeed: 2
-  currentState: 0
-  bubbleBody: {fileID: 4566537563883852650}
-  bubbleCollider: {fileID: 4488284502573638848}
-  logPlayerInteraction: 1
 --- !u!23 &8706553103238526404
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -136,28 +93,20 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &4488284502573638848
-SphereCollider:
+--- !u!114 &5822673138804042119
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1877137198347345606}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &4566537563883852650
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e90d211ecf284b4c8a98e9388237abf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DestroyAfterSeconds
+  seconds: 10
+--- !u!54 &6051108172106951639
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -166,7 +115,7 @@ Rigidbody:
   m_GameObject: {fileID: 1877137198347345606}
   serializedVersion: 5
   m_Mass: 1
-  m_LinearDamping: 0
+  m_LinearDamping: 0.1
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
@@ -179,7 +128,7 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 1
+  m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 0
   m_Constraints: 0
@@ -229,7 +178,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DensityShapeOverlay
   terrain: {fileID: 0}
-  radius: 0.5
-  injectRate: 0.25
-  maxDensity: 0.5
+  shape: 0
+  radius: 1.5
+  boxHalfExtents: {x: 0.5, y: 0.5, z: 0.5}
+  height: 2
+  ellipsoidRadii: {x: 0.5, y: 1, z: 0.5}
+  injectRate: -0.25
+  maxDensity: 0
+  stampDensity: 1
   gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
