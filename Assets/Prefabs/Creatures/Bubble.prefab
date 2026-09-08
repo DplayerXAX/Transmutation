@@ -195,7 +195,7 @@ GameObject:
   - component: {fileID: 6960998702909440734}
   - component: {fileID: 3353290112592412923}
   m_Layer: 0
-  m_Name: DensitySphereOverlay (1)
+  m_Name: DensityShapeOverlay (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -227,7 +227,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
+  m_EditorClassIdentifier: Assembly-CSharp::DensityShapeOverlay
   terrain: {fileID: 0}
   radius: 0.5
   injectRate: 0.25

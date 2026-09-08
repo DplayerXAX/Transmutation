@@ -1,0 +1,11 @@
+---
+description: Do not edit Unity scene files unless the user explicitly asks
+alwaysApply: true
+---
+
+# No Scene Edits Unless Asked
+
+- Do **not** modify Unity scene files (`*.unity`) unless the user explicitly asks to change the scene.
+- Prefer code, prefabs, ScriptableObjects, or Inspector-facing defaults in scripts instead of baking changes into a scene.
+- If a rename/refactor would normally require updating scene YAML (e.g. component class rename), **do not** mass-edit scenes; leave scene fix-up to the user/Unity, or ask first.
+- Prefabs may be updated when they are the clear owner of the change; still avoid scenes by default.

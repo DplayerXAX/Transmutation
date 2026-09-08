@@ -109,7 +109,7 @@ public class MarchingCubesVolume : MonoBehaviour
 	/// </summary>
 	float[,,] densities;
 
-	readonly List<DensitySphereOverlay> densityOverlays = new List<DensitySphereOverlay>();
+	readonly List<DensityShapeOverlay> densityOverlays = new List<DensityShapeOverlay>();
 	readonly Dictionary<Vector3Int, MarchingCubesChunk> chunks = new Dictionary<Vector3Int, MarchingCubesChunk>();
 	readonly HashSet<MarchingCubesChunk> dirtyChunks = new HashSet<MarchingCubesChunk>();
 
@@ -233,7 +233,7 @@ public class MarchingCubesVolume : MonoBehaviour
 		}
 	}
 
-	public void RegisterOverlay(DensitySphereOverlay overlay)
+	public void RegisterOverlay(DensityShapeOverlay overlay)
 	{
 		if (overlay == null || densityOverlays.Contains(overlay))
 		{
@@ -243,7 +243,7 @@ public class MarchingCubesVolume : MonoBehaviour
 		densityOverlays.Add(overlay);
 	}
 
-	public void UnregisterOverlay(DensitySphereOverlay overlay)
+	public void UnregisterOverlay(DensityShapeOverlay overlay)
 	{
 		if (overlay == null)
 		{
@@ -392,7 +392,7 @@ public class MarchingCubesVolume : MonoBehaviour
 
 		for (int i = 0; i < densityOverlays.Count; i++)
 		{
-			DensitySphereOverlay overlay = densityOverlays[i];
+			DensityShapeOverlay overlay = densityOverlays[i];
 			if (overlay == null || !overlay.isActiveAndEnabled)
 			{
 				continue;
@@ -402,9 +402,9 @@ public class MarchingCubesVolume : MonoBehaviour
 		}
 	}
 
-	void InjectFromOverlay(DensitySphereOverlay overlay, float dt)
+	void InjectFromOverlay(DensityShapeOverlay overlay, float dt)
 	{
-		float worldRadius = overlay.Radius;
+		float worldRadius = overlay.GetWorldBoundsRadius();
 		float injectRate = overlay.InjectRate;
 		float maxDensity = overlay.MaxDensity;
 		if (worldRadius <= 0f || injectRate == 0f)
@@ -445,23 +445,37 @@ public class MarchingCubesVolume : MonoBehaviour
 					Vector3 localSample = IndexToLocal(x, y, z);
 					Vector3 worldSample = transform.TransformPoint(localSample);
 					float falloff = overlay.EvaluateFalloff(worldSample);
-					if (falloff <= 0f)
+					if (falloff <= 0f || !float.IsFinite(falloff))
 					{
 						continue;
 					}
 
 					float d = densities[x, y, z];
-					float next = d + injectRate * falloff * dt;
-					if (injectRate > 0f)
+					float next;
+					if (overlay.StampDensity)
 					{
-						next = Mathf.Min(next, maxDensity);
+						// Immediate shape stamp: density matches falloff * max each tick.
+						float target = injectRate > 0f
+							? maxDensity * falloff
+							: -maxDensity * falloff;
+						next = injectRate > 0f
+							? Mathf.Max(d, target)
+							: Mathf.Min(d, target);
 					}
 					else
 					{
-						next = Mathf.Max(next, -maxDensity);
+						next = d + injectRate * falloff * dt;
+						if (injectRate > 0f)
+						{
+							next = Mathf.Min(next, maxDensity);
+						}
+						else
+						{
+							next = Mathf.Max(next, -maxDensity);
+						}
 					}
 
-					if (Mathf.Abs(next - d) <= densityEpsilon)
+					if (!float.IsFinite(next) || Mathf.Abs(next - d) <= densityEpsilon)
 					{
 						continue;
 					}
