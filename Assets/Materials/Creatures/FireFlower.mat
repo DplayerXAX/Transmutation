@@ -27,7 +27,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BaseAlpha: 1
-    - _Growth: 0
+    - _Growth: 0.556
     - _LineStretch: 100
     - _LineWarp: 1.1
     - _StaticContrast: 4

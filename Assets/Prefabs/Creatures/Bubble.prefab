@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 8706553103238526404}
   - component: {fileID: 4488284502573638848}
   - component: {fileID: 4566537563883852650}
-  - component: {fileID: 7844946983442489255}
   m_Layer: 0
   m_Name: Bubble
   m_TagString: Untagged
@@ -67,15 +66,15 @@ MonoBehaviour:
   maximumCarryDistance: 8
   upwardSpeed: 0.5
   fallStartWorldY: 20
-  swayDistance: 8
-  swayFrequency: 0.3
-  rotationSpeed: 20
-  minimumInitialDriftSpeed: 0.8
-  maximumInitialDriftSpeed: 1.8
-  driftDamping: 0.45
-  lifetimeSeconds: 10
-  fireFlowerPrefab: {fileID: 0}
+  swayDistance: 0.35
+  swayFrequency: 0.15
+  rotationSpeed: 10
+  horizontalSpeed: 4
+  lifetimeSeconds: 20
+  fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
   inanimateToFlowerDelay: 10
+  stillSpeedThreshold: 0.05
+  stillPositionTolerance: 0.05
   bubbleRenderer: {fileID: 8706553103238526404}
   stillVisualHeat: 13
   maximumVisualHeat: 25
@@ -180,19 +179,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &7844946983442489255
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1877137198347345606}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8e90d211ecf284b4c8a98e9388237abf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DestroyAfterSeconds
-  seconds: 120
 --- !u!1 &4634989449379782267
 GameObject:
   m_ObjectHideFlags: 0

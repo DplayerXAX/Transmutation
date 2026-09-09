@@ -2,7 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// A Bubble produced by FireFlower.
-/// It floats for a fixed lifetime, becomes inanimate, then turns into a Fire Flower after a delay.
+/// Flies along one horizontal heading with gentle sway, then falls and becomes
+/// a Fire Flower after remaining still for the configured delay.
 /// </summary>
 [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
 public sealed class FireBubble : Creature
@@ -23,39 +24,43 @@ public sealed class FireBubble : Creature
 
     [Tooltip("Maximum horizontal distance from the Bubble's central upward path.")]
     [Min(0f)]
-    [SerializeField] private float swayDistance = 1.25f;
+    [SerializeField] private float swayDistance = 0.35f;
 
     [Tooltip("Number of complete side-to-side sway cycles per second.")]
     [Min(0f)]
-    [SerializeField] private float swayFrequency = 0.22f;
+    [SerializeField] private float swayFrequency = 0.15f;
 
     [SerializeField] private float rotationSpeed = 20f;
 
-    [Header("Wind Drift")]
-    [Tooltip("Minimum initial horizontal wind speed.")]
+    [Header("Horizontal Flight")]
+    [Tooltip("Constant horizontal speed. Each Bubble chooses one heading at spawn and keeps it throughout flight.")]
     [Min(0f)]
-    [SerializeField] private float minimumInitialDriftSpeed = 0.8f;
+    [SerializeField] private float horizontalSpeed = 1f;
 
-    [Tooltip("Maximum initial horizontal wind speed.")]
-    [Min(0f)]
-    [SerializeField] private float maximumInitialDriftSpeed = 1.8f;
-
-    [Tooltip("How quickly the initial wind loses strength. Lower values carry the Bubble farther.")]
-    [Min(0f)]
-    [SerializeField] private float driftDamping = 0.45f;
+    [Tooltip("Maximum flight acceleration. Limits how hard the Bubble pushes against obstacles.")]
+    [Min(0.01f)]
+    [SerializeField] private float flightAcceleration = 4f;
 
     [Header("Lifetime")]
-    [Tooltip("Seconds of floating before this Bubble becomes inanimate. Independent of Heat.")]
+    [Tooltip("Maximum flight time before falling. Reaching Fall Start World Y can end flight sooner. Independent of Heat.")]
     [Min(0f)]
-    [SerializeField] private float lifetimeSeconds = 10f;
+    [SerializeField] private float lifetimeSeconds = 20f;
 
     [Header("Flower Transform")]
-    [Tooltip("Fire Flower spawned after the inanimate wait. Independent of Heat.")]
+    [Tooltip("Fire Flower spawned after the fallen Bubble remains still. Independent of Heat.")]
     [SerializeField] private FireFlower fireFlowerPrefab;
 
-    [Tooltip("Seconds to wait after becoming inanimate before transforming into a Fire Flower.")]
+    [Tooltip("Consecutive seconds of stillness after falling before becoming a flower. Moving or carrying resets the timer.")]
     [Min(0f)]
     [SerializeField] private float inanimateToFlowerDelay = 10f;
+
+    [Tooltip("Linear speed below which physics jitter counts as still, in metres per second.")]
+    [Min(0f)]
+    [SerializeField] private float stillSpeedThreshold = 0.05f;
+
+    [Tooltip("Maximum movement from the resting position before the stillness timer resets, in metres.")]
+    [Min(0f)]
+    [SerializeField] private float stillPositionTolerance = 0.05f;
 
     [Header("Visual Heat")]
     [Tooltip("Renderer using the Fire Bubble Shader. The first child Renderer is used when left empty.")]
@@ -83,6 +88,8 @@ public sealed class FireBubble : Creature
     private float previousSwayOffset;
     private float elapsedTime;
     private float inanimateTimer;
+    private Vector3 restingPosition;
+    private bool transformationStarted;
     private bool descending;
     private Vector3 driftVelocity;
     private float visualFlowTime;
@@ -92,18 +99,22 @@ public sealed class FireBubble : Creature
     private static readonly int MaximumHeatShaderId = Shader.PropertyToID("_MaximumHeat");
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
-    /// <summary>Whether this Bubble's floating lifetime has ended and it can be eaten later.</summary>
+    /// <summary>Whether this Bubble has started falling and can be eaten.</summary>
     public bool IsInanimate => currentState == BubbleState.Inanimate;
 
-    /// <summary>Sets up random motion and keeps the floating Bubble outside gravity simulation.</summary>
+    /// <summary>Chooses a fixed heading and keeps the floating Bubble outside gravity simulation.</summary>
     protected override void InitializeCreature()
     {
         FindPhysicsReferences();
         FindVisualReferences();
 
         bubbleCollider.isTrigger = false;
-        bubbleBody.isKinematic = true;
+        bubbleCollider.enabled = true;
+        bubbleBody.isKinematic = false;
         bubbleBody.useGravity = false;
+        bubbleBody.detectCollisions = true;
+        bubbleBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        bubbleBody.interpolation = RigidbodyInterpolation.Interpolate;
 
         Vector2 randomDirection = Random.insideUnitCircle.normalized;
 
@@ -119,45 +130,48 @@ public sealed class FireBubble : Creature
         previousSwayOffset = CalculateSwayOffset(0f);
         descending = false;
 
-        float minimumSpeed = Mathf.Min(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
-        float maximumSpeed = Mathf.Max(minimumInitialDriftSpeed, maximumInitialDriftSpeed);
-        driftVelocity = windDirection * Random.Range(minimumSpeed, maximumSpeed);
+        driftVelocity = windDirection * horizontalSpeed;
+        restingPosition = bubbleBody.position;
 
         UpdateHeatVisual(0f);
     }
 
-    /// <summary>Updates floating lifetime, then the inanimate-to-flower countdown.</summary>
+    /// <summary>Updates visuals. Movement and resting use the physics timestep.</summary>
     protected override void TickCreature(float deltaTime)
     {
         if (currentState == BubbleState.Inanimate)
         {
-            TickInanimate(deltaTime);
-            return;
-        }
-
-        elapsedTime += deltaTime;
-
-        FloatUpward(deltaTime);
-        if (!descending)
-        {
-            ApplyInitialDrift(deltaTime);
-            ApplySway();
-        }
-
-        RotateSlowly(deltaTime);
-
-        if (elapsedTime >= lifetimeSeconds)
-        {
-            BecomeInanimate();
             return;
         }
 
         UpdateHeatVisual(deltaTime);
     }
 
-    private void TickInanimate(float deltaTime)
+    private void FixedUpdate()
     {
-        inanimateTimer += deltaTime;
+        if (bubbleBody == null || transformationStarted)
+            return;
+
+        if (SimulationEnabled && !descending)
+        {
+            elapsedTime += Time.fixedDeltaTime;
+            if (elapsedTime >= lifetimeSeconds || bubbleBody.position.y >= fallStartWorldY || upwardSpeed <= 0f)
+                StartFalling();
+            else
+                ApplyFlight(Time.fixedDeltaTime);
+        }
+
+        bool moved = bubbleBody.linearVelocity.sqrMagnitude > stillSpeedThreshold * stillSpeedThreshold ||
+                     bubbleBody.angularVelocity.sqrMagnitude > 0.01f ||
+                     (bubbleBody.position - restingPosition).sqrMagnitude > stillPositionTolerance * stillPositionTolerance;
+        if (!SimulationEnabled || !descending || IsCarried || bubbleBody.isKinematic || moved)
+        {
+            inanimateTimer = 0f;
+            restingPosition = bubbleBody.position;
+            return;
+        }
+
+        inanimateTimer += Time.fixedDeltaTime;
         if (inanimateTimer < inanimateToFlowerDelay)
         {
             return;
@@ -166,20 +180,12 @@ public sealed class FireBubble : Creature
         TransformIntoFlower();
     }
 
-    /// <summary>Stops Bubble behavior and hands movement to gravity while waiting to become a flower.</summary>
-    private void BecomeInanimate()
-    {
-        ChangeState(BubbleState.Inanimate);
-        inanimateTimer = 0f;
-        StartFalling();
-    }
-
     private void TransformIntoFlower()
     {
+        transformationStarted = true;
         if (fireFlowerPrefab == null)
         {
             Debug.LogWarning($"{name} cannot become a flower because no Fire Flower prefab is assigned.", this);
-            Destroy(gameObject);
             return;
         }
 
@@ -207,74 +213,35 @@ public sealed class FireBubble : Creature
         }
 
         descending = true;
+        ChangeState(BubbleState.Inanimate);
+        inanimateTimer = 0f;
+        restingPosition = transform.position;
         SetMovementPhysics(false, true);
-        if (!IsCarried && bubbleBody != null)
-        {
-            bubbleBody.linearVelocity = driftVelocity;
-        }
     }
 
-    private void FloatUpward(float deltaTime)
-    {
-        if (descending)
-        {
-            return;
-        }
-
-        float currentY = transform.position.y;
-        if (currentY >= fallStartWorldY)
-        {
-            StartFalling();
-            return;
-        }
-
-        float riseThisFrame = Mathf.Min(upwardSpeed * deltaTime, fallStartWorldY - currentY);
-        if (riseThisFrame <= 0f)
-        {
-            StartFalling();
-            return;
-        }
-
-        MoveCreature(Vector3.up * riseThisFrame);
-
-        if (transform.position.y >= fallStartWorldY)
-        {
-            // Snap to the ceiling so we do not overshoot when frame spikes are large.
-            Vector3 position = transform.position;
-            position.y = fallStartWorldY;
-            if (!IsCarried)
-            {
-                transform.position = position;
-            }
-
-            StartFalling();
-        }
-    }
-
-    private void ApplyInitialDrift(float deltaTime)
-    {
-        MoveCreature(driftVelocity * deltaTime);
-        driftVelocity *= Mathf.Exp(-driftDamping * deltaTime);
-    }
-
-    private void ApplySway()
+    private void ApplyFlight(float deltaTime)
     {
         float currentSwayOffset = CalculateSwayOffset(elapsedTime);
-        float swayDelta = currentSwayOffset - previousSwayOffset;
-
-        MoveCreature(swayDirection * swayDelta);
+        float swaySpeed = (currentSwayOffset - previousSwayOffset) / deltaTime;
         previousSwayOffset = currentSwayOffset;
+
+        // The carrier owns forces while held; keep sway time current for release.
+        if (IsCarried)
+            return;
+
+        float riseSpeed = Mathf.Min(upwardSpeed, Mathf.Max(0f, fallStartWorldY - bubbleBody.position.y) / deltaTime);
+        Vector3 desiredVelocity = driftVelocity + swayDirection * swaySpeed + Vector3.up * riseSpeed;
+        Vector3 acceleration = (desiredVelocity - bubbleBody.linearVelocity) / deltaTime;
+        bubbleBody.AddForce(Vector3.ClampMagnitude(acceleration, flightAcceleration), ForceMode.Acceleration);
+
+        Vector3 desiredSpin = Vector3.up * (rotationSpeed * Mathf.Deg2Rad);
+        bubbleBody.AddTorque((desiredSpin - bubbleBody.angularVelocity) * 4f, ForceMode.Acceleration);
     }
 
     private float CalculateSwayOffset(float time)
     {
         float radians = time * swayFrequency * Mathf.PI * 2f + swayPhase;
         return Mathf.Sin(radians) * swayDistance;
-    }
-
-    private void RotateSlowly(float deltaTime)
-    {
-        FaceCreature(Quaternion.AngleAxis(rotationSpeed * deltaTime, Vector3.up) * transform.rotation);
     }
 
     /// <summary>
@@ -344,6 +311,12 @@ public sealed class FireBubble : Creature
         lifetimeSeconds = Mathf.Max(0f, lifetimeSeconds);
         inanimateToFlowerDelay = Mathf.Max(0f, inanimateToFlowerDelay);
         upwardSpeed = Mathf.Max(0f, upwardSpeed);
+        horizontalSpeed = Mathf.Max(0f, horizontalSpeed);
+        flightAcceleration = Mathf.Max(0.01f, flightAcceleration);
+        swayDistance = Mathf.Max(0f, swayDistance);
+        swayFrequency = Mathf.Max(0f, swayFrequency);
+        stillSpeedThreshold = Mathf.Max(0f, stillSpeedThreshold);
+        stillPositionTolerance = Mathf.Max(0f, stillPositionTolerance);
         stillVisualHeat = Mathf.Max(0f, stillVisualHeat);
         maximumVisualHeat = Mathf.Max(stillVisualHeat + 0.001f, maximumVisualHeat);
         maximumVisualFlowSpeed = Mathf.Max(0f, maximumVisualFlowSpeed);

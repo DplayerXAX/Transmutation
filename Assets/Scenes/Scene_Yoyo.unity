@@ -372,12 +372,26 @@ MonoBehaviour:
   maximumCarryDistance: 8
   moveSpeed: 2
   wanderRadius: 8
+  rotationLerpSpeed: 8
+  stuckDistanceThreshold: 0.35
+  stuckTimeout: 1.25
+  obstacleCheckDistance: 0.75
+  groundRayDistance: 2
+  groundRayOriginHeight: 0.5
+  maxGroundAngle: 55
+  groundNormalLerpSpeed: 10
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  playerAwarenessRadius: 8
+  fleeSpeed: 3.5
   detectionRadius: 6
   digestionDuration: 5
   fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
   flowerSpawnDistance: 1
   currentState: 0
   targetBubble: {fileID: 0}
+  fleeTarget: {fileID: 0}
 --- !u!4 &214482758
 Transform:
   m_ObjectHideFlags: 0
@@ -828,6 +842,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8755812520023030105, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: restricted
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -2214,12 +2232,26 @@ MonoBehaviour:
   maximumCarryDistance: 8
   moveSpeed: 2
   wanderRadius: 8
+  rotationLerpSpeed: 8
+  stuckDistanceThreshold: 0.35
+  stuckTimeout: 1.25
+  obstacleCheckDistance: 0.75
+  groundRayDistance: 2
+  groundRayOriginHeight: 0.5
+  maxGroundAngle: 55
+  groundNormalLerpSpeed: 10
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  playerAwarenessRadius: 8
+  fleeSpeed: 3.5
   detectionRadius: 6
   digestionDuration: 5
   fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
   flowerSpawnDistance: 1
   currentState: 0
   targetBubble: {fileID: 0}
+  fleeTarget: {fileID: 0}
 --- !u!4 &1722953799
 Transform:
   m_ObjectHideFlags: 0
@@ -2468,12 +2500,26 @@ MonoBehaviour:
   maximumCarryDistance: 8
   moveSpeed: 2
   wanderRadius: 8
+  rotationLerpSpeed: 8
+  stuckDistanceThreshold: 0.35
+  stuckTimeout: 1.25
+  obstacleCheckDistance: 0.75
+  groundRayDistance: 2
+  groundRayOriginHeight: 0.5
+  maxGroundAngle: 55
+  groundNormalLerpSpeed: 10
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  playerAwarenessRadius: 8
+  fleeSpeed: 3.5
   detectionRadius: 6
   digestionDuration: 5
   fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
   flowerSpawnDistance: 1
   currentState: 0
   targetBubble: {fileID: 0}
+  fleeTarget: {fileID: 0}
 --- !u!4 &1851524869
 Transform:
   m_ObjectHideFlags: 0
@@ -2738,12 +2784,26 @@ MonoBehaviour:
   maximumCarryDistance: 8
   moveSpeed: 2
   wanderRadius: 8
+  rotationLerpSpeed: 8
+  stuckDistanceThreshold: 0.35
+  stuckTimeout: 1.25
+  obstacleCheckDistance: 0.75
+  groundRayDistance: 2
+  groundRayOriginHeight: 0.5
+  maxGroundAngle: 55
+  groundNormalLerpSpeed: 10
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  playerAwarenessRadius: 8
+  fleeSpeed: 3.5
   detectionRadius: 6
   digestionDuration: 5
   fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
   flowerSpawnDistance: 1
   currentState: 0
   targetBubble: {fileID: 0}
+  fleeTarget: {fileID: 0}
 --- !u!4 &1951123837
 Transform:
   m_ObjectHideFlags: 0

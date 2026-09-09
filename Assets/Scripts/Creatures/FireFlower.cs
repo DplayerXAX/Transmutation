@@ -66,6 +66,13 @@ public sealed class FireFlower : Creature
     [Tooltip("Bubble prefab released from each density shape when blooming finishes.")]
     [SerializeField] private FireBubble bubblePrefab;
 
+    [Header("Visuals")]
+    [Tooltip("Renderer using the Fire Flower shader. Automatically found on this flower or its children when left empty.")]
+    [SerializeField] private Renderer flowerRenderer;
+
+    private static readonly int GrowthId = Shader.PropertyToID("_Growth");
+    private MaterialPropertyBlock visualProperties;
+
     [Header("Runtime State (Read Only)")]
     [SerializeField] private FireFlowerState currentState = FireFlowerState.Closed;
     [SerializeField] private float stateTime;
@@ -91,6 +98,8 @@ public sealed class FireFlower : Creature
         ChangeState(FireFlowerState.Closed);
         ApplyShapeSpread(0f);
         ApplyBodyRadius(0f);
+        InitializeVisuals();
+        UpdatePresentation(0f);
     }
 
     protected override void TickCreature(float deltaTime)
@@ -227,7 +236,36 @@ public sealed class FireFlower : Creature
 
     private void UpdatePresentation(float deltaTime)
     {
-        // TODO: Send bloomAmount / shapeSpreadAmount to visuals.
+        if (flowerRenderer == null)
+        {
+            return;
+        }
+
+        float heatRatio = Mathf.Clamp01(Heat / Mathf.Max(0.01f, bloomHeatThreshold));
+        visualProperties ??= new MaterialPropertyBlock();
+        flowerRenderer.GetPropertyBlock(visualProperties);
+        visualProperties.SetFloat(GrowthId, heatRatio * 0.5f);
+        flowerRenderer.SetPropertyBlock(visualProperties);
+    }
+
+    private void InitializeVisuals()
+    {
+        if (flowerRenderer != null)
+        {
+            return;
+        }
+
+        foreach (Renderer candidate in GetComponentsInChildren<Renderer>(true))
+        {
+            foreach (Material material in candidate.sharedMaterials)
+            {
+                if (material != null && material.HasProperty(GrowthId))
+                {
+                    flowerRenderer = candidate;
+                    return;
+                }
+            }
+        }
     }
 
     /// <summary>

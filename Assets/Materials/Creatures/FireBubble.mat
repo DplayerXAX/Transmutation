@@ -26,10 +26,26 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BaseAlpha: 0.74
-    - _StaticContrast: 4
+    - _BandDensity: 0.2
+    - _BaseAlpha: 1
+    - _BlockDensity: 30
+    - _ColorAmount: 0.213
+    - _ColorFlashChance: 0.2
+    - _ColorFlashRate: 4
+    - _FlashRate: 1.13
+    - _Seed: 1
+    - _Spectrum: 0.8
+    - _StaticContrast: 0.548
     - _StaticScale: 17
-    - _StaticSpeed: 60
-    m_Colors: []
+    - _StaticSpeed: 10.09
+    - _StreakStrength: 0
+    - _StripeDensity: 1
+    m_Colors:
+    - _ColorA: {r: 0.85, g: 0.025, b: 0.089999996, a: 1}
+    - _ColorB: {r: 1, g: 0.78, b: 0.015, a: 1}
+    - _ColorC: {r: 0.03, g: 0.85, b: 0.27999997, a: 1}
+    - _ColorD: {r: 0.45, g: 0.025, b: 1, a: 1}
+    - _DarkColor: {r: 0.008, g: 0.012, b: 0.014, a: 1}
+    - _LightColor: {r: 0.88, g: 0.9, b: 0.86, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

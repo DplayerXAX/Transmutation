@@ -37,7 +37,9 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             return;
         }
 
-        if (mouse.rightButton.wasPressedThisFrame && CarriedCreature == null)
+        // Keep trying while held so a moving Bubble can enter the pickup ray
+        // after the initial click.
+        if (mouse.rightButton.isPressed && CarriedCreature == null)
         {
             Creature creature = FindCreature();
             if (creature != null) BeginCarry(creature);

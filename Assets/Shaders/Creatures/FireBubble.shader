@@ -6,6 +6,8 @@ Shader "Capstone/Creature/FireBubble"
         _StaticSpeed("Static Speed", Range(1, 60)) = 24
         _StaticContrast("Static Contrast", Range(0.25, 4)) = 1.6
         _BaseAlpha("Opacity", Range(0, 1)) = 1
+        _ColorFlashChance("Color Flash Chance", Range(0, 1)) = 0.2
+        _ColorFlashRate("Color Flash Rate", Range(0.1, 20)) = 4
     }
 
     SubShader
@@ -37,6 +39,8 @@ Shader "Capstone/Creature/FireBubble"
                 float _StaticSpeed;
                 float _StaticContrast;
                 float _BaseAlpha;
+                float _ColorFlashChance;
+                float _ColorFlashRate;
             CBUFFER_END
 
             struct Attributes
@@ -74,7 +78,13 @@ Shader "Capstone/Creature/FireBubble"
                 float noise = RandomValue(cell, frame);
 
                 noise = saturate((noise - 0.5) * _StaticContrast + 0.5);
-                return half4(noise.xxx, _BaseAlpha);
+                // Keep the original grain; occasionally color the same cells.
+                float flashTick = floor(_Time.y * _ColorFlashRate);
+                float colored = RandomValue(float3(17, 53, 91), flashTick) < _ColorFlashChance ? 1.0 : 0.0;
+                float hue = RandomValue(cell + float3(7, 19, 31), frame);
+                float3 tint = saturate(abs(frac(hue + float3(0, 0.666667, 0.333333)) * 6 - 3) - 1);
+                half3 color = lerp(noise.xxx, noise * tint, colored);
+                return half4(color, _BaseAlpha);
             }
             ENDHLSL
         }

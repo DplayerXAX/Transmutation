@@ -8,6 +8,8 @@ float _TerrainMode;
 float _Frequency, _RiseHeight, _Threshold, _EdgeWidth, _Warp, _Roughness;
 float _Speed, _Motion, _Phase, _Posterize, _Terracing;
 float _GroundGray, _PeakGray, _SideGray, _ColorSoftness;
+float _UseCustomColors;
+float4 _GroundColor, _TopColor;
 CBUFFER_END
 float3 _LightDirection;
 float3 _LightPosition;
@@ -154,18 +156,20 @@ half4 FFrag(FVaryings i):SV_Target
     float slope=saturate((1-alignment)*2.5);
     // Gray floor, pale steep sides, black caps: readable physical relief.
     float gray=lerp(_GroundGray,lerp(_PeakGray,_SideGray,slope),occupied);
+    float3 customColor=lerp(_GroundColor.rgb,lerp(_TopColor.rgb,_SideGray.xxx,slope),occupied);
+    float3 color=lerp(gray.xxx,customColor,saturate(_UseCustomColors));
     float bands=max(2,round(_Posterize));
     // Soft, pixel-filtered transitions retain tonal bands without hard jaggies.
-    float scaled=saturate(gray)*(bands-1);
-    float width=max(0.5*_ColorSoftness, max(fwidth(scaled)*0.5,0.0001));
-    float tone=0;
+    float3 scaled=saturate(color)*(bands-1);
+    float3 width=max(0.5*_ColorSoftness, max(fwidth(scaled)*0.5,0.0001));
+    float3 tone=0;
     [unroll] for(int band=0;band<7;band++)
     {
         if(band < bands-1)
             tone += smoothstep(band+0.5-width,band+0.5+width,scaled);
     }
-    gray=tone/(bands-1);
-    return half4(gray.xxx,1);
+    color=tone/(bands-1);
+    return half4(color,1);
 }
 half4 FDepth(FVaryings i):SV_Target { FHoles(i); return 0; }
 half4 FNormals(FVaryings i):SV_Target

@@ -15,12 +15,16 @@ Shader "Capstone/Terrain/FBM Rising Posterized"
         _Motion ("Animation Amount (zero is static)", Range(0,1)) = 1
         _Phase ("Static Phase", Float) = 0
         [Header(Posterization)]
-        _Posterize ("Gray Levels", Range(2,8)) = 4
+        _Posterize ("Color Levels", Range(2,8)) = 4
         _ColorSoftness ("Color Band Softness", Range(0,1)) = 0.65
         _Terracing ("Height Terracing (zero = smooth)", Range(0,1)) = 0
         _GroundGray ("Ground Gray", Range(0,1)) = 0.66
         _PeakGray ("Raised Tops Gray", Range(0,1)) = 0.015
         _SideGray ("Raised Sides Gray", Range(0,1)) = 0.95
+        [Header(Custom Colors)]
+        [Toggle] _UseCustomColors ("Use Custom Colors", Float) = 0
+        _GroundColor ("Ground Color", Color) = (0.66,0.66,0.66,1)
+        _TopColor ("Top Color", Color) = (0.015,0.015,0.015,1)
         [HideInInspector] _TerrainHolesTexture ("Holes", 2D) = "white" {}
         [HideInInspector] _MainTex ("Base", 2D) = "gray" {}
         [HideInInspector] _BaseColor ("Base Color", Color) = (1,1,1,1)

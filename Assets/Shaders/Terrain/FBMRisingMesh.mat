@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _USECUSTOMCOLORS_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -38,18 +39,21 @@ Material:
     - _Frequency: 3.22
     - _GroundGray: 1
     - _Motion: 0.504
-    - _PeakGray: 0
+    - _PeakGray: 0.469
     - _Phase: 0
     - _Posterize: 2
-    - _RiseHeight: 0.2
+    - _RiseHeight: 0.23
     - _Roughness: 0.187
-    - _SideGray: 0.45
+    - _SideGray: 0.239
     - _Speed: 2
     - _Terracing: 0.59
     - _TerrainMode: 0
-    - _Threshold: 0.62
+    - _Threshold: 0.6061
+    - _UseCustomColors: 1
     - _Warp: 4
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _GroundColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TopColor: {r: 0.7065902, g: 0, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
