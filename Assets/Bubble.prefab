@@ -34,8 +34,7 @@ Transform:
   m_LocalPosition: {x: 23.17, y: -80.81, z: 1.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
-  m_Children:
-  - {fileID: 6960998702909440734}
+  m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &2063951176150548884
@@ -73,21 +72,14 @@ MonoBehaviour:
   minimumInitialDriftSpeed: 0.8
   maximumInitialDriftSpeed: 1.8
   driftDamping: 0.45
-  coolingPerSecond: 1
-  interactionMinimumHeat: 13
-  interactionMaximumHeat: 17
-  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
-  burstHeatDropPerMetre: 1
-  burstReceiverLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
+  lifetimeSeconds: 10
   bubbleRenderer: {fileID: 8706553103238526404}
+  stillVisualHeat: 13
   maximumVisualHeat: 25
   maximumVisualFlowSpeed: 2
   currentState: 0
   bubbleBody: {fileID: 4566537563883852650}
   bubbleCollider: {fileID: 4488284502573638848}
-  logPlayerInteraction: 1
 --- !u!23 &8706553103238526404
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -185,6 +177,7 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
+<<<<<<< Updated upstream:Assets/Bubble.prefab
 --- !u!114 &7844946983442489255
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -252,3 +245,5 @@ MonoBehaviour:
   maxDensity: 0.5
   stampDensity: 1
   gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
+=======
+>>>>>>> Stashed changes:Assets/Prefabs/Creatures/Bubble.prefab

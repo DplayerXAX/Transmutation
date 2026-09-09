@@ -52,6 +52,12 @@ public class DensityShapeOverlay : MonoBehaviour
 	public float MaxDensity => maxDensity;
 	public bool StampDensity => stampDensity;
 
+	/// <summary>Sets the Sphere / Capsule / Cylinder radius in world units.</summary>
+	public void SetRadius(float value)
+	{
+		radius = Mathf.Max(0.01f, value);
+	}
+
 	void Awake()
 	{
 		MigrateSerializedDefaults();
