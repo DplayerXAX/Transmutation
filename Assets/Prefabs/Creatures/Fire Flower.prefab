@@ -114,6 +114,114 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
+--- !u!1 &2637679015258991319
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3796565059308325939}
+  - component: {fileID: 2092512094764293325}
+  m_Layer: 0
+  m_Name: DensitySphereOverlay (4)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3796565059308325939
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2637679015258991319}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.11, y: 0.64, z: 4.84}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6498290818206514553}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2092512094764293325
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2637679015258991319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
+  terrain: {fileID: 2932272644639163897}
+  shape: 0
+  radius: 0.5
+  boxHalfExtents: {x: 1, y: 1, z: 1}
+  height: 8
+  ellipsoidRadii: {x: 2, y: 1, z: 1.5}
+  injectRate: 0.05
+  maxDensity: 0.5
+  stampDensity: 1
+  gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
+--- !u!1 &3510556264012690545
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9031015452282650912}
+  - component: {fileID: 7644078241564382630}
+  m_Layer: 0
+  m_Name: DensitySphereOverlay (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9031015452282650912
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3510556264012690545}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.11, y: 0.64, z: 4.84}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6498290818206514553}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7644078241564382630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3510556264012690545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
+  terrain: {fileID: 2932272644639163897}
+  shape: 0
+  radius: 0.5
+  boxHalfExtents: {x: 1, y: 1, z: 1}
+  height: 8
+  ellipsoidRadii: {x: 2, y: 1, z: 1.5}
+  injectRate: 0.05
+  maxDensity: 0.5
+  stampDensity: 1
+  gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
 --- !u!1 &4001589925250115277
 GameObject:
   m_ObjectHideFlags: 0
@@ -139,13 +247,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4001589925250115277}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.22464313, y: -0.2960749, z: -0.07185842, w: 0.9255871}
-  m_LocalPosition: {x: 1.2799995, y: 2.26, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.11, y: 0.64, z: 4.84}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6498290818206514553}
-  m_LocalEulerAnglesHint: {x: -27.284, y: -35.477, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2003425443163747241
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -158,16 +266,152 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
-  terrain: {fileID: 0}
+  terrain: {fileID: 2932272644639163897}
   shape: 3
-  radius: 2.33
+  radius: 0.5
   boxHalfExtents: {x: 1, y: 1, z: 1}
-  height: 8.58
+  height: 8
   ellipsoidRadii: {x: 2, y: 1, z: 1.5}
   injectRate: 0.25
   maxDensity: 0.5
   stampDensity: 1
   gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
+--- !u!1 &5103805268049794082
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7490506972141934810}
+  - component: {fileID: 8824190300413003835}
+  m_Layer: 0
+  m_Name: DensitySphereOverlay (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7490506972141934810
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5103805268049794082}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.11, y: 0.64, z: 4.84}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6498290818206514553}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8824190300413003835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5103805268049794082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DensitySphereOverlay
+  terrain: {fileID: 2932272644639163897}
+  shape: 0
+  radius: 0.5
+  boxHalfExtents: {x: 1, y: 1, z: 1}
+  height: 8
+  ellipsoidRadii: {x: 2, y: 1, z: 1.5}
+  injectRate: 0.05
+  maxDensity: 0.5
+  stampDensity: 1
+  gizmoColor: {r: 1, g: 0.45, b: 0.15, a: 0.9}
+--- !u!1 &6518921010380201831
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1160841655360824533}
+  - component: {fileID: 2932272644639163897}
+  - component: {fileID: 5307368109653261888}
+  m_Layer: 9
+  m_Name: MarchingCubesSphere
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1160841655360824533
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6518921010380201831}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.47485682, y: 4.922694, z: 3.9413211}
+  m_LocalScale: {x: 1.5828601, y: 1.5828598, z: 1.5828598}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6900514880523733287}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2932272644639163897
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6518921010380201831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32786b51877de4cc8aedfbb9d3d396d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MarchingCubesSphere
+  numPointsPerAxis: 36
+  spacing: 0.25
+  chunkSizeCubes: 8
+  chunkMaterial: {fileID: 2100000, guid: 8e2b4c6d0a1f4937b9c5d7e8f0a1b2c3, type: 2}
+  generateChunkColliders: 0
+  resetOnValidate: 1
+  decaySpeed: 1
+  simulationInterval: 0.05
+  densityEpsilon: 0.0001
+  forceBoundaryEmpty: 1
+  boundaryDensity: -1000000
+  drawVolumeBounds: 1
+  drawChunkBounds: 1
+  volumeGizmoColor: {r: 0.2, g: 0.9, b: 1, a: 0.85}
+  chunkGizmoColor: {r: 0.3, g: 1, b: 0.4, a: 0.55}
+--- !u!114 &5307368109653261888
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6518921010380201831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 003c54d19bebe4a869c500eaa3c474eb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MarchingSquareDigger
+  terrain: {fileID: 2932272644639163897}
+  brushLayers:
+    serializedVersion: 2
+    m_Bits: 512
+  maxRayDistance: 10000
+  brushRadius: 1
+  strength: 0.1
+  modificationInterval: 0.05
+  minGrowDistance: 3
+  growDistanceOrigin: {fileID: 0}
 --- !u!1 &6899895537282456957
 GameObject:
   m_ObjectHideFlags: 0
@@ -201,6 +445,7 @@ Transform:
   m_LocalScale: {x: 0.6317678, y: 0.63176787, z: 0.63176787}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 1160841655360824533}
   - {fileID: 433219826995720672}
   - {fileID: 6498290818206514553}
   m_Father: {fileID: 0}
@@ -235,12 +480,29 @@ MonoBehaviour:
   bloomHeatThreshold: 80
   bloomDuration: 1
   recoveryDuration: 1
+  densityShapes:
+  - shape: {fileID: 7644078241564382630}
+    startPosition: {x: 0, y: 0, z: 0}
+    spreadDirection: {x: 0, y: 0, z: 0}
+    initialized: 0
+  - shape: {fileID: 8824190300413003835}
+    startPosition: {x: 0, y: 0, z: 0}
+    spreadDirection: {x: 0, y: 0, z: 0}
+    initialized: 0
+  - shape: {fileID: 2092512094764293325}
+    startPosition: {x: 0, y: 0, z: 0}
+    spreadDirection: {x: 0, y: 0, z: 0}
+    initialized: 0
+  startHeightRange: {x: -3, y: 4}
+  maxSpreadDistance: 5
+  bodyCylinder: {fileID: 2003425443163747241}
+  bodyRadiusMin: 0.25
+  bodyRadiusMax: 0.75
   bubblePrefab: {fileID: 2077643943965342362, guid: 159bd17bc4e614ffab8ec76d1ad3b567, type: 3}
-  bubbleSpawnPoint: {fileID: 0}
-  bubbleCount: 4
   currentState: 0
   stateTime: 0
   bloomAmount: 0
+  shapeSpreadAmount: 0
 --- !u!23 &8182786005692432388
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -393,6 +655,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4b60de3d0ca384d118d9dabc46c5695b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 8447248588260516664}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4b60de3d0ca384d118d9dabc46c5695b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 9031015452282650912}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4b60de3d0ca384d118d9dabc46c5695b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7490506972141934810}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 4b60de3d0ca384d118d9dabc46c5695b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3796565059308325939}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4b60de3d0ca384d118d9dabc46c5695b, type: 3}
 --- !u!4 &6498290818206514553 stripped
