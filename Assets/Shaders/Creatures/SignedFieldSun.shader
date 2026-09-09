@@ -8,6 +8,8 @@ Shader "Capstone/Creature/SignedFieldSun"
         _Movement("Orbit Radius", Range(0, 0.7)) = 0.27
         _Speed("Orbit Speed (radians per second)", Range(0, 4)) = 0.45
         _OrbitTilt("Orbit Tilt", Range(0, 1)) = 0.65
+        _SizeVariation("Size Variation", Range(0, 0.75)) = 0.3
+        _SizeSpeed("Size Change Speed", Range(0, 2)) = 0.35
         _Blend("Gel Blend", Range(0.01, 0.4)) = 0.12
         _ViewSize("Size Inside Mesh", Range(0.1, 1)) = 1
         _Center("Object Center Offset", Vector) = (0, 0, 0, 0)
@@ -48,6 +50,7 @@ Shader "Capstone/Creature/SignedFieldSun"
             CBUFFER_START(UnityPerMaterial)
                 float4 _Center, _SkyColor, _NebulaColor, _StarColor, _BaseColor, _RimColor;
                 float _SphereCount, _SphereRadius, _Movement, _Speed, _OrbitTilt, _Blend, _ViewSize;
+                float _SizeVariation, _SizeSpeed;
                 float _StarDensity, _StarBrightness, _TwinkleSpeed;
                 float _RimStrength, _RimWidth, _RainbowAmount, _Gloss, _Refraction;
             CBUFFER_END
@@ -118,6 +121,18 @@ Shader "Capstone/Creature/SignedFieldSun"
                 float h = saturate(0.5 + 0.5 * (b - a) / k);
                 return lerp(b, a, h) - k * h * (1 - h);
             }
+            float SphereSize(float index)
+            {
+                // Independent smooth random targets, rather than synchronized pulses.
+                float seed = Hash(float3(index, 23, 51));
+                float clock = _Time.y * _SizeSpeed * lerp(0.65, 1.35, seed) + seed * 17;
+                float tick = floor(clock);
+                float blend = frac(clock);
+                blend = blend * blend * (3 - 2 * blend);
+                float a = Hash(float3(index, tick, 97));
+                float b = Hash(float3(index, tick + 1, 97));
+                return 1 + (lerp(a, b, blend) * 2 - 1) * _SizeVariation;
+            }
             float Field(float3 p, float4 spheres[8], int count)
             {
                 float d = length(p - spheres[0].xyz) - spheres[0].w;
@@ -132,20 +147,28 @@ Shader "Capstone/Creature/SignedFieldSun"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 int count = clamp((int)round(_SphereCount), 2, 8);
                 float4 spheres[8];
-                spheres[0] = float4(0, 0, 0, _SphereRadius * 1.2);
+                spheres[0] = float4(0, 0, 0, _SphereRadius * 1.2 * SphereSize(0));
                 float time = _Time.y * _Speed;
                 [loop] for (int i = 1; i < 8; i++)
                 {
                     float phase = TWO_PI * (i - 1) / (count - 1);
-                    float angle = time + phase;
-                    float tilt = sin(phase * 2.3 + 0.7) * _OrbitTilt * 1.2;
+                    float seed = Hash(float3(i, 31, 73));
+                    float direction = ((i & 1) == 0) ? -1 : 1;
+                    float localTime = time * direction * lerp(0.65, 1.35, seed);
+                    float angle = localTime + phase;
+                    // Slowly precess each orbit so it does not stay on one fixed plane.
+                    float tilt = _OrbitTilt * (lerp(-1.4, 1.4, seed) + 0.45 * sin(localTime * 0.37 + phase));
                     float3 orbit = float3(cos(angle), sin(angle) * cos(tilt), sin(angle) * sin(tilt));
-                    float radius = _SphereRadius * lerp(0.55, 0.95, Hash(float3(i, 7, 11)));
+                    float heading = _OrbitTilt * (seed * TWO_PI + localTime * 0.23);
+                    orbit = float3(orbit.x * cos(heading) + orbit.z * sin(heading), orbit.y,
+                                   -orbit.x * sin(heading) + orbit.z * cos(heading));
+                    float radius = _SphereRadius * lerp(0.55, 0.95, Hash(float3(i, 7, 11))) * SphereSize(i);
                     spheres[i] = float4(orbit * _Movement, radius);
                 }
 
                 // Fit the complete field inside a standard unit cube or sphere proxy.
-                float bound = _Movement + _SphereRadius * 1.2 + _Blend * 1.75 + 0.01;
+                // Use maximum possible size, so breathing never changes the overall scale.
+                float bound = _Movement + _SphereRadius * 1.2 * (1 + _SizeVariation) + _Blend * 1.75 + 0.01;
                 float fieldScale = 0.48 * _ViewSize / max(bound, 0.001);
                 float3 cameraOS = TransformWorldToObject(GetCameraPositionWS());
                 float3 rayDirection = normalize(input.positionOS - cameraOS);

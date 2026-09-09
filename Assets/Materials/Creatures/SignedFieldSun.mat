@@ -19,12 +19,35 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
-  m_LockedProperties:
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs: []
     m_Ints: []
-    m_Floats: []
-    m_Colors: []
+    m_Floats:
+    - _Blend: 0.322
+    - _Gloss: 128
+    - _Movement: 0.7
+    - _OrbitTilt: 0.564
+    - _RainbowAmount: 1
+    - _Refraction: 0.126
+    - _RimStrength: 1.51
+    - _RimWidth: 12
+    - _SizeSpeed: 1.15
+    - _SizeVariation: 0.558
+    - _Speed: 2.02
+    - _SphereCount: 8
+    - _SphereRadius: 0.308
+    - _StarBrightness: 1.4
+    - _StarDensity: 45
+    - _TwinkleSpeed: 0.8
+    - _ViewSize: 1
+    m_Colors:
+    - _BaseColor: {r: 0.85, g: 0.72, b: 1, a: 1}
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
+    - _NebulaColor: {r: 0, g: 0, b: 0, a: 1}
+    - _RimColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SkyColor: {r: 0.064989544, g: 0, b: 0.2924528, a: 1}
+    - _StarColor: {r: 2.1361256, g: 2.1361256, b: 2.1361256, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
