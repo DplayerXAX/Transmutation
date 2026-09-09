@@ -44,12 +44,9 @@ public sealed class FireSource : Creature
     {
         FindPhysicsReferences();
 
-        bodyCollider.isTrigger = false;
-        radiationTrigger.isTrigger = true;
         sourceBody.isKinematic = true;
         sourceBody.useGravity = false;
         UpdateRadiationTrigger();
-
     }
 
     /// <summary>Fire Source has no frame-based behavior outside its physics radiation step.</summary>
@@ -172,6 +169,7 @@ public sealed class FireSource : Creature
         if (radiationTrigger == null && Application.isPlaying)
         {
             radiationTrigger = gameObject.AddComponent<SphereCollider>();
+            radiationTrigger.isTrigger = true;
         }
 
         if (sourceBody == null)
@@ -180,7 +178,7 @@ public sealed class FireSource : Creature
         }
     }
 
-    /// <summary>Updates the Trigger radius while leaving the solid body Collider unchanged.</summary>
+    /// <summary>Updates the radiation Collider radius while leaving its Trigger flag alone.</summary>
     private void UpdateRadiationTrigger()
     {
         if (radiationTrigger == null)
@@ -188,7 +186,6 @@ public sealed class FireSource : Creature
             return;
         }
 
-        radiationTrigger.isTrigger = true;
         radiationTrigger.radius = RadiationRadius;
         radiationTrigger.enabled = Heat > 0f && radiationPerSecond > 0f;
     }
@@ -208,14 +205,8 @@ public sealed class FireSource : Creature
 
         FindPhysicsReferences();
 
-        if (bodyCollider != null)
-        {
-            bodyCollider.isTrigger = false;
-        }
-
         if (radiationTrigger != null)
         {
-            radiationTrigger.isTrigger = true;
             radiationTrigger.radius = RadiationRadius;
         }
 
@@ -236,10 +227,9 @@ public sealed class FireSource : Creature
         if (radiationTrigger == null)
         {
             radiationTrigger = gameObject.AddComponent<SphereCollider>();
+            radiationTrigger.isTrigger = true;
         }
 
-        bodyCollider.isTrigger = false;
-        radiationTrigger.isTrigger = true;
         radiationTrigger.radius = RadiationRadius;
     }
 }

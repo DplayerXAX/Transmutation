@@ -25,14 +25,14 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _CellDensity: 6
-    - _DotAmount: 0.571
-    - _DotSize: 0.48
+    - _CellDensity: 37
+    - _DotAmount: 1
+    - _DotSize: 0.01
     - _EdgeSoftness: 0
     - _GroundGray: 0.932
     - _InkGray: 0
     - _Motion: 1
-    - _PlateBlend: 0.661
+    - _PlateBlend: 1
     - _SeamWidth: 0.048
     - _Seed: 0
     - _Speed: 3

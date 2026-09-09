@@ -70,7 +70,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 0
   material: {fileID: 2100000, guid: 467544d3d3aa45ed9ed67e3f3aa92782, type: 2}
-  scenePath: Assets/_Recovery/0.unity
+  scenePath: Assets/Scenes/Scene_Lam.unity
   showInSceneView: 1
   injectionPoint: 600
 --- !u!114 &7833122117494664109

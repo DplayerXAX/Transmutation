@@ -429,6 +429,93 @@ Shader "Capstone/Terrain/SolidColor"
             }
             ENDHLSL
         }
+
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode" = "DepthNormals" }
+
+            ZWrite On
+
+            HLSLPROGRAM
+            #pragma target 2.0
+            #pragma vertex DepthNormalsVert
+            #pragma fragment DepthNormalsFrag
+            #pragma multi_compile_instancing
+            #pragma instancing_options assumeuniformscaling nomatrices nolightprobe nolightmap
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            CBUFFER_START(_Terrain)
+                #ifdef UNITY_INSTANCING_ENABLED
+                float4 _TerrainHeightmapRecipSize;
+                float4 _TerrainHeightmapScale;
+                #endif
+            CBUFFER_END
+
+            #ifdef UNITY_INSTANCING_ENABLED
+            TEXTURE2D(_TerrainHeightmapTexture);
+            TEXTURE2D(_TerrainNormalmapTexture);
+            #endif
+
+            UNITY_INSTANCING_BUFFER_START(Terrain)
+                UNITY_DEFINE_INSTANCED_PROP(float4, _TerrainPatchInstanceData)
+            UNITY_INSTANCING_BUFFER_END(Terrain)
+
+            void TerrainInstancing(inout float4 positionOS, inout float3 normalOS)
+            {
+            #ifdef UNITY_INSTANCING_ENABLED
+                float2 patchVertex = positionOS.xy;
+                float4 instanceData = UNITY_ACCESS_INSTANCED_PROP(Terrain, _TerrainPatchInstanceData);
+                float2 sampleCoords = (patchVertex.xy + instanceData.xy) * instanceData.z;
+                float height = UnpackHeightmap(_TerrainHeightmapTexture.Load(int3(sampleCoords, 0)));
+
+                positionOS.xz = sampleCoords * _TerrainHeightmapScale.xz;
+                positionOS.y = height * _TerrainHeightmapScale.y;
+                normalOS = _TerrainNormalmapTexture.Load(int3(sampleCoords, 0)).rgb * 2.0 - 1.0;
+            #endif
+            }
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+            };
+
+            Varyings DepthNormalsVert(Attributes input)
+            {
+                Varyings output;
+                UNITY_SETUP_INSTANCE_ID(input);
+                TerrainInstancing(input.positionOS, input.normalOS);
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                return output;
+            }
+
+            half4 DepthNormalsFrag(Varyings input) : SV_Target
+            {
+                float3 normalWS = NormalizeNormalPerPixel(input.normalWS);
+
+            #if defined(_GBUFFER_NORMALS_OCT)
+                float2 octNormalWS = PackNormalOctQuadEncode(normalWS);
+                float2 remappedOct = saturate(octNormalWS * 0.5 + 0.5);
+                half3 packedNormalWS = PackFloat2To888(remappedOct);
+                return half4(packedNormalWS, 0.0);
+            #else
+                return half4(normalWS, 0.0);
+            #endif
+            }
+            ENDHLSL
+        }
     }
 
     FallBack Off

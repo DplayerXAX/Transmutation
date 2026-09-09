@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// A Bubble produced by FireFlower.
-/// It floats for a fixed lifetime, then becomes inanimate and can be eaten by a Fire Eater.
+/// It floats for a fixed lifetime, becomes inanimate, then turns into a Fire Flower after a delay.
 /// </summary>
 [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
 public sealed class FireBubble : Creature
@@ -49,6 +49,14 @@ public sealed class FireBubble : Creature
     [Min(0f)]
     [SerializeField] private float lifetimeSeconds = 10f;
 
+    [Header("Flower Transform")]
+    [Tooltip("Fire Flower spawned after the inanimate wait. Independent of Heat.")]
+    [SerializeField] private FireFlower fireFlowerPrefab;
+
+    [Tooltip("Seconds to wait after becoming inanimate before transforming into a Fire Flower.")]
+    [Min(0f)]
+    [SerializeField] private float inanimateToFlowerDelay = 10f;
+
     [Header("Visual Heat")]
     [Tooltip("Renderer using the Fire Bubble Shader. The first child Renderer is used when left empty.")]
     [SerializeField] private Renderer bubbleRenderer;
@@ -74,6 +82,7 @@ public sealed class FireBubble : Creature
     private float swayPhase;
     private float previousSwayOffset;
     private float elapsedTime;
+    private float inanimateTimer;
     private bool descending;
     private Vector3 driftVelocity;
     private float visualFlowTime;
@@ -117,11 +126,12 @@ public sealed class FireBubble : Creature
         UpdateHeatVisual(0f);
     }
 
-    /// <summary>Updates movement and lifetime only while the Bubble remains floating.</summary>
+    /// <summary>Updates floating lifetime, then the inanimate-to-flower countdown.</summary>
     protected override void TickCreature(float deltaTime)
     {
-        if (currentState != BubbleState.Floating)
+        if (currentState == BubbleState.Inanimate)
         {
+            TickInanimate(deltaTime);
             return;
         }
 
@@ -145,11 +155,36 @@ public sealed class FireBubble : Creature
         UpdateHeatVisual(deltaTime);
     }
 
-    /// <summary>Stops Bubble behavior and hands movement to gravity for the Fire Eater path.</summary>
+    private void TickInanimate(float deltaTime)
+    {
+        inanimateTimer += deltaTime;
+        if (inanimateTimer < inanimateToFlowerDelay)
+        {
+            return;
+        }
+
+        TransformIntoFlower();
+    }
+
+    /// <summary>Stops Bubble behavior and hands movement to gravity while waiting to become a flower.</summary>
     private void BecomeInanimate()
     {
         ChangeState(BubbleState.Inanimate);
+        inanimateTimer = 0f;
         StartFalling();
+    }
+
+    private void TransformIntoFlower()
+    {
+        if (fireFlowerPrefab == null)
+        {
+            Debug.LogWarning($"{name} cannot become a flower because no Fire Flower prefab is assigned.", this);
+            Destroy(gameObject);
+            return;
+        }
+
+        Instantiate(fireFlowerPrefab, transform.position, Quaternion.identity);
+        Destroy(gameObject);
     }
 
     /// <summary>Changes the Bubble's current behavior state.</summary>
@@ -307,6 +342,7 @@ public sealed class FireBubble : Creature
     private void OnValidate()
     {
         lifetimeSeconds = Mathf.Max(0f, lifetimeSeconds);
+        inanimateToFlowerDelay = Mathf.Max(0f, inanimateToFlowerDelay);
         upwardSpeed = Mathf.Max(0f, upwardSpeed);
         stillVisualHeat = Mathf.Max(0f, stillVisualHeat);
         maximumVisualHeat = Mathf.Max(stillVisualHeat + 0.001f, maximumVisualHeat);

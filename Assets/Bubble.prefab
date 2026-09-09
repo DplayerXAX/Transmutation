@@ -67,13 +67,15 @@ MonoBehaviour:
   maximumCarryDistance: 8
   upwardSpeed: 0.5
   fallStartWorldY: 20
-  swayDistance: 5
+  swayDistance: 8
   swayFrequency: 0.3
   rotationSpeed: 20
   minimumInitialDriftSpeed: 0.8
   maximumInitialDriftSpeed: 1.8
   driftDamping: 0.45
   lifetimeSeconds: 10
+  fireFlowerPrefab: {fileID: 0}
+  inanimateToFlowerDelay: 10
   bubbleRenderer: {fileID: 8706553103238526404}
   stillVisualHeat: 13
   maximumVisualHeat: 25
