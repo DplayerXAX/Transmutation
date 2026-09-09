@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: GlitchedPool
+  m_Shader: {fileID: 4800000, guid: fa2741dbd52c4b0b886602b03efcaa93, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 2
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 1
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BandDensity: 0.2
+    - _BlockDensity: 5
+    - _ColorAmount: 0.158
+    - _FlashRate: 10
+    - _Seed: 1
+    - _Spectrum: 0.481
+    - _StreakStrength: 0.565
+    - _StripeDensity: 1
+    - _UseXY: 0
+    m_Colors:
+    - _ColorA: {r: 0.85, g: 0.025, b: 0.09, a: 1}
+    - _ColorB: {r: 1, g: 0.78, b: 0.015, a: 1}
+    - _ColorC: {r: 0.03, g: 0.85, b: 0.28, a: 1}
+    - _ColorD: {r: 0.45, g: 0.025, b: 1, a: 1}
+    - _DarkColor: {r: 0.008, g: 0.012, b: 0.014, a: 1}
+    - _LightColor: {r: 0.88, g: 0.9, b: 0.86, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
