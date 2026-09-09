@@ -22,9 +22,9 @@ public sealed class FireFlower : Creature
     {
         public DensityShapeOverlay shape;
 
-        [HideInInspector] public Vector3 startPosition;
-        [HideInInspector] public Vector3 spreadDirection;
-        [HideInInspector] public bool initialized;
+        [System.NonSerialized] public Vector3 startLocalPosition;
+        [System.NonSerialized] public Vector3 spreadDirection;
+        [System.NonSerialized] public bool initialized;
     }
 
     [Header("Heat")]
@@ -43,12 +43,13 @@ public sealed class FireFlower : Creature
     [Tooltip("Density shapes driven by this flower. Bubbles spawn from these positions on release.")]
     [SerializeField] private List<ShapeSlot> densityShapes = new List<ShapeSlot>();
 
-    [Tooltip("Inclusive world-Y range used when randomizing each shape's start height.")]
-    [SerializeField] private Vector2 startHeightRange = new Vector2(0f, 2f);
-
     [Tooltip("How far each shape travels from its start position at full Heat / bloom.")]
     [Min(0f)]
     [SerializeField] private float maxSpreadDistance = 3f;
+
+    [Tooltip("Seconds to lerp shapes from 0 out to the current target spread. Shorter = snappier.")]
+    [Min(0.01f)]
+    [SerializeField] private float spreadOutDuration = 0.35f;
 
     [Header("Body Cylinder")]
     [Tooltip("This flower's own cylinder DensityShape. Radius grows with Heat and shrinks while recovering.")]
@@ -106,7 +107,7 @@ public sealed class FireFlower : Creature
     {
         SenseHeat(deltaTime);
         UpdateState(deltaTime);
-        UpdateShapeMotion();
+        UpdateShapeMotion(deltaTime);
         UpdatePresentation(deltaTime);
     }
 
@@ -148,6 +149,9 @@ public sealed class FireFlower : Creature
         if (Heat > 0f)
         {
             RerollSpreadDirections();
+            shapeSpreadAmount = 0f;
+            ApplyShapeSpread(0f);
+            ApplyBodyRadius(0f);
             ChangeState(FireFlowerState.Heating);
         }
     }
@@ -196,19 +200,23 @@ public sealed class FireFlower : Creature
     private void ReleaseBubbles()
     {
         int shapeCount = CountValidShapes();
-        if (bubblePrefab == null || shapeCount <= 0)
+        if (bubblePrefab == null)
         {
-            Debug.LogWarning($"{name} cannot release bubbles because no Bubble prefab or density shapes are assigned.", this);
+            Debug.LogWarning($"{name} cannot release bubbles because no Bubble prefab is assigned.", this);
             return;
         }
 
-        float transferredHeat = SpendHeat(bloomHeatThreshold);
-        if (transferredHeat <= 0f)
+        if (shapeCount <= 0)
         {
+            Debug.LogWarning($"{name} cannot release bubbles because no density shapes are assigned.", this);
             return;
         }
 
-        float heatPerBubble = transferredHeat / shapeCount;
+        EnsureShapeSlotsInitialized();
+
+        // Always spawn bubbles from shape positions. Heat transfer is optional leftover energy.
+        float transferredHeat = SpendHeat(Heat);
+        float heatPerBubble = transferredHeat > 0f ? transferredHeat / shapeCount : 0f;
 
         for (int index = 0; index < densityShapes.Count; index++)
         {
@@ -219,7 +227,10 @@ public sealed class FireFlower : Creature
             }
 
             FireBubble bubble = Instantiate(bubblePrefab, slot.shape.transform.position, Quaternion.identity);
-            bubble.AddHeat(heatPerBubble);
+            if (heatPerBubble > 0f)
+            {
+                bubble.AddHeat(heatPerBubble);
+            }
         }
     }
 
@@ -268,14 +279,9 @@ public sealed class FireFlower : Creature
         }
     }
 
-    /// <summary>
-    /// Captures each shape's start pose: keeps editor XZ, randomizes Y within the configured range.
-    /// </summary>
+    /// <summary>Captures each shape's current local pose as its spread origin.</summary>
     private void InitializeShapeSlots()
     {
-        float minY = Mathf.Min(startHeightRange.x, startHeightRange.y);
-        float maxY = Mathf.Max(startHeightRange.x, startHeightRange.y);
-
         for (int index = 0; index < densityShapes.Count; index++)
         {
             ShapeSlot slot = densityShapes[index];
@@ -284,17 +290,32 @@ public sealed class FireFlower : Creature
                 continue;
             }
 
-            Vector3 position = slot.shape.transform.position;
-            float randomY = Random.Range(minY, maxY);
-            slot.startPosition = new Vector3(position.x, randomY, position.z);
+            slot.startLocalPosition = slot.shape.transform.localPosition;
             slot.initialized = true;
-            slot.shape.transform.position = slot.startPosition;
         }
 
         RerollSpreadDirections();
     }
 
-    /// <summary>Picks a fresh unit direction in 3D for every shape (called at the start of each heating cycle).</summary>
+    private void EnsureShapeSlotsInitialized()
+    {
+        for (int index = 0; index < densityShapes.Count; index++)
+        {
+            ShapeSlot slot = densityShapes[index];
+            if (slot == null || slot.shape == null)
+            {
+                continue;
+            }
+
+            if (!slot.initialized)
+            {
+                InitializeShapeSlots();
+                return;
+            }
+        }
+    }
+
+    /// <summary>Picks a fresh unit direction in local space for every shape (called at the start of each heating cycle).</summary>
     private void RerollSpreadDirections()
     {
         for (int index = 0; index < densityShapes.Count; index++)
@@ -316,45 +337,51 @@ public sealed class FireFlower : Creature
     }
 
     /// <summary>
-    /// Heating: spread follows Heat / threshold.
-    /// Blooming / Releasing: hold at full spread.
-    /// Recovering: ease back to the start positions.
+    /// Heating / Blooming target full spread; Recovering returns to center.
+    /// Spread amount is smoothed so a sudden Heat fill still shows outward motion.
     /// </summary>
-    private void UpdateShapeMotion()
+    private void UpdateShapeMotion(float deltaTime)
     {
-        float spread = 0f;
+        EnsureShapeSlotsInitialized();
+
+        float targetSpread = 0f;
 
         switch (currentState)
         {
             case FireFlowerState.Closed:
-                spread = 0f;
+                targetSpread = 0f;
                 break;
 
             case FireFlowerState.Heating:
-                spread = Mathf.Clamp01(Heat / Mathf.Max(0.01f, bloomHeatThreshold));
+                targetSpread = Mathf.Clamp01(Heat / Mathf.Max(0.01f, bloomHeatThreshold));
                 break;
 
             case FireFlowerState.Blooming:
             case FireFlowerState.Releasing:
-                spread = 1f;
+                targetSpread = 1f;
                 break;
 
             case FireFlowerState.Recovering:
             {
                 float safeDuration = Mathf.Max(0.01f, recoveryDuration);
-                spread = 1f - Mathf.Clamp01(stateTime / safeDuration);
+                targetSpread = 1f - Mathf.Clamp01(stateTime / safeDuration);
                 break;
             }
         }
 
-        ApplyShapeSpread(spread);
-        ApplyBodyRadius(spread);
+        float spreadSpeed = currentState == FireFlowerState.Recovering
+            ? 1f / Mathf.Max(0.01f, recoveryDuration)
+            : 1f / Mathf.Max(0.01f, spreadOutDuration);
+
+        shapeSpreadAmount = Mathf.MoveTowards(shapeSpreadAmount, targetSpread, spreadSpeed * deltaTime);
+        ApplyShapeSpread(shapeSpreadAmount);
+        ApplyBodyRadius(shapeSpreadAmount);
     }
 
     private void ApplyShapeSpread(float spread)
     {
-        shapeSpreadAmount = Mathf.Clamp01(spread);
-        float distance = shapeSpreadAmount * maxSpreadDistance;
+        float amount = Mathf.Clamp01(spread);
+        float distance = amount * maxSpreadDistance;
 
         for (int index = 0; index < densityShapes.Count; index++)
         {
@@ -364,7 +391,7 @@ public sealed class FireFlower : Creature
                 continue;
             }
 
-            slot.shape.transform.position = slot.startPosition + slot.spreadDirection * distance;
+            slot.shape.transform.localPosition = slot.startLocalPosition + slot.spreadDirection * distance;
         }
     }
 
@@ -411,14 +438,8 @@ public sealed class FireFlower : Creature
         bloomDuration = Mathf.Max(0f, bloomDuration);
         recoveryDuration = Mathf.Max(0f, recoveryDuration);
         maxSpreadDistance = Mathf.Max(0f, maxSpreadDistance);
+        spreadOutDuration = Mathf.Max(0.01f, spreadOutDuration);
         bodyRadiusMin = Mathf.Max(0.01f, bodyRadiusMin);
         bodyRadiusMax = Mathf.Max(0.01f, bodyRadiusMax);
-
-        if (startHeightRange.x > startHeightRange.y)
-        {
-            float swap = startHeightRange.x;
-            startHeightRange.x = startHeightRange.y;
-            startHeightRange.y = swap;
-        }
     }
 }
