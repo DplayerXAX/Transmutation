@@ -1,9 +1,8 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// A Bubble produced by FireFlower.
-/// It floats and cools until it is transformed, bursts, or becomes inanimate.
+/// It floats for a fixed lifetime, then becomes inanimate and can be eaten by a Fire Eater.
 /// </summary>
 [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
 public sealed class FireBubble : Creature
@@ -45,34 +44,20 @@ public sealed class FireBubble : Creature
     [Min(0f)]
     [SerializeField] private float driftDamping = 0.45f;
 
-    [Header("Cooling and Interaction")]
-    [Tooltip("Heat lost every second while this Bubble is floating.")]
+    [Header("Lifetime")]
+    [Tooltip("Seconds of floating before this Bubble becomes inanimate. Independent of Heat.")]
     [Min(0f)]
-    [SerializeField] private float coolingPerSecond = 1f;
-
-    [Tooltip("Lowest Heat at which interaction transforms this Bubble into a Fire Source.")]
-    [SerializeField] private float interactionMinimumHeat = 13f;
-
-    [Tooltip("Highest Heat at which interaction transforms this Bubble into a Fire Source. Above this, it bursts.")]
-    [SerializeField] private float interactionMaximumHeat = 17f;
-
-    [Tooltip("Fire Source created by a successful interaction.")]
-    [SerializeField] private FireSource fireSourcePrefab;
-
-    [Header("Hot Interaction Burst")]
-    [Tooltip("Heat lost per metre when a too-hot Bubble bursts.")]
-    [Min(0.001f)]
-    [SerializeField] private float burstHeatDropPerMetre = 3f;
-
-    [Tooltip("Physics layers that can contain creatures receiving burst Heat.")]
-    [SerializeField] private LayerMask burstReceiverLayers = ~0;
+    [SerializeField] private float lifetimeSeconds = 10f;
 
     [Header("Visual Heat")]
     [Tooltip("Renderer using the Fire Bubble Shader. The first child Renderer is used when left empty.")]
     [SerializeField] private Renderer bubbleRenderer;
 
+    [Tooltip("Shader still-heat floor. Visual only; does not control when the Bubble becomes inanimate.")]
+    [SerializeField] private float stillVisualHeat = 13f;
+
     [Tooltip("Heat treated as maximum intensity by the Shader.")]
-    [Min(13.001f)]
+    [Min(0.001f)]
     [SerializeField] private float maximumVisualHeat = 25f;
 
     [Tooltip("Maximum procedural flow speed at Maximum Visual Heat.")]
@@ -85,11 +70,6 @@ public sealed class FireBubble : Creature
     [SerializeField] private Rigidbody bubbleBody;
     [SerializeField] private SphereCollider bubbleCollider;
 
-    [Header("Debug")]
-    [Tooltip("Print one message only when the player interacts with this Bubble.")]
-    [SerializeField] private bool logPlayerInteraction = true;
-
-    private readonly HashSet<Creature> uniqueBurstReceivers = new HashSet<Creature>();
     private Vector3 swayDirection;
     private float swayPhase;
     private float previousSwayOffset;
@@ -103,7 +83,7 @@ public sealed class FireBubble : Creature
     private static readonly int MaximumHeatShaderId = Shader.PropertyToID("_MaximumHeat");
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
-    /// <summary>Whether this Bubble has reached its lower Heat bound and can be eaten later.</summary>
+    /// <summary>Whether this Bubble's floating lifetime has ended and it can be eaten later.</summary>
     public bool IsInanimate => currentState == BubbleState.Inanimate;
 
     /// <summary>Sets up random motion and keeps the floating Bubble outside gravity simulation.</summary>
@@ -137,7 +117,7 @@ public sealed class FireBubble : Creature
         UpdateHeatVisual(0f);
     }
 
-    /// <summary>Updates movement and cooling only while the Bubble remains alive and floating.</summary>
+    /// <summary>Updates movement and lifetime only while the Bubble remains floating.</summary>
     protected override void TickCreature(float deltaTime)
     {
         if (currentState != BubbleState.Floating)
@@ -155,114 +135,17 @@ public sealed class FireBubble : Creature
         }
 
         RotateSlowly(deltaTime);
-        CoolDown(deltaTime);
+
+        if (elapsedTime >= lifetimeSeconds)
+        {
+            BecomeInanimate();
+            return;
+        }
+
         UpdateHeatVisual(deltaTime);
     }
 
-    /// <summary>Responds to the player's centre-screen interaction ray.</summary>
-    public override void ReceiveInteraction(CreatureInteraction interaction)
-    {
-        if (currentState != BubbleState.Floating)
-        {
-            LogPlayerInteraction($"Inanimate -> no effect (Heat {Heat:0.00}).");
-            return;
-        }
-
-        if (Heat > interactionMaximumHeat)
-        {
-            LogPlayerInteraction($"Too hot -> burst (Heat {Heat:0.00}).");
-            BurstAndReleaseHeat();
-        }
-        else if (Heat >= interactionMinimumHeat)
-        {
-            LogPlayerInteraction($"Correct timing -> Fire Source (Heat {Heat:0.00}).");
-            TransformIntoFireSource();
-        }
-        else
-        {
-            LogPlayerInteraction($"Too cold -> no effect (Heat {Heat:0.00}).");
-        }
-    }
-
-    /// <summary>
-    /// Removes Heat while floating. At the lower interaction bound, cooling stops and
-    /// the Bubble becomes inanimate while preserving that remaining Heat.
-    /// </summary>
-    private void CoolDown(float deltaTime)
-    {
-        float heatAboveLowerBound = Heat - interactionMinimumHeat;
-
-        if (heatAboveLowerBound <= 0f)
-        {
-            BecomeInanimate();
-            return;
-        }
-
-        float coolingThisFrame = Mathf.Min(coolingPerSecond * deltaTime, heatAboveLowerBound);
-        SpendHeat(coolingThisFrame);
-
-        if (Heat <= interactionMinimumHeat)
-        {
-            // Remove any tiny floating-point remainder without cooling below the bound.
-            SetHeat(interactionMinimumHeat);
-            BecomeInanimate();
-        }
-    }
-
-    /// <summary>Replaces this Bubble with a falling Fire Source and transfers all remaining Heat.</summary>
-    private void TransformIntoFireSource()
-    {
-        if (fireSourcePrefab == null)
-        {
-            Debug.LogWarning($"{name} cannot transform because no Fire Source prefab is assigned.", this);
-            return;
-        }
-
-        float transferredHeat = SpendHeat(Heat);
-        FireSource fireSource = Instantiate(fireSourcePrefab, transform.position, transform.rotation);
-
-        fireSource.SetHeat(transferredHeat);
-        fireSource.BeginFalling(driftVelocity);
-
-        Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// Distributes all remaining Heat once using linear distance falloff, then destroys the Bubble.
-    /// Every creature independently receives Heat; receivers do not divide it.
-    /// </summary>
-    private void BurstAndReleaseHeat()
-    {
-        float burstHeat = SpendHeat(Heat);
-        float burstRadius = burstHeat / Mathf.Max(0.001f, burstHeatDropPerMetre);
-        Collider[] overlaps = Physics.OverlapSphere(
-            transform.position,
-            burstRadius,
-            burstReceiverLayers,
-            QueryTriggerInteraction.Collide
-        );
-
-        uniqueBurstReceivers.Clear();
-
-        foreach (Collider overlap in overlaps)
-        {
-            Creature creature = overlap.GetComponentInParent<Creature>();
-
-            if (creature == null || creature == this || !uniqueBurstReceivers.Add(creature))
-            {
-                continue;
-            }
-
-            float distance = Vector3.Distance(transform.position, creature.transform.position);
-            float receivedHeat = Mathf.Max(0f, burstHeat - distance * burstHeatDropPerMetre);
-
-            creature.AddHeat(receivedHeat);
-        }
-
-        Destroy(gameObject);
-    }
-
-    /// <summary>Stops Bubble behavior and hands movement to gravity for the future Fire Eater path.</summary>
+    /// <summary>Stops Bubble behavior and hands movement to gravity for the Fire Eater path.</summary>
     private void BecomeInanimate()
     {
         ChangeState(BubbleState.Inanimate);
@@ -280,10 +163,7 @@ public sealed class FireBubble : Creature
         currentState = nextState;
     }
 
-    /// <summary>
-    /// Stops scripted float motion and enables gravity so the Bubble descends.
-    /// Heat cooling and interaction remain active while still Floating.
-    /// </summary>
+    /// <summary>Stops scripted float motion and enables gravity so the Bubble descends.</summary>
     private void StartFalling()
     {
         if (descending)
@@ -364,7 +244,7 @@ public sealed class FireBubble : Creature
 
     /// <summary>
     /// Advances the Shader's procedural flow according to current Heat.
-    /// At the lower interaction threshold (13 by default), flow speed becomes zero.
+    /// At Still Visual Heat, flow speed becomes zero.
     /// </summary>
     private void UpdateHeatVisual(float deltaTime)
     {
@@ -373,13 +253,13 @@ public sealed class FireBubble : Creature
             return;
         }
 
-        float heatMotion = Mathf.InverseLerp(interactionMinimumHeat, maximumVisualHeat, Heat);
+        float heatMotion = Mathf.InverseLerp(stillVisualHeat, maximumVisualHeat, Heat);
         visualFlowTime += heatMotion * maximumVisualFlowSpeed * deltaTime;
 
         visualProperties ??= new MaterialPropertyBlock();
         bubbleRenderer.GetPropertyBlock(visualProperties);
         visualProperties.SetFloat(HeatShaderId, Heat);
-        visualProperties.SetFloat(StillHeatShaderId, interactionMinimumHeat);
+        visualProperties.SetFloat(StillHeatShaderId, stillVisualHeat);
         visualProperties.SetFloat(MaximumHeatShaderId, maximumVisualHeat);
         visualProperties.SetFloat(FlowTimeShaderId, visualFlowTime);
         bubbleRenderer.SetPropertyBlock(visualProperties);
@@ -389,15 +269,6 @@ public sealed class FireBubble : Creature
     protected override void OnHeatChanged()
     {
         UpdateHeatVisual(0f);
-    }
-
-    /// <summary>Prints only the result of a deliberate player interaction.</summary>
-    private void LogPlayerInteraction(string result)
-    {
-        if (logPlayerInteraction)
-        {
-            Debug.Log($"[FireBubble] Player interaction: {result}", this);
-        }
     }
 
     /// <summary>Finds the Rigidbody and solid Sphere Collider required by this Bubble.</summary>
@@ -423,14 +294,9 @@ public sealed class FireBubble : Creature
         }
     }
 
-    /// <summary>Shows the fall-start height and current too-hot burst radius while selected.</summary>
+    /// <summary>Shows the fall-start height while selected.</summary>
     private void OnDrawGizmosSelected()
     {
-        float burstRadius = Heat / Mathf.Max(0.001f, burstHeatDropPerMetre);
-
-        Gizmos.color = new Color(1f, 0.15f, 0f, 0.3f);
-        Gizmos.DrawWireSphere(transform.position, burstRadius);
-
         Vector3 center = transform.position;
         center.y = fallStartWorldY;
         Gizmos.color = new Color(0.3f, 0.85f, 1f, 0.9f);
@@ -440,12 +306,10 @@ public sealed class FireBubble : Creature
 
     private void OnValidate()
     {
-        coolingPerSecond = Mathf.Max(0f, coolingPerSecond);
+        lifetimeSeconds = Mathf.Max(0f, lifetimeSeconds);
         upwardSpeed = Mathf.Max(0f, upwardSpeed);
-        interactionMinimumHeat = Mathf.Max(0f, interactionMinimumHeat);
-        interactionMaximumHeat = Mathf.Max(interactionMinimumHeat, interactionMaximumHeat);
-        burstHeatDropPerMetre = Mathf.Max(0.001f, burstHeatDropPerMetre);
-        maximumVisualHeat = Mathf.Max(interactionMinimumHeat + 0.001f, maximumVisualHeat);
+        stillVisualHeat = Mathf.Max(0f, stillVisualHeat);
+        maximumVisualHeat = Mathf.Max(stillVisualHeat + 0.001f, maximumVisualHeat);
         maximumVisualFlowSpeed = Mathf.Max(0f, maximumVisualFlowSpeed);
 
         FindPhysicsReferences();

@@ -73,21 +73,14 @@ MonoBehaviour:
   minimumInitialDriftSpeed: 0.8
   maximumInitialDriftSpeed: 1.8
   driftDamping: 0.45
-  coolingPerSecond: 1
-  interactionMinimumHeat: 13
-  interactionMaximumHeat: 17
-  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
-  burstHeatDropPerMetre: 1
-  burstReceiverLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
+  lifetimeSeconds: 10
   bubbleRenderer: {fileID: 8706553103238526404}
+  stillVisualHeat: 13
   maximumVisualHeat: 25
   maximumVisualFlowSpeed: 2
   currentState: 0
   bubbleBody: {fileID: 4566537563883852650}
   bubbleCollider: {fileID: 4488284502573638848}
-  logPlayerInteraction: 1
 --- !u!23 &8706553103238526404
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -95,7 +88,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1877137198347345606}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -214,7 +207,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6960998702909440734
 Transform:
   m_ObjectHideFlags: 0
@@ -237,7 +230,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4634989449379782267}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b4866386fa8e45fa9f761dc013d387b, type: 3}
   m_Name: 
