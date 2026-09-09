@@ -179,6 +179,7 @@ public sealed class FireFlower : Creature
 
         if (stateTime >= safeDuration)
         {
+            SetHeat(0f);
             ChangeState(FireFlowerState.Closed);
         }
     }
