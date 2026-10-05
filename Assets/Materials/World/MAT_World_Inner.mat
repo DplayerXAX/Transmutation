@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_World_Inner
+  m_Shader: {fileID: 4800000, guid: 7466dce61bfc482e805357012c820f85, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _FloorBlendWidth: 9.08
+    - _FloorFreq: 12.33
+    - _FloorHeight: -5
+    - _FloorTravel: 0.96
+    - _FloorTriplanarSharpness: 1
+    - _FloorViewFalloff: 0.15
+    - _FloorViewInfluence: 1
+    - _PolarScale: 0.02
+    - _RayPhaseProximityBoost: 100
+    - _RayPhaseProximityFalloff: 0.12
+    - _RayPhaseScale: 29.25
+    - _RaySpeed: 0
+    - _RingDistort: 4
+    - _RingFreq: 46
+    - _RingKeepMix: 1
+    - _RingKeepThreshold: 1
+    - _RingSqrtBoost: 6
+    - _RingTravel: 7
+    - _ShadowLineDim: 0.85
+    - _MainLightAmount: 0
+    - _FakeLightAmount: 1.1
+    - _ShadeLevels: 4
+    - _HatchStrength: 0.7
+    - _HatchScale: 2.5
+    - _HatchWidth: 1
+    - _SheenAmount: 0.85
+    - _HazeStart: 6
+    - _HazeEnd: 75
+    m_Colors:
+    - _Color: {r: 0.66, g: 0.68, b: 0.96, a: 1}
+    - _ShadowColor: {r: 0.24, g: 0.21, b: 0.48, a: 1}
+    - _LineColor: {r: 0.12, g: 0.06, b: 0.32, a: 1}
+    - _LineColor2: {r: 0.03, g: 0.16, b: 0.44, a: 1}
+    - _FakeLightDir: {r: -0.3, g: 1, b: 0.45, a: 0}
+    - _HatchColor: {r: 0.32, g: 0.28, b: 0.62, a: 1}
+    - _HazeColor: {r: 0.56, g: 0.52, b: 0.95, a: 0.85}
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

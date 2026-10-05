@@ -1,0 +1,30 @@
+{
+ "SoundBanksInfo": {
+  "Platform": "Mac",
+  "BasePlatform": "Mac",
+  "SchemaVersion": "16",
+  "SoundBankVersion": "172",
+  "SoundBanks": [
+   {
+    "Id": "2271640160",
+    "Type": "User",
+    "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
+    "Language": "SFX",
+    "Hash": "{15D09F8E-3506-F531-5037-3914834A07B6}",
+    "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
+    "ShortName": "Transmutation",
+    "Path": "Transmutation.bnk",
+    "Events": [
+     {
+      "Id": "2542411811",
+      "Name": "PlayBGM",
+      "ObjectPath": "\\Events\\Default Work Unit\\PlayBGM",
+      "GUID": "{35352506-54B6-4A54-9C06-399C44291C2C}",
+      "DurationType": "Infinite"
+     }
+    ]
+   }
+  ],
+  "FileHash": "{B4A2C617-D59E-4D2F-65EF-E4337563C56B}"
+ }
+}

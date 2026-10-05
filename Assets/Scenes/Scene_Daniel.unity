@@ -1138,6 +1138,63 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &748032329
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 748032331}
+  - component: {fileID: 748032330}
+  m_Layer: 0
+  m_Name: WwiseGlobal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &748032330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748032329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ce5591ea968d584884b11d9378745a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AK.Wwise.Unity.MonoBehaviour::AkInitializer
+  InitializationSettings: {fileID: 11400000, guid: 04cffa1fd379c6844994586d29d5c369, type: 2}
+  basePath: 
+  language: 
+  defaultPoolSize: 0
+  lowerPoolSize: 0
+  streamingPoolSize: 0
+  memoryCutoffThreshold: 0
+  monitorPoolSize: 0
+  monitorQueuePoolSize: 0
+  callbackManagerBufferSize: 0
+  spatialAudioPoolSize: 0
+  maxSoundPropagationDepth: 0
+  engineLogging: 0
+--- !u!4 &748032331
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748032329}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &757158449 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4702101864647544357, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
@@ -1954,6 +2011,51 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 012e9eda14aff41f4bfa0d5ebc4b67be, type: 3}
   m_PrefabInstance: {fileID: 1121636438}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1176000793 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 2073160748}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1176000794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176000793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 119b92a3102b9f544a84c94e6b38b3ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AK.Wwise.Unity.MonoBehaviour::AkAudioListener
+  isDefaultListener: 1
+  bOverrideScalingFactor: 0
+  scalingFactor: -1
+  listenerId: 0
+--- !u!114 &1176000795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1176000793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6e4c8a9c5f11d644b6938301bcc3219, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AK.Wwise.Unity.MonoBehaviour::AkGameObj
+  m_listeners:
+    initialListenerList: []
+    useDefaultListeners: 1
+  isEnvironmentAware: 0
+  isStaticObject: 0
+  usePositionOffsetData: 0
+  m_positionOffsetData:
+    KeepMe: 0
+    positionOffset: {x: 0, y: 0, z: 0}
+  scalingFactor: 1
+  m_posOffsetData: {fileID: 0}
+  listenerMask: 1
 --- !u!1001 &1286493689
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2510,6 +2612,1047 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1700000001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000002}
+  - component: {fileID: 1700000003}
+  m_Layer: 5
+  m_Name: InteractionPromptHUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  carrier: {fileID: 0}
+  interactor: {fileID: 0}
+  traversal: {fileID: 0}
+  handClimber: {fileID: 0}
+  offsetFromCentre: {x: 0, y: -70}
+  titleFontSize: 18
+  hintFontSize: 22
+  titleColor: {r: 1, g: 1, b: 1, a: 0.55}
+  hintColor: {r: 1, g: 1, b: 1, a: 0.92}
+  fadeTime: 0.12
+  showCreatureName: 1
+  carryHint: '[Hold RMB]  Carry'
+  releaseHint: '[Release RMB]  Drop'
+  pickUpKeyHintFormat: '[{0}]  Pick up'
+  dropKeyHintFormat: '[{0}]  Drop'
+  interactHintFormat: '[LMB]  {0}'
+  climbHint: '[Hold W]  Climb'
+  climbJumpHint: '[Space]  Jump off wall'
+  wallRunHint: '[Hold W]  Wall run'
+  wallRunActiveHint: '[Space]  Wall jump    [Shift] / [Ctrl]  Up / Down'
+  ledgeHint: '[Space]  Jump    [WASD]  Let go'
+  handClimbHint: '[WASD]  Climb    [Space]  Push off'
+--- !u!1 &1700000011
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000012}
+  - component: {fileID: 1700000013}
+  - component: {fileID: 1700000014}
+  - component: {fileID: 1700000015}
+  m_Layer: 0
+  m_Name: Tentacle Creature
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000011}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 229.8, y: -22.5, z: 227.6}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &1700000013
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000011}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 80
+  m_CollisionDetection: 0
+--- !u!135 &1700000014
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000011}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000015
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000011}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe33add57e03498680820e4b9ee5c7c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
+  creatureName: Tentacle Creature
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  bodyRadius: 0.35
+  hoverHeight: 0.9
+  bobAmplitude: 0.08
+  bobSpeed: 1.6
+  bodyMaterial: {fileID: 2100000, guid: 36cab6b29c85418f9de4b42cc2eb0d4b, type: 2}
+  jointMaterial: {fileID: 2100000, guid: c80e25641a474315b2e91b0362fcba74, type: 2}
+  tipMaterial: {fileID: 2100000, guid: 2c286a1f55324d7ea90829ebf472383e, type: 2}
+  seed: 13
+  asymmetry: 0.85
+  membraneMaterial: {fileID: 2100000, guid: ec05989cb3b6487ea5c104299c8fb072, type: 2}
+  membraneThickness: 2.6
+  bodySkinScale: 1.45
+  irregularity: 0.24
+  membraneRings: 22
+  membraneSides: 10
+  exposedBoneChance: 0.6
+  tentacleCount: 6
+  jointsPerTentacle: 7
+  reach: 2.4
+  stepDistance: 1.1
+  stepDuration: 0.22
+  stepHeight: 0.45
+  jointRadius: 0.09
+  tipRadius: 0.045
+  surfaceLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  wanderRadius: 6
+  moveSpeed: 1.2
+  turnSpeed: 120
+  pauseTimeRange: {x: 0.5, y: 2.5}
+  fallSpeed: 4
+  minGripsToClimb: 2
+  climbUpSpeed: 4
+  climbDownSpeed: 3
+  climbAcceleration: 25
+  climbUpKey: 1
+  climbDownKey: 55
+  climbClearance: 0.3
+  climbUpPrompt: '[Space]  Climb up'
+  climbDownPrompt: '[Ctrl]  Climb down'
+  plantedTentacles: 0
+  gripping: 0
+  canClimbUp: 0
+  canHang: 0
+--- !u!1 &1700000021
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000022}
+  - component: {fileID: 1700000023}
+  - component: {fileID: 1700000024}
+  - component: {fileID: 1700000025}
+  - component: {fileID: 1700000026}
+  m_Layer: 7
+  m_Name: Cave Hill
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1700000022
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000021}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 231, y: -24, z: 262}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &1700000023
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000021}
+  m_Mesh: {fileID: 0}
+--- !u!23 &1700000024
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000021}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: ccf1cd8a4ae54a1bb54df320e4b4c648, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!64 &1700000025
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000021}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 0}
+--- !u!114 &1700000026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7193c3508b94c69949621ee84809186, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CaveFormation
+  footprint: {x: 48, y: 48}
+  volumeHeight: 26
+  cellSize: 0.6
+  buryDepth: 3
+  bumps:
+  - position: {x: 0, y: 0}
+    height: 15
+    radius: 18
+  - position: {x: -11, y: 9}
+    height: 10
+    radius: 11
+  - position: {x: 10, y: -6}
+    height: 8
+    radius: 10
+  - position: {x: 6, y: 13}
+    height: 6
+    radius: 8
+  seed: 7
+  noiseAmplitude: 2.6
+  noiseFrequency: 0.11
+  terracing: 0.35
+  terraceHeight: 1.6
+  tunnel:
+  - position: {x: 0, y: -25}
+    heightAboveGround: 1.6
+    radius: 2.6
+  - position: {x: -1, y: -16}
+    heightAboveGround: 1.9
+    radius: 2.4
+  - position: {x: -5, y: -8}
+    heightAboveGround: 2.2
+    radius: 2.2
+  - position: {x: 0, y: 0}
+    heightAboveGround: 3.2
+    radius: 2.6
+  - position: {x: 6, y: 7}
+    heightAboveGround: 3.6
+    radius: 2.2
+  - position: {x: 4, y: 16}
+    heightAboveGround: 2.4
+    radius: 2.4
+  - position: {x: 3, y: 25}
+    heightAboveGround: 1.6
+    radius: 2.6
+  chamberPoint: 3
+  chamberRadius: 6.5
+  chamberFlatten: 0.65
+  skylightRadius: 1.4
+  caveNoise: 0.7
+  drawBounds: 1
+  lastVertexCount: 0
+--- !u!1 &1700000031
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000032}
+  - component: {fileID: 1700000033}
+  m_Layer: 7
+  m_Name: Procedural World
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000032
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 230.23, y: -25.2, z: 223.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  worldSize: {x: 288, y: 288}
+  cellSize: 1.25
+  chunkCells: 24
+  seed: 1
+  surfaceAmplitude: 32
+  surfaceFrequency: 0.013
+  ridges: 0.7
+  overhangAmplitude: 5
+  overhangFrequency: 0.06
+  spawnFlatRadius: 18
+  spawnBlend: 30
+  rimHeight: 30
+  crustThickness: 9
+  innerGap: 20
+  ceilingMirror: 0.8
+  innerInvert: 1
+  innerDetail: 5
+  caveFrequency: 0.025
+  caveWidth: 0.12
+  caveDepth: 14
+  sinkholeCount: 6
+  sinkholeRadius: {x: 4, y: 7}
+  firstSinkholeDistance: 45
+  surfaceMaterial: {fileID: 2100000, guid: ccf1cd8a4ae54a1bb54df320e4b4c648, type: 2}
+  innerMaterial: {fileID: 2100000, guid: 155dc562899c460e915e472b6e0a9519, type: 2}
+  chunkLayer: 7
+  blockingRadius: 40
+  meshesPerFrame: 6
+  respawnFallingPlayer: 1
+  chunksBuilt: 0
+  chunksTotal: 0
+--- !u!1 &1700000041
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000042}
+  - component: {fileID: 1700000043}
+  - component: {fileID: 1700000044}
+  m_Layer: 0
+  m_Name: Player Body
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000042
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000041}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40e76d05e1a1453ab221bb632d7bd3d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandClimber
+  controller: {fileID: 0}
+  climbLayers:
+    serializedVersion: 2
+    m_Bits: 384
+  minWallSteepness: 55
+  detectDistance: 0.9
+  maxFacingAngle: 55
+  wallOffset: 0.5
+  handHeight: 0.6
+  handSpread: 0.3
+  pullSpeed: 2.4
+  reachStep: 0.5
+  reachTime: 0.22
+  maxHandDistance: 1.4
+  mantleTime: 0.5
+  jumpOffVelocity: {x: 5, y: 5}
+  regrabDelay: 0.35
+  upKey: 37
+  downKey: 33
+  leftKey: 15
+  rightKey: 18
+  jumpOffKey: 1
+  climbing: 0
+  mantling: 0
+  canStartClimb: 0
+--- !u!114 &1700000044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62ec318a6e27422dbf235651446d2e77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FirstPersonBody
+  controller: {fileID: 0}
+  viewCamera: {fileID: 0}
+  carrier: {fileID: 0}
+  climber: {fileID: 0}
+  limbMaterial: {fileID: 2100000, guid: 97b46b0a5d754ad78a98689664392761, type: 2}
+  jointMaterial: {fileID: 2100000, guid: 6a62aff1be3543cf923dead093f70001, type: 2}
+  armThickness: 0.075
+  legThickness: 0.11
+  showLegs: 1
+  shoulderOffset: {x: 0.24, y: -0.3, z: -0.05}
+  idleHandOffset: {x: 0.24, y: -0.34, z: 0.5}
+  upperArmLength: 0.36
+  forearmLength: 0.34
+  handFollow: 18
+  hipHeight: -0.05
+  hipWidth: 0.14
+  thighLength: 0.5
+  shinLength: 0.48
+  strideLength: 0.9
+--- !u!1 &1700000051
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000052}
+  - component: {fileID: 1700000053}
+  - component: {fileID: 1700000054}
+  - component: {fileID: 1700000055}
+  m_Layer: 0
+  m_Name: Fuzz Creature 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000052
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000051}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 236.23, y: -24.7, z: 231.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &1700000053
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000051}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 80
+  m_CollisionDetection: 0
+--- !u!135 &1700000054
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000051}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92085c7aa57b4f349e53286ef84a1ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
+  creatureName: Fuzz
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  noticeRadius: 6
+  loseRadius: 30
+  spacing: 1.3
+  maxSpeed: 6.5
+  wanderRadius: 3
+  radius: 0.38
+  seed: 3
+  groundClearance: 0.02
+  hopHeight: 0.18
+  hopRate: 2.2
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
+  gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
+  furShells: 12
+  following: 0
+  chainIndex: -1
+--- !u!1 &1700000061
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000062}
+  - component: {fileID: 1700000063}
+  - component: {fileID: 1700000064}
+  - component: {fileID: 1700000065}
+  m_Layer: 0
+  m_Name: Fuzz Creature 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000062
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000061}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 223.23, y: -24.7, z: 233.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &1700000063
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000061}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 80
+  m_CollisionDetection: 0
+--- !u!135 &1700000064
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000061}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92085c7aa57b4f349e53286ef84a1ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
+  creatureName: Fuzz
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  noticeRadius: 6
+  loseRadius: 30
+  spacing: 1.3
+  maxSpeed: 6.5
+  wanderRadius: 3
+  radius: 0.32
+  seed: 10
+  groundClearance: 0.02
+  hopHeight: 0.18
+  hopRate: 2.2
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
+  gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
+  furShells: 12
+  following: 0
+  chainIndex: -1
+--- !u!1 &1700000071
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000072}
+  - component: {fileID: 1700000073}
+  - component: {fileID: 1700000074}
+  - component: {fileID: 1700000075}
+  m_Layer: 0
+  m_Name: Fuzz Creature 3
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000072
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000071}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 239.23, y: -24.7, z: 218.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &1700000073
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000071}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 80
+  m_CollisionDetection: 0
+--- !u!135 &1700000074
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000071}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000075
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92085c7aa57b4f349e53286ef84a1ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
+  creatureName: Fuzz
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  noticeRadius: 6
+  loseRadius: 30
+  spacing: 1.3
+  maxSpeed: 6.5
+  wanderRadius: 3
+  radius: 0.45
+  seed: 17
+  groundClearance: 0.02
+  hopHeight: 0.18
+  hopRate: 2.2
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
+  gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
+  furShells: 12
+  following: 0
+  chainIndex: -1
+--- !u!1 &1700000081
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000082}
+  - component: {fileID: 1700000083}
+  - component: {fileID: 1700000084}
+  - component: {fileID: 1700000085}
+  m_Layer: 0
+  m_Name: Fuzz Creature 4
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000082
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000081}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 225.23, y: -24.7, z: 214.44}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!54 &1700000083
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000081}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 80
+  m_CollisionDetection: 0
+--- !u!135 &1700000084
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000081}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.4
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000085
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000081}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92085c7aa57b4f349e53286ef84a1ea3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
+  creatureName: Fuzz
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  noticeRadius: 6
+  loseRadius: 30
+  spacing: 1.3
+  maxSpeed: 6.5
+  wanderRadius: 3
+  radius: 0.35
+  seed: 24
+  groundClearance: 0.02
+  hopHeight: 0.18
+  hopRate: 2.2
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
+  gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
+  furShells: 12
+  following: 0
+  chainIndex: -1
 --- !u!1 &1722953792
 GameObject:
   m_ObjectHideFlags: 0
@@ -3335,15 +4478,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 180101728617543538, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.3
+      value: 0.42
       objectReference: {fileID: 0}
     - target: {fileID: 180101728617543538, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.45
+      value: -0.36
       objectReference: {fileID: 0}
     - target: {fileID: 180101728617543538, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1.3
+      value: 0.95
       objectReference: {fileID: 0}
     - target: {fileID: 1185223867066776486, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_Name
@@ -3364,6 +4507,22 @@ PrefabInstance:
     - target: {fileID: 6924890591384260322, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: maxClimbTime
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: minWallSteepness
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: allowWallClimbing
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: whatIsWall.m_Bits
+      value: 384
       objectReference: {fileID: 0}
     - target: {fileID: 8755812520023030105, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3406,6 +4565,14 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: firmGrip
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: carryInput
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: pickupRange
       value: 3
       objectReference: {fileID: 0}
@@ -3425,30 +4592,16 @@ PrefabInstance:
       propertyPath: groundCheckOriginYOffset
       value: 0.3
       objectReference: {fileID: 0}
-    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
-      propertyPath: allowWallClimbing
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
-      propertyPath: maxClimbTime
-      value: 0.75
-      objectReference: {fileID: 0}
-    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
-      propertyPath: whatIsWall.m_Bits
-      value: 384
-      objectReference: {fileID: 0}
-    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
-      propertyPath: minWallSteepness
-      value: 60
-      objectReference: {fileID: 0}
-    - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
-      propertyPath: carryInput
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1176000795}
+    - targetCorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1176000794}
   m_SourcePrefab: {fileID: 100100000, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
 --- !u!1001 &2121471363
 PrefabInstance:
@@ -3700,321 +4853,6 @@ PrefabInstance:
       addedObject: {fileID: 1358192232}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c05a285be30dfe8488310060958d1d64, type: 3}
---- !u!1 &1700000001
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1700000002}
-  - component: {fileID: 1700000003}
-  m_Layer: 5
-  m_Name: InteractionPromptHUD
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1700000002
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000001}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1700000003
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000001}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
---- !u!1 &1700000011
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1700000012}
-  - component: {fileID: 1700000013}
-  - component: {fileID: 1700000014}
-  - component: {fileID: 1700000015}
-  m_Layer: 0
-  m_Name: Tentacle Creature
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1700000012
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000011}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 229.8, y: -22.5, z: 227.6}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!54 &1700000013
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000011}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
-  m_Interpolate: 1
-  m_Constraints: 80
-  m_CollisionDetection: 0
---- !u!135 &1700000014
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000011}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.4
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &1700000015
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000011}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe33add57e03498680820e4b9ee5c7c5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
-  creatureName: Tentacle Creature
-  bodyMaterial: {fileID: 2100000, guid: 36cab6b29c85418f9de4b42cc2eb0d4b, type: 2}
-  jointMaterial: {fileID: 2100000, guid: c80e25641a474315b2e91b0362fcba74, type: 2}
-  tipMaterial: {fileID: 2100000, guid: 2c286a1f55324d7ea90829ebf472383e, type: 2}
-  membraneMaterial: {fileID: 2100000, guid: ec05989cb3b6487ea5c104299c8fb072, type: 2}
---- !u!1 &1700000021
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1700000022}
-  - component: {fileID: 1700000023}
-  - component: {fileID: 1700000024}
-  - component: {fileID: 1700000025}
-  - component: {fileID: 1700000026}
-  m_Layer: 7
-  m_Name: Cave Hill
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &1700000022
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000021}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 231, y: -24, z: 262}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &1700000023
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000021}
-  m_Mesh: {fileID: 0}
---- !u!23 &1700000024
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000021}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: ccf1cd8a4ae54a1bb54df320e4b4c648, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!64 &1700000025
-MeshCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000021}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 0
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 0}
---- !u!114 &1700000026
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000021}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f7193c3508b94c69949621ee84809186, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CaveFormation
---- !u!1 &1700000031
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1700000032}
-  - component: {fileID: 1700000033}
-  m_Layer: 7
-  m_Name: Procedural World
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1700000032
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000031}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 230.23, y: -25.2, z: 223.44}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1700000033
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000031}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
-  surfaceMaterial: {fileID: 2100000, guid: ccf1cd8a4ae54a1bb54df320e4b4c648, type: 2}
-  innerMaterial: {fileID: 2100000, guid: 155dc562899c460e915e472b6e0a9519, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -4047,3 +4885,9 @@ SceneRoots:
   - {fileID: 1700000012}
   - {fileID: 1700000022}
   - {fileID: 1700000032}
+  - {fileID: 1700000042}
+  - {fileID: 1700000052}
+  - {fileID: 1700000062}
+  - {fileID: 1700000072}
+  - {fileID: 1700000082}
+  - {fileID: 748032331}
