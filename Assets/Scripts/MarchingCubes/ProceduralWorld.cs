@@ -118,6 +118,9 @@ public sealed class ProceduralWorld : MonoBehaviour
     private Vector3 spawnPosition;
     private bool generating;
 
+    /// <summary>Raised on the main thread after each chunk object and its mesh are created.</summary>
+    public event System.Action<GameObject, Mesh> ChunkCreated;
+
     private void Start()
     {
         Rigidbody[] bodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
@@ -521,6 +524,7 @@ public sealed class ProceduralWorld : MonoBehaviour
         chunkObjects.Add(chunk);
         chunkMeshes.Add(mesh);
         chunksBuilt++;
+        ChunkCreated?.Invoke(chunk, mesh);
     }
 
     // ---------------- Noise (thread safe) ----------------

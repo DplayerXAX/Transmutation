@@ -29,10 +29,18 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Forward speed given to a physics creature when it is dropped in Toggle Key mode.")]
     [Min(0f)] [SerializeField] private float dropForwardSpeed = 1.5f;
 
+    [Header("Grip")]
+    [Tooltip("Lock the held creature to the hand every frame instead of pulling it there with a spring. " +
+             "Feels solid and has no lag, but the held creature can pass through walls.")]
+    [SerializeField] private bool firmGrip;
+
     public Creature CarriedCreature { get; private set; }
 
     private Collider[] playerColliders;
     private Collider[] carriedColliders;
+    private Rigidbody heldBody;
+    private RigidbodyInterpolation heldInterpolation;
+    private Quaternion heldYawOffset;
     public CarryInput InputMode => carryInput;
     public Key ToggleKeyBinding => toggleKey;
 
@@ -126,12 +134,45 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
+
+        if (firmGrip)
+        {
+            heldBody = creature.GetComponent<Rigidbody>();
+            if (heldBody != null)
+            {
+                heldInterpolation = heldBody.interpolation;
+                heldBody.interpolation = RigidbodyInterpolation.None;
+                heldBody.isKinematic = true; // EndCarry restores the creature's own setting.
+            }
+            heldYawOffset = Quaternion.Inverse(CarryYaw()) * creature.transform.rotation;
+            SnapHeld();
+        }
     }
 
     private void FixedUpdate()
     {
-        if (CarriedCreature == null) return;
+        if (CarriedCreature == null || firmGrip) return;
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
+    }
+
+    // After the camera has moved this frame, so the held creature never trails behind the view.
+    private void LateUpdate()
+    {
+        if (firmGrip && CarriedCreature != null) SnapHeld();
+    }
+
+    private void SnapHeld()
+    {
+        if (carryPoint == null) return;
+        CarriedCreature.transform.SetPositionAndRotation(carryPoint.position, CarryYaw() * heldYawOffset);
+        if (heldBody != null) heldBody.position = carryPoint.position;
+    }
+
+    private Quaternion CarryYaw()
+    {
+        Vector3 forward = carryCamera != null ? carryCamera.transform.forward : transform.forward;
+        forward = Vector3.ProjectOnPlane(forward, Vector3.up);
+        return forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(forward.normalized, Vector3.up) : Quaternion.identity;
     }
 
     /// <summary>Releases the creature and, if it is a free physics body, sends it slightly forward.</summary>
@@ -150,6 +191,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
+        if (heldBody != null) heldBody.interpolation = heldInterpolation;
+        heldBody = null;
         SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
     }
