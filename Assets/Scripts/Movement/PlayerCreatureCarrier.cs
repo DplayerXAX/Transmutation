@@ -3,22 +3,50 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Attach to the player. Holds any Creature at an anchor without disabling its
-/// simulation, colliders, animation, or heat reactions. Hold right click to carry.
+/// simulation, colliders, animation, or heat reactions. Either hold right click to
+/// carry, or press a key once to pick up and again to drop.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(1000)]
 public sealed class PlayerCreatureCarrier : MonoBehaviour
 {
+    public enum CarryInput
+    {
+        HoldRightMouse,
+        ToggleKey
+    }
+
     [SerializeField] private Camera carryCamera;
     [Tooltip("Empty transform in front of the camera. Created automatically if unassigned.")]
     [SerializeField] private Transform carryPoint;
     [Min(0f)] [SerializeField] private float pickupRange = 5f;
     [SerializeField] private LayerMask pickupLayers = ~0;
 
+    [Header("Input")]
+    [SerializeField] private CarryInput carryInput = CarryInput.HoldRightMouse;
+    [Tooltip("Pick up / drop key used by the Toggle Key mode.")]
+    [SerializeField] private Key toggleKey = Key.E;
+    [Tooltip("Forward speed given to a physics creature when it is dropped in Toggle Key mode.")]
+    [Min(0f)] [SerializeField] private float dropForwardSpeed = 1.5f;
+
     public Creature CarriedCreature { get; private set; }
+
+    private Collider[] playerColliders;
+    private Collider[] carriedColliders;
+    public CarryInput InputMode => carryInput;
+    public Key ToggleKeyBinding => toggleKey;
+
+    /// <summary>The player's Rigidbody, so carried creatures can help it move.</summary>
+    public Rigidbody PlayerBody { get; private set; }
+
+    /// <summary>The player's movement controller, or null.</summary>
+    public SmoothFirstPersonController PlayerController { get; private set; }
 
     private void Awake()
     {
+        PlayerBody = GetComponentInParent<Rigidbody>();
+        PlayerController = GetComponentInParent<SmoothFirstPersonController>();
+        playerColliders = transform.root.GetComponentsInChildren<Collider>(true);
         if (carryCamera == null) carryCamera = Camera.main;
         if (carryPoint == null && carryCamera != null)
         {
@@ -30,8 +58,40 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
+        if (!Application.isFocused)
+        {
+            Release();
+            return;
+        }
+
+        if (carryInput == CarryInput.ToggleKey)
+            UpdateToggle();
+        else
+            UpdateHoldRightMouse();
+
+        if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
+            Release();
+    }
+
+    private void UpdateToggle()
+    {
+        Keyboard keyboard = Keyboard.current;
+        if (keyboard == null || !keyboard[toggleKey].wasPressedThisFrame) return;
+
+        if (CarriedCreature != null)
+        {
+            Drop();
+            return;
+        }
+
+        Creature creature = FindCreature();
+        if (creature != null) BeginCarry(creature);
+    }
+
+    private void UpdateHoldRightMouse()
+    {
         Mouse mouse = Mouse.current;
-        if (mouse == null || !Application.isFocused)
+        if (mouse == null)
         {
             Release();
             return;
@@ -46,11 +106,10 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         }
 
         if (!mouse.rightButton.isPressed) Release();
-        if (CarriedCreature == null || !CarriedCreature.isActiveAndEnabled)
-            Release();
     }
 
-    private Creature FindCreature()
+    /// <summary>The Creature the pickup input would grab now, or null.</summary>
+    public Creature FindCreature()
     {
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -64,6 +123,9 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     {
         if (carryPoint == null || !creature.TryBeginCarry(this, carryPoint)) return;
         CarriedCreature = creature;
+        // A held creature must never push the player: looking down onto it would lift the player into the air.
+        carriedColliders = creature.GetComponentsInChildren<Collider>();
+        SetPlayerCollision(carriedColliders, ignore: true);
     }
 
     private void FixedUpdate()
@@ -72,10 +134,35 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
     }
 
+    /// <summary>Releases the creature and, if it is a free physics body, sends it slightly forward.</summary>
+    public void Drop()
+    {
+        Creature dropped = CarriedCreature;
+        Release();
+        if (dropped == null || carryCamera == null) return;
+
+        Rigidbody body = dropped.GetComponent<Rigidbody>();
+        if (body != null && !body.isKinematic)
+            body.linearVelocity += carryCamera.transform.forward * dropForwardSpeed;
+    }
+
     public void Release()
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
+        SetPlayerCollision(carriedColliders, ignore: false);
+        carriedColliders = null;
+    }
+
+    private void SetPlayerCollision(Collider[] colliders, bool ignore)
+    {
+        if (colliders == null || playerColliders == null) return;
+        foreach (Collider carried in colliders)
+        {
+            if (carried == null) continue;
+            foreach (Collider player in playerColliders)
+                if (player != null) Physics.IgnoreCollision(carried, player, ignore);
+        }
     }
 
     private void OnDisable() => Release();

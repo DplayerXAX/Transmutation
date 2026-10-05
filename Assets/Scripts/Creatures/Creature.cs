@@ -258,6 +258,18 @@ public abstract class Creature : MonoBehaviour
     }
 
     /// <summary>
+    /// Short verb shown in the interaction prompt (for example "Ignite").
+    /// Null means left-click does nothing here, so no prompt is shown.
+    /// Override together with ReceiveInteraction.
+    /// </summary>
+    public virtual string InteractionPrompt => null;
+
+    /// <summary>
+    /// Extra control hint shown while the player carries this creature, or null for none.
+    /// </summary>
+    public virtual string CarriedPrompt => null;
+
+    /// <summary>
     /// Receives notification that this creature has met another creature.
     /// Collision or trigger components can call this method later.
     /// </summary>

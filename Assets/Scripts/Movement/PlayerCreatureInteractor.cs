@@ -40,24 +40,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Raycasts through screen centre and notifies the first Creature hit.</summary>
     public void TryInteract()
     {
-        if (interactionCamera == null)
-        {
-            return;
-        }
-
-        Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-
-        if (!Physics.Raycast(
-                ray,
-                out RaycastHit hit,
-                interactionRange,
-                interactionLayers,
-                QueryTriggerInteraction.Collide))
-        {
-            return;
-        }
-
-        Creature creature = hit.collider.GetComponentInParent<Creature>();
+        Creature creature = FindCreature(out RaycastHit hit, out Ray ray);
 
         if (creature == null)
         {
@@ -71,5 +54,36 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         );
 
         creature.ReceiveInteraction(interaction);
+    }
+
+    /// <summary>The Creature a left-click would interact with now, or null.</summary>
+    public Creature FindCreature()
+    {
+        return FindCreature(out _, out _);
+    }
+
+    private Creature FindCreature(out RaycastHit hit, out Ray ray)
+    {
+        hit = default;
+        ray = default;
+
+        if (interactionCamera == null)
+        {
+            return null;
+        }
+
+        ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+
+        if (!Physics.Raycast(
+                ray,
+                out hit,
+                interactionRange,
+                interactionLayers,
+                QueryTriggerInteraction.Collide))
+        {
+            return null;
+        }
+
+        return hit.collider.GetComponentInParent<Creature>();
     }
 }

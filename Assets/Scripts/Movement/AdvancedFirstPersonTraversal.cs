@@ -70,6 +70,25 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
     public bool ExitingLedge => exitingLedge;
     public bool ExitingClimbWall => exitingClimbWall;
 
+    // Read-only queries for UI prompts. They mirror the state machine conditions below.
+    public bool IsClimbing => isClimbing;
+    public bool IsWallRunning => controller != null && controller.WallRunning;
+
+    /// <summary>A climbable wall is in front and holding W would start a climb.</summary>
+    public bool CanStartClimb =>
+        allowWallClimbing && wallFront && !isClimbing && !exitingClimbWall && !holdingLedge &&
+        wallLookAngle < maxWallLookAngle && climbTimer > 0f;
+
+    /// <summary>Pressing jump now would push off the wall in front.</summary>
+    public bool CanClimbJump =>
+        allowWallClimbing && wallFront && climbJumpsLeft > 0 && !holdingLedge &&
+        controller != null && !controller.Grounded;
+
+    /// <summary>A side wall is close while airborne, so moving forward would start a wall run.</summary>
+    public bool CanStartWallRun =>
+        allowWallRunning && (wallLeft || wallRight) && !wallRunExiting &&
+        controller != null && !controller.WallRunning && AboveGround();
+
     private SmoothFirstPersonController controller;
     private Rigidbody rb;
 
