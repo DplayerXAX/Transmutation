@@ -3433,6 +3433,14 @@ PrefabInstance:
       propertyPath: maxClimbTime
       value: 0.75
       objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: whatIsWall.m_Bits
+      value: 384
+      objectReference: {fileID: 0}
+    - target: {fileID: 8360543341690713986, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: minWallSteepness
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: carryInput
       value: 1

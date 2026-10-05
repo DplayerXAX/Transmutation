@@ -22,6 +22,9 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
     [Header("Wall Run — FullMovement Values")]
     [SerializeField] private LayerMask whatIsWall;
     [SerializeField] private LayerMask whatIsGround;
+    [Tooltip("Surfaces flatter than this (degrees from horizontal) are floors, not walls. " +
+             "Needed when walls and ground share a layer, as on generated terrain. 0 = any surface.")]
+    [Range(0f, 90f)] [SerializeField] private float minWallSteepness;
     [SerializeField] private float wallRunForce = 200f;
     [SerializeField] private float wallJumpUpForce = 7f;
     [SerializeField] private float wallJumpSideForce = 14f;
@@ -200,13 +203,18 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
             orientation.right,
             out rightWallHit,
             wallCheckDistance,
-            whatIsWall);
+            whatIsWall) && IsSteepEnough(rightWallHit.normal);
         wallLeft = Physics.Raycast(
             transform.position,
             -orientation.right,
             out leftWallHit,
             wallCheckDistance,
-            whatIsWall);
+            whatIsWall) && IsSteepEnough(leftWallHit.normal);
+    }
+
+    private bool IsSteepEnough(Vector3 normal)
+    {
+        return minWallSteepness <= 0f || Vector3.Angle(normal, Vector3.up) >= minWallSteepness;
     }
 
     private bool AboveGround()
@@ -330,9 +338,13 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
             orientation.forward,
             out frontWallHit,
             climbDetectionLength,
-            whatIsWall);
+            whatIsWall) && IsSteepEnough(frontWallHit.normal);
 
-        wallLookAngle = Vector3.Angle(orientation.forward, -frontWallHit.normal);
+        // Compare headings only, so leaning (non-vertical) rock faces still count as facing the wall.
+        Vector3 flatWallNormal = Vector3.ProjectOnPlane(frontWallHit.normal, Vector3.up);
+        wallLookAngle = flatWallNormal.sqrMagnitude > 1e-6f
+            ? Vector3.Angle(orientation.forward, -flatWallNormal)
+            : 180f;
 
         bool newWall = frontWallHit.transform != lastWall ||
                        Mathf.Abs(Vector3.Angle(lastWallNormal, frontWallHit.normal)) >
