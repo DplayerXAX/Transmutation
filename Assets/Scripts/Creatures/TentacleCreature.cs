@@ -82,6 +82,9 @@ public sealed class TentacleCreature : Creature
     [SerializeField] private bool canClimbUp;
     [SerializeField] private bool canHang;
 
+    /// <summary>The player carrying this creature is climbing (the climber drives the body kinematically).</summary>
+    private bool PlayerClimbing => IsCarried && Carrier.PlayerBody != null && Carrier.PlayerBody.isKinematic;
+
     /// <summary>Enough tentacles are holding a surface to support the player.</summary>
     public bool IsGripping => gripping;
 
@@ -95,7 +98,7 @@ public sealed class TentacleCreature : Creature
 
     [Header("Carried On The Hand")]
     [Tooltip("Size of the creature while it sits on the player's hand.")]
-    [Range(0.2f, 1f)] [SerializeField] private float carriedScale = 0.45f;
+    [Range(0.05f, 1f)] [SerializeField] private float wristScale = 0.18f;
     private Vector3 restScale = Vector3.one;
 
     public override string CarriedPrompt
@@ -194,7 +197,7 @@ public sealed class TentacleCreature : Creature
 
         if (!IsCarried && !ExternalMovement) Wander(deltaTime);
         // Shrinks to sit on the hand while carried, grows back when let go.
-        Vector3 scale = IsCarried ? restScale * carriedScale : restScale;
+        Vector3 scale = IsCarried ? restScale * wristScale : restScale;
         transform.localScale = Vector3.MoveTowards(transform.localScale, scale, deltaTime * 2f);
         UpdateTentacles(deltaTime);
         UpdateBodyVisual(deltaTime);
@@ -321,6 +324,12 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle tentacle = tentacles[i];
+            if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
+            {
+                // Back on the hand after a climb: let go of the wall and coil up again.
+                if (tentacle.stepping) stepping--;
+                tentacle.planted = tentacle.stepping = false;
+            }
             bool hasIdeal = FindIdealHold(tentacle, out Vector3 idealPoint, out Vector3 idealNormal);
 
             if (tentacle.stepping)
@@ -386,6 +395,10 @@ public sealed class TentacleCreature : Creature
         }
         else if (IsCarried)
         {
+            // On the hand it only reaches for surfaces while the player climbs; otherwise it stays coiled
+            // so no arms hang across the view.
+            if (!PlayerClimbing) return false;
+            reach *= 0.7f;
             // Reach out in a fan around the body so some arms find walls above and some below.
             Vector3 axis = Vector3.Cross(Vector3.up, outward);
             Vector3 direction = Quaternion.AngleAxis(-tentacle.elevation, axis) * outward;
@@ -422,16 +435,18 @@ public sealed class TentacleCreature : Creature
         float time = Time.time * 2.2f + tentacle.phase;
         if (IsCarried && Carrier != null)
         {
-            // Carried with nothing to hold: coil round the wrist and forearm behind the body.
-            Vector3 back = Carrier.transform.position - transform.position;
+            // Carried with nothing to hold: wrap round the wrist and forearm.
+            Vector3 back = Carrier.HandAnchor != null ? -Carrier.HandAnchor.forward : Carrier.transform.position - transform.position;
             back = back.sqrMagnitude > 1e-4f ? back.normalized : Vector3.down;
             Vector3 across = Vector3.Cross(back, Vector3.up);
             if (across.sqrMagnitude < 1e-4f) across = Vector3.right;
             across.Normalize();
             Vector3 around = Vector3.Cross(across, back);
-            float angle = tentacle.phase * 3.1f + Time.time * 0.8f;
-            float distance = 0.12f + 0.1f * Mathf.Repeat(tentacle.phase, 1f);
-            Vector3 coil = transform.position + back * distance + (across * Mathf.Cos(angle) + around * Mathf.Sin(angle)) * 0.11f;
+            // Like a bracelet: each arm wraps once round the forearm, spread from the wrist up the arm.
+            Vector3 wrist = Carrier.HandAnchor != null ? Carrier.HandAnchor.position : transform.position;
+            float angle = tentacle.phase * 2.4f + Time.time * 0.6f;
+            float distance = 0.02f + 0.12f * Mathf.Repeat(tentacle.phase * 0.37f, 1f);
+            Vector3 coil = wrist + back * distance + (across * Mathf.Cos(angle) + around * Mathf.Sin(angle)) * 0.045f;
             return Vector3.Lerp(tentacle.foot, coil, 1f - Mathf.Exp(-10f * deltaTime));
         }
 

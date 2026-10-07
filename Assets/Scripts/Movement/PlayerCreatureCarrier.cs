@@ -52,6 +52,15 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     public float LastGrabTime { get; private set; } = -10f;
     public Vector3 LastGrabPoint { get; private set; }
 
+    [Tooltip("Seconds from the click until the reaching hand closes on the creature and it is picked up.")]
+    [Min(0f)] [SerializeField] private float grabReachTime = 0.22f;
+    [Tooltip("How fast a picked-up creature is brought from where it was taken to where it is held (m/s).")]
+    [Min(0.1f)] [SerializeField] private float bringInSpeed = 4f;
+    private Creature pendingCreature;
+    private float pendingAt;
+    private Vector3 carryTargetLocal;
+    private bool bringingIn;
+
     private Vector3 carryPointHome;
 
     private Collider[] playerColliders;
@@ -95,6 +104,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             UpdateHoldRightMouse();
         else
             UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
+        UpdatePendingGrab();
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             Release();
@@ -112,13 +122,41 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             Drop();
             return;
         }
+        if (pendingCreature != null) return;
 
         Creature creature = FindCreature();
         // The right hand reaches out on every press, towards the creature if there is one.
         LastGrabTime = Time.time;
         LastGrabPoint = creature != null ? creature.transform.position
             : carryCamera != null ? carryCamera.transform.position + carryCamera.transform.forward * 1.2f : transform.position;
-        if (creature != null) BeginCarry(creature);
+        // The creature is taken only when the hand gets there, not at the moment of the click.
+        pendingCreature = creature;
+        pendingAt = Time.time + grabReachTime;
+    }
+
+    private void UpdatePendingGrab()
+    {
+        if (pendingCreature == null) return;
+        if (!pendingCreature.isActiveAndEnabled || pendingCreature.IsCarried)
+        {
+            pendingCreature = null;
+            return;
+        }
+        LastGrabPoint = pendingCreature.transform.position; // The hand follows a creature that moves.
+        if (Time.time < pendingAt) return;
+        Creature creature = pendingCreature;
+        pendingCreature = null;
+        float reach = pickupRange + 1f;
+        if (carryCamera != null && (creature.transform.position - carryCamera.transform.position).sqrMagnitude > reach * reach) return;
+        BeginCarry(creature);
+    }
+
+    /// <summary>Brings a just-taken creature in from where it was grabbed instead of snapping it there.</summary>
+    private void BringIn(float deltaTime)
+    {
+        if (!bringingIn || carryPoint == null) return;
+        carryPoint.localPosition = Vector3.MoveTowards(carryPoint.localPosition, carryTargetLocal, bringInSpeed * deltaTime);
+        if ((carryPoint.localPosition - carryTargetLocal).sqrMagnitude < 1e-4f) bringingIn = false;
     }
 
     private void UpdateHoldRightMouse()
@@ -224,6 +262,10 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
+        // Start where the hand took it and bring it in from there.
+        carryTargetLocal = carryPoint.localPosition;
+        carryPoint.position = creature.transform.position;
+        bringingIn = true;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
@@ -245,6 +287,7 @@ private void FitCarryPoint(Creature creature)
     private void FixedUpdate()
     {
         if (CarriedCreature == null || firmGrip) return;
+        BringIn(Time.fixedDeltaTime);
         FollowHand();
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
     }
@@ -253,6 +296,7 @@ private void FitCarryPoint(Creature creature)
     private void LateUpdate()
     {
         if (CarriedCreature == null) return;
+        if (firmGrip) BringIn(Time.deltaTime);
         FollowHand();
         if (firmGrip) SnapHeld();
     }
@@ -261,7 +305,8 @@ private void FitCarryPoint(Creature creature)
     private void FollowHand()
     {
         if (carryPoint == null || HandAnchor == null || !(CarriedCreature is TentacleCreature)) return;
-        carryPoint.position = HandAnchor.position + HandAnchor.up * 0.08f + HandAnchor.forward * 0.03f;
+        // On the back of the forearm just behind the wrist, out of the middle of the view.
+        carryPoint.position = HandAnchor.position - HandAnchor.forward * 0.07f + HandAnchor.up * 0.05f;
     }
 
     public bool CarriesTentacle => CarriedCreature is TentacleCreature;
@@ -296,6 +341,7 @@ private void FitCarryPoint(Creature creature)
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
+        bringingIn = false;
         if (heldBody != null) heldBody.interpolation = heldInterpolation;
         heldBody = null;
         SetPlayerCollision(carriedColliders, ignore: false);

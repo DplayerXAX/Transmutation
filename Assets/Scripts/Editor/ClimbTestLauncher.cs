@@ -29,3 +29,19 @@ public static class ClimbTestLauncher
         EditorApplication.EnterPlaymode();
     }
 }
+
+/// <summary>Batch check of the player prefab menu on the test copy (logs what ended up where, then quits).</summary>
+public static class PlayerPrefabMenuCheck
+{
+    public static void Run()
+    {
+        EditorSceneManager.OpenScene("Assets/Scenes/Scene_Daniel.unity");
+        EditorApplication.ExecuteMenuItem("Tools/Capstone/Player/Move Arms, Legs And Climbing Into Player Prefab");
+        var prefab = AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        UnityEngine.Debug.Log($"[PrefabCheck] prefab body {prefab.GetComponentsInChildren<FirstPersonBody>(true).Length}, climber {prefab.GetComponentsInChildren<HandClimber>(true).Length}, guard {prefab.GetComponentsInChildren<CameraWallGuard>(true).Length}, steps {prefab.GetComponentsInChildren<Footsteps>(true).Length}");
+        UnityEngine.Debug.Log($"[PrefabCheck] scene body {UnityEngine.Object.FindObjectsByType<FirstPersonBody>(UnityEngine.FindObjectsSortMode.None).Length}, climber {UnityEngine.Object.FindObjectsByType<HandClimber>(UnityEngine.FindObjectsSortMode.None).Length}, guard {UnityEngine.Object.FindObjectsByType<CameraWallGuard>(UnityEngine.FindObjectsSortMode.None).Length}, steps {UnityEngine.Object.FindObjectsByType<Footsteps>(UnityEngine.FindObjectsSortMode.None).Length}");
+        EditorSceneManager.OpenScene("Assets/Scenes/Scene_Yoyo.unity");
+        UnityEngine.Debug.Log($"[PrefabCheck] yoyo body {UnityEngine.Object.FindObjectsByType<FirstPersonBody>(UnityEngine.FindObjectsSortMode.None).Length}, climber {UnityEngine.Object.FindObjectsByType<HandClimber>(UnityEngine.FindObjectsSortMode.None).Length}");
+        EditorApplication.Exit(0);
+    }
+}
