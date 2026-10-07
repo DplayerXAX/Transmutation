@@ -99,12 +99,57 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield return Climb(cliffs[i], fast: i % 2 == 1, timeout: i < 10 ? 40f : 80f, fromGround: i % 3 == 0);
 
         Cliff spire;
-        for (int face = 0; face < 4; face++)
+        yield return CheckSpireCreatures();
+        int faces = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestCreaturesOnly") >= 0 ? 0 : 4;
+        for (int face = 0; face < faces; face++)
             if (FindSpire(out spire, face * 90f)) yield return Climb(spire, fast: face % 2 == 1, timeout: 200f, fromGround: false, capture: face == 0);
         else Log("Spire: not found.");
 
         Log($"RESULT {passed}/{total} climbs reached the top.");
         Quit();
+    }
+
+    /// <summary>Tentacle creatures on the tower: where they are, then carry one and climb with it.</summary>
+    private IEnumerator CheckSpireCreatures()
+    {
+        yield return new WaitForSeconds(4f);
+        var crawlers = FindObjectsByType<SpireCrawler>(FindObjectsSortMode.None);
+        var tentacles = FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None);
+        Log($"Tentacle creatures: {tentacles.Length}, crawling on the tower: {crawlers.Length}");
+        foreach (SpireCrawler crawler in crawlers)
+        {
+            float gap = crawler.wall != null ? Vector3.Distance(crawler.wall.ClosestPoint(crawler.transform.position), crawler.transform.position) : -1f;
+            Log($"    {crawler.name} at height {crawler.transform.position.y - crawler.axisBase.y:0.0} m, {gap:0.00} m from the wall");
+        }
+        if (crawlers.Length > 0)
+        {
+            Vector3 before = crawlers[0].transform.position;
+            yield return new WaitForSeconds(6f);
+            Log($"    {crawlers[0].name} moved {Vector3.Distance(before, crawlers[0].transform.position):0.0} m in 6 s");
+            if (framesPath != null)
+            {
+                // A look at it from 4 m out.
+                Camera main = Camera.main;
+                Transform crawlerTransform = crawlers[0].transform;
+                Vector3 normal = crawlerTransform.up;
+                if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+                captureCamera.CopyFrom(main);
+                captureCamera.enabled = false;
+                Vector3 from = crawlerTransform.position + normal * 4f + Vector3.up * 1f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(crawlerTransform.position - from));
+                Directory.CreateDirectory(framesPath);
+                Save(captureCamera, Path.Combine(framesPath, "crawler.png"));
+            }
+
+            // Carry it (as a right click would) and climb the tower with it on the hand.
+            var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+            body.isKinematic = false;
+            body.position = crawlers[0].transform.position + Vector3.up * 0.5f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { crawlers[0].GetComponent<TentacleCreature>() });
+            Log($"    carried: {carrier.CarriesTentacle}, sticky hands: {climber.StickyHands}");
+        }
     }
 
     private static string savedProgress;

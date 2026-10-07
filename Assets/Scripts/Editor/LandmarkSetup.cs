@@ -72,6 +72,20 @@ public static class LandmarkSetup
         serialized.ApplyModifiedProperties();
 
         string note = "";
+        // Tentacle creatures on the tower are copies of the one already in the scene.
+        TentacleCreature tentacle = Object.FindFirstObjectByType<TentacleCreature>();
+        if (tentacle != null) landmark.SetTentacleTemplate(tentacle);
+        else note += " No TentacleCreature in the scene to copy, so the tower has no creatures.";
+
+        // Pick up and drop creatures with a right click (the right hand reaches out).
+        PlayerCreatureCarrier carrier = Object.FindFirstObjectByType<PlayerCreatureCarrier>();
+        if (carrier != null)
+        {
+            var carrierSettings = new SerializedObject(carrier);
+            carrierSettings.FindProperty("carryInput").enumValueIndex = (int)PlayerCreatureCarrier.CarryInput.ToggleRightMouse;
+            carrierSettings.ApplyModifiedProperties();
+        }
+
         MeditationController meditation = Object.FindFirstObjectByType<MeditationController>();
         if (meditation != null)
         {

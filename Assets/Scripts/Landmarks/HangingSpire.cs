@@ -41,6 +41,12 @@ public sealed class HangingSpire : MonoBehaviour
     [SerializeField] private string seedId = "spire_seed";
     [SerializeField] private string glyphId = "spire";
 
+    [Header("Creatures")]
+    [Tooltip("A tentacle creature in the scene to copy. Copies crawl over the tower and wander round its base.")]
+    [SerializeField] private TentacleCreature tentacleTemplate;
+    [Range(0, 8)] [SerializeField] private int wallCrawlers = 3;
+    [Range(0, 8)] [SerializeField] private int groundCrawlers = 2;
+
     [Header("Runtime State (Read Only)")]
     [SerializeField] private bool built;
     [SerializeField] private int sinkholeIndex = -1;
@@ -124,7 +130,7 @@ public sealed class HangingSpire : MonoBehaviour
             noiseSeed = 3.3f + seed * 1.71f,
         };
         Mesh upperMesh = LandmarkShapes.Spire(upper, random, ledgeCount, beam: true, flipY: false, out Vector3 beamCentre);
-        Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
+        GameObject spireObject = Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
 
         // ---- Hanging twin in the inner world ----
         Vector3 ceilingPoint = world.SinkholeCentre(sinkholeIndex, ceilingHigh, out _);
@@ -200,6 +206,7 @@ public sealed class HangingSpire : MonoBehaviour
             mark.transform.localPosition = Vector3.down * 0.6f;
         }
 
+        SpawnCreatures(spireObject.GetComponent<Collider>(), basePoint, upper.height, doorAngle, random);
         Debug.Log($"Hanging Spire built on sinkhole {sinkholeIndex} at {basePoint}.");
     }
 
@@ -268,6 +275,64 @@ public sealed class HangingSpire : MonoBehaviour
         if (collide) go.AddComponent<MeshCollider>().sharedMesh = mesh;
         return go;
     }
+
+    /// <summary>Copies of the template tentacle creature: some crawling on the tower walls, some round its base.</summary>
+    private void SpawnCreatures(Collider wall, Vector3 basePoint, float towerHeight, float doorAngle, System.Random random)
+    {
+        if (tentacleTemplate == null || wall == null) return;
+        int total = wallCrawlers + groundCrawlers;
+        for (int i = 0; i < total; i++)
+        {
+            // Spread round the tower, away from the door so the entrance stays clear.
+            float angle = doorAngle * Mathf.Rad2Deg + 60f + i * (240f / Mathf.Max(1, total)) + (float)random.NextDouble() * 20f;
+            TentacleCreature copy = CopyCreature(tentacleTemplate, $"Spire Tentacle {i}");
+            if (i < wallCrawlers)
+            {
+                var crawler = copy.gameObject.AddComponent<SpireCrawler>();
+                crawler.wall = wall;
+                crawler.axisBase = basePoint;
+                crawler.maxHeight = towerHeight - 6f;
+                // Unity angles: 0 = +z. The tower's door angle is measured from +x.
+                crawler.Place(90f - angle, Mathf.Lerp(6f, towerHeight * 0.7f, (float)random.NextDouble()));
+            }
+            else
+            {
+                Vector3 outward = Quaternion.Euler(0f, 90f - angle, 0f) * Vector3.forward;
+                Vector3 start = basePoint + outward * 16f + Vector3.up * 20f;
+                if (Physics.Raycast(start, Vector3.down, out RaycastHit ground, 60f, 1 << 7, QueryTriggerInteraction.Ignore))
+                    start = ground.point + Vector3.up;
+                copy.transform.position = start;
+            }
+            copy.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// A fresh creature with the template's settings. Built inactive so it makes its own body
+    /// (instead of copying the template's already built one) once activated.
+    /// </summary>
+    private TentacleCreature CopyCreature(TentacleCreature template, string name)
+    {
+        var go = new GameObject(name) { layer = template.gameObject.layer };
+        go.SetActive(false);
+        go.transform.SetParent(root, false);
+        go.transform.localScale = template.transform.localScale;
+        var templateCollider = template.GetComponent<SphereCollider>();
+        if (templateCollider != null)
+        {
+            var collider = go.AddComponent<SphereCollider>();
+            collider.radius = templateCollider.radius;
+            collider.center = templateCollider.center;
+            collider.isTrigger = templateCollider.isTrigger;
+        }
+        var copy = go.AddComponent<TentacleCreature>();
+        // Same settings, but each copy grows its own body shape.
+        string settings = System.Text.RegularExpressions.Regex.Replace(JsonUtility.ToJson(template), @"""seed"":-?\d+", $"\"seed\":{name.GetHashCode() & 0xffff}");
+        JsonUtility.FromJsonOverwrite(settings, copy);
+        return copy;
+    }
+
+    public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
 
     public void SetMaterials(Material spire, Material innerSpire, Material glyph, Material seedPod)
     {

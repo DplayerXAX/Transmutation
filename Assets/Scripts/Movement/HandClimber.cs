@@ -126,6 +126,7 @@ public sealed class HandClimber : MonoBehaviour
     private float noProgressTimer;
     private float bestAnchorHeight;
     private float halfHeight = 1f;
+    private PlayerCreatureCarrier carrier;
     // 0 = normal climb, 1 = fast climb; eased so holding Shift speeds up smoothly.
     private float fastBlend;
 
@@ -203,6 +204,7 @@ public sealed class HandClimber : MonoBehaviour
         var capsule = controller.GetComponent<CapsuleCollider>();
         if (capsule != null) halfHeight = capsule.height * 0.5f * controller.transform.lossyScale.y;
         if (viewCamera == null) viewCamera = Camera.main;
+        carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (viewCamera != null)
         {
             cameraBasePosition = viewCamera.transform.localPosition;
@@ -280,7 +282,7 @@ public sealed class HandClimber : MonoBehaviour
         float limit = maxHandDistance + 0.3f;
         bool far = (hands[0].hold - body.position).magnitude > limit && (hands[1].hold - body.position).magnitude > limit;
         farTimer = far ? farTimer + deltaTime : 0f;
-        if (farTimer > 0.5f)
+        if (farTimer > 0.5f && !StickyHands)
         {
             lastEvent = $"Let go: hands {(hands[0].hold - body.position).magnitude:0.0} and {(hands[1].hold - body.position).magnitude:0.0} m away, " +
                         $"body {(body.position - bodyTarget).magnitude:0.0} m off its spot";
@@ -305,7 +307,9 @@ public sealed class HandClimber : MonoBehaviour
         Vector3 origin = controller.transform.position + Vector3.up * 0.3f;
         if (!Physics.SphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
             return false;
-        if (Vector3.Angle(hit.normal, Vector3.up) < minWallSteepness || hit.normal.y < -0.85f) return false;
+        // With a tentacle on the hand even gentle slopes and overhangs can be grabbed.
+        float steepness = StickyHands ? 45f : minWallSteepness;
+        if (Vector3.Angle(hit.normal, Vector3.up) < steepness || hit.normal.y < (StickyHands ? -1.01f : -0.85f)) return false;
         Vector3 flatNormal = Vector3.ProjectOnPlane(hit.normal, Vector3.up);
         return flatNormal.sqrMagnitude > 1e-4f && Vector3.Angle(orientation.forward, -flatNormal) <= maxFacingAngle;
     }
@@ -350,7 +354,7 @@ public sealed class HandClimber : MonoBehaviour
             feet[i] = foot;
         }
         UpdateBodyTarget(1f);
-        lastEvent = "Grabbed the wall";
+        lastEvent = StickyHands ? "Grabbed the wall (tentacle helping)" : "Grabbed the wall";
     }
 
     // ---------------- Reaching ----------------
@@ -419,7 +423,7 @@ public sealed class HandClimber : MonoBehaviour
         int index = moving >= 0 ? 1 - moving
             : Vector3.Dot(holdA - anchor, direction) <= Vector3.Dot(holdB - anchor, direction) ? 0 : 1;
         // Fast climbing takes longer reaches, not just quicker ones.
-        float length = reachLength * Mathf.Lerp(1f, 1.15f, fastBlend);
+        float length = reachLength * Mathf.Lerp(1f, 1.15f, fastBlend) * (StickyHands ? 1.25f : 1f);
         if (TryReachWith(index, anchor, direction, length, ReachScales)) return;
 
         // Blocked going up: over the top if there is ground up there.
@@ -518,7 +522,10 @@ public sealed class HandClimber : MonoBehaviour
     }
 
     /// <summary>Too steep to stand on, and not a ceiling (overhangs are fine).</summary>
-    private bool Grippable(Vector3 normal) => Vector3.Angle(normal, Vector3.up) >= MinGripAngle && normal.y > -0.85f;
+    private bool Grippable(Vector3 normal) => Vector3.Angle(normal, Vector3.up) >= MinGripAngle && normal.y > (StickyHands ? -1.01f : -0.85f);
+
+    /// <summary>A carried tentacle creature wraps the hand and sticks to anything: ceilings too, from further away, and it never slips.</summary>
+    public bool StickyHands => carrier != null && carrier.CarriesTentacle;
 
     /// <summary>
     /// Looks for ground above and behind the hands that the player can stand on: flat enough

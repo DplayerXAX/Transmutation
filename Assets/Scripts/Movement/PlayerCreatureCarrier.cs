@@ -3,8 +3,9 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Attach to the player. Holds any Creature at an anchor without disabling its
-/// simulation, colliders, animation, or heat reactions. Either hold right click to
-/// carry, or press a key once to pick up and again to drop.
+/// simulation, colliders, animation, or heat reactions. Hold right click to carry,
+/// or click right (or press a key) once to pick up and again to drop.
+/// A tentacle creature is not held out in front: it shrinks and sits on the right hand.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(1000)]
@@ -13,7 +14,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     public enum CarryInput
     {
         HoldRightMouse,
-        ToggleKey
+        ToggleKey,
+        ToggleRightMouse
     }
 
     [SerializeField] private Camera carryCamera;
@@ -43,6 +45,12 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+
+    /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
+    public Transform HandAnchor { get; set; }
+    /// <summary>When the pickup input was last pressed and what it reached for, so the right hand can reach out.</summary>
+    public float LastGrabTime { get; private set; } = -10f;
+    public Vector3 LastGrabPoint { get; private set; }
 
     private Vector3 carryPointHome;
 
@@ -83,19 +91,21 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             return;
         }
 
-        if (carryInput == CarryInput.ToggleKey)
-            UpdateToggle();
-        else
+        if (carryInput == CarryInput.HoldRightMouse)
             UpdateHoldRightMouse();
+        else
+            UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             Release();
     }
 
-    private void UpdateToggle()
+    private void UpdateToggle(bool rightMouse)
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !keyboard[toggleKey].wasPressedThisFrame) return;
+        bool pressed;
+        if (rightMouse) pressed = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+        else pressed = Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame;
+        if (!pressed) return;
 
         if (CarriedCreature != null)
         {
@@ -104,6 +114,10 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         }
 
         Creature creature = FindCreature();
+        // The right hand reaches out on every press, towards the creature if there is one.
+        LastGrabTime = Time.time;
+        LastGrabPoint = creature != null ? creature.transform.position
+            : carryCamera != null ? carryCamera.transform.position + carryCamera.transform.forward * 1.2f : transform.position;
         if (creature != null) BeginCarry(creature);
     }
 
@@ -141,8 +155,8 @@ Creature creature = hit.collider.GetComponentInParent<Creature>();
 if (creature == null || !creature.CanBeCarried)
     return null;
 
-// Too big to hold in one hand: no prompt, no pickup.
-if (MeasureCreature(creature, out _, out _) > maxCarrySize)
+// Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
+if (!(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
     return null;
 
 return creature;
@@ -231,14 +245,26 @@ private void FitCarryPoint(Creature creature)
     private void FixedUpdate()
     {
         if (CarriedCreature == null || firmGrip) return;
+        FollowHand();
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
     }
 
     // After the camera has moved this frame, so the held creature never trails behind the view.
     private void LateUpdate()
     {
-        if (firmGrip && CarriedCreature != null) SnapHeld();
+        if (CarriedCreature == null) return;
+        FollowHand();
+        if (firmGrip) SnapHeld();
     }
+
+    /// <summary>A tentacle creature rides on the back of the right hand instead of floating in front of the view.</summary>
+    private void FollowHand()
+    {
+        if (carryPoint == null || HandAnchor == null || !(CarriedCreature is TentacleCreature)) return;
+        carryPoint.position = HandAnchor.position + HandAnchor.up * 0.08f + HandAnchor.forward * 0.03f;
+    }
+
+    public bool CarriesTentacle => CarriedCreature is TentacleCreature;
 
     private void SnapHeld()
     {
