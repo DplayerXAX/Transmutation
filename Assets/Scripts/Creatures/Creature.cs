@@ -66,6 +66,9 @@ public abstract class Creature : MonoBehaviour
 
     public bool IsCarried => Carrier != null;
 
+    /// <summary>Whether this creature can currently be picked up.</summary>
+    public virtual bool CanBeCarried => true;
+
     [Header("Carry Physics")]
     [Min(0f)] [SerializeField] private float carryStrength = 45f;
     [Min(0f)] [SerializeField] private float carryDamping = 12f;
@@ -82,7 +85,9 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
-        if (carrier == null || target == null || IsCarried || !isActiveAndEnabled) return false;
+        if (carrier == null || target == null || IsCarried || !isActiveAndEnabled || !CanBeCarried) return false;
+        // Silk must release its movement claim before carry physics takes ownership.
+        if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
         movementBody = GetComponent<Rigidbody>();
         if (movementBody == null)
         {
