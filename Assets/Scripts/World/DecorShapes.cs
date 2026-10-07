@@ -25,9 +25,23 @@ public static class DecorShapes
         Bladders,
         Creepers,
         ShellTentacle,
+        Cage,
+        Needles,
+        Halo,
+        Totem,
+        Ribbon,
+        Fruit,
+        Flower,
+        HangingStalk,
+        Mushrooms,
+        Pebbles,
+        Fronds,
+        Obelisk,
     }
 
-    public static bool IsFaceted(Shape shape) => shape == Shape.Shards || shape == Shape.Arch || shape == Shape.Cairn;
+    public static bool IsFaceted(Shape shape) =>
+        shape == Shape.Shards || shape == Shape.Arch || shape == Shape.Cairn || shape == Shape.Cage || shape == Shape.Totem ||
+        shape == Shape.Pebbles || shape == Shape.Obelisk;
 
     public static DecorMesh Build(Shape shape, int seed)
     {
@@ -42,6 +56,18 @@ public static class DecorShapes
             case Shape.Bladders: Bladders(mesh, random); break;
             case Shape.Creepers: Creepers(mesh, random); break;
             case Shape.ShellTentacle: ShellTentacle(mesh, random); break;
+            case Shape.Cage: Cage(mesh, random); break;
+            case Shape.Needles: Needles(mesh, random); break;
+            case Shape.Halo: Halo(mesh, random); break;
+            case Shape.Totem: Totem(mesh, random); break;
+            case Shape.Ribbon: Ribbon(mesh, random); break;
+            case Shape.Fruit: Fruit(mesh, random); break;
+            case Shape.Flower: Flower(mesh, random); break;
+            case Shape.HangingStalk: HangingStalk(mesh, random); break;
+            case Shape.Mushrooms: Mushrooms(mesh, random); break;
+            case Shape.Pebbles: Pebbles(mesh, random); break;
+            case Shape.Fronds: Fronds(mesh, random); break;
+            case Shape.Obelisk: Obelisk(mesh, random); break;
         }
         if (IsFaceted(shape)) Unweld(mesh);
         else SmoothNormals(mesh);
@@ -238,11 +264,298 @@ public static class DecorShapes
         }, 8, 0.04f, random, radius * 0.6f, 0f, 1f, ts);
     }
 
+    /// <summary>An irregular wire polyhedron standing on thin legs, like a drawing of a rock.</summary>
+    private static void Cage(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 6, 11);
+        float size = Range(random, 0.6f, 1.1f);
+        var centre = new Vector3(0f, size * Range(random, 1.1f, 1.8f), 0f);
+        var stretch = new Vector3(Range(random, 0.7f, 1.2f), Range(random, 0.9f, 1.6f), Range(random, 0.7f, 1.2f)) * size;
+        var points = new Vector3[count];
+        for (int i = 0; i < count; i++) points[i] = centre + Vector3.Scale(OnSphere(random), stretch);
+
+        float thickness = Range(random, 0.02f, 0.04f);
+        float height = centre.y + stretch.y;
+        var edges = new HashSet<(int, int)>();
+        for (int i = 0; i < count; i++)
+        {
+            // Connect each corner to its nearest few neighbours.
+            var order = new List<int>();
+            for (int j = 0; j < count; j++) if (j != i) order.Add(j);
+            Vector3 from = points[i];
+            order.Sort((x, y) => (points[x] - from).sqrMagnitude.CompareTo((points[y] - from).sqrMagnitude));
+            int links = Range(random, 2, 4);
+            for (int k = 0; k < links && k < order.Count; k++)
+                edges.Add((Mathf.Min(i, order[k]), Mathf.Max(i, order[k])));
+        }
+        foreach (var (a, b) in edges)
+            Rod(mesh, points[a], points[b], thickness, random, height);
+
+        // A few legs down to the ground from the lowest corners.
+        var lowest = new List<int>();
+        for (int i = 0; i < count; i++) lowest.Add(i);
+        lowest.Sort((x, y) => points[x].y.CompareTo(points[y].y));
+        int legs = Range(random, 2, 4);
+        for (int i = 0; i < legs && i < lowest.Count; i++)
+        {
+            Vector3 top = points[lowest[i]];
+            Rod(mesh, new Vector3(top.x * 1.3f, -0.2f, top.z * 1.3f), top, thickness * 0.8f, random, height);
+        }
+    }
+
+    /// <summary>A dense tuft of thin spikes of very different heights.</summary>
+    private static void Needles(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 14, 40);
+        float reach = Range(random, 0.4f, 0.9f);
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 root = Flat(OnDisc(random)) * reach;
+            float height = Mathf.Lerp(0.25f, 1.9f, Mathf.Pow((float)random.NextDouble(), 2.2f)) * (1.2f - root.magnitude / reach * 0.5f);
+            Vector3 lean = root * Range(random, 0.1f, 0.5f) + Flat(OnDisc(random)) * 0.15f;
+            Vector3 direction = (Vector3.up + lean).normalized;
+            var path = new List<Vector3>
+            {
+                root - direction * 0.1f,
+                root + direction * height * 0.5f + Flat(OnDisc(random)) * 0.04f,
+                root + direction * height,
+            };
+            float radius = Range(random, 0.012f, 0.03f);
+            Tube(mesh, path, t => radius * (1f - 0.7f * t), 3, 0f, random, height * 0.15f, 0f, height / 1.9f);
+        }
+    }
+
+    /// <summary>One or two tilted rings hovering above the ground, sometimes held by a hair-thin stem.</summary>
+    private static void Halo(DecorMesh mesh, System.Random random)
+    {
+        int count = random.NextDouble() < 0.35 ? 2 : 1;
+        float height = Range(random, 1.4f, 3f);
+        for (int r = 0; r < count; r++)
+        {
+            float radius = Range(random, 0.5f, 1.3f) * (r == 0 ? 1f : 0.6f);
+            Quaternion tilt = Quaternion.Euler(Range(random, -60f, 60f), Range(random, 0f, 360f), Range(random, -60f, 60f));
+            var centre = new Vector3(0f, height + r * 0.35f, 0f);
+            var path = new List<Vector3>();
+            const int points = 28;
+            float phase = Range(random, 0f, 6.28f);
+            for (int i = 0; i <= points; i++)
+            {
+                float angle = i / (float)points * Mathf.PI * 2f;
+                float wobble = 1f + 0.08f * Mathf.Sin(angle * 3f + phase);
+                path.Add(centre + tilt * new Vector3(Mathf.Cos(angle) * radius * wobble, 0f, Mathf.Sin(angle) * radius * wobble));
+            }
+            float thickness = Range(random, 0.035f, 0.07f);
+            Tube(mesh, path, t => thickness, 7, 0.05f, random, 0f, 0.95f, 1f);
+        }
+        if (random.NextDouble() < 0.6)
+            Rod(mesh, new Vector3(0f, -0.2f, 0f), new Vector3(0f, height, 0f), 0.012f, random, height);
+    }
+
+    /// <summary>Unrelated solids skewered on one thin axis: discs, stones, small prisms.</summary>
+    private static void Totem(DecorMesh mesh, System.Random random)
+    {
+        float height = Range(random, 1.8f, 3.6f);
+        Rod(mesh, new Vector3(0f, -0.3f, 0f), new Vector3(0f, height, 0f), Range(random, 0.025f, 0.045f), random, height);
+        int count = Range(random, 2, 6);
+        for (int i = 0; i < count; i++)
+        {
+            float y = height * Mathf.Lerp(0.25f, 0.95f, (i + (float)random.NextDouble() * 0.6f) / count);
+            var centre = new Vector3(Range(random, -0.05f, 0.05f), y, Range(random, -0.05f, 0.05f));
+            float size = Range(random, 0.15f, 0.45f);
+            float t = y / height;
+            switch (random.Next(3))
+            {
+                case 0:
+                    Blob(mesh, centre, new Vector3(size, size * 0.12f, size),
+                        Quaternion.Euler(Range(random, -25f, 25f), 0f, Range(random, -25f, 25f)), 3, 10, 0.05f, random, t, t);
+                    break;
+                case 1:
+                    Blob(mesh, centre, Vector3.one * size * 0.7f,
+                        Quaternion.Euler(Range(random, 0f, 360f), Range(random, 0f, 360f), 0f), 4, 6, 0.2f, random, t - 0.05f, t + 0.05f);
+                    break;
+                default:
+                    Vector3 axis = Quaternion.Euler(Range(random, -40f, 40f), Range(random, 0f, 360f), 0f) * Vector3.up * size;
+                    Tube(mesh, new List<Vector3> { centre - axis, centre + axis }, _ => size * 0.45f, Range(random, 3, 5), 0.1f, random, 0f, t, t);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>A flat band spiralling upwards and twisting as it goes.</summary>
+    private static void Ribbon(DecorMesh mesh, System.Random random)
+    {
+        float height = Range(random, 1.4f, 3.4f);
+        float spiral = Range(random, 0.15f, 0.5f);
+        float turns = Range(random, 0.5f, 1.6f);
+        float phase = Range(random, 0f, 6.28f);
+        var path = new List<Vector3>();
+        const int points = 22;
+        for (int i = 0; i <= points; i++)
+        {
+            float t = i / (float)points;
+            float angle = phase + t * turns * Mathf.PI * 2f;
+            float r = spiral * (0.3f + t);
+            path.Add(new Vector3(Mathf.Cos(angle) * r, t * height - 0.15f, Mathf.Sin(angle) * r));
+        }
+        float width = Range(random, 0.18f, 0.35f);
+        Tube(mesh, path, t => width * (1f - 0.6f * t * t), 8, 0.05f, random, 0f, 0f, 1f, null,
+            Range(random, 0.08f, 0.16f), Range(random, -6f, 6f));
+    }
+
+    /// <summary>A bunch of lumpy berries hanging below the origin, with a short stem up to it.</summary>
+    private static void Fruit(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 3, 8);
+        float size = Range(random, 0.05f, 0.085f);
+        Tube(mesh, new List<Vector3> { new Vector3(0f, 0.02f, 0f), new Vector3(0f, -0.08f, 0f) }, _ => 0.012f, 4, 0f, random, 0f, 0.95f, 0.9f);
+        for (int i = 0; i < count; i++)
+        {
+            // Berries settle into a loose teardrop: wider at the top, one at the bottom.
+            float depth = Mathf.Lerp(0.1f, 0.3f, i / (float)Mathf.Max(1, count - 1));
+            Vector3 centre = new Vector3(0f, -depth, 0f) + Flat(OnDisc(random)) * size * (1.4f - depth * 2.5f);
+            float r = size * Range(random, 0.75f, 1.2f);
+            Blob(mesh, centre, new Vector3(r, r * Range(random, 1f, 1.3f), r), Quaternion.Euler(0f, Range(random, 0f, 360f), 0f), 6, 8, 0.1f, random, 0.6f, 1f);
+        }
+    }
+
+    /// <summary>A curved stem with a ring of petals around a swollen centre.</summary>
+    private static void Flower(DecorMesh mesh, System.Random random)
+    {
+        float height = Range(random, 0.3f, 0.65f);
+        Vector3 lean = Flat(OnDisc(random)) * 0.35f;
+        var path = new List<Vector3>();
+        for (int i = 0; i <= 6; i++)
+        {
+            float t = i / 6f;
+            path.Add(new Vector3(0f, t * height - 0.03f, 0f) + lean * t * t * height);
+        }
+        Tube(mesh, path, t => 0.014f * (1.2f - 0.4f * t), 5, 0.05f, random, 0f, 0f, 0.65f);
+
+        Vector3 head = path[path.Count - 1];
+        Vector3 facing = (Vector3.up + lean * 1.5f).normalized;
+        Quaternion toHead = Quaternion.FromToRotation(Vector3.up, facing);
+        int petals = Range(random, 4, 8);
+        float petalLength = Range(random, 0.07f, 0.13f);
+        float cup = Range(random, 15f, 55f);
+        float spin = Range(random, 0f, 360f);
+        for (int p = 0; p < petals; p++)
+        {
+            Quaternion around = toHead * Quaternion.Euler(0f, spin + p * 360f / petals + Range(random, -10f, 10f), 0f);
+            Quaternion tilt = around * Quaternion.Euler(cup + Range(random, -8f, 8f), 0f, 0f);
+            Vector3 centre = head + tilt * new Vector3(0f, 0f, petalLength * 0.6f);
+            Blob(mesh, centre, new Vector3(petalLength * 0.38f, petalLength * 0.07f, petalLength * 0.6f), tilt, 4, 8, 0.08f, random, 0.8f, 1f);
+        }
+        Blob(mesh, head, Vector3.one * petalLength * 0.28f, toHead, 5, 7, 0.15f, random, 0.9f, 1f);
+    }
+
+    /// <summary>A thin, slightly wavering thread of unit length along +y, for fruit hanging from a ceiling.</summary>
+    private static void HangingStalk(DecorMesh mesh, System.Random random)
+    {
+        var path = new List<Vector3>();
+        float phase = Range(random, 0f, 6.28f);
+        for (int i = 0; i <= 8; i++)
+        {
+            float t = i / 8f;
+            path.Add(new Vector3(Mathf.Sin(t * 5f + phase) * 0.03f, t - 0.03f, Mathf.Cos(t * 4f + phase) * 0.03f));
+        }
+        Tube(mesh, path, t => 0.016f * (1.3f - 0.6f * t), 5, 0.05f, random, 0f, 0f, 1f);
+    }
+
+    /// <summary>A clump of mushrooms: bent stems with flat, tilted caps of different sizes.</summary>
+    private static void Mushrooms(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 1, 7);
+        for (int i = 0; i < count; i++)
+        {
+            float height = Range(random, 0.25f, 1.2f) * (i == 0 ? 1.3f : 1f);
+            Vector3 root = Flat(OnDisc(random)) * 0.45f;
+            Vector3 bend = Flat(OnDisc(random)) * 0.3f;
+            var path = new List<Vector3>();
+            for (int s = 0; s <= 5; s++)
+            {
+                float t = s / 5f;
+                path.Add(root + new Vector3(0f, t * height - 0.05f, 0f) + bend * t * t * height);
+            }
+            float stem = Range(random, 0.035f, 0.1f) * (0.6f + height * 0.5f);
+            Tube(mesh, path, t => stem * (1.25f - 0.35f * t), 7, 0.1f, random, 0f, 0f, 0.8f);
+
+            Vector3 top = path[path.Count - 1];
+            float cap = stem * Range(random, 3f, 5.5f);
+            Quaternion tilt = Quaternion.Euler(Range(random, -20f, 20f), Range(random, 0f, 360f), Range(random, -20f, 20f));
+            Blob(mesh, top + tilt * Vector3.up * cap * 0.12f, new Vector3(cap, cap * Range(random, 0.25f, 0.45f), cap), tilt, 6, 12, 0.08f, random, 0.8f, 1f);
+        }
+    }
+
+    /// <summary>Scattered small stones half sunk into the ground.</summary>
+    private static void Pebbles(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 6, 20);
+        for (int i = 0; i < count; i++)
+        {
+            float r = Mathf.Lerp(0.05f, 0.28f, Mathf.Pow((float)random.NextDouble(), 2f));
+            Vector3 centre = Flat(OnDisc(random)) * 1.6f + Vector3.up * r * 0.15f;
+            var radii = new Vector3(r * Range(random, 0.8f, 1.3f), r * Range(random, 0.4f, 0.8f), r * Range(random, 0.7f, 1.1f));
+            Blob(mesh, centre, radii, Quaternion.Euler(Range(random, -15f, 15f), Range(random, 0f, 360f), 0f), 3, 6, 0.15f, random, 0f, 0.15f);
+        }
+    }
+
+    /// <summary>Flat leaves that rise from one root and arch over towards the ground.</summary>
+    private static void Fronds(DecorMesh mesh, System.Random random)
+    {
+        int count = Range(random, 4, 10);
+        for (int i = 0; i < count; i++)
+        {
+            float length = Range(random, 0.6f, 1.5f);
+            float angle = i / (float)count * Mathf.PI * 2f + Range(random, -0.3f, 0.3f);
+            var outward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            float rise = Range(random, 0.5f, 1.1f);
+            var path = new List<Vector3>();
+            for (int s = 0; s <= 10; s++)
+            {
+                float t = s / 10f;
+                // Up first, then out and down: a fountain-like arch.
+                path.Add(outward * t * length + Vector3.up * (Mathf.Sin(t * Mathf.PI * 0.85f) * rise * length - 0.03f));
+            }
+            float width = Range(random, 0.06f, 0.13f);
+            Tube(mesh, path, t => width * Mathf.Sin(Mathf.Clamp(t, 0.05f, 1f) * Mathf.PI * 0.9f + 0.15f), 6, 0.04f, random, 0.02f, 0f, 1f, null,
+                0.15f, Range(random, -1.5f, 1.5f));
+        }
+    }
+
+    /// <summary>A tall, thin, slightly bent needle of stone with a loose block floating above it.</summary>
+    private static void Obelisk(DecorMesh mesh, System.Random random)
+    {
+        float height = Range(random, 3f, 6.5f);
+        float radius = Range(random, 0.18f, 0.35f);
+        Vector3 bend = Flat(OnDisc(random)) * 0.25f;
+        var path = new List<Vector3> { Vector3.down * 0.5f, Vector3.up * height * 0.5f + bend * 0.5f, Vector3.up * height + bend };
+        Tube(mesh, path, t => radius * (1f - 0.5f * t), Range(random, 3, 5), 0.12f, random, 0f, 0f, 0.85f);
+
+        if (random.NextDouble() < 0.7)
+        {
+            float block = radius * Range(random, 1.2f, 2.2f);
+            Vector3 centre = Vector3.up * (height + block + Range(random, 0.25f, 0.6f)) + bend;
+            Blob(mesh, centre, new Vector3(block, block * Range(random, 0.6f, 1.4f), block),
+                Quaternion.Euler(Range(random, -30f, 30f), Range(random, 0f, 360f), Range(random, -30f, 30f)), 2, 4, 0.1f, random, 0.9f, 1f);
+        }
+    }
+
     // ---------------- Builders ----------------
 
-    /// <summary>A tube along a path with an irregular cross-section. tipLength 0 = flat cap.</summary>
+    /// <summary>A straight thin rod between two points. uv.x follows height over the given total.</summary>
+    private static void Rod(DecorMesh mesh, Vector3 from, Vector3 to, float radius, System.Random random, float totalHeight)
+    {
+        float t0 = Mathf.Clamp01(from.y / Mathf.Max(totalHeight, 0.01f));
+        float t1 = Mathf.Clamp01(to.y / Mathf.Max(totalHeight, 0.01f));
+        Tube(mesh, new List<Vector3> { from, to }, _ => radius, 4, 0f, random, 0f, t0, t1);
+    }
+
+    /// <summary>
+    /// A tube along a path with an irregular cross-section. tipLength 0 = flat cap.
+    /// flatten below 1 squashes the section into a band; twist turns the band along the path (radians).
+    /// </summary>
     private static void Tube(DecorMesh mesh, IList<Vector3> path, System.Func<float, float> radius, int sides, float noise,
-        System.Random random, float tipLength, float t0, float t1, IList<float> pathT = null)
+        System.Random random, float tipLength, float t0, float t1, IList<float> pathT = null, float flatten = 1f, float twist = 0f)
     {
         int rings = path.Count;
         int start = mesh.vertices.Count;
@@ -261,13 +574,16 @@ public static class DecorShapes
             Vector3 binormal = Vector3.Cross(tangent, normal);
 
             float t = pathT != null ? pathT[i] : i / (float)(rings - 1);
+            float turn = twist * t;
+            Vector3 wide = normal * Mathf.Cos(turn) + binormal * Mathf.Sin(turn);
+            Vector3 thin = binormal * Mathf.Cos(turn) - normal * Mathf.Sin(turn);
             float r = radius(t);
             for (int j = 0; j < sides; j++)
             {
                 float theta = j / (float)sides * Mathf.PI * 2f;
                 float bump = 1f;
                 foreach (var h in harmonics) bump += h.amplitude * Mathf.Sin(h.k * theta + h.phase + t * h.twist);
-                Vector3 offset = (normal * Mathf.Cos(theta) + binormal * Mathf.Sin(theta)) * r * bump;
+                Vector3 offset = (wide * Mathf.Cos(theta) + thin * Mathf.Sin(theta) * flatten) * r * bump;
                 mesh.vertices.Add(path[i] + offset);
                 mesh.lengths.Add(Mathf.Lerp(t0, t1, t));
             }

@@ -25,21 +25,32 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _ShadowLineDim: 0.4
-    - _LineWidth: 1.1
-    - _MainLightAmount: 1
-    - _FakeLightAmount: 0.25
+    - _ShadowLineDim: 1
+    - _LineWidth: 1.3
+    - _MainLightAmount: 1.2
+    - _FakeLightAmount: 0.15
     - _ShadeLevels: 3
-    - _RimPower: 4
-    - _RimStrength: 0.35
-    - _HatchStrength: 0.8
+    - _RimPower: 3
+    - _RimStrength: 0.55
+    - _HatchStrength: 0.9
     - _HatchScale: 8
     - _HatchWidth: 1
     - _RingCount: 0
     - _RingSpeed: 0
     - _RingKeep: 1
-    - _StrataFrequency: 2.4
+    - _StrataFrequency: 2.6
     - _SheenAmount: 0
+    - _InvertChance: 0
+    - _DotChance: 0.35
+    - _DotScale: 11
+    - _GridChance: 0.25
+    - _GridScale: 7
+    - _GlitchAmount: 0.7
+    - _GlitchSplit: 0.12
+    - _GlitchTint: 0.3
+    - _GlitchBands: 3
+    - _GlitchRate: 4
+    - _GlitchShift: 0.1
     - _SwayAmount: 0
     - _SwaySpeed: 0.7
     - _BreathAmount: 0
@@ -48,12 +59,15 @@ Material:
     - _HazeStart: 10
     - _HazeEnd: 80
     m_Colors:
-    - _Color: {r: 0.22, g: 0.22, b: 0.24, a: 1}
-    - _ShadowColor: {r: 0.02, g: 0.02, b: 0.03, a: 1}
-    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
-    - _LineColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.66, g: 0.66, b: 0.67, a: 1}
+    - _ShadowColor: {r: 0.34, g: 0.34, b: 0.36, a: 1}
+    - _LineColor: {r: 0.05, g: 0.05, b: 0.06, a: 1}
+    - _LineColor2: {r: 0.05, g: 0.05, b: 0.06, a: 1}
+    - _DotColor: {r: 0.06, g: 0.06, b: 0.07, a: 1}
     - _FakeLightDir: {r: 0.3, g: 1, b: 0.2, a: 0}
-    - _HatchColor: {r: 0.45, g: 0.45, b: 0.47, a: 1}
+    - _HatchColor: {r: 0.12, g: 0.12, b: 0.13, a: 1}
     - _HazeColor: {r: 0, g: 0, b: 0, a: 0}
+    - _GlitchColorA: {r: 0.22, g: 0.68, b: 0.74, a: 1}
+    - _GlitchColorB: {r: 0.78, g: 0.24, b: 0.55, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

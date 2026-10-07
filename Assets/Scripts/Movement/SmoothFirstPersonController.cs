@@ -40,6 +40,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [SerializeField] private float climbSpeed = 3f;
     [SerializeField] private float airMinSpeed = 7f;
     [SerializeField] private float speedIncreaseMultiplier = 1.5f;
+    [Tooltip("Scales walk, sprint, crouch and air speed together (1 = values above).")]
+    [Range(0.2f, 2f)] [SerializeField] private float moveSpeedScale = 0.75f;
     [SerializeField] private float slopeIncreaseMultiplier = 2.5f;
     [SerializeField] private float groundDrag = 4f;
 
@@ -89,6 +91,11 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Tooltip("Degrees per mouse-delta unit. This is not comparable to the old Input Manager value of 400.")]
     [SerializeField] private float sensitivityX = 0.12f;
     [SerializeField] private float sensitivityY = 0.12f;
+    [Tooltip("Furthest the camera can look down / up, in degrees.")]
+    [Range(0f, 90f)] [SerializeField] private float lookDownLimit = 60f;
+    [Range(0f, 90f)] [SerializeField] private float lookUpLimit = 85f;
+    [Tooltip("Look-down limit while climbing, so the view stays on the wall instead of inside it.")]
+    [Range(0f, 90f)] [SerializeField] private float climbingLookDownLimit = 25f;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private MovementState state;
@@ -228,7 +235,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         horizontalInput = ReadAxis(keyboard, Key.A, Key.D);
         verticalInput = ReadAxis(keyboard, Key.S, Key.W);
 
-        if (keyboard[jumpKey].isPressed && readyToJump && (grounded || allowUngroundedJump))
+        // One jump per key press; holding the key no longer hops again on landing.
+        if (keyboard[jumpKey].wasPressedThisFrame && readyToJump && (grounded || allowUngroundedJump))
         {
             readyToJump = false;
             Jump();
@@ -279,7 +287,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         yRotation += mouseX;
         xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        // Positive xRotation looks down. When the limit tightens (starting a climb), ease up to it.
+        float lookDown = climbing ? Mathf.Min(lookDownLimit, climbingLookDownLimit) : lookDownLimit;
+        xRotation = Mathf.Clamp(xRotation, -lookUpLimit, Mathf.Max(lookDown, xRotation - 150f * Time.deltaTime));
 
         cameraHolder.rotation = Quaternion.Euler(xRotation, yRotation, 0f);
         orientation.rotation = Quaternion.Euler(0f, yRotation, 0f);
@@ -331,24 +341,24 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         else if (crouching)
         {
             state = MovementState.Crouching;
-            desiredMoveSpeed = crouchSpeed;
+            desiredMoveSpeed = crouchSpeed * moveSpeedScale;
         }
         else if (grounded && IsKeyPressed(sprintKey))
         {
             state = MovementState.Sprinting;
-            desiredMoveSpeed = sprintSpeed;
+            desiredMoveSpeed = sprintSpeed * moveSpeedScale;
         }
         else if (grounded)
         {
             state = MovementState.Walking;
-            desiredMoveSpeed = walkSpeed;
+            desiredMoveSpeed = walkSpeed * moveSpeedScale;
         }
         else
         {
             state = MovementState.Air;
 
-            if (moveSpeed < airMinSpeed)
-                desiredMoveSpeed = airMinSpeed;
+            if (moveSpeed < airMinSpeed * moveSpeedScale)
+                desiredMoveSpeed = airMinSpeed * moveSpeedScale;
         }
 
         bool desiredMoveSpeedHasChanged = desiredMoveSpeed != lastDesiredMoveSpeed;
@@ -432,6 +442,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void SpeedControl()
     {
+        // A climber drives the body kinematically; its velocity cannot be set.
+        if (rb.isKinematic)
+            return;
         if (OnSlope() && !exitingSlope)
         {
             if (rb.linearVelocity.magnitude > moveSpeed)
@@ -451,6 +464,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void Jump()
     {
+        if (rb.isKinematic)
+            return;
         exitingSlope = true;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);

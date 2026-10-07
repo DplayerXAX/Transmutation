@@ -1138,6 +1138,138 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &648466094
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 648466096}
+  - component: {fileID: 648466095}
+  - component: {fileID: 648466097}
+  m_Layer: 0
+  m_Name: Landmark - Hanging Spire
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &648466095
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648466094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 479c9f5d6c6986043ac1c3ee5b6af7ab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HangingSpire
+  world: {fileID: 1700000033}
+  spireMaterial: {fileID: 2100000, guid: 8f8a494806cfe8844b2dde280a6f426a, type: 2}
+  innerSpireMaterial: {fileID: 2100000, guid: 540320eb4426728429946c574809ed69, type: 2}
+  glyphMaterial: {fileID: 2100000, guid: ad272fbaef6bfa245962227d45dda480, type: 2}
+  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  preferredDistance: 85
+  sinkholeOverride: -1
+  seed: 11
+  height: 72
+  ledgeCount: 11
+  windows: 0.22
+  hangingLength: 0.6
+  halo: 1
+  seedId: spire_seed
+  glyphId: spire
+  built: 0
+  sinkholeIndex: -1
+--- !u!4 &648466096
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648466094}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &648466097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648466094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0d171f5e062a304fb3adfaab7598c71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MusicChannel
+  layerEvent: BGM_landmark
+  innerRadius: 15
+  outerRadius: 70
+  zone: {fileID: 0}
+--- !u!1 &663679482
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 663679484}
+  - component: {fileID: 663679483}
+  m_Layer: 0
+  m_Name: AudioManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &663679483
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 663679482}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb85a28e30563124594eafe3c035ae38, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  bank: {fileID: 11400000, guid: 03a44caa670806c49ae63afb3f16fc16, type: 2}
+  backend: 0
+  wwiseBanks:
+  - Transmutation
+  startEvent: PlayBGM
+  masterVolume: 1
+  musicVolume: 0.8
+  soundVolume: 1
+  creatureScanInterval: 1
+  showDebug: 1
+--- !u!4 &663679484
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 663679482}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &748032329
 GameObject:
   m_ObjectHideFlags: 0
@@ -1148,6 +1280,7 @@ GameObject:
   m_Component:
   - component: {fileID: 748032331}
   - component: {fileID: 748032330}
+  - component: {fileID: 748032332}
   m_Layer: 0
   m_Name: WwiseGlobal
   m_TagString: Untagged
@@ -1195,6 +1328,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &748032332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748032329}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63f1947de3ecf8d4eb87f45e1ca6c06e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AK.Wwise.Unity.MonoBehaviour::AkBank
+  triggerList: f7e1664c
+  useOtherObject: 0
+  data:
+    idInternal: 0
+    valueGuidInternal: 
+    WwiseObjectReference: {fileID: 11400000, guid: 8586b786ce098804a807f04ae9cd2081, type: 2}
+  decodeBank: 0
+  overrideLoadSetting: 0
+  loadAsynchronous: 0
+  saveDecodedBank: 0
+  unloadTriggerList: 958ca0ea
+  bankNameInternal: 
+  valueGuidInternal: 
+--- !u!1 &753290478 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 2073160748}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &753290487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 753290478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f8c513b73fbc744f8dcb9a95d76653b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraWallGuard
+  viewCamera: {fileID: 0}
+  cameraHolder: {fileID: 0}
+  bodyCollider: {fileID: 0}
+  probeRadius: 0.18
+  anchorHeight: 0.2
+  blockingLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  releaseSpeed: 1.5
+  nearClipPlane: 0.05
+  pulledBack: 0
 --- !u!1 &757158449 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4702101864647544357, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
@@ -2011,6 +2197,160 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 012e9eda14aff41f4bfa0d5ebc4b67be, type: 3}
   m_PrefabInstance: {fileID: 1121636438}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1154897107
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1154897113}
+  - component: {fileID: 1154897112}
+  - component: {fileID: 1154897111}
+  - component: {fileID: 1154897110}
+  - component: {fileID: 1154897109}
+  - component: {fileID: 1154897108}
+  - component: {fileID: 1154897114}
+  m_Layer: 0
+  m_Name: Meditation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1154897108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e024146885486de4bb933a88f1b669ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeditationController
+  meditateKey: 27
+  veilMaterial: {fileID: 2100000, guid: 1c24e9cc11346664286cd7b1156ee39e, type: 2}
+  settleTime: 1.5
+  skyEraseTime: 1.8
+  worldEraseTime: 4
+  spaceRevealTime: 2.5
+  spaceEraseTime: 2
+  worldRevealTime: 3.5
+  transitionSpeed: 2
+  sinkDepth: 0.5
+  settleLook: 0.3
+  lookSensitivity: 0.12
+  spaceVeilRadius: 26
+  spaceHeight: 3000
+  spaceEyeHeight: 1.6
+--- !u!114 &1154897109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae887eebfa6bd1e468989eca61ccbdb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeditationHUD
+  paperColor: {r: 0.86, g: 0.85, b: 0.82, a: 1}
+  worldTextColor: {r: 1, g: 1, b: 1, a: 0.9}
+  spaceTextColor: {r: 0.08, g: 0.08, b: 0.09, a: 0.9}
+  toastSeconds: 3
+--- !u!114 &1154897110
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e9b8c24891ee11448b169c6a705a11b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReflectionVisitor
+  walkSpeed: 2.4
+  lookSensitivity: 0.12
+  reach: 3.5
+  interactKey: 19
+  brushPixels: 3.2
+  eraserPixels: 14
+  focusTime: 0.6
+--- !u!114 &1154897111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8186c141221f03c43b814ad15d5506a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureJournal
+  encounterDistance: 6
+  requireInView: 1
+  castMaxSize: 2.5
+  scanInterval: 0.25
+--- !u!114 &1154897112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb6a1c44a30a48469270637ed0e7c31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReflectionSpace
+  floorMaterial: {fileID: 2100000, guid: 01a49b39f3b9115458e155745e29ad28, type: 2}
+  stoneMaterial: {fileID: 2100000, guid: 27702e042556bd24ba704d5d1ae6fa52, type: 2}
+  faceMaterial: {fileID: 2100000, guid: a05e2ead4811f7b44bc7689233a72fe7, type: 2}
+  castMaterial: {fileID: 2100000, guid: b9072a2b9df33494483f05f1c7b87f4c, type: 2}
+  seed: 7
+  floorRadius: 14
+  walkRadius: 11
+  steleCount: 5
+  tabletCount: 4
+  steleDistance: {x: 6.5, y: 8.5}
+  tabletDistance: {x: 4.2, y: 5.2}
+--- !u!4 &1154897113
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1154897114
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1154897107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eabb295eb912c46418f5b0301efce25c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SteleInscriptions
+  space: {fileID: 0}
+  glyphMaterial: {fileID: 2100000, guid: ad272fbaef6bfa245962227d45dda480, type: 2}
+  glyphSize: 0.42
+  glyphHeight: 1.9
 --- !u!1 &1176000793 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
@@ -3011,6 +3351,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1700000032}
   - component: {fileID: 1700000033}
+  - component: {fileID: 1700000034}
+  - component: {fileID: 1700000035}
+  - component: {fileID: 1700000036}
   m_Layer: 7
   m_Name: Procedural World
   m_TagString: Untagged
@@ -3068,14 +3411,275 @@ MonoBehaviour:
   sinkholeCount: 6
   sinkholeRadius: {x: 4, y: 7}
   firstSinkholeDistance: 45
-  surfaceMaterial: {fileID: 2100000, guid: ccf1cd8a4ae54a1bb54df320e4b4c648, type: 2}
-  innerMaterial: {fileID: 2100000, guid: 155dc562899c460e915e472b6e0a9519, type: 2}
+  surfaceMaterial: {fileID: 2100000, guid: 0dfa071372f549cbb11a55723431ef48, type: 2}
+  innerMaterial: {fileID: 2100000, guid: a4748f8408104d80b37495e628e6681f, type: 2}
   chunkLayer: 7
   blockingRadius: 40
   meshesPerFrame: 6
   respawnFallingPlayer: 1
   chunksBuilt: 0
   chunksTotal: 0
+--- !u!114 &1700000034
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf49e4c7e4c87e240a61b7eb759d1cc6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldDecorator
+  stoneMaterial: {fileID: 2100000, guid: 2486ddf48c8940e097437b93aded10d7, type: 2}
+  organicMaterial: {fileID: 2100000, guid: 3b424fc7bbee4444849515660dddcc82, type: 2}
+  innerMaterial: {fileID: 2100000, guid: 497694e1a34d4486a1b62e0cb92769b8, type: 2}
+  innerGlowMaterial: {fileID: 0}
+  seed: 7
+  variantsPerShape: 6
+  spawnClearRadius: 6
+  kinds:
+  - name: Shards
+    shape: 0
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.9
+    membersPerCluster: {x: 1, y: 3}
+    clusterRadius: 6
+    scaleRange: {x: 0.8, y: 1.8}
+    normalYRange: {x: 0.5, y: 1}
+    alignToNormal: 0.35
+    sink: 0.05
+    patchSize: 70
+    patchCoverage: 0.6
+    uniformClusters: 0
+  - name: Arches
+    shape: 1
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.25
+    membersPerCluster: {x: 1, y: 2}
+    clusterRadius: 8
+    scaleRange: {x: 0.8, y: 1.6}
+    normalYRange: {x: 0.7, y: 1}
+    alignToNormal: 0.5
+    sink: 0
+    patchSize: 90
+    patchCoverage: 0.65
+    uniformClusters: 0
+  - name: Cairns
+    shape: 2
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.45
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 5
+    scaleRange: {x: 0.6, y: 1.3}
+    normalYRange: {x: 0.7, y: 1}
+    alignToNormal: 0.2
+    sink: 0.05
+    patchSize: 50
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Cages
+    shape: 7
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.3
+    membersPerCluster: {x: 1, y: 3}
+    clusterRadius: 7
+    scaleRange: {x: 0.8, y: 1.8}
+    normalYRange: {x: 0.65, y: 1}
+    alignToNormal: 0.15
+    sink: 0
+    patchSize: 60
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Totems
+    shape: 10
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.3
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 6
+    scaleRange: {x: 0.8, y: 1.5}
+    normalYRange: {x: 0.7, y: 1}
+    alignToNormal: 0.1
+    sink: 0
+    patchSize: 55
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Halos
+    shape: 9
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.14
+    membersPerCluster: {x: 1, y: 2}
+    clusterRadius: 10
+    scaleRange: {x: 0.8, y: 1.6}
+    normalYRange: {x: 0.6, y: 1}
+    alignToNormal: 0
+    sink: 0
+    patchSize: 80
+    patchCoverage: 0.6
+    uniformClusters: 0
+  - name: Polyps
+    shape: 3
+    group: 1
+    inner: 0
+    clustersPer1000m2: 1.4
+    membersPerCluster: {x: 2, y: 7}
+    clusterRadius: 4
+    scaleRange: {x: 0.7, y: 1.6}
+    normalYRange: {x: 0.6, y: 1}
+    alignToNormal: 0.2
+    sink: 0.03
+    patchSize: 45
+    patchCoverage: 0.6
+    uniformClusters: 0
+  - name: Bladders
+    shape: 4
+    group: 1
+    inner: 0
+    clustersPer1000m2: 1
+    membersPerCluster: {x: 2, y: 6}
+    clusterRadius: 3
+    scaleRange: {x: 0.6, y: 1.4}
+    normalYRange: {x: 0.55, y: 1}
+    alignToNormal: 0.7
+    sink: 0.05
+    patchSize: 35
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Creepers
+    shape: 5
+    group: 1
+    inner: 0
+    clustersPer1000m2: 1
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 4
+    scaleRange: {x: 0.8, y: 1.6}
+    normalYRange: {x: 0.45, y: 1}
+    alignToNormal: 1
+    sink: 0
+    patchSize: 40
+    patchCoverage: 0.6
+    uniformClusters: 0
+  - name: Needles
+    shape: 8
+    group: 1
+    inner: 0
+    clustersPer1000m2: 1.1
+    membersPerCluster: {x: 2, y: 6}
+    clusterRadius: 3.5
+    scaleRange: {x: 0.6, y: 1.5}
+    normalYRange: {x: 0.5, y: 1}
+    alignToNormal: 0.6
+    sink: 0.02
+    patchSize: 30
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Ribbons
+    shape: 11
+    group: 1
+    inner: 0
+    clustersPer1000m2: 0.5
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 4
+    scaleRange: {x: 0.8, y: 1.5}
+    normalYRange: {x: 0.65, y: 1}
+    alignToNormal: 0.15
+    sink: 0.02
+    patchSize: 50
+    patchCoverage: 0.5
+    uniformClusters: 0
+  - name: Shell Tentacles
+    shape: 6
+    group: 2
+    inner: 1
+    clustersPer1000m2: 1.6
+    membersPerCluster: {x: 8, y: 22}
+    clusterRadius: 3.5
+    scaleRange: {x: 1.4, y: 3.4}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.85
+    sink: 0.05
+    patchSize: 40
+    patchCoverage: 0.65
+    uniformClusters: 1
+  - name: Shell Carpets
+    shape: 6
+    group: 2
+    inner: 1
+    clustersPer1000m2: 0.7
+    membersPerCluster: {x: 12, y: 26}
+    clusterRadius: 2.2
+    scaleRange: {x: 0.45, y: 0.8}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.95
+    sink: 0.03
+    patchSize: 30
+    patchCoverage: 0.55
+    uniformClusters: 1
+  - name: Needle Beards
+    shape: 8
+    group: 2
+    inner: 1
+    clustersPer1000m2: 0.6
+    membersPerCluster: {x: 3, y: 8}
+    clusterRadius: 3
+    scaleRange: {x: 0.8, y: 1.6}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.9
+    sink: 0.02
+    patchSize: 35
+    patchCoverage: 0.55
+    uniformClusters: 1
+  stoneColliders: 1
+  innerColliders: 0
+  decorLayer: 7
+  piecesPlaced: 0
+--- !u!114 &1700000035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0e45147c0fe1a340b388ce7e1fe86fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CaveHarvest
+  fruitMaterial: {fileID: 2100000, guid: 5c379c02a1834fff90878b22e4400ed4, type: 2}
+  flowerMaterial: {fileID: 2100000, guid: cbc20315c04143e1a8c735ce9f16bd66, type: 2}
+  stalkMaterial: {fileID: 2100000, guid: 497694e1a34d4486a1b62e0cb92769b8, type: 2}
+  fruitClustersPer1000m2: 0.5
+  fruitsPerCluster: {x: 2, y: 5}
+  stalkLength: {x: 0.5, y: 1.6}
+  flowerClustersPer1000m2: 0.6
+  flowersPerCluster: {x: 3, y: 8}
+  clusterRadius: 2.5
+  seed: 11
+  variants: 6
+  itemsGrown: 0
+--- !u!114 &1700000036
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c70229a47d5a5b04fa6bf329846aff80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CaveMusicChannel
+  layerEvent: BGM_cave
+  innerRadius: 4
+  outerRadius: 20
+  zone: {fileID: 0}
+  startDepth: 2
 --- !u!1 &1700000041
 GameObject:
   m_ObjectHideFlags: 0
@@ -3087,6 +3691,7 @@ GameObject:
   - component: {fileID: 1700000042}
   - component: {fileID: 1700000043}
   - component: {fileID: 1700000044}
+  - component: {fileID: 1700000045}
   m_Layer: 0
   m_Name: Player Body
   m_TagString: Untagged
@@ -3122,30 +3727,45 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandClimber
   controller: {fileID: 0}
+  viewCamera: {fileID: 0}
   climbLayers:
     serializedVersion: 2
     m_Bits: 384
   minWallSteepness: 55
+  maxStandSlope: 36
   detectDistance: 0.9
   maxFacingAngle: 55
   wallOffset: 0.5
   handHeight: 0.6
   handSpread: 0.3
   pullSpeed: 2.4
+  bodySmoothTime: 0.16
   reachStep: 0.5
+  reachLength: 0.8
   reachTime: 0.22
   maxHandDistance: 1.4
-  mantleTime: 0.5
+  climbSpeed: 1
+  fastClimbBoost: 1.4
+  detourDelay: 0.2
+  pullUpTime: 1.2
   jumpOffVelocity: {x: 5, y: 5}
   regrabDelay: 0.35
+  cameraLag: 0.06
+  reachTilt: 2.5
+  lookAtHands: 0.4
+  lookAtHandsPullUp: 0.65
+  footStepTime: 0.22
   upKey: 37
   downKey: 33
   leftKey: 15
   rightKey: 18
   jumpOffKey: 1
+  fastClimbKey: 51
   climbing: 0
   mantling: 0
   canStartClimb: 0
+  lastEvent: 
+  drawDebug: 0
 --- !u!114 &1700000044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3177,6 +3797,21 @@ MonoBehaviour:
   thighLength: 0.5
   shinLength: 0.48
   strideLength: 0.9
+--- !u!114 &1700000045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000041}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc7dfa4248d69944ca41f6f9832fc046, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Footsteps
+  leftEvent: Play_Footstep_Left
+  rightEvent: Play_Footstep_Right
+  gridDivision: 2
 --- !u!1 &1700000051
 GameObject:
   m_ObjectHideFlags: 0
@@ -4596,6 +5231,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 753290487}
     - targetCorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1176000795}
@@ -4891,3 +5529,6 @@ SceneRoots:
   - {fileID: 1700000072}
   - {fileID: 1700000082}
   - {fileID: 748032331}
+  - {fileID: 1154897113}
+  - {fileID: 648466096}
+  - {fileID: 663679484}

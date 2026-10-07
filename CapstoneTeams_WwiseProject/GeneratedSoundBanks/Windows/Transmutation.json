@@ -10,21 +10,133 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{15D09F8E-3506-F531-5037-3914834A07B6}",
+    "Hash": "{42DADACE-D984-35E7-12AA-2899D855385B}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
+    "Media": [
+     {
+      "Id": "95100673",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "basic_test.wav",
+      "CachePath": "9E/{9E3F54CF-D0D0-7922-E9F9-E5F29F73D54A}.wem"
+     },
+     {
+      "Id": "221012135",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "fuzzy.wav",
+      "CachePath": "F2/{F275F9A4-A93E-E906-AD1A-226DE33EA86D}.wem"
+     },
+     {
+      "Id": "454687851",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "left.wav",
+      "CachePath": "F0/{F02073ED-9FC1-DEC1-54F1-6AAB1DEF58EC}.wem"
+     },
+     {
+      "Id": "468006233",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "cave.wav",
+      "CachePath": "25/{2532FACB-A624-F908-6F86-68A9D609190F}.wem"
+     },
+     {
+      "Id": "481382044",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "right.wav",
+      "CachePath": "A5/{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem"
+     },
+     {
+      "Id": "631985183",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "like a fluid.wav",
+      "CachePath": "F5/{F535A4EF-FB6E-EA25-7C41-09D59579DA3F}.wem"
+     }
+    ],
     "Events": [
+     {
+      "Id": "2837114212",
+      "Name": "Play_Footstep_Left",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Footstep_Left",
+      "GUID": "{68B83415-D24B-415C-A452-A8619448A65C}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.0819207",
+      "DurationMax": "1.4441909",
+      "MediaRefs": [
+       {
+        "Id": "454687851"
+       }
+      ]
+     },
+     {
+      "Id": "1110411331",
+      "Name": "Play_Footstep_Right",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Footstep_Right",
+      "GUID": "{5C4F89C2-C554-474D-A9F1-088B610F61BD}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.1495703",
+      "DurationMax": "1.5344924",
+      "MediaRefs": [
+       {
+        "Id": "481382044"
+       }
+      ]
+     },
      {
       "Id": "2542411811",
       "Name": "PlayBGM",
       "ObjectPath": "\\Events\\Default Work Unit\\PlayBGM",
       "GUID": "{35352506-54B6-4A54-9C06-399C44291C2C}",
-      "DurationType": "Infinite"
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "95100673"
+       },
+       {
+        "Id": "221012135"
+       },
+       {
+        "Id": "468006233"
+       },
+       {
+        "Id": "631985183"
+       }
+      ]
+     }
+    ],
+    "GameParameters": [
+     {
+      "Id": "721355700",
+      "Name": "BGM_fuzzy",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_fuzzy",
+      "GUID": "{4D3949A8-14FE-426D-9078-4D4EC9D90842}"
+     },
+     {
+      "Id": "840600496",
+      "Name": "BGM_fluid",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_fluid",
+      "GUID": "{CD677A09-C6BC-46E4-824D-DC16A6BEC140}"
+     },
+     {
+      "Id": "861516679",
+      "Name": "BGM_cave",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_cave",
+      "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
      }
     ]
    }
   ],
-  "FileHash": "{83519AAE-394F-8619-31D4-3BA1C842362D}"
+  "FileHash": "{96EB0C0C-1840-92C8-A947-BF40F3C31A55}"
  }
 }

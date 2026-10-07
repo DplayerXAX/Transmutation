@@ -34,7 +34,17 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
              "Feels solid and has no lag, but the held creature can pass through walls.")]
     [SerializeField] private bool firmGrip;
 
+    [Header("Big Creatures")]
+    [Tooltip("Creatures larger than this (metres, largest side) cannot be picked up.")]
+    [Min(0.1f)] [SerializeField] private float maxCarrySize = 2.2f;
+    [Tooltip("Degrees below the crosshair the top of a held creature is kept.")]
+    [Range(0f, 30f)] [SerializeField] private float clearBelowCrosshair = 8f;
+    [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
+    [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
+
     public Creature CarriedCreature { get; private set; }
+
+    private Vector3 carryPointHome;
 
     private Collider[] playerColliders;
     private Collider[] carriedColliders;
@@ -62,6 +72,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             carryPoint.SetParent(carryCamera.transform, false);
             carryPoint.localPosition = new Vector3(0f, -0.35f, 2.5f);
         }
+        if (carryPoint != null) carryPointHome = carryPoint.localPosition;
     }
 
     private void Update()
@@ -122,14 +133,56 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
-        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-            return hit.collider.GetComponentInParent<Creature>();
-        return null;
+        if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
+            return null;
+        Creature creature = hit.collider.GetComponentInParent<Creature>();
+        // Too big to hold in one hand: no prompt, no pickup.
+        if (creature != null && MeasureCreature(creature, out _, out _) > maxCarrySize) return null;
+        return creature;
+    }
+
+    /// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
+    private static float MeasureCreature(Creature creature, out float above, out float sideways)
+    {
+        above = sideways = 0f;
+        Bounds bounds = default;
+        bool any = false;
+        foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
+        {
+            if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer) continue;
+            if (!any) bounds = renderer.bounds;
+            else bounds.Encapsulate(renderer.bounds);
+            any = true;
+        }
+        if (!any) return 0f;
+        Vector3 pivot = creature.transform.position;
+        above = Mathf.Max(0f, bounds.max.y - pivot.y);
+        sideways = Mathf.Max(Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
+            Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z));
+        return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+    }
+
+    // Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
+    private void FitCarryPoint(Creature creature)
+    {
+        if (carryPoint == null) return;
+        MeasureCreature(creature, out float above, out float sideways);
+        Vector3 home = carryPointHome;
+        float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
+        float y = Mathf.Min(home.y, -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z));
+        float x = Mathf.Max(home.x, sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z);
+        carryPoint.localPosition = new Vector3(x, y, z);
     }
 
     private void BeginCarry(Creature creature)
     {
-        if (carryPoint == null || !creature.TryBeginCarry(this, carryPoint)) return;
+        if (carryPoint == null) return;
+        FitCarryPoint(creature);
+        if (!creature.TryBeginCarry(this, carryPoint))
+        {
+            carryPoint.localPosition = carryPointHome;
+            return;
+        }
         CarriedCreature = creature;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
@@ -195,6 +248,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         heldBody = null;
         SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
+        if (carryPoint != null) carryPoint.localPosition = carryPointHome;
     }
 
     private void SetPlayerCollision(Collider[] colliders, bool ignore)

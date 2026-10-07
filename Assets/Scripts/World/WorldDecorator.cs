@@ -20,6 +20,7 @@ public sealed class WorldDecorator : MonoBehaviour
         Stone,
         Organic,
         Inner,
+        InnerGlow,
     }
 
     [System.Serializable]
@@ -52,10 +53,12 @@ public sealed class WorldDecorator : MonoBehaviour
     [SerializeField] private Material stoneMaterial;
     [SerializeField] private Material organicMaterial;
     [SerializeField] private Material innerMaterial;
+    [Tooltip("Faintly glowing inner growths: crystals and sacs.")]
+    [SerializeField] private Material innerGlowMaterial;
 
     [Header("Placement")]
     [SerializeField] private int seed = 7;
-    [Range(1, 16)] [SerializeField] private int variantsPerShape = 6;
+    [Range(1, 16)] [SerializeField] private int variantsPerShape = 8;
     [Tooltip("No surface decorations this close to the spawn point.")]
     [Min(0f)] [SerializeField] private float spawnClearRadius = 6f;
     [SerializeField] private List<Kind> kinds = DefaultKinds();
@@ -79,7 +82,7 @@ public sealed class WorldDecorator : MonoBehaviour
     }
 
     /// <summary>World-space triangles of one chunk sub-mesh, for area-weighted sampling.</summary>
-    private sealed class Ground
+    internal sealed class Ground
     {
         public Vector3[] a, b, c, normal, centre;
         public float[] cumulativeArea;
@@ -116,8 +119,9 @@ public sealed class WorldDecorator : MonoBehaviour
         variants.Clear();
     }
 
-    public void SetMaterials(Material stone, Material organic, Material innerGrowth)
+    public void SetMaterials(Material stone, Material organic, Material innerGrowth, Material innerGlow)
     {
+        innerGlowMaterial = innerGlow;
         stoneMaterial = stone;
         organicMaterial = organic;
         innerMaterial = innerGrowth;
@@ -255,9 +259,10 @@ public sealed class WorldDecorator : MonoBehaviour
         decor.transform.SetParent(chunk.transform, false);
         decor.GetComponent<MeshFilter>().sharedMesh = mesh;
         var meshRenderer = decor.GetComponent<MeshRenderer>();
-        meshRenderer.sharedMaterial = group == Group.Stone ? stoneMaterial : group == Group.Organic ? organicMaterial : innerMaterial;
+        meshRenderer.sharedMaterial = group == Group.Stone ? stoneMaterial : group == Group.Organic ? organicMaterial
+            : group == Group.InnerGlow && innerGlowMaterial != null ? innerGlowMaterial : innerMaterial;
         // The inner world has no sun, so its growths never need to cast shadows.
-        if (group == Group.Inner) meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        if (group == Group.Inner || group == Group.InnerGlow) meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         if ((group == Group.Stone && stoneColliders) || (group == Group.Inner && innerColliders))
             decor.AddComponent<MeshCollider>().sharedMesh = mesh;
@@ -267,7 +272,7 @@ public sealed class WorldDecorator : MonoBehaviour
 
     // ---------------- Helpers ----------------
 
-    private static Ground BuildGround(Transform chunk, Vector3[] vertices, Vector3[] normals, int[] triangles)
+    internal static Ground BuildGround(Transform chunk, Vector3[] vertices, Vector3[] normals, int[] triangles)
     {
         int count = triangles.Length / 3;
         var ground = new Ground
@@ -292,7 +297,7 @@ public sealed class WorldDecorator : MonoBehaviour
         return ground;
     }
 
-    private static int PickTriangle(Ground ground, System.Random random)
+    internal static int PickTriangle(Ground ground, System.Random random)
     {
         float target = (float)random.NextDouble() * ground.totalArea;
         int index = System.Array.BinarySearch(ground.cumulativeArea, target);
@@ -300,7 +305,7 @@ public sealed class WorldDecorator : MonoBehaviour
         return Mathf.Clamp(index, 0, ground.Count - 1);
     }
 
-    private static Vector3 PointOn(Ground ground, int triangle, System.Random random)
+    internal static Vector3 PointOn(Ground ground, int triangle, System.Random random)
     {
         float u = (float)random.NextDouble(), v = (float)random.NextDouble();
         if (u + v > 1f)
@@ -351,36 +356,50 @@ public sealed class WorldDecorator : MonoBehaviour
 
     private static float Range(System.Random random, float min, float max) => min + (float)random.NextDouble() * (max - min);
 
+    [ContextMenu("Reset Kinds To Defaults")]
+    public void ResetKinds() => kinds = DefaultKinds();
+
+    private static Kind NewKind(string name, DecorShapes.Shape shape, Group group, float clusters, int minMembers, int maxMembers,
+        float radius, float minScale, float maxScale, float minNormalY, float align, float sink, float patchSize, float coverage)
+    {
+        return new Kind
+        {
+            name = name, shape = shape, group = group, inner = group == Group.Inner || group == Group.InnerGlow,
+            clustersPer1000m2 = clusters, membersPerCluster = new Vector2Int(minMembers, maxMembers), clusterRadius = radius,
+            scaleRange = new Vector2(minScale, maxScale), normalYRange = new Vector2(minNormalY, 1f),
+            alignToNormal = align, sink = sink, patchSize = patchSize, patchCoverage = coverage,
+            uniformClusters = group == Group.Inner || group == Group.InnerGlow,
+        };
+    }
+
     private static List<Kind> DefaultKinds() => new List<Kind>
     {
-        // Surface, inorganic.
-        new Kind { name = "Shards", shape = DecorShapes.Shape.Shards, group = Group.Stone, clustersPer1000m2 = 0.5f,
-            membersPerCluster = new Vector2Int(1, 2), clusterRadius = 6f, scaleRange = new Vector2(0.8f, 1.7f),
-            normalYRange = new Vector2(0.5f, 1f), alignToNormal = 0.35f, sink = 0.05f, patchSize = 70f, patchCoverage = 0.45f },
-        new Kind { name = "Arches", shape = DecorShapes.Shape.Arch, group = Group.Stone, clustersPer1000m2 = 0.12f,
-            membersPerCluster = new Vector2Int(1, 1), clusterRadius = 0f, scaleRange = new Vector2(0.8f, 1.5f),
-            normalYRange = new Vector2(0.75f, 1f), alignToNormal = 0.5f, sink = 0f, patchSize = 90f, patchCoverage = 0.6f },
-        new Kind { name = "Cairns", shape = DecorShapes.Shape.Cairn, group = Group.Stone, clustersPer1000m2 = 0.25f,
-            membersPerCluster = new Vector2Int(1, 3), clusterRadius = 5f, scaleRange = new Vector2(0.6f, 1.2f),
-            normalYRange = new Vector2(0.7f, 1f), alignToNormal = 0.2f, sink = 0.05f, patchSize = 50f, patchCoverage = 0.4f },
+        // Surface, inorganic and abstract.
+        NewKind("Shards", DecorShapes.Shape.Shards, Group.Stone, 0.9f, 1, 3, 6f, 0.8f, 1.8f, 0.5f, 0.35f, 0.05f, 70f, 0.6f),
+        NewKind("Arches", DecorShapes.Shape.Arch, Group.Stone, 0.25f, 1, 2, 8f, 0.8f, 1.6f, 0.7f, 0.5f, 0f, 90f, 0.65f),
+        NewKind("Cairns", DecorShapes.Shape.Cairn, Group.Stone, 0.45f, 1, 4, 5f, 0.6f, 1.3f, 0.7f, 0.2f, 0.05f, 50f, 0.55f),
+        NewKind("Cages", DecorShapes.Shape.Cage, Group.Stone, 0.3f, 1, 3, 7f, 0.8f, 1.8f, 0.65f, 0.15f, 0f, 60f, 0.55f),
+        NewKind("Totems", DecorShapes.Shape.Totem, Group.Stone, 0.3f, 1, 4, 6f, 0.8f, 1.5f, 0.7f, 0.1f, 0f, 55f, 0.55f),
+        NewKind("Halos", DecorShapes.Shape.Halo, Group.Stone, 0.14f, 1, 2, 10f, 0.8f, 1.6f, 0.6f, 0f, 0f, 80f, 0.6f),
 
         // Surface, organic.
-        new Kind { name = "Polyps", shape = DecorShapes.Shape.Polyps, group = Group.Organic, clustersPer1000m2 = 0.8f,
-            membersPerCluster = new Vector2Int(2, 6), clusterRadius = 4f, scaleRange = new Vector2(0.7f, 1.5f),
-            normalYRange = new Vector2(0.6f, 1f), alignToNormal = 0.2f, sink = 0.03f, patchSize = 45f, patchCoverage = 0.45f },
-        new Kind { name = "Bladders", shape = DecorShapes.Shape.Bladders, group = Group.Organic, clustersPer1000m2 = 0.6f,
-            membersPerCluster = new Vector2Int(2, 5), clusterRadius = 3f, scaleRange = new Vector2(0.6f, 1.3f),
-            normalYRange = new Vector2(0.55f, 1f), alignToNormal = 0.7f, sink = 0.05f, patchSize = 35f, patchCoverage = 0.4f },
-        new Kind { name = "Creepers", shape = DecorShapes.Shape.Creepers, group = Group.Organic, clustersPer1000m2 = 0.6f,
-            membersPerCluster = new Vector2Int(1, 3), clusterRadius = 4f, scaleRange = new Vector2(0.8f, 1.5f),
-            normalYRange = new Vector2(0.5f, 1f), alignToNormal = 1f, sink = 0f, patchSize = 40f, patchCoverage = 0.5f },
+        NewKind("Polyps", DecorShapes.Shape.Polyps, Group.Organic, 1.4f, 2, 7, 4f, 0.7f, 1.6f, 0.6f, 0.2f, 0.03f, 45f, 0.6f),
+        NewKind("Bladders", DecorShapes.Shape.Bladders, Group.Organic, 1f, 2, 6, 3f, 0.6f, 1.4f, 0.55f, 0.7f, 0.05f, 35f, 0.55f),
+        NewKind("Creepers", DecorShapes.Shape.Creepers, Group.Organic, 1f, 1, 4, 4f, 0.8f, 1.6f, 0.45f, 1f, 0f, 40f, 0.6f),
+        NewKind("Needles", DecorShapes.Shape.Needles, Group.Organic, 1.1f, 2, 6, 3.5f, 0.6f, 1.5f, 0.5f, 0.6f, 0.02f, 30f, 0.55f),
+        NewKind("Ribbons", DecorShapes.Shape.Ribbon, Group.Organic, 0.5f, 1, 4, 4f, 0.8f, 1.5f, 0.65f, 0.15f, 0.02f, 50f, 0.5f),
+        NewKind("Mushrooms", DecorShapes.Shape.Mushrooms, Group.Organic, 1.2f, 2, 6, 3.5f, 0.7f, 1.6f, 0.55f, 0.3f, 0.02f, 35f, 0.55f),
+        NewKind("Fronds", DecorShapes.Shape.Fronds, Group.Organic, 0.9f, 1, 4, 4f, 0.7f, 1.4f, 0.6f, 0.4f, 0.02f, 40f, 0.55f),
+        NewKind("Pebbles", DecorShapes.Shape.Pebbles, Group.Stone, 1.5f, 1, 3, 5f, 0.7f, 1.6f, 0.5f, 0.9f, 0.02f, 30f, 0.65f),
+        NewKind("Obelisks", DecorShapes.Shape.Obelisk, Group.Stone, 0.08f, 1, 2, 12f, 0.8f, 1.4f, 0.75f, 0.05f, 0f, 120f, 0.6f),
 
-        // Inner world: colonies of identical hard-shelled tentacles, and low carpets of short spikes.
-        new Kind { name = "Shell Tentacles", shape = DecorShapes.Shape.ShellTentacle, group = Group.Inner, inner = true,
-            clustersPer1000m2 = 1f, membersPerCluster = new Vector2Int(8, 20), clusterRadius = 3.5f, scaleRange = new Vector2(1.4f, 3.2f),
-            normalYRange = new Vector2(-1f, 1f), alignToNormal = 0.85f, sink = 0.05f, patchSize = 40f, patchCoverage = 0.6f, uniformClusters = true },
-        new Kind { name = "Shell Carpets", shape = DecorShapes.Shape.ShellTentacle, group = Group.Inner, inner = true,
-            clustersPer1000m2 = 0.35f, membersPerCluster = new Vector2Int(12, 24), clusterRadius = 2.2f, scaleRange = new Vector2(0.45f, 0.8f),
-            normalYRange = new Vector2(-1f, 1f), alignToNormal = 0.95f, sink = 0.03f, patchSize = 30f, patchCoverage = 0.5f, uniformClusters = true },
+        // Inner world: colonies of identical hard-shelled tentacles, carpets of short spikes, hanging needle beards.
+        NewKind("Shell Tentacles", DecorShapes.Shape.ShellTentacle, Group.Inner, 1.6f, 8, 22, 3.5f, 1.4f, 3.4f, -1f, 0.85f, 0.05f, 40f, 0.65f),
+        NewKind("Shell Carpets", DecorShapes.Shape.ShellTentacle, Group.Inner, 0.7f, 12, 26, 2.2f, 0.45f, 0.8f, -1f, 0.95f, 0.03f, 30f, 0.55f),
+        NewKind("Needle Beards", DecorShapes.Shape.Needles, Group.Inner, 0.6f, 3, 8, 3f, 0.8f, 1.6f, -1f, 0.9f, 0.02f, 35f, 0.55f),
+        NewKind("Crystals", DecorShapes.Shape.Shards, Group.InnerGlow, 0.7f, 2, 6, 3f, 0.5f, 1.3f, -1f, 0.8f, 0.05f, 45f, 0.55f),
+        NewKind("Hanging Veils", DecorShapes.Shape.Ribbon, Group.Inner, 0.5f, 2, 5, 3f, 0.9f, 1.8f, -1f, 0.95f, 0.02f, 40f, 0.5f),
+        NewKind("Glow Sacs", DecorShapes.Shape.Bladders, Group.InnerGlow, 0.6f, 1, 4, 3f, 0.5f, 1.1f, -1f, 0.8f, 0.05f, 35f, 0.55f),
+        NewKind("Cave Pebbles", DecorShapes.Shape.Pebbles, Group.Inner, 1.2f, 1, 3, 5f, 0.7f, 1.5f, 0.5f, 0.9f, 0.02f, 30f, 0.6f),
     };
 }

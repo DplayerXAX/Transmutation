@@ -1,6 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}" SchemaVersion="133">
 	<GameParameters>
-		<WorkUnit Name="Default Work Unit" ID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}" PersistMode="Standalone">
+			<ChildrenList>
+				<GameParameter Name="BGM_landmark" ID="{93BE28E3-BBE3-4176-8247-EDC7A6E99568}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_fuzzy" ID="{4D3949A8-14FE-426D-9078-4D4EC9D90842}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_cave" ID="{FD0B5E54-FFDA-4471-8F77-27DC7547847F}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_fluid" ID="{CD677A09-C6BC-46E4-824D-DC16A6BEC140}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+			</ChildrenList>
+		</WorkUnit>
 	</GameParameters>
 </WwiseDocument>

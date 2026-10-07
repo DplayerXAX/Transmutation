@@ -32,6 +32,12 @@ Shader "Capstone/World/Decor"
         _RingKeep("Ring Keep (broken rings)", Range(0, 1)) = 1
         _StrataFrequency("Height Strata Per Metre", Float) = 0
         _SheenAmount("Line Sheen Amount", Range(0, 1)) = 0
+        _InvertChance("Inverted Pieces (white <-> black)", Range(0, 1)) = 0
+        _DotChance("Pieces Shaded With Halftone Dots", Range(0, 1)) = 0
+        _DotScale("Halftone Dots Per Metre", Float) = 12
+        _DotColor("Halftone Dot Colour", Color) = (0.02, 0.02, 0.03, 1)
+        _GridChance("Pieces With A Digital Grid", Range(0, 1)) = 0
+        _GridScale("Grid Lines Per Metre", Float) = 8
 
         [Header(Motion)]
         _SwayAmount("Sway (metres at tip)", Float) = 0
@@ -39,6 +45,16 @@ Shader "Capstone/World/Decor"
         _BreathAmount("Breath (metres)", Float) = 0
         _BreathSpeed("Breath Speed", Float) = 1.2
         _BreathWaves("Breath Waves Along Length", Float) = 1.5
+
+        [Header(Glitch)]
+        _GlitchAmount("Glitch Amount", Range(0, 1)) = 0
+        _GlitchColorA("Glitch Colour A", Color) = (0.25, 0.8, 0.85, 1)
+        _GlitchColorB("Glitch Colour B", Color) = (0.85, 0.25, 0.6, 1)
+        _GlitchSplit("Colour Split (fraction of line spacing)", Range(0, 0.5)) = 0.12
+        _GlitchTint("Body Tint On Some Pieces", Range(0, 1)) = 0.3
+        _GlitchBands("Tear Bands Per Metre", Float) = 3
+        _GlitchRate("Tear Changes Per Second", Float) = 4
+        _GlitchShift("Tear Shift (metres)", Float) = 0.12
 
         [Header(Haze)]
         _HazeColor("Haze Color (alpha = strength)", Color) = (0, 0, 0, 0)
@@ -80,6 +96,20 @@ Shader "Capstone/World/Decor"
             half _RingKeep;
             float _StrataFrequency;
             half _SheenAmount;
+            half _InvertChance;
+            half _DotChance;
+            float _DotScale;
+            half4 _DotColor;
+            half _GridChance;
+            float _GridScale;
+            half _GlitchAmount;
+            half4 _GlitchColorA;
+            half4 _GlitchColorB;
+            float _GlitchSplit;
+            half _GlitchTint;
+            float _GlitchBands;
+            float _GlitchRate;
+            float _GlitchShift;
             float _SwayAmount;
             float _SwaySpeed;
             float _BreathAmount;
@@ -90,9 +120,35 @@ Shader "Capstone/World/Decor"
             float _HazeEnd;
         CBUFFER_END
 
+        float Hash11(float p)
+        {
+            p = frac(p * 0.1031);
+            p *= p + 33.33;
+            p *= p + p;
+            return frac(p);
+        }
+
+        // Glitch tears: thin horizontal bands that switch on for a moment, a few at a time,
+        // at different moments in different areas. Returns 1 inside an active band.
+        half GlitchBand(float3 positionWS, out float bandRandom)
+        {
+            float2 cell = floor(positionWS.xz / 8.0);
+            float cellRandom = Hash11(cell.x * 7.13 + cell.y * 3.37);
+            float band = floor(positionWS.y * _GlitchBands);
+            float tick = floor(_Time.y * _GlitchRate + cellRandom * 10.0);
+            float h = Hash11(band * 1.37 + tick * 7.91 + cellRandom * 113.0);
+            bandRandom = Hash11(h * 91.7 + 0.5);
+            return step(1.0 - _GlitchAmount * 0.06, h);
+        }
+
         // Living motion: the tip sways, and a slow swelling wave runs from base to tip.
+        // Glitch tears shove slices of the piece sideways.
         float3 AnimateDecor(float3 positionWS, float3 normalWS, float2 uv)
         {
+            float bandRandom;
+            half tear = GlitchBand(positionWS, bandRandom);
+            positionWS.xz += tear * (bandRandom - 0.5) * 2.0 * _GlitchShift * float2(1.0, 0.35);
+
             float t = uv.x;
             float phase = uv.y * 6.2831853 + dot(positionWS.xz, float2(0.11, 0.07));
             float time = _Time.y;
@@ -105,14 +161,6 @@ Shader "Capstone/World/Decor"
             float wave = sin(time * _BreathSpeed - t * _BreathWaves * 6.2831853 + phase);
             positionWS += normalWS * wave * _BreathAmount * (0.35 + 0.65 * t);
             return positionWS;
-        }
-
-        float Hash11(float p)
-        {
-            p = frac(p * 0.1031);
-            p *= p + 33.33;
-            p *= p + p;
-            return frac(p);
         }
         ENDHLSL
 
@@ -164,6 +212,15 @@ Shader "Capstone/World/Decor"
                 return output;
             }
 
+            // Rings along the length (some broken) plus horizontal strata, at given pattern coordinates.
+            half PatternLines(float ringCoord, float strataCoord, float pieceRandom)
+            {
+                float keep = step(1.0 - _RingKeep, Hash11(floor(ringCoord + 0.5) + pieceRandom * 91.0));
+                half rings = LineWorldStripe(ringCoord, _LineWidth) * keep * step(0.001, _RingCount);
+                half strata = LineWorldStripe(strataCoord, _LineWidth) * step(0.001, _StrataFrequency);
+                return max(rings, strata);
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 half3 normalWS = normalize(input.normalWS);
@@ -175,26 +232,68 @@ Shader "Capstone/World/Decor"
                     _MainLightAmount, _FakeLightDir.xyz, _FakeLightAmount, _ShadeLevels, ao);
 
                 half3 color = lerp(_ShadowColor.rgb, _Color.rgb, light) * lerp(0.6h, 1.0h, ao);
-                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength;
+
+                // Each piece shades in one of three ways, so it never reads as the ground's material:
+                // hatching, halftone dots, or hatching plus a fine digital grid.
+                float pick = frac(input.uv.y * 13.37);
+                half useDots = step(1.0 - _DotChance, pick);
+                half useGrid = step(pick, _GridChance) * (1.0h - useDots);
+
+                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength * (1.0h - useDots);
                 color = lerp(color, _HatchColor.rgb, hatch);
 
-                // Rings along the length (shell plates, growth rings), some of them broken.
+                // Halftone: a 3D lattice of dots that grow in the dark, like cheap print.
+                float dotDistance = length(frac(input.positionWS * _DotScale) - 0.5);
+                float dotRadius = sqrt(saturate(1.0 - light * 0.9)) * 0.48;
+                float dotFw = max(fwidth(dotDistance), 1e-4);
+                half dots = 1.0h - smoothstep(dotRadius - dotFw, dotRadius + dotFw, dotDistance);
+                // Far away the dots blur into their average tone instead of shimmering.
+                dots = lerp(dots, saturate(dotRadius * dotRadius * 4.2), saturate(dotFw * 6.0 - 0.5));
+                half3 printed = lerp(_Color.rgb * lerp(0.6h, 1.0h, ao), _DotColor.rgb, dots);
+                color = lerp(color, printed, useDots);
+
+                // Digital grid in the glitch palette, dimmer in shadow.
+                float3 gridCoord = input.positionWS * _GridScale;
+                half grid = max(max(LineWorldStripe(gridCoord.x, _LineWidth * 0.8), LineWorldStripe(gridCoord.y, _LineWidth * 0.8)),
+                    LineWorldStripe(gridCoord.z, _LineWidth * 0.8));
+                half3 gridColor = frac(input.uv.y * 5.1) < 0.5 ? _GlitchColorA.rgb : _GlitchColorB.rgb;
+                color = lerp(color, gridColor * lerp(0.45h, 0.9h, light), grid * useGrid * 0.75h);
+
+                // Some pieces carry a faint body tint from the glitch palette.
+                half3 pieceTint = frac(input.uv.y * 7.3) < 0.5 ? _GlitchColorA.rgb : _GlitchColorB.rgb;
+                half tinted = step(0.6, frac(input.uv.y * 3.7)) * _GlitchTint * _GlitchAmount;
+                color = lerp(color, Luminance(color) * pieceTint * 1.8h, tinted);
+
                 // Moving rings get a random offset per piece; still rings stay on the plate seams.
                 float ringCoord = input.uv.x * _RingCount - _Time.y * _RingSpeed + input.uv.y * 3.0 * saturate(_RingSpeed * 100.0);
-                float keep = step(1.0 - _RingKeep, Hash11(floor(ringCoord + 0.5) + input.uv.y * 91.0));
-                half lines = LineWorldStripe(ringCoord, _LineWidth) * keep * step(0.001, _RingCount);
-
-                // Horizontal strata like contour lines on stone, slightly wavy.
-                float strata = input.positionWS.y * _StrataFrequency
+                // Strata like contour lines on stone, slightly wavy.
+                float strataCoord = input.positionWS.y * _StrataFrequency
                     + 0.25 * sin(dot(input.positionWS.xz, float2(1.3, 0.9)) + input.uv.y * 6.0);
-                lines = max(lines, LineWorldStripe(strata, _LineWidth) * step(0.001, _StrataFrequency));
+                half lines = PatternLines(ringCoord, strataCoord, input.uv.y);
+
+                // Colour split: the same lines drawn slightly shifted, once per glitch colour.
+                float split = _GlitchSplit * _GlitchAmount;
+                half splitA = PatternLines(ringCoord + split, strataCoord + split, input.uv.y) * (1.0h - lines);
+                half splitB = PatternLines(ringCoord - split, strataCoord - split, input.uv.y) * (1.0h - lines);
 
                 half rim = pow(1.0h - saturate(dot(normalWS, viewDirWS)), _RimPower) * _RimStrength;
                 lines = max(lines, saturate(rim));
 
+                half lineLight = lerp(_ShadowLineDim, 1.0h, light);
                 half3 lineColor = LineWorldSheen(_LineColor.rgb, _LineColor2.rgb, normalWS, viewDirWS, input.positionWS, _SheenAmount);
-                lineColor *= lerp(_ShadowLineDim, 1.0h, light);
-                color = lerp(color, lineColor, lines);
+                color = lerp(color, lineColor * lineLight, lines);
+                color = lerp(color, _GlitchColorA.rgb * lineLight, splitA * _GlitchAmount);
+                color = lerp(color, _GlitchColorB.rgb * lineLight, splitB * _GlitchAmount);
+
+                // Active tear bands: palette colour with coarse scanlines.
+                float bandRandom;
+                half tear = GlitchBand(input.positionWS, bandRandom);
+                half3 tearColor = bandRandom < 0.5 ? _GlitchColorA.rgb : _GlitchColorB.rgb;
+                half scan = step(0.5, frac(input.positionCS.y * 0.25));
+                color = lerp(color, tearColor * lerp(0.35h, 0.8h, scan), tear * 0.65h);
+
+                // Some pieces are drawn as a negative: white body, black lines.
+                color = lerp(color, 1.0h - color, step(input.uv.y, _InvertChance));
 
                 color = LineWorldHaze(color, input.positionWS, _HazeColor, _HazeStart, _HazeEnd);
                 color = MixFog(color, input.fogFactor);
