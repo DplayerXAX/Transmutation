@@ -43,24 +43,24 @@ Material:
     - _RingKeepThreshold: 1
     - _RingSqrtBoost: 6
     - _RingTravel: 7
-    - _ShadowLineDim: 0.85
+    - _ShadowLineDim: 0.45
     - _MainLightAmount: 0
-    - _FakeLightAmount: 1.1
-    - _ShadeLevels: 4
-    - _HatchStrength: 0.7
+    - _FakeLightAmount: 0.55
+    - _ShadeLevels: 3
+    - _HatchStrength: 0.6
     - _HatchScale: 2.5
     - _HatchWidth: 1
-    - _SheenAmount: 0.85
-    - _HazeStart: 6
-    - _HazeEnd: 75
+    - _SheenAmount: 1
+    - _HazeStart: 3
+    - _HazeEnd: 45
     m_Colors:
-    - _Color: {r: 0.66, g: 0.68, b: 0.96, a: 1}
-    - _ShadowColor: {r: 0.24, g: 0.21, b: 0.48, a: 1}
-    - _LineColor: {r: 0.12, g: 0.06, b: 0.32, a: 1}
-    - _LineColor2: {r: 0.03, g: 0.16, b: 0.44, a: 1}
+    - _Color: {r: 0.07, g: 0.06, b: 0.13, a: 1}
+    - _ShadowColor: {r: 0, g: 0, b: 0.005, a: 1}
+    - _LineColor: {r: 0.2, g: 0.85, b: 0.95, a: 1}
+    - _LineColor2: {r: 0.62, g: 0.3, b: 1.0, a: 1}
     - _FakeLightDir: {r: -0.3, g: 1, b: 0.45, a: 0}
-    - _HatchColor: {r: 0.32, g: 0.28, b: 0.62, a: 1}
-    - _HazeColor: {r: 0.56, g: 0.52, b: 0.95, a: 0.85}
+    - _HatchColor: {r: 0.1, g: 0.08, b: 0.22, a: 1}
+    - _HazeColor: {r: 0.01, g: 0.0, b: 0.03, a: 0.97}
     - _Center: {r: 0, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

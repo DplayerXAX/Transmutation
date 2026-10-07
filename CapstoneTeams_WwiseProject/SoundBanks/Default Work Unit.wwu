@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <WwiseDocument Type="WorkUnit" ID="{3BCC4F54-C91F-4DE5-8E62-15DE21C87A1A}" SchemaVersion="133">
 	<SoundBanks>
-		<WorkUnit Name="Default Work Unit" ID="{3BCC4F54-C91F-4DE5-8E62-15DE21C87A1A}" PersistMode="Standalone"/>
+		<WorkUnit Name="Default Work Unit" ID="{3BCC4F54-C91F-4DE5-8E62-15DE21C87A1A}" PersistMode="Standalone">
+			<ChildrenList>
+				<SoundBank Name="Transmutation" ID="{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}">
+					<ObjectInclusionList>
+						<ObjectRef Name="Play_Footstep_Left" ID="{68B83415-D24B-415C-A452-A8619448A65C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Footstep_Right" ID="{5C4F89C2-C554-474D-A9F1-088B610F61BD}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="PlayBGM" ID="{35352506-54B6-4A54-9C06-399C44291C2C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+					</ObjectInclusionList>
+					<ObjectExclusionList/>
+					<GameSyncExclusionList/>
+				</SoundBank>
+			</ChildrenList>
+		</WorkUnit>
 	</SoundBanks>
 </WwiseDocument>

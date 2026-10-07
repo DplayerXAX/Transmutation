@@ -121,6 +121,29 @@ public sealed class ProceduralWorld : MonoBehaviour
     /// <summary>Raised on the main thread after each chunk object and its mesh are created.</summary>
     public event System.Action<GameObject, Mesh> ChunkCreated;
 
+    /// <summary>True once the layout (noise offsets, sinkholes) exists, so the queries below work.</summary>
+    public bool LayoutReady => sinkholes != null;
+    public int SinkholeCount => sinkholes != null ? sinkholes.Length : 0;
+
+    /// <summary>Where a sinkhole shaft crosses a world height (shafts lean slightly), and its radius.</summary>
+    public Vector3 SinkholeCentre(int index, float worldY, out float radius)
+    {
+        Sinkhole hole = sinkholes[index];
+        radius = hole.radius;
+        float localY = worldY - transform.position.y;
+        return transform.position + new Vector3(hole.position.x, localY, hole.position.y - localY * 0.07f);
+    }
+
+    /// <summary>Base world heights (no 3D noise) of the surface, inner ceiling and inner ground at a world point.</summary>
+    public void ColumnHeights(Vector3 worldPoint, out float surface, out float ceiling, out float innerGround)
+    {
+        Vector3 local = worldPoint - transform.position;
+        float h = SurfaceHeight(local.x, local.z);
+        surface = transform.position.y + h;
+        ceiling = transform.position.y + CeilingHeight(h);
+        innerGround = transform.position.y + InnerGroundHeight(local.x, local.z, h);
+    }
+
     private void Start()
     {
         Rigidbody[] bodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
