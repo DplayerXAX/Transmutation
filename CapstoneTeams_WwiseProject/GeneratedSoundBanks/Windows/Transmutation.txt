@@ -1,0 +1,18 @@
+Event	ID	Name			Wwise Object Path	Notes
+	1110411331	Play_Footstep_Right			\Default Work Unit\Play_Footstep_Right	
+	2542411811	PlayBGM			\Default Work Unit\PlayBGM	
+	2837114212	Play_Footstep_Left			\Default Work Unit\Play_Footstep_Left	
+
+Game Parameter	ID	Name			Wwise Object Path	Notes
+	721355700	BGM_fuzzy			\Default Work Unit\BGM_fuzzy	
+	840600496	BGM_fluid			\Default Work Unit\BGM_fluid	
+	861516679	BGM_cave			\Default Work Unit\BGM_cave	
+
+In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	95100673	basic_test	.cache\9E\{9E3F54CF-D0D0-7922-E9F9-E5F29F73D54A}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\basic_test		11025096
+	221012135	fuzzy	.cache\F2\{F275F9A4-A93E-E906-AD1A-226DE33EA86D}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fuzzy		11025096
+	454687851	left_D	.cache\F0\{F02073ED-9FC1-DEC1-54F1-6AAB1DEF58EC}.wem		\Containers\Default Work Unit\Footstep_Left\left_D		220596
+	468006233	cave	.cache\25\{2532FACB-A624-F908-6F86-68A9D609190F}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\cave		11025096
+	481382044	right_E	.cache\A5\{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem		\Containers\Default Work Unit\Footstep_Right\right_E		220596
+	631985183	fluid	.cache\F5\{F535A4EF-FB6E-EA25-7C41-09D59579DA3F}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fluid		11025096
+

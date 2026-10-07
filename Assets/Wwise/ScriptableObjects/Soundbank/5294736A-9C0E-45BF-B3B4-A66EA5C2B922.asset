@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9236f71220f85624a8347a8ccf60263f, type: 3}
+  m_Name: 5294736A-9C0E-45BF-B3B4-A66EA5C2B922
+  m_EditorClassIdentifier: AK.Wwise.Unity.API.WwiseTypes::WwiseBankReference
+  objectName: Transmutation
+  id: 2271640160
+  guid: 5294736A-9C0E-45BF-B3B4-A66EA5C2B922

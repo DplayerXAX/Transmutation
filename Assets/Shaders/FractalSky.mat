@@ -30,9 +30,9 @@ Material:
     - _Contrast: 4.42
     - _Detail: 0
     - _Scale: 8
-    - _Speed: 0.25
+    - _Speed: 0.3
     - _Twist: 0
-    - _Warp: 0.8
+    - _Warp: 0.75
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

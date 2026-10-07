@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_Landmark_Spire
+  m_Shader: {fileID: 4800000, guid: 68c1d6c33b8c44bcb187d1dbdb3ee2e6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _BreathAmount: 0
+    - _BreathSpeed: 1.2
+    - _BreathWaves: 1.5
+    - _FakeLightAmount: 0.15
+    - _GlitchAmount: 0.35
+    - _GlitchBands: 0.6
+    - _GlitchRate: 4
+    - _GlitchShift: 0.3
+    - _GlitchSplit: 0.12
+    - _GlitchTint: 0.3
+    - _HatchScale: 4
+    - _HatchStrength: 0.9
+    - _HatchWidth: 1
+    - _HazeEnd: 80
+    - _HazeStart: 10
+    - _InvertChance: 0
+    - _LineWidth: 1.2
+    - _MainLightAmount: 1.2
+    - _RimPower: 4
+    - _RimStrength: 0.35
+    - _RingCount: 0
+    - _RingKeep: 1
+    - _RingSpeed: 0
+    - _ShadeLevels: 2
+    - _ShadowLineDim: 0.35
+    - _SheenAmount: 0
+    - _StrataFrequency: 0.75
+    - _SwayAmount: 0
+    - _SwaySpeed: 0.7
+    m_Colors:
+    - _Color: {r: 0.24, g: 0.24, b: 0.25, a: 1}
+    - _FakeLightDir: {r: 0.3, g: 1, b: 0.2, a: 0}
+    - _GlitchColorA: {r: 0.22, g: 0.68, b: 0.74, a: 1}
+    - _GlitchColorB: {r: 0.78, g: 0.24, b: 0.55, a: 1}
+    - _HatchColor: {r: 0.55, g: 0.55, b: 0.57, a: 1}
+    - _HazeColor: {r: 0, g: 0, b: 0, a: 0}
+    - _LineColor: {r: 0.92, g: 0.92, b: 0.9, a: 1}
+    - _LineColor2: {r: 0.92, g: 0.92, b: 0.9, a: 1}
+    - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

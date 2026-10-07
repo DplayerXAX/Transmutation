@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_Harvest_Flower
+  m_Shader: {fileID: 4800000, guid: 68c1d6c33b8c44bcb187d1dbdb3ee2e6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _ShadowLineDim: 0.6
+    - _LineWidth: 1.2
+    - _MainLightAmount: 0
+    - _FakeLightAmount: 0.8
+    - _ShadeLevels: 3
+    - _RimPower: 2.5
+    - _RimStrength: 0.6
+    - _HatchStrength: 0.4
+    - _HatchScale: 20
+    - _HatchWidth: 1
+    - _RingCount: 8
+    - _RingSpeed: 0.1
+    - _RingKeep: 0.75
+    - _StrataFrequency: 0
+    - _SheenAmount: 1
+    - _InvertChance: 0
+    - _DotChance: 0
+    - _DotScale: 12
+    - _GridChance: 0
+    - _GridScale: 8
+    - _GlitchAmount: 0
+    - _SwayAmount: 0.04
+    - _SwaySpeed: 0.4
+    - _BreathAmount: 0.004
+    - _BreathSpeed: 0.9
+    - _BreathWaves: 1
+    - _HazeStart: 3
+    - _HazeEnd: 45
+    m_Colors:
+    - _Color: {r: 0.2, g: 0.11, b: 0.38, a: 1}
+    - _ShadowColor: {r: 0.04, g: 0.02, b: 0.09, a: 1}
+    - _LineColor: {r: 0.4, g: 0.95, b: 1.0, a: 1}
+    - _LineColor2: {r: 0.65, g: 0.4, b: 1.0, a: 1}
+    - _DotColor: {r: 0, g: 0, b: 0, a: 1}
+    - _FakeLightDir: {r: -0.3, g: 1, b: 0.45, a: 0}
+    - _HatchColor: {r: 0.02, g: 0.01, b: 0.05, a: 1}
+    - _HazeColor: {r: 0.01, g: 0.0, b: 0.03, a: 0.97}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

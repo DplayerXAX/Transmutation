@@ -52,6 +52,9 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Editor-facing name of this creature.</summary>
     public string CreatureName => creatureName;
 
+    /// <summary>For things spawned at runtime, which have no inspector to set the name.</summary>
+    protected void SetCreatureName(string value) => creatureName = value;
+
     /// <summary>Whether this creature currently runs its simulation logic.</summary>
     public bool SimulationEnabled => simulationEnabled;
 

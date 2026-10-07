@@ -13,6 +13,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private PlayerCreatureCarrier carrier;
     [SerializeField] private PlayerCreatureInteractor interactor;
     [SerializeField] private AdvancedFirstPersonTraversal traversal;
+    [SerializeField] private HandClimber handClimber;
 
     [Header("Layout")]
     [Tooltip("Offset of the prompt block from the screen centre, in reference pixels (1920x1080).")]
@@ -37,6 +38,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private string wallRunHint = "[Hold W]  Wall run";
     [SerializeField] private string wallRunActiveHint = "[Space]  Wall jump    [Shift] / [Ctrl]  Up / Down";
     [SerializeField] private string ledgeHint = "[Space]  Jump    [WASD]  Let go";
+    [SerializeField] private string handClimbHint = "[WASD]  Climb    [Space]  Push off";
 
     private CanvasGroup group;
     private Text titleText;
@@ -47,6 +49,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (interactor == null) interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
         if (traversal == null) traversal = FindFirstObjectByType<AdvancedFirstPersonTraversal>();
+        if (handClimber == null) handClimber = FindFirstObjectByType<HandClimber>();
         BuildCanvas();
     }
 
@@ -80,6 +83,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             return;
         }
 
+        if (handClimber != null && handClimber.isActiveAndEnabled && handClimber.IsClimbing)
+        {
+            if (!handClimber.IsMantling) hint = handClimbHint;
+            return;
+        }
+
         if (traversal != null && traversal.isActiveAndEnabled)
         {
             if (traversal.HoldingLedge) { hint = ledgeHint; return; }
@@ -103,6 +112,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             hint = interactLine != null && carryLine != null
                 ? interactLine + "    " + carryLine
                 : interactLine ?? carryLine;
+            return;
+        }
+
+        if (handClimber != null && handClimber.isActiveAndEnabled && handClimber.CanStartClimb)
+        {
+            hint = climbHint;
             return;
         }
 

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" SchemaVersion="133">
+	<Events>
+		<WorkUnit Name="Default Work Unit" ID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" PersistMode="Standalone">
+			<ChildrenList>
+				<Event Name="PlayBGM" ID="{35352506-54B6-4A54-9C06-399C44291C2C}">
+					<ChildrenList>
+						<Action Name="" ID="{6B5FBA20-C4EC-4E56-8D60-D24DDF1F169B}" ShortID="561006840">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="basic" ID="{116E46D8-C562-4576-BEE1-14B788353645}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Footstep_Left" ID="{68B83415-D24B-415C-A452-A8619448A65C}">
+					<ChildrenList>
+						<Action Name="" ID="{7968A985-8CEE-4667-A3DF-E00618071D08}" ShortID="868427414">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Footstep_Left" ID="{33DAC69C-A8B5-4FEB-BCB6-F89E0FE346B3}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Footstep_Right" ID="{5C4F89C2-C554-474D-A9F1-088B610F61BD}">
+					<ChildrenList>
+						<Action Name="" ID="{99687331-D305-4C2E-BBED-10B30FCA3BEC}" ShortID="625138165">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Footstep_Right" ID="{2A957380-C6C0-41D6-9505-B9C53561D6E4}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+			</ChildrenList>
+		</WorkUnit>
+	</Events>
+</WwiseDocument>

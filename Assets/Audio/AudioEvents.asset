@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79364d5cd033ae641bb440783a18be3b, type: 3}
+  m_Name: AudioEvents
+  m_EditorClassIdentifier: Assembly-CSharp::AudioEventBank
+  bpm: 84
+  beatsPerBar: 4
+  bars: 4
+  musicGroup: {fileID: 0}
+  soundGroup: {fileID: 0}
+  events:
+  - name: PlayBGM
+    kind: 0
+    clips: []
+    volume: 0.7
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 0
+  - name: BGM_fuzzy
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 1
+  - name: BGM_cave
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 3
+    fadeOut: 3
+    placeholderVoice: 5
+  - name: BGM_fluid
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 3
+  - name: BGM_landmark
+    kind: 1
+    clips: []
+    volume: 0.5
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 6
+  - name: SFX_test
+    kind: 2
+    clips: []
+    volume: 1
+    pitchRange: {x: 0.9, y: 1.1}
+    loop: 0
+    spatialBlend: 1
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 100
+  - name: Play_Footstep_Left
+    kind: 2
+    clips: []
+    volume: 0.4
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 101
+  - name: Play_Footstep_Right
+    kind: 2
+    clips: []
+    volume: 0.4
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 102
+  creatureChannels:
+  - creatureType: FuzzCreature
+    layerEvent: BGM_fuzzy
+    innerRadius: 2
+    outerRadius: 10
+  - creatureType: FireEater
+    layerEvent: BGM_fluid
+    innerRadius: 2
+    outerRadius: 10

@@ -29,10 +29,28 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Forward speed given to a physics creature when it is dropped in Toggle Key mode.")]
     [Min(0f)] [SerializeField] private float dropForwardSpeed = 1.5f;
 
+    [Header("Grip")]
+    [Tooltip("Lock the held creature to the hand every frame instead of pulling it there with a spring. " +
+             "Feels solid and has no lag, but the held creature can pass through walls.")]
+    [SerializeField] private bool firmGrip;
+
+    [Header("Big Creatures")]
+    [Tooltip("Creatures larger than this (metres, largest side) cannot be picked up.")]
+    [Min(0.1f)] [SerializeField] private float maxCarrySize = 2.2f;
+    [Tooltip("Degrees below the crosshair the top of a held creature is kept.")]
+    [Range(0f, 30f)] [SerializeField] private float clearBelowCrosshair = 8f;
+    [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
+    [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
+
     public Creature CarriedCreature { get; private set; }
+
+    private Vector3 carryPointHome;
 
     private Collider[] playerColliders;
     private Collider[] carriedColliders;
+    private Rigidbody heldBody;
+    private RigidbodyInterpolation heldInterpolation;
+    private Quaternion heldYawOffset;
     public CarryInput InputMode => carryInput;
     public Key ToggleKeyBinding => toggleKey;
 
@@ -54,6 +72,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             carryPoint.SetParent(carryCamera.transform, false);
             carryPoint.localPosition = new Vector3(0f, -0.35f, 2.5f);
         }
+        if (carryPoint != null) carryPointHome = carryPoint.localPosition;
     }
 
     private void Update()
@@ -114,27 +133,125 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
-        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-        {
-            Creature creature = hit.collider.GetComponentInParent<Creature>();
-            return creature != null && creature.CanBeCarried ? creature : null;
-        }
-        return null;
+if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
+    return null;
+
+Creature creature = hit.collider.GetComponentInParent<Creature>();
+
+if (creature == null || !creature.CanBeCarried)
+    return null;
+
+// Too big to hold in one hand: no prompt, no pickup.
+if (MeasureCreature(creature, out _, out _) > maxCarrySize)
+    return null;
+
+return creature;
+}
+
+/// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
+private static float MeasureCreature(Creature creature, out float above, out float sideways)
+{
+    above = sideways = 0f;
+    Bounds bounds = default;
+    bool any = false;
+
+    foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
+    {
+        if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer)
+            continue;
+
+        if (!any) bounds = renderer.bounds;
+        else bounds.Encapsulate(renderer.bounds);
+
+        any = true;
     }
+
+    if (!any) return 0f;
+
+    Vector3 pivot = creature.transform.position;
+    above = Mathf.Max(0f, bounds.max.y - pivot.y);
+    sideways = Mathf.Max(
+        Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
+        Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z)
+    );
+
+    return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+}
+
+// Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
+private void FitCarryPoint(Creature creature)
+{
+    if (carryPoint == null) return;
+
+    MeasureCreature(creature, out float above, out float sideways);
+
+    Vector3 home = carryPointHome;
+    float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
+    float y = Mathf.Min(
+        home.y,
+        -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z)
+    );
+    float x = Mathf.Max(
+        home.x,
+        sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z
+    );
+
+    carryPoint.localPosition = new Vector3(x, y, z);
+
+}
 
     private void BeginCarry(Creature creature)
     {
-        if (carryPoint == null || !creature.TryBeginCarry(this, carryPoint)) return;
+        if (carryPoint == null) return;
+        FitCarryPoint(creature);
+        if (!creature.TryBeginCarry(this, carryPoint))
+        {
+            carryPoint.localPosition = carryPointHome;
+            return;
+        }
         CarriedCreature = creature;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
+
+        if (firmGrip)
+        {
+            heldBody = creature.GetComponent<Rigidbody>();
+            if (heldBody != null)
+            {
+                heldInterpolation = heldBody.interpolation;
+                heldBody.interpolation = RigidbodyInterpolation.None;
+                heldBody.isKinematic = true; // EndCarry restores the creature's own setting.
+            }
+            heldYawOffset = Quaternion.Inverse(CarryYaw()) * creature.transform.rotation;
+            SnapHeld();
+        }
     }
 
     private void FixedUpdate()
     {
-        if (CarriedCreature == null) return;
+        if (CarriedCreature == null || firmGrip) return;
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
+    }
+
+    // After the camera has moved this frame, so the held creature never trails behind the view.
+    private void LateUpdate()
+    {
+        if (firmGrip && CarriedCreature != null) SnapHeld();
+    }
+
+    private void SnapHeld()
+    {
+        if (carryPoint == null) return;
+        CarriedCreature.transform.SetPositionAndRotation(carryPoint.position, CarryYaw() * heldYawOffset);
+        if (heldBody != null) heldBody.position = carryPoint.position;
+    }
+
+    private Quaternion CarryYaw()
+    {
+        Vector3 forward = carryCamera != null ? carryCamera.transform.forward : transform.forward;
+        forward = Vector3.ProjectOnPlane(forward, Vector3.up);
+        return forward.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(forward.normalized, Vector3.up) : Quaternion.identity;
     }
 
     /// <summary>Releases the creature and, if it is a free physics body, sends it slightly forward.</summary>
@@ -153,8 +270,11 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
+        if (heldBody != null) heldBody.interpolation = heldInterpolation;
+        heldBody = null;
         SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
+        if (carryPoint != null) carryPoint.localPosition = carryPointHome;
     }
 
     private void SetPlayerCollision(Collider[] colliders, bool ignore)

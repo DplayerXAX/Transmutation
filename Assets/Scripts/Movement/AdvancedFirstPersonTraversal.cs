@@ -409,6 +409,9 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void StopClimbing()
     {
+        // Only clear the flag this script set itself; HandClimber may be climbing.
+        if (!isClimbing)
+            return;
         isClimbing = false;
         if (controller != null)
             controller.SetClimbing(false);
