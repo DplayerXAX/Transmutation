@@ -128,13 +128,17 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         }
     }
 
-    private bool UsesToggleKey => carrier != null && carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleKey;
+    private bool UsesToggleKey => carrier != null && carrier.InputMode != PlayerCreatureCarrier.CarryInput.HoldRightMouse;
+
+    // Click right to pick up and again to drop, or a key in Toggle Key mode.
+    private string ToggleName =>
+        carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse ? "RMB" : carrier.ToggleKeyBinding.ToString();
 
     private string PickUpHint() =>
-        UsesToggleKey ? string.Format(pickUpKeyHintFormat, carrier.ToggleKeyBinding) : carryHint;
+        UsesToggleKey ? string.Format(pickUpKeyHintFormat, ToggleName) : carryHint;
 
     private string DropHint() =>
-        UsesToggleKey ? string.Format(dropKeyHintFormat, carrier.ToggleKeyBinding) : releaseHint;
+        UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;
 
     private string NameOf(Creature creature)
     {

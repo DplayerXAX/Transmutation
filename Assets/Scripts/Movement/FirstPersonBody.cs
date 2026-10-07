@@ -64,6 +64,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     private float interactTimer;
     // Seconds off the ground, so short hops over bumps do not throw the arms up.
     private float airTime;
+    private const float GrabTime = 0.45f;
     // Vertical speed while airborne, and the landing that follows a real fall or jump.
     private float airSpeed;
     private float airPhase;
@@ -93,6 +94,8 @@ public sealed class FirstPersonBody : MonoBehaviour
             rightLeg = BuildLimb("Right Leg", legThickness, hand: false, side: 1f);
         }
         renderers = root.GetComponentsInChildren<Renderer>();
+        // Tentacle creatures ride on the right hand.
+        if (carrier != null) carrier.HandAnchor = rightArm.end;
     }
 
     private void OnDestroy()
@@ -154,10 +157,15 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private void UpdateArm(Limb arm, float side, Transform view, float speed, bool grounded, bool climbing, float deltaTime)
     {
-        bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null;
+        bool tentacleOnHand = side > 0f && carrier != null && carrier.CarriesTentacle;
+        bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null && !tentacleOnHand;
         bool poking = side < 0f && interactTimer > 0f;
+        // Right hand reaching out for a creature when the pickup button is pressed.
+        float grabAge = side > 0f && carrier != null ? Time.time - carrier.LastGrabTime : 10f;
+        bool grabbing = grabAge < GrabTime && !climbing;
+        carrying |= grabbing;
         // Arms hang from the body (so looking around does not swing them), except while holding or poking something in view.
-        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking ? 0f : 1f, deltaTime * 5f);
+        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
 
         Vector3 eye = view.position;
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
@@ -193,6 +201,26 @@ public sealed class FirstPersonBody : MonoBehaviour
                 grip = 0.05f;
                 spread = 1f;
             }
+        }
+        else if (grabbing)
+        {
+            // Reach out towards what was clicked, open, then close the hand and bring it back.
+            float reachOut = Mathf.Sin(Mathf.Clamp01(grabAge / GrabTime) * Mathf.PI);
+            Vector3 rest = view.TransformPoint(Vector3.Scale(idleHandOffset, new Vector3(side, 1f, 1f)));
+            Vector3 toGoal = carrier.LastGrabPoint - shoulder;
+            Vector3 goal = shoulder + Vector3.ClampMagnitude(toGoal, (upperArmLength + forearmLength) * 0.97f);
+            target = Vector3.Lerp(rest, goal, reachOut);
+            palmNormal = -toGoal.normalized;
+            grip = grabAge < GrabTime * 0.45f ? 0.05f : 0.85f;
+            spread = grabAge < GrabTime * 0.45f ? 1f : 0f;
+        }
+        else if (tentacleOnHand && !climbing)
+        {
+            // Holding the tentacle creature up a little so it can be seen coiled round the hand.
+            target = view.TransformPoint(new Vector3(0.2f, -0.24f, 0.42f) + new Vector3(0f, Mathf.Sin(Time.time * 1.3f) * 0.01f, 0f));
+            palmNormal = -view.up;
+            grip = 0.55f;
+            flutter = 0.06f;
         }
         else if (carrying)
         {

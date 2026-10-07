@@ -54,6 +54,11 @@ public sealed class CreatureCast
             }
             else continue;
 
+            if (source.vertexCount == 0 || source.subMeshCount == 0)
+            {
+                if (baked) UnityEngine.Object.Destroy(source);
+                continue;
+            }
             vertexCount += source.vertexCount;
             if (vertexCount > 400000)
             {
@@ -69,6 +74,7 @@ public sealed class CreatureCast
                     pieces[s] = new CombineInstance { mesh = source, subMeshIndex = s, transform = matrix };
                 var mesh = new Mesh { name = renderer.name, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
                 mesh.CombineMeshes(pieces, false, true);
+                if (mesh.vertexCount == 0) { UnityEngine.Object.Destroy(mesh); if (baked) UnityEngine.Object.Destroy(source); continue; }
 
                 Material[] materials = renderer.sharedMaterials;
                 var part = new Part
@@ -165,7 +171,11 @@ public sealed class CreatureCast
                 var cast = new CreatureCast();
                 int count = reader.ReadInt32();
                 Dictionary<string, Material> lookup = LoadedMaterials();
-                for (int i = 0; i < count; i++) cast.parts.Add(ReadPart(reader, lookup));
+                for (int i = 0; i < count; i++)
+                {
+                    Part part = ReadPart(reader, lookup);
+                    if (part.mesh.vertexCount > 0 && part.mesh.subMeshCount > 0) cast.parts.Add(part);
+                }
                 bool first = true;
                 foreach (Part part in cast.parts)
                 {

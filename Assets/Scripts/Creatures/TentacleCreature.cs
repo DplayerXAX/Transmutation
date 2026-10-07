@@ -85,6 +85,19 @@ public sealed class TentacleCreature : Creature
     /// <summary>Enough tentacles are holding a surface to support the player.</summary>
     public bool IsGripping => gripping;
 
+    /// <summary>
+    /// Another script moves the body (for example crawling up a tower wall); the creature skips its
+    /// own wandering and its free tentacles reach towards that surface instead of the ground below.
+    /// </summary>
+    public bool ExternalMovement { get; set; }
+    /// <summary>Outward normal of the surface the body is crawling on while ExternalMovement is set.</summary>
+    public Vector3 CrawlNormal { get; set; } = Vector3.up;
+
+    [Header("Carried On The Hand")]
+    [Tooltip("Size of the creature while it sits on the player's hand.")]
+    [Range(0.2f, 1f)] [SerializeField] private float carriedScale = 0.45f;
+    private Vector3 restScale = Vector3.one;
+
     public override string CarriedPrompt
     {
         get
@@ -169,6 +182,7 @@ public sealed class TentacleCreature : Creature
 
         home = transform.position;
         wanderTarget = home;
+        restScale = transform.localScale;
         curve = new Vector3[jointsPerTentacle];
         BuildVisuals();
     }
@@ -178,7 +192,10 @@ public sealed class TentacleCreature : Creature
         if (wasCarried && !IsCarried) home = transform.position; // Wander around where it was dropped.
         wasCarried = IsCarried;
 
-        if (!IsCarried) Wander(deltaTime);
+        if (!IsCarried && !ExternalMovement) Wander(deltaTime);
+        // Shrinks to sit on the hand while carried, grows back when let go.
+        Vector3 scale = IsCarried ? restScale * carriedScale : restScale;
+        transform.localScale = Vector3.MoveTowards(transform.localScale, scale, deltaTime * 2f);
         UpdateTentacles(deltaTime);
         UpdateBodyVisual(deltaTime);
         UpdateMembrane();
@@ -357,7 +374,17 @@ public sealed class TentacleCreature : Creature
         normal = Vector3.up;
 
         RaycastHit hit;
-        if (IsCarried)
+        if (ExternalMovement && !IsCarried)
+        {
+            // Crawling on a wall: spread over it, each arm reaching out sideways and into the surface.
+            Vector3 wallUp = CrawlNormal.sqrMagnitude > 0.5f ? CrawlNormal.normalized : Vector3.up;
+            Vector3 along = Vector3.ProjectOnPlane(transform.rotation * tentacle.restDirection, wallUp);
+            if (along.sqrMagnitude < 1e-4f) along = Vector3.ProjectOnPlane(Vector3.up, wallUp);
+            Vector3 direction = (along.normalized * 0.7f - wallUp * 0.7f).normalized;
+            if (!CastSurface(centre, direction, reach, out hit) && !CastSurface(centre, -wallUp, reach, out hit))
+                return false;
+        }
+        else if (IsCarried)
         {
             // Reach out in a fan around the body so some arms find walls above and some below.
             Vector3 axis = Vector3.Cross(Vector3.up, outward);
@@ -392,8 +419,23 @@ public sealed class TentacleCreature : Creature
 
         if (tentacle.planted) return tentacle.hold;
 
-        // Unattached: drift loosely below the body and sway.
         float time = Time.time * 2.2f + tentacle.phase;
+        if (IsCarried && Carrier != null)
+        {
+            // Carried with nothing to hold: coil round the wrist and forearm behind the body.
+            Vector3 back = Carrier.transform.position - transform.position;
+            back = back.sqrMagnitude > 1e-4f ? back.normalized : Vector3.down;
+            Vector3 across = Vector3.Cross(back, Vector3.up);
+            if (across.sqrMagnitude < 1e-4f) across = Vector3.right;
+            across.Normalize();
+            Vector3 around = Vector3.Cross(across, back);
+            float angle = tentacle.phase * 3.1f + Time.time * 0.8f;
+            float distance = 0.12f + 0.1f * Mathf.Repeat(tentacle.phase, 1f);
+            Vector3 coil = transform.position + back * distance + (across * Mathf.Cos(angle) + around * Mathf.Sin(angle)) * 0.11f;
+            return Vector3.Lerp(tentacle.foot, coil, 1f - Mathf.Exp(-10f * deltaTime));
+        }
+
+        // Unattached: drift loosely below the body and sway.
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
         Vector3 side = Vector3.Cross(Vector3.up, outward);
         Vector3 idle = transform.position + outward * (tentacle.reach * 0.45f) + Vector3.down * (tentacle.reach * 0.35f) +

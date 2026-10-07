@@ -179,6 +179,8 @@ public sealed class ReflectionSpace : MonoBehaviour
         // One child per original renderer, with the creature's own materials.
         foreach (CreatureCast.Part part in creatureCast.parts)
         {
+            // Some creatures carry empty meshes (nothing generated yet); skip them.
+            if (part.mesh == null || part.mesh.subMeshCount == 0 || part.mesh.vertexCount == 0) continue;
             var materials = new Material[part.mesh.subMeshCount];
             for (int i = 0; i < materials.Length; i++)
             {
