@@ -115,7 +115,10 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
         if (Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-            return hit.collider.GetComponentInParent<Creature>();
+        {
+            Creature creature = hit.collider.GetComponentInParent<Creature>();
+            return creature != null && creature.CanBeCarried ? creature : null;
+        }
         return null;
     }
 
