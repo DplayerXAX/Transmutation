@@ -147,46 +147,72 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
-        if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-            return null;
-        Creature creature = hit.collider.GetComponentInParent<Creature>();
-        // Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
-        if (creature != null && !(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize) return null;
-        return creature;
+if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
+    return null;
+
+Creature creature = hit.collider.GetComponentInParent<Creature>();
+
+if (creature == null || !creature.CanBeCarried)
+    return null;
+
+// Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
+if (!(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
+    return null;
+
+return creature;
+}
+
+/// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
+private static float MeasureCreature(Creature creature, out float above, out float sideways)
+{
+    above = sideways = 0f;
+    Bounds bounds = default;
+    bool any = false;
+
+    foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
+    {
+        if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer)
+            continue;
+
+        if (!any) bounds = renderer.bounds;
+        else bounds.Encapsulate(renderer.bounds);
+
+        any = true;
     }
 
-    /// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
-    private static float MeasureCreature(Creature creature, out float above, out float sideways)
-    {
-        above = sideways = 0f;
-        Bounds bounds = default;
-        bool any = false;
-        foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
-        {
-            if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer) continue;
-            if (!any) bounds = renderer.bounds;
-            else bounds.Encapsulate(renderer.bounds);
-            any = true;
-        }
-        if (!any) return 0f;
-        Vector3 pivot = creature.transform.position;
-        above = Mathf.Max(0f, bounds.max.y - pivot.y);
-        sideways = Mathf.Max(Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
-            Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z));
-        return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
-    }
+    if (!any) return 0f;
 
-    // Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
-    private void FitCarryPoint(Creature creature)
-    {
-        if (carryPoint == null) return;
-        MeasureCreature(creature, out float above, out float sideways);
-        Vector3 home = carryPointHome;
-        float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
-        float y = Mathf.Min(home.y, -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z));
-        float x = Mathf.Max(home.x, sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z);
-        carryPoint.localPosition = new Vector3(x, y, z);
-    }
+    Vector3 pivot = creature.transform.position;
+    above = Mathf.Max(0f, bounds.max.y - pivot.y);
+    sideways = Mathf.Max(
+        Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
+        Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z)
+    );
+
+    return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+}
+
+// Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
+private void FitCarryPoint(Creature creature)
+{
+    if (carryPoint == null) return;
+
+    MeasureCreature(creature, out float above, out float sideways);
+
+    Vector3 home = carryPointHome;
+    float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
+    float y = Mathf.Min(
+        home.y,
+        -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z)
+    );
+    float x = Mathf.Max(
+        home.x,
+        sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z
+    );
+
+    carryPoint.localPosition = new Vector3(x, y, z);
+
+}
 
     private void BeginCarry(Creature creature)
     {
