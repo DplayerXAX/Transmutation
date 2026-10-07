@@ -31,6 +31,7 @@ Transform:
   m_Children:
   - {fileID: 2537799774727380860}
   - {fileID: 7092844570855933057}
+  - {fileID: 7330124418134659308}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -104.615, z: 0}
 --- !u!1 &1612156595183698087
@@ -192,6 +193,138 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2537799774727380860}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3698220401038103807
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7330124418134659308}
+  - component: {fileID: 8115453190923542061}
+  - component: {fileID: 6302391524333744001}
+  - component: {fileID: 2613620289114762461}
+  m_Layer: 0
+  m_Name: Player Body
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7330124418134659308
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698220401038103807}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8755812520023030105}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8115453190923542061
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698220401038103807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40e76d05e1a1453ab221bb632d7bd3d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandClimber
+  controller: {fileID: 0}
+  viewCamera: {fileID: 0}
+  climbLayers:
+    serializedVersion: 2
+    m_Bits: 384
+  minWallSteepness: 55
+  maxStandSlope: 36
+  detectDistance: 0.9
+  maxFacingAngle: 55
+  wallOffset: 0.5
+  handHeight: 0.6
+  handSpread: 0.3
+  pullSpeed: 2.4
+  bodySmoothTime: 0.16
+  reachStep: 0.5
+  reachLength: 0.8
+  reachTime: 0.22
+  maxHandDistance: 1.4
+  climbSpeed: 1
+  fastClimbBoost: 1.4
+  detourDelay: 0.2
+  pullUpTime: 1.2
+  jumpOffVelocity: {x: 5, y: 5}
+  regrabDelay: 0.35
+  cameraLag: 0.06
+  reachTilt: 2.5
+  lookAtHands: 0.4
+  lookAtHandsPullUp: 0.65
+  footStepTime: 0.22
+  upKey: 37
+  downKey: 33
+  leftKey: 15
+  rightKey: 18
+  jumpOffKey: 1
+  fastClimbKey: 51
+  climbing: 0
+  mantling: 0
+  canStartClimb: 0
+  lastEvent: 
+  drawDebug: 0
+--- !u!114 &6302391524333744001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698220401038103807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62ec318a6e27422dbf235651446d2e77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FirstPersonBody
+  controller: {fileID: 0}
+  viewCamera: {fileID: 0}
+  carrier: {fileID: 0}
+  climber: {fileID: 0}
+  limbMaterial: {fileID: 2100000, guid: 97b46b0a5d754ad78a98689664392761, type: 2}
+  jointMaterial: {fileID: 2100000, guid: 6a62aff1be3543cf923dead093f70001, type: 2}
+  armThickness: 0.075
+  legThickness: 0.11
+  showLegs: 1
+  shoulderOffset: {x: 0.24, y: -0.3, z: -0.05}
+  idleHandOffset: {x: 0.24, y: -0.34, z: 0.5}
+  upperArmLength: 0.36
+  forearmLength: 0.34
+  handFollow: 18
+  hipHeight: -0.05
+  hipWidth: 0.14
+  thighLength: 0.5
+  shinLength: 0.48
+  strideLength: 0.9
+--- !u!114 &2613620289114762461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3698220401038103807}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc7dfa4248d69944ca41f6f9832fc046, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Footsteps
+  leftEvent: Play_Footstep_Left
+  rightEvent: Play_Footstep_Right
+  gridDivision: 2
 --- !u!1 &4143822023010584049
 GameObject:
   m_ObjectHideFlags: 0
@@ -208,6 +341,7 @@ GameObject:
   - component: {fileID: 5514343264562485390}
   - component: {fileID: 9193611089624520312}
   - component: {fileID: 8888969591394796978}
+  - component: {fileID: 5322836975175712463}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -254,6 +388,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SmoothFirstPersonController
   allowCrouch: 1
   allowDoubleJump: 0
+  allowUngroundedJump: 0
   allowSliding: 1
   enableCameraFovAndTilt: 1
   walkSpeed: 7
@@ -263,6 +398,7 @@ MonoBehaviour:
   climbSpeed: 3
   airMinSpeed: 7
   speedIncreaseMultiplier: 1.5
+  moveSpeedScale: 0.75
   slopeIncreaseMultiplier: 2.5
   groundDrag: 4
   jumpForce: 12
@@ -280,6 +416,9 @@ MonoBehaviour:
   whatIsGround:
     serializedVersion: 2
     m_Bits: 640
+  groundCheckDistance: 0.2
+  groundCheckHalfExtents: {x: 0.35, y: 0.05, z: 0.35}
+  groundCheckOriginYOffset: 0
   maxSlopeAngle: 80
   orientation: {fileID: 4734288860246865075}
   cameraPosition: {fileID: 338630813493779751}
@@ -287,6 +426,9 @@ MonoBehaviour:
   playerCamera: {fileID: 3648896915039600098}
   sensitivityX: 0.12
   sensitivityY: 0.12
+  lookDownLimit: 60
+  lookUpLimit: 85
+  climbingLookDownLimit: 25
   state: 0
   grounded: 0
   sliding: 0
@@ -320,6 +462,7 @@ MonoBehaviour:
   whatIsGround:
     serializedVersion: 2
     m_Bits: 128
+  minWallSteepness: 0
   wallRunForce: 200
   wallJumpUpForce: 7
   wallJumpSideForce: 14
@@ -474,6 +617,38 @@ MonoBehaviour:
   pickupLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  carryInput: 0
+  toggleKey: 19
+  dropForwardSpeed: 1.5
+  firmGrip: 0
+  maxCarrySize: 2.2
+  clearBelowCrosshair: 8
+  clearRightOfCrosshair: 6
+  grabReachTime: 0.22
+  bringInSpeed: 4
+--- !u!114 &5322836975175712463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4143822023010584049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f8c513b73fbc744f8dcb9a95d76653b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraWallGuard
+  viewCamera: {fileID: 0}
+  cameraHolder: {fileID: 0}
+  bodyCollider: {fileID: 0}
+  probeRadius: 0.18
+  anchorHeight: 0.2
+  blockingLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  releaseSpeed: 1.5
+  nearClipPlane: 0.05
+  pulledBack: 0
 --- !u!1 &6924890591384260322
 GameObject:
   m_ObjectHideFlags: 0

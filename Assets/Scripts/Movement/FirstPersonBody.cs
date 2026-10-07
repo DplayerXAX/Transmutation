@@ -162,7 +162,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         bool poking = side < 0f && interactTimer > 0f;
         // Right hand reaching out for a creature when the pickup button is pressed.
         float grabAge = side > 0f && carrier != null ? Time.time - carrier.LastGrabTime : 10f;
-        bool grabbing = grabAge < GrabTime && !climbing;
+        // Ends as soon as the creature is in hand; from then on the holding pose takes over.
+        bool grabbing = grabAge < GrabTime && !climbing && carrier.CarriedCreature == null;
         carrying |= grabbing;
         // Arms hang from the body (so looking around does not swing them), except while holding or poking something in view.
         arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
@@ -217,7 +218,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         else if (tentacleOnHand && !climbing)
         {
             // Holding the tentacle creature up a little so it can be seen coiled round the hand.
-            target = view.TransformPoint(new Vector3(0.2f, -0.24f, 0.42f) + new Vector3(0f, Mathf.Sin(Time.time * 1.3f) * 0.01f, 0f));
+            target = view.TransformPoint(new Vector3(0.28f, -0.42f, 0.46f) + new Vector3(0f, Mathf.Sin(Time.time * 1.3f) * 0.01f, 0f));
             palmNormal = -view.up;
             grip = 0.55f;
             flutter = 0.06f;
