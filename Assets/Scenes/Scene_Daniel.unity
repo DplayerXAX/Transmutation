@@ -483,6 +483,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   moveSpeed: 2
   wanderRadius: 8
   rotationLerpSpeed: 8
@@ -1149,6 +1151,7 @@ GameObject:
   - component: {fileID: 648466096}
   - component: {fileID: 648466095}
   - component: {fileID: 648466097}
+  - component: {fileID: 648466098}
   m_Layer: 0
   m_Name: Landmark - Hanging Spire
   m_TagString: Untagged
@@ -1219,6 +1222,24 @@ MonoBehaviour:
   innerRadius: 15
   outerRadius: 70
   zone: {fileID: 0}
+--- !u!114 &648466098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 648466094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8239fcbedc846f741a335c9fdfdbfa45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClimbMusicChannel
+  layerEvent: BGM_climb
+  innerRadius: 4
+  outerRadius: 20
+  zone: {fileID: 0}
+  probeRadius: 0.5
+  checkInterval: 0.25
 --- !u!1 &663679482
 GameObject:
   m_ObjectHideFlags: 0
@@ -2987,6 +3008,8 @@ MonoBehaviour:
   pickUpKeyHintFormat: '[{0}]  Pick up'
   dropKeyHintFormat: '[{0}]  Drop'
   interactHintFormat: '[LMB]  {0}'
+  petHint: '[Hold LMB]  Pet'
+  pettingHint: Petting...
   climbHint: '[Hold W]  Climb'
   climbJumpHint: '[Space]  Jump off wall'
   wallRunHint: '[Hold W]  Wall run'
@@ -3094,6 +3117,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   bodyRadius: 0.35
   hoverHeight: 0.9
   bobAmplitude: 0.08
@@ -3139,7 +3164,7 @@ MonoBehaviour:
   gripping: 0
   canClimbUp: 0
   canHang: 0
-  wristScale: 0.18
+  backScale: 0.32
 --- !u!1 &1700000021
 GameObject:
   m_ObjectHideFlags: 0
@@ -3757,6 +3782,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   noticeRadius: 6
   loseRadius: 30
   spacing: 1.3
@@ -3770,6 +3797,8 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 385
+  petHopHeight: 0.4
+  petHopTime: 0.55
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
@@ -3876,6 +3905,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   noticeRadius: 6
   loseRadius: 30
   spacing: 1.3
@@ -3889,6 +3920,8 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 385
+  petHopHeight: 0.4
+  petHopTime: 0.55
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
@@ -3995,6 +4028,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   noticeRadius: 6
   loseRadius: 30
   spacing: 1.3
@@ -4008,6 +4043,8 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 385
+  petHopHeight: 0.4
+  petHopTime: 0.55
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
@@ -4114,6 +4151,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   noticeRadius: 6
   loseRadius: 30
   spacing: 1.3
@@ -4127,6 +4166,8 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 385
+  petHopHeight: 0.4
+  petHopTime: 0.55
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
@@ -4301,6 +4342,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   moveSpeed: 2
   wanderRadius: 8
   rotationLerpSpeed: 8
@@ -4508,6 +4551,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   moveSpeed: 2
   wanderRadius: 8
   rotationLerpSpeed: 8
@@ -4796,6 +4841,8 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   moveSpeed: 2
   wanderRadius: 8
   rotationLerpSpeed: 8
@@ -5081,7 +5128,29 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1176000794}
+    - targetCorrespondingSourceObject: {fileID: 3698220401038103807, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2073160750}
   m_SourcePrefab: {fileID: 100100000, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+--- !u!1 &2073160749 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3698220401038103807, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 2073160748}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2073160750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2073160749}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b99a1128aee84046ac872155daf4584, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ClimbReachSound
+  reachEvent: Play_Climb_Reach
+  gridDivision: 2
 --- !u!1001 &2121471363
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,9 +1,11 @@
 Event	ID	Name			Wwise Object Path	Notes
 	1110411331	Play_Footstep_Right			\Default Work Unit\Play_Footstep_Right	
+	1169957417	Play_Climb_Reach			\Default Work Unit\Play_Climb_Reach	
 	2542411811	PlayBGM			\Default Work Unit\PlayBGM	
 	2837114212	Play_Footstep_Left			\Default Work Unit\Play_Footstep_Left	
 
 Game Parameter	ID	Name			Wwise Object Path	Notes
+	224820983	BGM_climb			\Default Work Unit\BGM_climb	
 	721355700	BGM_fuzzy			\Default Work Unit\BGM_fuzzy	
 	840600496	BGM_fluid			\Default Work Unit\BGM_fluid	
 	861516679	BGM_cave			\Default Work Unit\BGM_cave	

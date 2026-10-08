@@ -73,6 +73,28 @@ MonoBehaviour:
     fadeIn: 1.5
     fadeOut: 3
     placeholderVoice: 6
+  - name: BGM_climb
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 2
+    fadeOut: 4
+    placeholderVoice: 4
+  - name: Play_Climb_Reach
+    kind: 2
+    clips: []
+    volume: 0.4
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 103
   - name: SFX_test
     kind: 2
     clips: []

@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{2A7E153D-6CB6-AF31-FFB7-FD265BB51AA4}",
+    "Hash": "{B979A27A-AF80-9816-AF46-B936D3FD39DF}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -56,6 +56,12 @@
     ],
     "GameParameters": [
      {
+      "Id": "224820983",
+      "Name": "BGM_climb",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_climb",
+      "GUID": "{59F93406-0AA5-43CD-BD54-BF0D129565E0}"
+     },
+     {
       "Id": "721355700",
       "Name": "BGM_fuzzy",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_fuzzy",
@@ -82,6 +88,6 @@
     ]
    }
   ],
-  "FileHash": "{36B58BEF-2DA3-763D-EB80-F4BF705FF22E}"
+  "FileHash": "{47592112-3737-4EE2-6175-9A1E33368BE5}"
  }
 }
