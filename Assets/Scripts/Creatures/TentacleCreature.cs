@@ -82,6 +82,58 @@ public sealed class TentacleCreature : Creature
     [SerializeField] private bool canClimbUp;
     [SerializeField] private bool canHang;
 
+    private void OnEnable() => FirstPersonBody.LimbsPosed += StickToArms;
+    private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
+
+    /// <summary>
+    /// After the player's arms are posed this frame, carried arms are moved onto them again so they
+    /// stay wrapped tight while the arms swing (the creature's own update runs before the arms move).
+    /// </summary>
+    private void StickToArms()
+    {
+        if (!IsCarried || Carrier == null || tentacles == null) return;
+        foreach (Tentacle tentacle in tentacles)
+        {
+            if (tentacle.touchingHand) continue;
+            tentacle.foot = CoilPoint(tentacle);
+            LayoutTentacle(tentacle);
+        }
+        UpdateMembrane();
+    }
+
+    protected override void OnPetStart()
+    {
+        // The two arms nearest the hand let go of the ground and reach up to it.
+        if (tentacles == null) return;
+        int first = -1, second = -1;
+        float firstDistance = float.MaxValue, secondDistance = float.MaxValue;
+        for (int i = 0; i < tentacles.Length; i++)
+        {
+            float distance = (tentacles[i].foot - PetPoint).sqrMagnitude;
+            if (distance < firstDistance)
+            {
+                second = first; secondDistance = firstDistance;
+                first = i; firstDistance = distance;
+            }
+            else if (distance < secondDistance)
+            {
+                second = i; secondDistance = distance;
+            }
+        }
+        foreach (int i in new[] { first, second })
+        {
+            if (i < 0) continue;
+            tentacles[i].touchingHand = true;
+            tentacles[i].planted = tentacles[i].stepping = false;
+        }
+    }
+
+    protected override void OnPetEnd()
+    {
+        if (tentacles == null) return;
+        foreach (Tentacle tentacle in tentacles) tentacle.touchingHand = false;
+    }
+
     /// <summary>The player carrying this creature is climbing (the climber drives the body kinematically).</summary>
     private bool PlayerClimbing => IsCarried && Carrier.PlayerBody != null && Carrier.PlayerBody.isKinematic;
 
@@ -96,10 +148,12 @@ public sealed class TentacleCreature : Creature
     /// <summary>Outward normal of the surface the body is crawling on while ExternalMovement is set.</summary>
     public Vector3 CrawlNormal { get; set; } = Vector3.up;
 
-    [Header("Carried On The Hand")]
-    [Tooltip("Size of the creature while it sits on the player's hand.")]
-    [Range(0.05f, 1f)] [SerializeField] private float wristScale = 0.18f;
+    [Header("Carried On The Back")]
+    [Tooltip("Size of the creature while it clings to the player's back.")]
+    [Range(0.05f, 1f)] [SerializeField] private float backScale = 0.32f;
     private Vector3 restScale = Vector3.one;
+    // Skin and bones are laid out in world space, so the carried size is applied to them by hand (1 = normal).
+    private float limbSize = 1f;
 
     public override string CarriedPrompt
     {
@@ -120,6 +174,7 @@ public sealed class TentacleCreature : Creature
         public float elevation;          // Probe tilt used while carried, in degrees.
         public float phase;
         public bool planted;
+        public bool touchingHand;        // Reaching up to the player's petting hand.
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
         public Vector3 foot;
@@ -197,8 +252,9 @@ public sealed class TentacleCreature : Creature
 
         if (!IsCarried && !ExternalMovement) Wander(deltaTime);
         // Shrinks to sit on the hand while carried, grows back when let go.
-        Vector3 scale = IsCarried ? restScale * wristScale : restScale;
+        Vector3 scale = IsCarried ? restScale * backScale : restScale;
         transform.localScale = Vector3.MoveTowards(transform.localScale, scale, deltaTime * 2f);
+        limbSize = Mathf.MoveTowards(limbSize, IsCarried ? backScale : 1f, deltaTime * 2f);
         UpdateTentacles(deltaTime);
         UpdateBodyVisual(deltaTime);
         UpdateMembrane();
@@ -212,6 +268,8 @@ public sealed class TentacleCreature : Creature
         foreach (Tentacle tentacle in tentacles)
             if (tentacle.stepping) steppingCount++;
         float target = IsCarried ? (gripping ? 1f : 0.6f) : steppingCount / (float)tentacles.Length;
+        // Petted: the rings run fast and bright, like purring.
+        if (IsPetted) target = 1f;
         activity = Mathf.MoveTowards(activity, target, deltaTime * 2f);
 
         propertyBlock ??= new MaterialPropertyBlock();
@@ -228,6 +286,14 @@ public sealed class TentacleCreature : Creature
 
     private void Wander(float deltaTime)
     {
+        if (IsPetted)
+        {
+            // Stays put and turns towards the hand that strokes it.
+            Vector3 toHand = Vector3.ProjectOnPlane(PetPoint - transform.position, Vector3.up);
+            if (toHand.sqrMagnitude > 1e-4f)
+                FaceCreature(Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(toHand.normalized, Vector3.up), turnSpeed * 0.5f * deltaTime));
+            return;
+        }
         Vector3 position = transform.position;
         Vector3 toTarget = Vector3.ProjectOnPlane(wanderTarget - position, Vector3.up);
 
@@ -324,6 +390,13 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle tentacle = tentacles[i];
+            if (tentacle.touchingHand && IsPetted)
+            {
+                // Held up to the petting hand; no stepping until it lets go.
+                tentacle.foot = FootPosition(tentacle, deltaTime);
+                LayoutTentacle(tentacle);
+                continue;
+            }
             if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
             {
                 // Back on the hand after a climb: let go of the wall and coil up again.
@@ -397,7 +470,8 @@ public sealed class TentacleCreature : Creature
         {
             // On the hand it only reaches for surfaces while the player climbs; otherwise it stays coiled
             // so no arms hang across the view.
-            if (!PlayerClimbing) return false;
+            // On the player's back its arms stay wrapped round the player's arms, even while climbing.
+            return false;
             reach *= 0.7f;
             // Reach out in a fan around the body so some arms find walls above and some below.
             Vector3 axis = Vector3.Cross(Vector3.up, outward);
@@ -423,6 +497,18 @@ public sealed class TentacleCreature : Creature
 
     private Vector3 FootPosition(Tentacle tentacle, float deltaTime)
     {
+        if (tentacle.touchingHand && IsPetted)
+        {
+            // Wrap gently round the petting hand, each arm at its own spot, slowly feeling about.
+            float wave = Time.time * 2.4f + tentacle.phase;
+            Vector3 sideways = Vector3.Cross(PetNormal, Vector3.up);
+            if (sideways.sqrMagnitude < 1e-4f) sideways = Vector3.right;
+            sideways.Normalize();
+            Vector3 up = Vector3.Cross(sideways, PetNormal);
+            Vector3 touch = PetPoint + PetNormal * 0.08f + (sideways * Mathf.Cos(wave) + up * Mathf.Sin(wave * 0.7f)) * 0.09f;
+            return Vector3.Lerp(tentacle.foot, touch, 1f - Mathf.Exp(-6f * deltaTime));
+        }
+
         if (tentacle.stepping)
         {
             float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(tentacle.stepTime));
@@ -435,22 +521,38 @@ public sealed class TentacleCreature : Creature
         float time = Time.time * 2.2f + tentacle.phase;
         if (IsCarried && Carrier != null)
         {
-            // Carried with nothing to hold: wrap round the wrist and forearm.
-            Vector3 back = Carrier.HandAnchor != null ? -Carrier.HandAnchor.forward : Carrier.transform.position - transform.position;
+            // Clinging to the player's back: the arms reach over the shoulders and wrap round the
+            // player's forearms, half on each arm, so the hands (and the holds they grab) are its suckers.
+            return CoilPoint(tentacle);
+        }
+
+        // Unattached: drift loosely below the body and sway.
+        return DriftPoint(tentacle, time, deltaTime);
+    }
+
+    /// <summary>Where a carried arm wraps round the player's forearm (exactly, no lag).</summary>
+    private Vector3 CoilPoint(Tentacle tentacle)
+    {
+        {
+            int index = System.Array.IndexOf(tentacles, tentacle);
+            Transform hand = index % 2 == 0 ? Carrier.HandAnchor : Carrier.LeftHandAnchor;
+            if (hand == null) hand = Carrier.HandAnchor;
+            Vector3 back = hand != null ? -hand.forward : Carrier.transform.position - transform.position;
             back = back.sqrMagnitude > 1e-4f ? back.normalized : Vector3.down;
             Vector3 across = Vector3.Cross(back, Vector3.up);
             if (across.sqrMagnitude < 1e-4f) across = Vector3.right;
             across.Normalize();
             Vector3 around = Vector3.Cross(across, back);
-            // Like a bracelet: each arm wraps once round the forearm, spread from the wrist up the arm.
-            Vector3 wrist = Carrier.HandAnchor != null ? Carrier.HandAnchor.position : transform.position;
+            Vector3 wrist = hand != null ? hand.position : transform.position;
             float angle = tentacle.phase * 2.4f + Time.time * 0.6f;
-            float distance = 0.02f + 0.12f * Mathf.Repeat(tentacle.phase * 0.37f, 1f);
-            Vector3 coil = wrist + back * distance + (across * Mathf.Cos(angle) + around * Mathf.Sin(angle)) * 0.045f;
-            return Vector3.Lerp(tentacle.foot, coil, 1f - Mathf.Exp(-10f * deltaTime));
+            // Spread from the wrist up the forearm, one wrap each.
+            float distance = 0.02f + 0.18f * ((index / 2) / Mathf.Max(1f, tentacles.Length / 2f - 1f));
+            return wrist + back * distance + (across * Mathf.Cos(angle) + around * Mathf.Sin(angle)) * 0.045f;
         }
+    }
 
-        // Unattached: drift loosely below the body and sway.
+    private Vector3 DriftPoint(Tentacle tentacle, float time, float deltaTime)
+    {
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
         Vector3 side = Vector3.Cross(Vector3.up, outward);
         Vector3 idle = transform.position + outward * (tentacle.reach * 0.45f) + Vector3.down * (tentacle.reach * 0.35f) +
@@ -462,18 +564,26 @@ public sealed class TentacleCreature : Creature
     private void LayoutTentacle(Tentacle tentacle)
     {
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
-        Vector3 root = transform.position + outward * (bodyRadius * 0.9f) + Vector3.up * tentacle.rootHeight;
+        Vector3 root = transform.position + outward * (bodyRadius * 0.9f * limbSize) + Vector3.up * (tentacle.rootHeight * limbSize);
         Vector3 tip = tentacle.foot;
         float length = Vector3.Distance(root, tip);
         Vector3 tipNormal = tentacle.stepping ? tentacle.stepNormal
             : tentacle.planted ? tentacle.holdNormal
             : Vector3.up;
+        // On the player's back the arms run low round the body and come up to the wrists from below,
+        // instead of arching up past the player's head.
+        float arch = tentacle.arch;
+        if (IsCarried)
+        {
+            tipNormal = Vector3.down;
+            arch *= 0.1f;
+        }
 
         // Arch up and out of the body, then come down onto the surface along its normal.
         tentacle.root = root;
         tentacle.tip = tip;
         tentacle.outward = outward;
-        tentacle.c1 = root + outward * (length * 0.4f) + Vector3.up * (length * tentacle.arch);
+        tentacle.c1 = root + outward * (length * 0.4f) + Vector3.up * (length * arch);
         tentacle.c2 = tip + tipNormal * (length * 0.35f);
         tentacle.side = Vector3.Cross(Vector3.up, outward);
         tentacle.rippleTime = Time.time * tentacle.rippleSpeed + tentacle.phase;
@@ -485,7 +595,7 @@ public sealed class TentacleCreature : Creature
         for (int j = 0; j < count; j++)
         {
             float t = j / (float)(count - 1);
-            float radius = Mathf.Lerp(jointRadius, tipRadius, t) * tentacle.thickness;
+            float radius = Mathf.Lerp(jointRadius, tipRadius, t) * tentacle.thickness * limbSize;
             Transform joint = tentacle.joints[j];
             joint.position = curve[j];
             joint.localScale = Vector3.one * (radius * 2f);
@@ -812,7 +922,7 @@ public sealed class TentacleCreature : Creature
 
         // Body: lumpy, breathing blob that swells towards each tentacle root.
         float breath = 1f + 0.07f * Mathf.Sin(time * bobSpeed * 2f);
-        float bodySkin = bodyRadius * bodySkinScale;
+        float bodySkin = bodyRadius * bodySkinScale * limbSize;
         for (int i = 0; i < bodySkinVertexCount; i++)
         {
             Vector3 local = bodySkinDirections[i];
@@ -891,7 +1001,7 @@ public sealed class TentacleCreature : Creature
     {
         float rootRadius = jointRadius * membraneThickness * 1.5f * tentacle.thickness;
         float tipSkinRadius = tipRadius * membraneThickness * 0.5f;
-        float radius = Mathf.Lerp(rootRadius, tipSkinRadius, Mathf.Pow(t, 0.7f));
+        float radius = Mathf.Lerp(rootRadius, tipSkinRadius, Mathf.Pow(t, 0.7f)) * limbSize;
         float tumor = (t - tentacle.tumorT) / 0.09f;
         return radius * (1f + tentacle.tumorSize * Mathf.Exp(-tumor * tumor));
     }
@@ -899,6 +1009,7 @@ public sealed class TentacleCreature : Creature
     protected override void OnDisable()
     {
         base.OnDisable();
+        OnDisableHook();
         gripping = false;
     }
 
