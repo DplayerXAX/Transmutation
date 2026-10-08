@@ -149,6 +149,10 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield return null;
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { crawlers[0].GetComponent<TentacleCreature>() });
             Log($"    carried: {carrier.CarriesTentacle}, sticky hands: {climber.StickyHands}");
+            // How it looks from the eyes with the creature on the back.
+            yield return new WaitForSeconds(2f);
+            Log($"    still carried after 2 s: {carrier.CarriesTentacle}, creature {(crawlers.Length > 0 && crawlers[0] != null ? "-" : "on back")}");
+            if (framesPath != null) { Capture("Carried", "back"); yield return new WaitForSeconds(0.7f); Capture("Carried", "back"); }
         }
     }
 

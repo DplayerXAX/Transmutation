@@ -33,6 +33,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private string pickUpKeyHintFormat = "[{0}]  Pick up";
     [SerializeField] private string dropKeyHintFormat = "[{0}]  Drop";
     [SerializeField] private string interactHintFormat = "[LMB]  {0}";
+    [SerializeField] private string petHint = "[Hold LMB]  Pet";
+    [SerializeField] private string pettingHint = "Petting...";
+    private PlayerCreaturePetter petter;
     [SerializeField] private string climbHint = "[Hold W]  Climb";
     [SerializeField] private string climbJumpHint = "[Space]  Jump off wall";
     [SerializeField] private string wallRunHint = "[Hold W]  Wall run";
@@ -48,6 +51,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     {
         if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (interactor == null) interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
+        petter = FindFirstObjectByType<PlayerCreaturePetter>();
         if (traversal == null) traversal = FindFirstObjectByType<AdvancedFirstPersonTraversal>();
         if (handClimber == null) handClimber = FindFirstObjectByType<HandClimber>();
         BuildCanvas();
@@ -83,6 +87,14 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             return;
         }
 
+        if (petter == null) petter = FindFirstObjectByType<PlayerCreaturePetter>();
+        if (petter != null && petter.IsPetting)
+        {
+            title = NameOf(petter.Petted);
+            hint = pettingHint;
+            return;
+        }
+
         if (handClimber != null && handClimber.isActiveAndEnabled && handClimber.IsClimbing)
         {
             if (!handClimber.IsMantling) hint = handClimbHint;
@@ -101,9 +113,17 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         string interactVerb = interactTarget != null ? interactTarget.InteractionPrompt : null;
         if (string.IsNullOrEmpty(interactVerb)) interactTarget = null;
 
-        if (carryTarget != null || interactTarget != null)
+        Creature petTarget = petter != null && petter.isActiveAndEnabled ? petter.FindPettable() : null;
+        if (carryTarget != null || interactTarget != null || petTarget != null)
         {
-            title = NameOf(carryTarget != null ? carryTarget : interactTarget);
+            Creature shown = carryTarget != null ? carryTarget : interactTarget != null ? interactTarget : petTarget;
+            title = NameOf(shown);
+            string petLine = petTarget == shown ? petHint : null;
+            if (carryTarget == null && interactTarget == null)
+            {
+                hint = petLine;
+                return;
+            }
             if (interactTarget != null && carryTarget != null && interactTarget != carryTarget)
                 carryTarget = null; // Different targets: favour the one left-click reaches.
 
@@ -112,6 +132,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             hint = interactLine != null && carryLine != null
                 ? interactLine + "    " + carryLine
                 : interactLine ?? carryLine;
+            if (petLine != null) hint += "    " + petLine;
             return;
         }
 

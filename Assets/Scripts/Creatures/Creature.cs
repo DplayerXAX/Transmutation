@@ -203,6 +203,8 @@ public abstract class Creature : MonoBehaviour
         }
 
         TickCreature(Time.deltaTime);
+        // Affection fades slowly once the petting stops.
+        if (!IsPetted && Affection > 0f) Affection = Mathf.Max(0f, Affection - Time.deltaTime * affectionFade);
     }
 
     /// <summary>
@@ -276,6 +278,54 @@ public abstract class Creature : MonoBehaviour
     /// Extra control hint shown while the player carries this creature, or null for none.
     /// </summary>
     public virtual string CarriedPrompt => null;
+
+    // ---------------- Petting (the player's left hand) ----------------
+
+    [Header("Petting")]
+    [Tooltip("Affection gained per second of petting (0..1 scale).")]
+    [Min(0f)] [SerializeField] private float affectionGain = 0.35f;
+    [Tooltip("Affection lost per second after petting stops.")]
+    [Min(0f)] [SerializeField] private float affectionFade = 0.05f;
+
+    /// <summary>The player's hand is stroking this creature right now.</summary>
+    public bool IsPetted { get; private set; }
+    /// <summary>0..1: grows while petted and slowly fades. Behaviours can read it (follow, calm down, glow...).</summary>
+    public float Affection { get; private set; }
+    /// <summary>Where the hand touches the creature, and the surface direction there.</summary>
+    public Vector3 PetPoint { get; private set; }
+    public Vector3 PetNormal { get; private set; } = Vector3.up;
+
+    /// <summary>Called by the player's petting hand when it starts stroking this creature.</summary>
+    public void BeginPet(Vector3 point, Vector3 normal)
+    {
+        IsPetted = true;
+        PetPoint = point;
+        PetNormal = normal;
+        OnPetStart();
+    }
+
+    /// <summary>Called every frame while the hand keeps stroking.</summary>
+    public void ContinuePet(Vector3 point, Vector3 normal, float deltaTime)
+    {
+        if (!IsPetted) return;
+        PetPoint = point;
+        PetNormal = normal;
+        Affection = Mathf.Min(1f, Affection + deltaTime * affectionGain);
+        OnPet(deltaTime);
+    }
+
+    /// <summary>Called when the hand lets go.</summary>
+    public void EndPet()
+    {
+        if (!IsPetted) return;
+        IsPetted = false;
+        OnPetEnd();
+    }
+
+    /// <summary>Hooks for each creature's own reaction to being petted (all optional).</summary>
+    protected virtual void OnPetStart() { }
+    protected virtual void OnPet(float deltaTime) { }
+    protected virtual void OnPetEnd() { }
 
     /// <summary>
     /// Receives notification that this creature has met another creature.

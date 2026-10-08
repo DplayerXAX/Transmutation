@@ -25,6 +25,10 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     [Header("Arms (camera space)")]
     [SerializeField] private Vector3 shoulderOffset = new Vector3(0.24f, -0.3f, -0.05f);
+    [Tooltip("Extra shoulder width when the arms hang from the body (walking, running, climbing), so they read as coming from real shoulders.")]
+    [Min(0f)] [SerializeField] private float shoulderWiden = 0.08f;
+    [Tooltip("How far out from the body the hanging hands rest, metres.")]
+    [Min(0f)] [SerializeField] private float armHangOut = 0.14f;
     [SerializeField] private Vector3 idleHandOffset = new Vector3(0.24f, -0.34f, 0.5f);
     [Min(0.05f)] [SerializeField] private float upperArmLength = 0.36f;
     [Min(0.05f)] [SerializeField] private float forearmLength = 0.34f;
@@ -37,6 +41,13 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Min(0.05f)] [SerializeField] private float thighLength = 0.5f;
     [Min(0.05f)] [SerializeField] private float shinLength = 0.48f;
     [Min(0.05f)] [SerializeField] private float strideLength = 0.9f;
+    [Tooltip("Steps per second when walking and at full sprint. Faster movement takes longer strides instead of " +
+             "ever quicker steps. 2 per second lands on the beat of the 120 BPM music (footsteps follow these steps).")]
+    [SerializeField] private Vector2 stepRate = new Vector2(2f, 3f);
+    [Tooltip("Speeds (m/s) that count as walking and as full sprint, for the step rate above.")]
+    [SerializeField] private Vector2 gaitSpeeds = new Vector2(5f, 7.5f);
+    // How long each stride is right now (metres), which sets how far arms and legs swing.
+    private float currentStride = 0.9f;
 
     private sealed class Limb
     {
@@ -65,6 +76,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     // Seconds off the ground, so short hops over bumps do not throw the arms up.
     private float airTime;
     private const float GrabTime = 0.45f;
+    private PlayerCreaturePetter petter;
     // Vertical speed while airborne, and the landing that follows a real fall or jump.
     private float airSpeed;
     private float airPhase;
@@ -95,7 +107,14 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
         renderers = root.GetComponentsInChildren<Renderer>();
         // Tentacle creatures ride on the right hand.
-        if (carrier != null) carrier.HandAnchor = rightArm.end;
+        if (carrier != null)
+        {
+            carrier.HandAnchor = rightArm.end;
+            carrier.LeftHandAnchor = leftArm.end;
+        }
+        // The left hand pets creatures.
+        petter = FindFirstObjectByType<PlayerCreaturePetter>();
+        if (petter == null) petter = gameObject.AddComponent<PlayerCreaturePetter>();
     }
 
     private void OnDestroy()
@@ -113,7 +132,16 @@ public sealed class FirstPersonBody : MonoBehaviour
         float speed = new Vector2(velocity.x, velocity.z).magnitude;
         bool grounded = controller.Grounded;
         bool climbing = climber != null && climber.IsClimbing;
-        if (grounded && !climbing) walkPhase += speed * deltaTime / strideLength * Mathf.PI;
+        if (grounded && !climbing)
+        {
+            // Below walking speed steps slow down with the speed; above it the stride grows instead.
+            float rate = speed < gaitSpeeds.x
+                ? stepRate.x * speed / Mathf.Max(0.01f, gaitSpeeds.x)
+                : Mathf.Lerp(stepRate.x, stepRate.y, Mathf.InverseLerp(gaitSpeeds.x, gaitSpeeds.y, speed));
+            walkPhase += rate * Mathf.PI * deltaTime;
+            float stride = rate > 0.05f ? speed / rate : strideLength;
+            currentStride = Mathf.Lerp(currentStride, stride, 1f - Mathf.Exp(-4f * deltaTime));
+        }
 
         Mouse mouse = Mouse.current;
         if (mouse != null && mouse.leftButton.wasPressedThisFrame) interactTimer = 0.3f;
@@ -151,28 +179,34 @@ public sealed class FirstPersonBody : MonoBehaviour
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
             part.SetPropertyBlock(block);
         }
+        LimbsPosed?.Invoke();
     }
+
+    /// <summary>Raised after the arms and legs are posed each frame, for things that must stick to them exactly.</summary>
+    public static event System.Action LimbsPosed;
 
     // ---------------- Arms ----------------
 
     private void UpdateArm(Limb arm, float side, Transform view, float speed, bool grounded, bool climbing, float deltaTime)
     {
-        bool tentacleOnHand = side > 0f && carrier != null && carrier.CarriesTentacle;
-        bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null && !tentacleOnHand;
-        bool poking = side < 0f && interactTimer > 0f;
+        // A carried tentacle creature sits on the back now, so the right hand is free.
+        bool tentacleOnHand = false;
+        bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null && !carrier.CarriesTentacle;
+        bool petting = side < 0f && petter != null && petter.IsPetting && !climbing;
+        bool poking = side < 0f && interactTimer > 0f && !petting;
         // Right hand reaching out for a creature when the pickup button is pressed.
         float grabAge = side > 0f && carrier != null ? Time.time - carrier.LastGrabTime : 10f;
         // Ends as soon as the creature is in hand; from then on the holding pose takes over.
         bool grabbing = grabAge < GrabTime && !climbing && carrier.CarriedCreature == null;
         carrying |= grabbing;
         // Arms hang from the body (so looking around does not swing them), except while holding or poking something in view.
-        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
+        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || petting || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
 
         Vector3 eye = view.position;
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         Vector3 bodyRight = orientation.right, bodyUp = Vector3.up, bodyForward = orientation.forward;
         if (climbing && climber != null) climber.GetClimbFrame(out eye, out bodyRight, out bodyUp, out bodyForward);
-        Vector3 bodyShoulder = eye + bodyRight * (shoulderOffset.x * side) + bodyUp * shoulderOffset.y + bodyForward * shoulderOffset.z;
+        Vector3 bodyShoulder = eye + bodyRight * ((shoulderOffset.x + shoulderWiden) * side) + bodyUp * shoulderOffset.y + bodyForward * shoulderOffset.z;
         Vector3 viewShoulder = view.TransformPoint(Vector3.Scale(shoulderOffset, new Vector3(side, 1f, 1f)));
         Vector3 shoulder = Vector3.Lerp(viewShoulder, bodyShoulder, arm.bodyFrame);
         // Elbows point down and out.
@@ -202,6 +236,20 @@ public sealed class FirstPersonBody : MonoBehaviour
                 grip = 0.05f;
                 spread = 1f;
             }
+        }
+        else if (petting)
+        {
+            // Stroking: the palm rests on the creature and slides back and forth along its surface.
+            Vector3 normal = petter.TouchNormal;
+            Vector3 along = Vector3.ProjectOnPlane(view.up, normal);
+            if (along.sqrMagnitude < 1e-4f) along = Vector3.ProjectOnPlane(view.forward, normal);
+            along.Normalize();
+            Vector3 across = Vector3.Cross(normal, along);
+            float stroke = Mathf.Sin(Time.time * 4.2f);
+            target = petter.TouchPoint + normal * 0.05f + along * (stroke * 0.08f) + across * (Mathf.Sin(Time.time * 2.1f) * 0.03f);
+            palmNormal = normal;
+            grip = 0.25f + 0.1f * Mathf.Max(0f, stroke);
+            flutter = 0.08f;
         }
         else if (grabbing)
         {
@@ -250,8 +298,17 @@ public sealed class FirstPersonBody : MonoBehaviour
             float run = grounded ? Mathf.Clamp01(speed / 5f) : 0f;
             float swing = Mathf.Sin(walkPhase + (side > 0f ? Mathf.PI : 0f));
             float forward = Mathf.Max(0f, swing);
-            target = bodyShoulder - bodyUp * (upperArmLength + forearmLength) * 0.9f + bodyRight * (0.07f * side) + bodyForward * 0.06f;
-            target += bodyForward * (0.32f * swing * run) + bodyUp * (0.22f * forward * run) - bodyRight * (0.07f * side * forward * run);
+            // 0 at a walking stride, 1 at a long running stride: bigger swings.
+            float reach = Mathf.InverseLerp(strideLength, strideLength * 2.2f, currentStride);
+            // Arms hang a little out from the body, from shoulders wider than the hips.
+            Vector3 hang = bodyShoulder - bodyUp * (upperArmLength + forearmLength) * 0.9f + bodyRight * (armHangOut * side) + bodyForward * 0.06f;
+            // Running: elbows bent and fists pumping in front of the chest, swinging in towards the middle,
+            // so at the top of each swing the hand comes up into the bottom of the view, first-person style.
+            Vector3 pump = bodyShoulder
+                + bodyForward * (0.24f + (0.26f + 0.12f * reach) * swing)
+                + bodyUp * (-0.4f + (0.24f + 0.1f * reach) * forward - 0.1f * Mathf.Max(0f, -swing))
+                - bodyRight * (side * (0.03f + 0.12f * forward));
+            target = Vector3.Lerp(hang, pump, run);
             target += bodyUp * (Mathf.Sin(Time.time * 1.7f + side) * 0.006f);
             // In the air (only a real jump or fall, not a short drop over a bump): arms out for balance,
             // swung forward and up on the way up, thrown up and flailing on the way down.
@@ -262,9 +319,10 @@ public sealed class FirstPersonBody : MonoBehaviour
             target += (bodyUp * Mathf.Sin(airPhase + side * 1.7f) * 0.09f + bodyForward * Mathf.Cos(airPhase * 1.3f + side) * 0.1f) * falling;
             // Landing: hands drop and come forward to take the jolt.
             target += (bodyForward * 0.18f - bodyUp * 0.12f + bodyRight * (0.05f * side)) * landing;
-            palmNormal = Vector3.Slerp(-bodyRight * side, -bodyUp, falling);
+            // palmNormal is the way the back of the hand faces: outward, so the palms face the legs.
+            palmNormal = Vector3.Slerp(bodyRight * side, -bodyUp, falling);
             // Loose and relaxed at rest, curled a bit more when running, splayed and fluttering when falling.
-            grip = Mathf.Lerp(0.3f, 0.5f, run);
+            grip = Mathf.Lerp(0.3f, 0.8f, run); // loose at rest, loose fists when running
             grip = Mathf.Lerp(grip, 0.05f, falling);
             grip = Mathf.Lerp(grip, 0.65f, landing);
             spread = falling;
@@ -327,8 +385,9 @@ public sealed class FirstPersonBody : MonoBehaviour
         {
             float phase = walkPhase + (side > 0f ? 0f : Mathf.PI);
             float amount = Mathf.Clamp01(speed / 6f);
-            Vector3 swing = orientation.forward * (Mathf.Sin(phase) * strideLength * 0.35f * amount);
-            float lift = Mathf.Max(0f, Mathf.Cos(phase)) * 0.18f * amount;
+            // Longer strides swing the legs further and lift the knees higher.
+            Vector3 swing = orientation.forward * (Mathf.Sin(phase) * Mathf.Min(currentStride * 0.4f, 0.55f) * amount);
+            float lift = Mathf.Max(0f, Mathf.Cos(phase)) * Mathf.Lerp(0.18f, 0.32f, Mathf.InverseLerp(strideLength, strideLength * 2.2f, currentStride)) * amount;
             target = hip + Vector3.down * (legLength * 0.97f - lift) + swing + orientation.right * (0.03f * side);
             // Landing: knees bend to take the jolt.
             target += Vector3.up * (0.28f * landing) + orientation.forward * (0.08f * landing);

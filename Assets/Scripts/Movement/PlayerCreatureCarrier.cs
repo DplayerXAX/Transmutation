@@ -48,6 +48,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
     public Transform HandAnchor { get; set; }
+    /// <summary>The player's left hand (set by FirstPersonBody).</summary>
+    public Transform LeftHandAnchor { get; set; }
     /// <summary>When the pickup input was last pressed and what it reached for, so the right hand can reach out.</summary>
     public float LastGrabTime { get; private set; } = -10f;
     public Vector3 LastGrabPoint { get; private set; }
@@ -94,7 +96,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
-        if (!Application.isFocused)
+        if (!Application.isFocused && !Application.isBatchMode)
         {
             Release();
             return;
@@ -287,8 +289,8 @@ private void FitCarryPoint(Creature creature)
     private void FixedUpdate()
     {
         if (CarriedCreature == null || firmGrip) return;
-        BringIn(Time.fixedDeltaTime);
-        FollowHand();
+        if (!CarriesTentacle) BringIn(Time.fixedDeltaTime);
+        FollowHand(Time.fixedDeltaTime);
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
     }
 
@@ -296,17 +298,28 @@ private void FitCarryPoint(Creature creature)
     private void LateUpdate()
     {
         if (CarriedCreature == null) return;
-        if (firmGrip) BringIn(Time.deltaTime);
-        FollowHand();
+        if (firmGrip && !CarriesTentacle) BringIn(Time.deltaTime);
+        FollowHand(Time.deltaTime);
         if (firmGrip) SnapHeld();
     }
 
-    /// <summary>A tentacle creature rides on the back of the right hand instead of floating in front of the view.</summary>
-    private void FollowHand()
+    /// <summary>A tentacle creature clings to the player's back (between the shoulder blades), out of view.</summary>
+    private void FollowHand(float deltaTime)
     {
-        if (carryPoint == null || HandAnchor == null || !(CarriedCreature is TentacleCreature)) return;
-        // On the back of the forearm just behind the wrist, out of the middle of the view.
-        carryPoint.position = HandAnchor.position - HandAnchor.forward * 0.07f + HandAnchor.up * 0.05f;
+        if (carryPoint == null || !(CarriedCreature is TentacleCreature)) return;
+        Transform player = PlayerBody != null ? PlayerBody.transform : transform;
+        Vector3 forward = carryCamera != null ? Vector3.ProjectOnPlane(carryCamera.transform.forward, Vector3.up) : player.forward;
+        if (forward.sqrMagnitude < 1e-4f) forward = player.forward;
+        forward.Normalize();
+        // Low on the back (below the head), so its body never comes near the camera; only the arms reach forward.
+        Vector3 back = player.position + Vector3.up * 0.02f - forward * 0.5f;
+        // Right after the grab it climbs from the hand round to the back instead of jumping there.
+        if (bringingIn)
+        {
+            carryPoint.position = Vector3.MoveTowards(carryPoint.position, back, bringInSpeed * deltaTime);
+            if ((carryPoint.position - back).sqrMagnitude < 1e-3f) bringingIn = false;
+        }
+        else carryPoint.position = back;
     }
 
     public bool CarriesTentacle => CarriedCreature is TentacleCreature;

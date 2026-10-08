@@ -59,6 +59,10 @@ prompts and carry work.
 
 - **Player:** carried by `PlayerCreatureCarrier`, clicked through `PlayerCreatureInteractor`, named by
   `InteractionPromptHUD`.
+- **Petting:** holding left click on a creature within arm's reach makes the left hand stroke it
+  (`PlayerCreaturePetter`). Override `OnPetStart`, `OnPet(deltaTime)` and `OnPetEnd` to react; read
+  `IsPetted`, `PetPoint`/`PetNormal` (where the hand touches) and `Affection` (0..1, rises while petted,
+  fades slowly). `TentacleCreature` is the example: it stops, turns to the hand and wraps two arms round it.
 - **Meditation:** `CreatureJournal` records each creature type the first time the player is near it and
   saves a cast of its meshes.
 - **Audio:** the `AudioEventBank`'s creature channels map a creature class name (e.g. `FuzzCreature`) to a
