@@ -23,6 +23,11 @@
 						<Property Name="InitialValue" Type="Real64" Value="0"/>
 					</PropertyList>
 				</GameParameter>
+				<GameParameter Name="BGM_climb" ID="{59F93406-0AA5-43CD-BD54-BF0D129565E0}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
 			</ChildrenList>
 		</WorkUnit>
 	</GameParameters>

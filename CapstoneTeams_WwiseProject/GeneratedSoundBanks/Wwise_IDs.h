@@ -13,6 +13,7 @@ namespace AK
 {
     namespace EVENTS
     {
+        static const AkUniqueID PLAY_CLIMB_REACH = 1169957417U;
         static const AkUniqueID PLAY_FOOTSTEP_LEFT = 2837114212U;
         static const AkUniqueID PLAY_FOOTSTEP_RIGHT = 1110411331U;
         static const AkUniqueID PLAYBGM = 2542411811U;
@@ -21,6 +22,7 @@ namespace AK
     namespace GAME_PARAMETERS
     {
         static const AkUniqueID BGM_CAVE = 861516679U;
+        static const AkUniqueID BGM_CLIMB = 224820983U;
         static const AkUniqueID BGM_FLUID = 840600496U;
         static const AkUniqueID BGM_FUZZY = 721355700U;
         static const AkUniqueID BGM_LANDMARK = 4101327976U;

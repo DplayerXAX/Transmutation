@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{42DADACE-D984-35E7-12AA-2899D855385B}",
+    "Hash": "{0A5725E1-2BA8-201A-6DF4-4971B800F1BD}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
@@ -66,6 +66,15 @@
     ],
     "Events": [
      {
+      "Id": "1169957417",
+      "Name": "Play_Climb_Reach",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Climb_Reach",
+      "GUID": "{FAC6352C-DFDB-48BB-A514-B0D401159B5B}",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     },
+     {
       "Id": "2837114212",
       "Name": "Play_Footstep_Left",
       "ObjectPath": "\\Events\\Default Work Unit\\Play_Footstep_Left",
@@ -117,6 +126,12 @@
     ],
     "GameParameters": [
      {
+      "Id": "224820983",
+      "Name": "BGM_climb",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_climb",
+      "GUID": "{59F93406-0AA5-43CD-BD54-BF0D129565E0}"
+     },
+     {
       "Id": "721355700",
       "Name": "BGM_fuzzy",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_fuzzy",
@@ -137,6 +152,6 @@
     ]
    }
   ],
-  "FileHash": "{96EB0C0C-1840-92C8-A947-BF40F3C31A55}"
+  "FileHash": "{9419380C-83B2-330C-6211-D7A5A0C03857}"
  }
 }
