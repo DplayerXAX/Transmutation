@@ -56,6 +56,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private IEnumerator Start()
     {
         savedProgress = File.Exists(LandmarkProgress.FilePath) ? File.ReadAllText(LandmarkProgress.FilePath) : null;
+        LandmarkProgress.ResetAll(); // start with nothing collected (the real save is put back at the end)
         controller = FindFirstObjectByType<SmoothFirstPersonController>();
         climber = FindFirstObjectByType<HandClimber>();
         world = FindFirstObjectByType<ProceduralWorld>();
@@ -113,6 +114,37 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private IEnumerator CheckSpireCreatures()
     {
         yield return new WaitForSeconds(4f);
+        var eruption = FindFirstObjectByType<SeedEruption>();
+        var seedPickup = FindObjectsByType<LandmarkPickup>(FindObjectsSortMode.None);
+        Log($"Seed eruption: {(eruption != null ? "yes" : "no")}, pickups: {seedPickup.Length}");
+        if (eruption != null && framesPath != null)
+        {
+            // The crown seed: from the crown (a few moments, to catch it cracking) and from the ground 40 m out.
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Directory.CreateDirectory(framesPath);
+            Transform seedPoint = seedPickup.Length > 0 ? System.Array.Find(seedPickup, p => p.kind == LandmarkPickup.Kind.Seed)?.transform : null;
+            for (int i = 0; i < 10 && seedPoint != null; i++)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 from = centre + new Vector3(Mathf.Cos(i * 0.3f), 0f, Mathf.Sin(i * 0.3f)) * 14f + Vector3.down * 3f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                Save(captureCamera, Path.Combine(framesPath, $"seed_{i}.png"));
+                Log($"    seed at {centre.y:0.0}, shards out: {eruption.GetComponentsInChildren<Renderer>().Length}");
+                yield return new WaitForSeconds(0.15f);
+            }
+            if (seedPoint != null)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 flat = new Vector3(centre.x, 0f, centre.z);
+                Vector3 from = flat + Vector3.right * 60f;
+                if (Physics.Raycast(from + Vector3.up * 200f, Vector3.down, out RaycastHit ground, 400f, 1 << 7)) from = ground.point + Vector3.up * 1.7f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                captureCamera.fieldOfView = 70f;
+                Save(captureCamera, Path.Combine(framesPath, "seed_from_ground.png"));
+            }
+        }
         var crawlers = FindObjectsByType<SpireCrawler>(FindObjectsSortMode.None);
         var tentacles = FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None);
         Log($"Tentacle creatures: {tentacles.Length}, crawling on the tower: {crawlers.Length}");

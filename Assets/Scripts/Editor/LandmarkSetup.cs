@@ -67,6 +67,7 @@ public static class LandmarkSetup
         }
         Undo.RecordObject(landmark, "Set Spire Materials");
         landmark.SetMaterials(spire, innerSpire, glyph, seed);
+        AssignSeedModel(landmark);
         var serialized = new SerializedObject(landmark);
         serialized.FindProperty("world").objectReferenceValue = world;
         serialized.ApplyModifiedProperties();
@@ -104,6 +105,21 @@ public static class LandmarkSetup
         EditorSceneManager.MarkSceneDirty(landmark.gameObject.scene);
         Selection.activeGameObject = landmark.gameObject;
         Debug.Log("Hanging Spire added. It is built in Play mode around a sinkhole about 85 m from spawn. Save the scene to keep it." + note);
+    }
+
+    // The crown seed is a copy of Daniel's "Colorful" object in the open scene.
+    private static void AssignSeedModel(HangingSpire landmark)
+    {
+        const string sourceName = "Colorful";
+        GameObject source = null;
+        foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (t.name == sourceName && t.GetComponentInChildren<Renderer>(true) != null) { source = t.gameObject; break; }
+        landmark.SetSeedModel(null, null, Vector3.zero);
+        landmark.SetSeedSource(source);
+        if (source == null)
+            Debug.LogWarning("No object named " + sourceName + " with a renderer in the scene; the crown seed keeps the built-in pod shape.");
+        else
+            Debug.Log("Crown seed will be a copy of " + source.name + ".");
     }
 
     [MenuItem("Tools/Capstone/Landmarks/Reset Landmark Progress (Seeds And Glyphs)")]

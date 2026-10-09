@@ -22,6 +22,20 @@ public sealed class HangingSpire : MonoBehaviour
     [SerializeField] private Material glyphMaterial;
     [SerializeField] private Material seedMaterial;
 
+    [Header("Seed Model")]
+    [Tooltip("An object in the scene to copy as the crown seed (the menu uses the one named Colorful). " +
+             "The copy keeps its materials and parts; the original stays where it is.")]
+    [SerializeField] private GameObject seedSource;
+    [Tooltip("Used when there is no Seed Source: a single mesh for the crown seed. Empty = the built-in pod shape.")]
+    [SerializeField] private Mesh seedModel;
+    [SerializeField] private Material seedModelMaterial;
+    [Tooltip("Turns the model upright (the Cylinder needs -90 on X).")]
+    [SerializeField] private Vector3 seedModelRotation = new Vector3(-90f, 0f, 0f);
+    [Tooltip("Height of the seed at the crown (metres).")]
+    [Min(0.5f)] [SerializeField] private float crownSeedSize = 8f;
+    [Tooltip("How high above the crown teeth it floats (seen from the ground) until the player climbs up.")]
+    [Min(0f)] [SerializeField] private float crownSeedFloat = 5f;
+
     [Header("Placement")]
     [Tooltip("Picks the sinkhole whose distance from the spawn is closest to this.")]
     [Min(0f)] [SerializeField] private float preferredDistance = 85f;
@@ -187,12 +201,46 @@ public sealed class HangingSpire : MonoBehaviour
 
         if (!string.IsNullOrEmpty(seedId))
         {
-            LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * 1.2f, LandmarkPickup.Kind.Seed);
-            seedPickup.id = seedId;
-            GameObject pod = Part("Pod", seedPickup.transform, LandmarkShapes.Seed(seed), seedMaterial, collide: false, shadows: false);
-            // Twice life size so it reads from the rim, two metres away.
-            pod.transform.localPosition = Vector3.down * 0.5f;
-            pod.transform.localScale = Vector3.one * 2f;
+            if (seedSource != null)
+            {
+                // A copy of the scene object, floating high over the crown and cracking apart now and then.
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * (crownSeedSize * 0.5f + 0.4f), LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                seedPickup.hoverHeight = 0f;
+                seedPickup.triggerRadius = crownSeedSize * 0.5f + 1f;
+                Transform body = CopySeed(seedPickup.transform);
+                var cracking = new GameObject("Seed Eruption").AddComponent<SeedEruption>();
+                cracking.transform.SetParent(root, false);
+                cracking.Init(seedPickup, body, crownSeedSize, upper.crown + crownSeedFloat + crownSeedSize * 0.5f);
+            }
+            else if (seedModel != null && seedModelMaterial != null)
+            {
+                // A big seed floating high over the crown and cracking apart now and then.
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * (crownSeedSize * 0.5f + 0.4f), LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                seedPickup.hoverHeight = 0f;
+                seedPickup.triggerRadius = crownSeedSize * 0.5f + 1f;
+                Quaternion upright = Quaternion.Euler(seedModelRotation);
+                GameObject body = Part("Seed Body", seedPickup.transform, seedModel, seedModelMaterial, collide: false, shadows: true);
+                Vector3 extent = SeedEruption.UprightSize(seedModel, upright);
+                float scale = crownSeedSize / Mathf.Max(1e-5f, extent.y);
+                body.transform.localRotation = upright;
+                body.transform.localScale = Vector3.one * scale;
+                body.transform.localPosition = -(upright * seedModel.bounds.center) * scale;
+
+                var cracking = new GameObject("Seed Eruption").AddComponent<SeedEruption>();
+                cracking.transform.SetParent(root, false);
+                cracking.Init(seedPickup, body.transform, crownSeedSize, upper.crown + crownSeedFloat + crownSeedSize * 0.5f);
+            }
+            else
+            {
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * 1.2f, LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                GameObject pod = Part("Pod", seedPickup.transform, LandmarkShapes.Seed(seed), seedMaterial, collide: false, shadows: false);
+                // Twice life size so it reads from the rim, two metres away.
+                pod.transform.localPosition = Vector3.down * 0.5f;
+                pod.transform.localScale = Vector3.one * 2f;
+            }
         }
 
         if (!string.IsNullOrEmpty(glyphId))
@@ -333,6 +381,48 @@ public sealed class HangingSpire : MonoBehaviour
     }
 
     public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
+
+    /// <summary>
+    /// Copies seedSource under the pickup, keeps its rotation, scales it to crownSeedSize tall and centres it.
+    /// Its colliders and rigidbodies are removed.
+    /// </summary>
+    private Transform CopySeed(Transform parent)
+    {
+        var holder = new GameObject("Seed Body").transform;
+        holder.SetParent(parent, false);
+        GameObject copy = Instantiate(seedSource, holder);
+        copy.name = seedSource.name;
+        copy.SetActive(true);
+        copy.transform.SetPositionAndRotation(holder.position, seedSource.transform.rotation);
+        copy.transform.localScale = seedSource.transform.lossyScale;
+        foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
+        foreach (Rigidbody r in copy.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+
+        Bounds bounds = new Bounds(holder.position, Vector3.zero);
+        bool any = false;
+        foreach (Renderer r in copy.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+            if (any) bounds.Encapsulate(r.bounds); else { bounds = r.bounds; any = true; }
+        }
+
+        float scale = crownSeedSize / Mathf.Max(1e-4f, bounds.size.y);
+        Vector3 offset = bounds.center - holder.position;
+        holder.localScale = Vector3.one * scale;
+        holder.position -= offset * scale;
+        return holder;
+    }
+
+    /// <summary>Scene object copied as the crown seed (null = use the single mesh below, or the built-in pod).</summary>
+    public void SetSeedSource(GameObject source) => seedSource = source;
+
+    /// <summary>Model used for the crown seed (null mesh = the built-in pod).</summary>
+    public void SetSeedModel(Mesh mesh, Material material, Vector3 uprightEuler)
+    {
+        seedModel = mesh;
+        seedModelMaterial = material;
+        seedModelRotation = uprightEuler;
+    }
 
     public void SetMaterials(Material spire, Material innerSpire, Material glyph, Material seedPod)
     {
