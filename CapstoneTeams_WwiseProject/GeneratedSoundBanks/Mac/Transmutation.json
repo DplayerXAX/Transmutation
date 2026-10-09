@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{42DADACE-D984-35E7-12AA-2899D855385B}",
+    "Hash": "{297173EA-D9E6-0BE5-0A4D-26CF2841DB9E}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
@@ -21,7 +21,15 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "basic_test.wav",
-      "CachePath": "9E/{9E3F54CF-D0D0-7922-E9F9-E5F29F73D54A}.wem"
+      "CachePath": "76/{765FADE7-30AA-0A51-77DE-42F33C0F9686}.wem"
+     },
+     {
+      "Id": "115744844",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "climb my wall.wav",
+      "CachePath": "1B/{1BAB8EDB-9C67-6357-B4EC-174E310319D1}.wem"
      },
      {
       "Id": "221012135",
@@ -29,7 +37,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "fuzzy.wav",
-      "CachePath": "F2/{F275F9A4-A93E-E906-AD1A-226DE33EA86D}.wem"
+      "CachePath": "A6/{A6895E12-D410-F1C3-D644-78BC34C9CC35}.wem"
      },
      {
       "Id": "454687851",
@@ -45,7 +53,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "cave.wav",
-      "CachePath": "25/{2532FACB-A624-F908-6F86-68A9D609190F}.wem"
+      "CachePath": "25/{25223711-1AF6-49E2-FEF5-93CB6EF32381}.wem"
      },
      {
       "Id": "481382044",
@@ -61,10 +69,27 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "like a fluid.wav",
-      "CachePath": "F5/{F535A4EF-FB6E-EA25-7C41-09D59579DA3F}.wem"
+      "CachePath": "BF/{BF9BEA1A-BD53-8DD5-C8BA-5E72D4A45552}.wem"
+     },
+     {
+      "Id": "773018024",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "time spider.wav",
+      "CachePath": "B6/{B6F4A03D-CFD5-C551-C09A-35C7E44B9E8C}.wem"
      }
     ],
     "Events": [
+     {
+      "Id": "1169957417",
+      "Name": "Play_Climb_Reach",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Climb_Reach",
+      "GUID": "{FAC6352C-DFDB-48BB-A514-B0D401159B5B}",
+      "DurationType": "OneShot",
+      "DurationMin": "0",
+      "DurationMax": "0"
+     },
      {
       "Id": "2837114212",
       "Name": "Play_Footstep_Left",
@@ -104,6 +129,9 @@
         "Id": "95100673"
        },
        {
+        "Id": "115744844"
+       },
+       {
         "Id": "221012135"
        },
        {
@@ -111,11 +139,20 @@
        },
        {
         "Id": "631985183"
+       },
+       {
+        "Id": "773018024"
        }
       ]
      }
     ],
     "GameParameters": [
+     {
+      "Id": "224820983",
+      "Name": "BGM_climb",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_climb",
+      "GUID": "{59F93406-0AA5-43CD-BD54-BF0D129565E0}"
+     },
      {
       "Id": "721355700",
       "Name": "BGM_fuzzy",
@@ -133,10 +170,22 @@
       "Name": "BGM_cave",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_cave",
       "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
+     },
+     {
+      "Id": "1599936364",
+      "Name": "BGM_timespider",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_timespider",
+      "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
+     },
+     {
+      "Id": "3397956017",
+      "Name": "BGM_bird",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
+      "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
      }
     ]
    }
   ],
-  "FileHash": "{AAC3C46D-C075-7BD4-C002-8243DF04AB7F}"
+  "FileHash": "{6CD8DC5E-DB74-ED55-3FFD-3C0E0AF1B459}"
  }
 }

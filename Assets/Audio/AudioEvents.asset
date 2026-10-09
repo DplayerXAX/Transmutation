@@ -73,6 +73,28 @@ MonoBehaviour:
     fadeIn: 1.5
     fadeOut: 3
     placeholderVoice: 6
+  - name: BGM_timespider
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 2
+  - name: BGM_bird
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 3
+    placeholderVoice: 7
   - name: BGM_climb
     kind: 1
     clips: []
@@ -135,5 +157,13 @@ MonoBehaviour:
     outerRadius: 10
   - creatureType: FireEater
     layerEvent: BGM_fluid
+    innerRadius: 2
+    outerRadius: 10
+  - creatureType: SkySpider
+    layerEvent: BGM_timespider
+    innerRadius: 2
+    outerRadius: 10
+  - creatureType: Bird
+    layerEvent: BGM_bird
     innerRadius: 2
     outerRadius: 10

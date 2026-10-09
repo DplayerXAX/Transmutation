@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{B979A27A-AF80-9816-AF46-B936D3FD39DF}",
+    "Hash": "{576F21D4-22A8-D925-8D61-314B5C900912}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -80,6 +80,18 @@
       "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
      },
      {
+      "Id": "1599936364",
+      "Name": "BGM_timespider",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_timespider",
+      "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
+     },
+     {
+      "Id": "3397956017",
+      "Name": "BGM_bird",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
+      "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
+     },
+     {
       "Id": "4101327976",
       "Name": "BGM_landmark",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_landmark",
@@ -88,6 +100,6 @@
     ]
    }
   ],
-  "FileHash": "{47592112-3737-4EE2-6175-9A1E33368BE5}"
+  "FileHash": "{6AA62200-673C-D12B-C519-C1C7BABB2E79}"
  }
 }
