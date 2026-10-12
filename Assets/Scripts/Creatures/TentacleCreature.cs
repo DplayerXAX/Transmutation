@@ -106,6 +106,8 @@ public sealed class TentacleCreature : Creature
         public bool planted;
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
+        public Collider holdCollider;
+        public Collider stepCollider;
         public Vector3 foot;
         public bool stepping;
         public float stepTime;
@@ -304,7 +306,12 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle tentacle = tentacles[i];
-            bool hasIdeal = FindIdealHold(tentacle, out Vector3 idealPoint, out Vector3 idealNormal);
+            bool hasIdeal = FindIdealHold(tentacle, out Vector3 idealPoint, out Vector3 idealNormal, out Collider idealCollider);
+            // Generated colliders retain identity when their mesh changes; a cached world point may no longer exist.
+            if (tentacle.planted && (tentacle.holdCollider == null ||
+                (tentacle.holdCollider.GetComponent<ProceduralWorldChunk>() != null &&
+                !tentacle.holdCollider.Raycast(new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal), out _, 0.24f))))
+                tentacle.planted = false;
 
             if (tentacle.stepping)
             {
@@ -315,6 +322,7 @@ public sealed class TentacleCreature : Creature
                     tentacle.planted = true;
                     tentacle.hold = tentacle.stepTo;
                     tentacle.holdNormal = tentacle.stepNormal;
+                    tentacle.holdCollider = tentacle.stepCollider;
                     stepping--;
                 }
             }
@@ -334,6 +342,7 @@ public sealed class TentacleCreature : Creature
                     tentacle.stepFrom = tentacle.foot;
                     tentacle.stepTo = idealPoint;
                     tentacle.stepNormal = idealNormal;
+                    tentacle.stepCollider = idealCollider;
                     stepping++;
                 }
                 else if (outOfReach)
@@ -348,13 +357,14 @@ public sealed class TentacleCreature : Creature
     }
 
     /// <summary>Where this tentacle would like to hold right now.</summary>
-    private bool FindIdealHold(Tentacle tentacle, out Vector3 point, out Vector3 normal)
+    private bool FindIdealHold(Tentacle tentacle, out Vector3 point, out Vector3 normal, out Collider collider)
     {
         Vector3 centre = transform.position;
         float reach = tentacle.reach;
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
         point = default;
         normal = Vector3.up;
+        collider = null;
 
         RaycastHit hit;
         if (IsCarried)
@@ -378,6 +388,7 @@ public sealed class TentacleCreature : Creature
         if ((hit.point - centre).sqrMagnitude > reach * reach) return false;
         point = hit.point;
         normal = hit.normal;
+        collider = hit.collider;
         return true;
     }
 

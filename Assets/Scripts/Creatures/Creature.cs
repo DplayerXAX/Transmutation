@@ -36,6 +36,10 @@ public readonly struct CreatureInteraction
 [DisallowMultipleComponent]
 public abstract class Creature : MonoBehaviour
 {
+    /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
+    public static event System.Action<Creature> Activated;
+    protected virtual void OnEnable() => Activated?.Invoke(this);
+
     [Header("Creature Identity")]
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
