@@ -14,6 +14,8 @@ Shaders for them are in `Assets/Shaders/Creatures`.
   and the `OnHeatChanged()` hook.
 - **Interaction:** `ReceiveInteraction(CreatureInteraction)` is called on left click.
   `InteractionPrompt` (verb, e.g. "Ignite") and `CarriedPrompt` feed the prompt HUD. Null = no prompt.
+  `CanUseWhileCarried` explicitly opts into held-use priority. That use consumes left-click even on cooldown.
+  `PickupActionPrompt` / `ReceivePickupAttempt` allow a pickup action without beginning a carry.
 - **Carry:** `TryBeginCarry` / `PullTowards` / `EndCarry` let `PlayerCreatureCarrier` move the creature with
   forces without stopping its behaviour. A Rigidbody is added if the creature has none.
   Subclasses must move through `MoveCreature`, `SetCreatureHorizontalVelocity`, `FaceCreature` and
@@ -41,6 +43,17 @@ The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects inject
 `MarchingCubesVolume` (see `Scripts/MarchingCubes/README.md`).
 
 ## Other creatures
+
+**BubbleFlower** — a stationary flower emitting trapping bubbles every 3–6 seconds. While held through
+the existing carry system, left-click shoots toward the crosshair with a 0.5-second cooldown and stops
+automatic emission. `TrappingBubble` is separate from `FireBubble`; neither changes the fire cycle.
+See [BubbleFlowerPrototype.md](BubbleFlowerPrototype.md) for setup, controls, and tuning.
+
+**BirdCreature** — carryable cube bird with 3D separation, alignment, cohesion, and wandering.
+Birds register automatically with a scene-local `BirdFlockManager`, which creates a pooled
+octree and snapshots all flight state before movement. Spawn areas only place initial
+clusters; groups merge when they meet. See [BirdFlockPrototype.md](BirdFlockPrototype.md)
+for setup, controls, and validation.
 
 **FuzzCreature** — a sticky furry blob. Inside `noticeRadius` (6 m) it joins a single-file chain behind the
 player (static `Chain` list); each one follows the one in front, joined by a sagging goo strand. Leaves the

@@ -118,6 +118,50 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public bool Restricted => restricted;
     public MovementState State => state;
     public float CurrentVelocity => currentVelocity;
+    public Camera PlayerCamera => playerCamera;
+    private BubbleCapture bubbleCapture;
+    private bool bubbleMovementLocked;
+    private int suppressedJumpFrame = -1;
+    public bool BubbleMovementBlocked => bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
+        (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
+
+    public bool IsContainingBubble(Collider collider) => bubbleCapture != null && bubbleCapture.IsCaptured &&
+        collider.GetComponentInParent<TrappingBubble>() == bubbleCapture.OwningBubble;
+
+    public void BeginBubbleMovementLock()
+    {
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        bubbleCapture = GetComponent<BubbleCapture>();
+        // Cancel traversal first: a ledge or hand climb may own a kinematic body.
+        GetComponent<AdvancedFirstPersonTraversal>()?.StopForBubbleCapture();
+        var climbers = FindObjectsByType<HandClimber>(FindObjectsSortMode.None);
+        foreach (var climber in climbers) if (climber.Controls(this)) climber.StopForBubbleCapture();
+        // Keep the current body scale while captured; movement updates are suspended below.
+        bubbleMovementLocked = true;
+        horizontalInput = verticalInput = 0f;
+    }
+
+    public void EndBubbleMovementLock()
+    {
+        bubbleMovementLocked = false;
+        // A release of Ctrl during capture must not leave the restored player crouched or sliding.
+        if (!IsKeyPressed(crouchAndSlideKey))
+        {
+            if (crouching) StopCrouch();
+            if (sliding) StopSlide();
+        }
+    }
+    public void SuppressJumpForCurrentFrame() => suppressedJumpFrame = Time.frameCount;
+    public void PrepareBubbleEscape()
+    {
+        // A grounded capture can retain ground drag through several fixed steps in the escape frame.
+        grounded = false;
+        rb.linearDamping = 0f;
+        exitingSlope = true;
+        CancelInvoke(nameof(ResetJump));
+        Invoke(nameof(ResetJump), jumpCooldown);
+        SuppressJumpForCurrentFrame();
+    }
 
     private Rigidbody rb;
     private AdvancedFirstPersonTraversal advancedController;
@@ -170,6 +214,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void Update()
     {
+        if (BubbleMovementBlocked)
+        {
+            FollowCameraPosition();
+            ReadCameraInput();
+            return;
+        }
         GroundCheck();
 
         if (grounded)
@@ -192,6 +242,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (BubbleMovementBlocked) return;
         MovePlayer();
 
         if (sliding)

@@ -38,6 +38,7 @@ public sealed class BounceShroom : Creature
     public override string InteractionPrompt =>
         currentState == ShroomState.Compact || currentState == ShroomState.Shrinking ? "Expand" : null;
     public override string CarriedPrompt => "[LMB] Expand and place";
+    public override bool CanUseWhileCarried => true;
 
     protected override void InitializeCreature()
     {

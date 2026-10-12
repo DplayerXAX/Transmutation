@@ -81,6 +81,7 @@ MonoBehaviour:
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
   webPrefab: {fileID: 6567200558255696930, guid: 51e175fb2c465224bbf826a086160bac, type: 3}
+  webScale: 1
   returnRange: 12
   moveSpeed: 1.2
   turnSpeed: 120

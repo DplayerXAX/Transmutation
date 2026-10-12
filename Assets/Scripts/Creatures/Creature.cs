@@ -69,6 +69,13 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Whether this creature can currently be picked up.</summary>
     public virtual bool CanBeCarried => true;
 
+    /// <summary>Left-click uses this creature before the cursor target while held.</summary>
+    public virtual bool CanUseWhileCarried => false;
+    /// <summary>Alternate pickup action, such as popping instead of carrying.</summary>
+    public virtual string PickupActionPrompt => null;
+    public virtual void ReceivePickupAttempt(PlayerCreatureCarrier carrier) { }
+    public bool IsBubbleCaptured => TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured;
+
     [Header("Carry Physics")]
     [Min(0f)] [SerializeField] private float carryStrength = 45f;
     [Min(0f)] [SerializeField] private float carryDamping = 12f;
@@ -85,7 +92,7 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
-        if (carrier == null || target == null || IsCarried || !isActiveAndEnabled || !CanBeCarried) return false;
+        if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
         movementBody = GetComponent<Rigidbody>();
@@ -148,6 +155,11 @@ public abstract class Creature : MonoBehaviour
     {
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody == null) return;
+        if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured)
+        {
+            capture.SetReleasePhysics(movementBody, isKinematic, useGravity);
+            return;
+        }
         if (IsCarried)
         {
             releaseKinematic = isKinematic;
@@ -161,25 +173,35 @@ public abstract class Creature : MonoBehaviour
     // Existing autonomous movement stays unchanged when free. Carry ownership is checked here.
     protected void MoveCreature(Vector3 displacement)
     {
-        if (!IsCarried) transform.position += displacement;
+        if (!IsCarried && !IsBubbleCaptured) transform.position += displacement;
     }
 
     protected void SetCreatureHorizontalVelocity(Vector3 velocity)
     {
-        if (IsCarried) return;
+        if (IsCarried || IsBubbleCaptured) return;
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody != null && !movementBody.isKinematic)
             movementBody.linearVelocity = new Vector3(velocity.x, movementBody.linearVelocity.y, velocity.z);
     }
 
+    /// <summary>Full world-space flight velocity. Carry movement always retains ownership.</summary>
+    protected void SetCreatureVelocity(Vector3 velocity)
+    {
+        if (IsCarried || IsBubbleCaptured) return;
+        if (movementBody == null) movementBody = GetComponent<Rigidbody>();
+        if (movementBody != null && !movementBody.isKinematic)
+            movementBody.linearVelocity = velocity;
+    }
+
     protected void FaceCreature(Quaternion rotation)
     {
-        if (!IsCarried) transform.rotation = rotation;
+        if (!IsCarried && !IsBubbleCaptured) transform.rotation = rotation;
     }
 
     protected virtual void OnDisable()
     {
         if (IsCarried) Carrier.Release();
+        if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
 
     /// <summary>

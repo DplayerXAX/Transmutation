@@ -143,6 +143,8 @@ public sealed class HandClimber : MonoBehaviour
     private float feel, roll, look;
 
     public bool IsClimbing => climbing;
+    public bool Controls(SmoothFirstPersonController player) => controller == player;
+    public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
@@ -214,7 +216,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
-        if (controller == null || body == null) return;
+        if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null && ScriptedInput == null) return;
         bool Held(Key key) => keyboard != null && keyboard[key].isPressed;

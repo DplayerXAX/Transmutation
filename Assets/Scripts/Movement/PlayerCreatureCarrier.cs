@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Attach to the player. Holds any Creature at an anchor without disabling its
@@ -60,6 +61,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private float pendingAt;
     private Vector3 carryTargetLocal;
     private bool bringingIn;
+    private bool pickupActionConsumed;
 
     private Vector3 carryPointHome;
 
@@ -125,6 +127,11 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (pendingCreature != null) return;
 
         Creature creature = FindCreature();
+        if (creature != null && !string.IsNullOrEmpty(creature.PickupActionPrompt))
+        {
+            BeginCarry(creature);
+            return;
+        }
         // The right hand reaches out on every press, towards the creature if there is one.
         LastGrabTime = Time.time;
         LastGrabPoint = creature != null ? creature.transform.position
@@ -137,7 +144,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private void UpdatePendingGrab()
     {
         if (pendingCreature == null) return;
-        if (!pendingCreature.isActiveAndEnabled || pendingCreature.IsCarried)
+        if (!pendingCreature.isActiveAndEnabled || pendingCreature.IsCarried || pendingCreature.IsBubbleCaptured)
         {
             pendingCreature = null;
             return;
@@ -170,13 +177,13 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
         // Keep trying while held so a moving Bubble can enter the pickup ray
         // after the initial click.
-        if (mouse.rightButton.isPressed && CarriedCreature == null)
+        if (mouse.rightButton.isPressed && CarriedCreature == null && !pickupActionConsumed)
         {
             Creature creature = FindCreature();
             if (creature != null) BeginCarry(creature);
         }
 
-        if (!mouse.rightButton.isPressed) Release();
+        if (!mouse.rightButton.isPressed) { pickupActionConsumed = false; Release(); }
     }
 
     /// <summary>The Creature the pickup input would grab now, or null.</summary>
@@ -185,13 +192,16 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
-if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
+if (!gameObject.scene.GetPhysicsScene().Raycast(ray.origin, ray.direction, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
     return null;
 
 Creature creature = hit.collider.GetComponentInParent<Creature>();
 
-if (creature == null || !creature.CanBeCarried)
+if (creature == null || creature.IsBubbleCaptured || !creature.isActiveAndEnabled)
     return null;
+
+if (!string.IsNullOrEmpty(creature.PickupActionPrompt)) return creature;
+if (!creature.CanBeCarried) return null;
 
 // Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
 if (!(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
@@ -204,21 +214,7 @@ return creature;
 private static float MeasureCreature(Creature creature, out float above, out float sideways)
 {
     above = sideways = 0f;
-    Bounds bounds = default;
-    bool any = false;
-
-    foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
-    {
-        if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer)
-            continue;
-
-        if (!any) bounds = renderer.bounds;
-        else bounds.Encapsulate(renderer.bounds);
-
-        any = true;
-    }
-
-    if (!any) return 0f;
+    if (!CreatureBounds.TryMeasure(creature.transform, out Bounds bounds)) return 0f;
 
     Vector3 pivot = creature.transform.position;
     above = Mathf.Max(0f, bounds.max.y - pivot.y);
@@ -254,6 +250,14 @@ private void FitCarryPoint(Creature creature)
 
     private void BeginCarry(Creature creature)
     {
+        if (creature == null || creature.IsBubbleCaptured || !creature.isActiveAndEnabled) return;
+        if (!string.IsNullOrEmpty(creature.PickupActionPrompt))
+        {
+            creature.ReceivePickupAttempt(this);
+            pickupActionConsumed = true;
+            return;
+        }
+        if (!creature.CanBeCarried) return;
         if (carryPoint == null) return;
         FitCarryPoint(creature);
         if (!creature.TryBeginCarry(this, carryPoint))

@@ -7,7 +7,11 @@ Repeated setup runs preserve existing prefab and material edits.
 
 ## Behavior and controls
 
-- `SkySpider`: return range (12 m), movement speed, turning speed, and patrol pauses.
+- `SkySpider`: Web Scale (1), return range (12 m), movement speed, turning speed,
+  and patrol pauses. Set Web Scale on the spider to control the webs it spawns:
+  0.5 is half size, 2 is double size. Each new web receives that value once,
+  before creating its meshes. Changing the spider's value affects future webs;
+  returning to an existing web retains that web's original size.
   Pickup uses the existing creature carrier. A nearby drop returns to one of that
   spider's webs; a distant drop starts a new one there.
 - `SkyWeb`: maximum radius (6 m), growth duration (45 s), random seed, cell count
@@ -16,6 +20,8 @@ Repeated setup runs preserve existing prefab and material edits.
   within each group. The default layout has two small pairs and three individual
   cages on separate branches. Cell Size controls cage size relative to the web.
   Loose Strands Per Cell adds long individual threads within the existing budget.
+  The web's own Web Scale is the default for standalone webs. A spawning spider
+  overrides it with its Inspector value without modifying the shared prefab.
   Web Scale uniformly scales newly generated geometry: 0.5 is half size, 1 is
   normal, and 2 is double size. It scales positions, thicknesses, patches, patrol
   and trapping together without changing the seed, growth time, or geometry count.
