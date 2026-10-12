@@ -21,6 +21,7 @@ public sealed class HangingSpire : MonoBehaviour
     [SerializeField] private Material innerSpireMaterial;
     [SerializeField] private Material glyphMaterial;
     [SerializeField] private Material seedMaterial;
+    [SerializeField] private Material glazeMaterial;
 
     [Header("Seed Model")]
     [Tooltip("An object in the scene to copy as the crown seed (the menu uses the one named Colorful). " +
@@ -55,6 +56,21 @@ public sealed class HangingSpire : MonoBehaviour
     [SerializeField] private string seedId = "spire_seed";
     [SerializeField] private string glyphId = "spire";
 
+    [Header("Glaze")]
+    [Tooltip("Smooth glaze that bare hands slide down. One full ring round the outside, between these shares " +
+             "of the tower's height; below it scattered patches that get denser going up. Inside only patches. " +
+             "Ways past the ring: a tentacle creature on the back, the shaft draft once fire warms the hearth, " +
+             "the bounce mushroom on the balcony below it, or climbing inside. x >= y turns all glaze off.")]
+    [SerializeField] private Vector2 glazeRing = new Vector2(0.72f, 0.775f);
+    [Tooltip("Share of the wall covered by patches just under the ring.")]
+    [Range(0f, 1f)] [SerializeField] private float glazePatches = 0.6f;
+    [Tooltip("Bounce mushroom placed on the balcony under the band (the landmark menu uses the prefab).")]
+    [SerializeField] private GameObject bounceShroomPrefab;
+    [Tooltip("Heat (summed over fire creatures on the hearth inside the door) for the shaft draft to lift at full strength.")]
+    [Min(1f)] [SerializeField] private float heatForLift = 25f;
+    [Tooltip("Upward speed of the heated draft, m/s.")]
+    [Min(0f)] [SerializeField] private float liftSpeed = 9f;
+
     [Header("Creatures")]
     [Tooltip("A tentacle creature in the scene to copy. Copies crawl over the tower and wander round its base.")]
     [SerializeField] private TentacleCreature tentacleTemplate;
@@ -83,6 +99,7 @@ public sealed class HangingSpire : MonoBehaviour
             haloSpin += Time.deltaTime * 2.5f;
             haloTransform.localRotation = Quaternion.Euler(9f + Mathf.Sin(Time.time * 0.11f) * 4f, haloSpin, 6f);
         }
+        UpdateHeat();
     }
 
     private void OnDisable()
@@ -142,9 +159,42 @@ public sealed class HangingSpire : MonoBehaviour
             doorHeight = 5.5f + (rimHigh - rimLow) * 0.3f,
             windows = windows,
             noiseSeed = 3.3f + seed * 1.71f,
+            glazePatchDensity = glazePatches,
+            // Balcony round to the side of the door, so players walking round the tower pass under it.
+            balconyAngle = doorAngle + Mathf.PI * 0.6f, // the glaze tentacle in SpawnCreatures uses the same angle
         };
+        upper.glazeBottom = upper.height * glazeRing.x;
+        upper.glazeTop = upper.height * glazeRing.y;
+        upper.SnapGlaze();
+        upperShape = upper;
+        ringBottom = upper.glazeBottom;
+        ringTop = upper.glazeTop;
         Mesh upperMesh = LandmarkShapes.Spire(upper, random, ledgeCount, beam: true, flipY: false, out Vector3 beamCentre);
         GameObject spireObject = Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
+        spireRenderer = spireObject.GetComponent<Renderer>();
+        if (upper.HasGlaze)
+        {
+            GameObject glaze = Part("Glaze", root, LandmarkShapes.Glaze(upper), glazeMaterial != null ? glazeMaterial : spireMaterial, collide: true, shadows: true);
+            glaze.AddComponent<SlipperySurface>();
+            if (bounceShroomPrefab != null)
+            {
+                Vector3 spot = basePoint + LandmarkShapes.BalconyTop(upper) + Vector3.up * 0.6f;
+                GameObject shroom = Instantiate(bounceShroomPrefab, spot, Quaternion.identity, root);
+                shroom.name = "Balcony Bounce Shroom";
+                shroom.AddComponent<ReturnHome>();
+            }
+        }
+        // Hearth: a slab inside the door, over the shaft. Fire set down on it warms the tower and the draft lifts.
+        {
+            Vector3 inward = -new Vector3(Mathf.Cos(doorAngle), 0f, Mathf.Sin(doorAngle));
+            Vector3 axis0 = upper.Axis(0f);
+            float wallIn = upper.Inner(doorAngle, 0f);
+            Vector3 from = axis0 - inward * (wallIn + 0.4f) + Vector3.down * 0.6f;
+            Vector3 to = axis0 - inward * (wallIn - 3.6f) + Vector3.down * 0.6f;
+            Part("Hearth", root, LandmarkShapes.Slab(from, to, 4f, 0.6f, 0.3f), spireMaterial, collide: true, shadows: true);
+            heatProbe = basePoint + (from + to) * 0.5f + Vector3.up * 0.8f;
+            heatRadius = 3f;
+        }
 
         // ---- Hanging twin in the inner world ----
         Vector3 ceilingPoint = world.SinkholeCentre(sinkholeIndex, ceilingHigh, out _);
@@ -291,6 +341,12 @@ public sealed class HangingSpire : MonoBehaviour
 
     private void Draft(string name, Vector3 centre, Vector3 axis, float length, float radius)
     {
+        ShaftDraft draft = MakeDraft(name, centre, axis, length, radius);
+        if (name == "Tower Draft") towerDraft = draft;
+    }
+
+    private ShaftDraft MakeDraft(string name, Vector3 centre, Vector3 axis, float length, float radius)
+    {
         var go = new GameObject(name) { layer = 2 };
         go.transform.SetParent(root, false);
         go.transform.SetPositionAndRotation(centre, Quaternion.FromToRotation(Vector3.up, axis));
@@ -299,7 +355,86 @@ public sealed class HangingSpire : MonoBehaviour
         capsule.direction = 1;
         capsule.radius = Mathf.Max(0.5f, radius);
         capsule.height = Mathf.Max(length, capsule.radius * 2f);
-        go.AddComponent<ShaftDraft>();
+        return go.AddComponent<ShaftDraft>();
+    }
+
+    // ---- Heat in the base: fire creatures brought inside the tower make the shaft draft lift ----
+    private ShaftDraft towerDraft;
+    private float ringBottom, ringTop;
+    private SpireShape upperShape;
+
+    /// <summary>
+    /// For tests: the lowest window below the glaze ring. sill = middle of its bottom edge on the inner
+    /// (or outer) face; radial points out of the tower.
+    /// </summary>
+    public bool FindWindow(bool inside, out Vector3 sill, out Vector3 radial)
+    {
+        sill = radial = default;
+        if (upperShape == null || root == null) return false;
+        for (int j = 0; j < upperShape.Rings; j += 2)
+        for (int k = 0; k < upperShape.segments; k++)
+        {
+            float y = upperShape.RingY(j);
+            if (y < 14f || !upperShape.WindowCell(j, k) || upperShape.WindowCell(j - 1, k)) continue;
+            if (upperShape.HasGlaze && y > upperShape.glazeBottom - 3f) continue;
+            float angle = (k + 0.5f) * Mathf.PI * 2f / upperShape.segments;
+            radial = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            float r = inside ? upperShape.Inner(angle, y) : upperShape.Outer(angle, y);
+            Vector3 axis = upperShape.Axis(y);
+            sill = root.position + new Vector3(axis.x, y, axis.z) + radial * r;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>Heights (above the base) of the full glaze ring, for tests.</summary>
+    public Vector2 GlazeRing => new Vector2(ringBottom, ringTop);
+    private Renderer spireRenderer;
+    private MaterialPropertyBlock glowBlock;
+    private Vector3 heatProbe;
+    private float heatRadius;
+    private float nextHeatCheck;
+    private float heatTarget;
+    private readonly Collider[] heatHits = new Collider[32];
+    private readonly System.Collections.Generic.HashSet<Creature> heatCounted = new System.Collections.Generic.HashSet<Creature>();
+
+    /// <summary>How warm the tower's base is (0..1). Public for tests and other scripts.</summary>
+    public float Warmth { get; private set; }
+
+    /// <summary>Where heat is measured: just above the middle of the hearth.</summary>
+    public Vector3 HeatProbe => heatProbe;
+
+    private void UpdateHeat()
+    {
+        if (towerDraft == null) return;
+        if (Time.time >= nextHeatCheck)
+        {
+            nextHeatCheck = Time.time + 0.5f;
+            float heat = 0f;
+            heatCounted.Clear();
+            int count = Physics.OverlapSphereNonAlloc(heatProbe, heatRadius, heatHits, ~0, QueryTriggerInteraction.Collide);
+            for (int i = 0; i < count; i++)
+            {
+                Creature creature = heatHits[i].GetComponentInParent<Creature>();
+                if (creature != null && heatCounted.Add(creature)) heat += Mathf.Max(0f, creature.Heat);
+            }
+            heatTarget = Mathf.Clamp01(heat / heatForLift);
+        }
+        // Warms up over a few seconds, cools more slowly.
+        Warmth = Mathf.MoveTowards(Warmth, heatTarget, Time.deltaTime * (heatTarget > Warmth ? 0.3f : 0.1f));
+        towerDraft.lift = Warmth > 0.15f ? liftSpeed * Warmth : 0f;
+
+        // The tower's script glows warm while the draft runs.
+        if (spireRenderer != null && spireMaterial != null && spireMaterial.HasProperty("_GlowColor"))
+        {
+            if (glowBlock == null) glowBlock = new MaterialPropertyBlock();
+            spireRenderer.GetPropertyBlock(glowBlock);
+            Color cool = spireMaterial.GetColor("_GlowColor");
+            float strength = spireMaterial.GetFloat("_GlowStrength");
+            glowBlock.SetColor("_GlowColor", Color.Lerp(cool, new Color(1f, 0.45f, 0.15f), Warmth));
+            glowBlock.SetFloat("_GlowStrength", strength * (1f + 1.5f * Warmth));
+            spireRenderer.SetPropertyBlock(glowBlock);
+        }
     }
 
     private LandmarkPickup Pickup(string name, Vector3 position, LandmarkPickup.Kind kind)
@@ -353,6 +488,20 @@ public sealed class HangingSpire : MonoBehaviour
             }
             copy.gameObject.SetActive(true);
         }
+
+        // One more lives on the glaze ring, by the balcony: the creature that lets the hands stick there.
+        if (ringTop > ringBottom)
+        {
+            TentacleCreature bandCopy = CopyCreature(tentacleTemplate, "Spire Tentacle (glaze)");
+            var bandCrawler = bandCopy.gameObject.AddComponent<SpireCrawler>();
+            bandCrawler.wall = wall;
+            bandCrawler.axisBase = basePoint;
+            bandCrawler.minHeight = ringBottom - 1f;
+            bandCrawler.maxHeight = ringTop + 0.5f;
+            float balcony = (doorAngle + Mathf.PI * 0.6f) * Mathf.Rad2Deg;
+            bandCrawler.Place(90f - balcony - 12f, ringBottom + 1.5f);
+            bandCopy.gameObject.SetActive(true);
+        }
     }
 
     /// <summary>
@@ -380,7 +529,18 @@ public sealed class HangingSpire : MonoBehaviour
         return copy;
     }
 
+    /// <summary>True once the tower has been built (it waits for the world).</summary>
+    public bool Built => built;
+    /// <summary>The sinkhole the tower stands on (-1 before it is built).</summary>
+    public int SinkholeIndex => sinkholeIndex;
+
     public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
+
+    public void SetGlaze(Material material, GameObject bounceShroom)
+    {
+        glazeMaterial = material;
+        bounceShroomPrefab = bounceShroom;
+    }
 
     /// <summary>
     /// Copies seedSource under the pickup, keeps its rotation, scales it to crownSeedSize tall and centres it.

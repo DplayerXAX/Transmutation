@@ -124,6 +124,8 @@ public sealed class ProceduralWorld : MonoBehaviour
     /// <summary>True once the layout (noise offsets, sinkholes) exists, so the queries below work.</summary>
     public bool LayoutReady => sinkholes != null;
     public int SinkholeCount => sinkholes != null ? sinkholes.Length : 0;
+    /// <summary>Size of the world on x and z (metres), centred on this transform.</summary>
+    public Vector2 WorldSize => worldSize;
 
     /// <summary>Where a sinkhole shaft crosses a world height (shafts lean slightly), and its radius.</summary>
     public Vector3 SinkholeCentre(int index, float worldY, out float radius)

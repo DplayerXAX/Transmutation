@@ -42,6 +42,7 @@ public static class ClimbTestLauncher
         }
         // Same tower material as after running the landmark setup menu.
         EditorApplication.ExecuteMenuItem("Tools/Capstone/Landmarks/Add Hanging Spire To Open Scene");
+        EditorApplication.ExecuteMenuItem("Tools/Capstone/Landmarks/Add Bone Kiln To Open Scene");
         EditorApplication.EnterPlaymode();
     }
 }

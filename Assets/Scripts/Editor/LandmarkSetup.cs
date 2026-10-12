@@ -68,6 +68,26 @@ public static class LandmarkSetup
         Undo.RecordObject(landmark, "Set Spire Materials");
         landmark.SetMaterials(spire, innerSpire, glyph, seed);
         AssignSeedModel(landmark);
+        // Glaze (slippery): the same stone shader as the tower, but deep blue and running with long pale-cyan
+        // streaks instead of blocks and carvings, so it stands out from the ivory stone at a glance.
+        Material glaze = FromShader("MAT_Landmark_SpireGlazeBlue", "Capstone/Landmarks/SpireStone", m =>
+        {
+            m.SetColor("_Color", new Color(0.16f, 0.3f, 0.55f, 1f));
+            m.SetColor("_ShadowColor", new Color(0.04f, 0.08f, 0.2f, 1f));
+            m.SetColor("_LineColor", new Color(0.62f, 0.88f, 0.98f, 1f));
+            m.SetColor("_HatchColor", new Color(0.05f, 0.1f, 0.24f, 1f));
+            m.SetColor("_GlowColor", new Color(0.15f, 0.75f, 0.8f, 1f));
+            m.SetFloat("_GlowStrength", 1.4f);
+            m.SetFloat("_HatchStrength", 0.35f);
+            m.SetFloat("_ShadowLineDim", 0.7f);
+            m.SetFloat("_CourseHeight", 6f);
+            m.SetVector("_BlockWidth", new Vector4(0.12f, 0.45f, 0f, 0f));
+            m.SetFloat("_CourseWave", 0.6f);
+            m.SetFloat("_ScriptChance", 0f);
+            m.SetFloat("_ScriptChanceInside", 0f);
+            m.SetFloat("_GlitchAmount", 0.6f);
+        });
+        landmark.SetGlaze(glaze, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/BounceShroom.prefab"));
         var serialized = new SerializedObject(landmark);
         serialized.FindProperty("world").objectReferenceValue = world;
         serialized.ApplyModifiedProperties();
@@ -120,6 +140,49 @@ public static class LandmarkSetup
             Debug.LogWarning("No object named " + sourceName + " with a renderer in the scene; the crown seed keeps the built-in pod shape.");
         else
             Debug.Log("Crown seed will be a copy of " + source.name + ".");
+    }
+
+    [MenuItem("Tools/Capstone/Landmarks/Add Bone Kiln To Open Scene")]
+    private static void AddBoneKiln()
+    {
+        ProceduralWorld world = Object.FindFirstObjectByType<ProceduralWorld>();
+        if (world == null)
+        {
+            EditorUtility.DisplayDialog("Landmarks", "No ProceduralWorld found in the open scene.", "OK");
+            return;
+        }
+        // Bone as poured marble: black and white bands swirling slowly, colour fringes and glitch tears.
+        Material bone = FromShader("MAT_Landmark_BoneMarble", "Capstone/Landmarks/BoneMarble", m =>
+        {
+            m.SetFloat("_Bands", 5f);
+            m.SetFloat("_Scale", 0.11f);
+            m.SetFloat("_Warp", 3.2f);
+        });
+        Material ink = Unlit("MAT_Landmark_Ink", new Color(0.02f, 0.02f, 0.025f, 1f));
+        Material glyph = Unlit("MAT_Landmark_Glyph", new Color(0.9f, 0.9f, 0.86f, 1f));
+        Material seed = Unlit("MAT_Landmark_Seed", new Color(0.42f, 0.74f, 0.76f, 1f));
+        if (bone == null || glyph == null)
+        {
+            EditorUtility.DisplayDialog("Landmarks", "Could not make the bone materials (SpireStone shader or URP Unlit not found; let Unity finish compiling).", "OK");
+            return;
+        }
+
+        BoneKiln kiln = Object.FindFirstObjectByType<BoneKiln>();
+        if (kiln == null)
+        {
+            var go = new GameObject("Landmark - Bone Kiln");
+            Undo.RegisterCreatedObjectUndo(go, "Add Bone Kiln");
+            kiln = go.AddComponent<BoneKiln>();
+        }
+        Undo.RecordObject(kiln, "Set Bone Kiln Materials");
+        kiln.SetMaterials(bone, ink, glyph, seed);
+        var serialized = new SerializedObject(kiln);
+        serialized.FindProperty("world").objectReferenceValue = world;
+        serialized.ApplyModifiedProperties();
+        EditorUtility.SetDirty(kiln);
+        EditorSceneManager.MarkSceneDirty(kiln.gameObject.scene);
+        Selection.activeGameObject = kiln.gameObject;
+        Debug.Log("Bone Kiln added. It is built in Play mode on a flat spot about 130 m from spawn. Save the scene to keep it.");
     }
 
     [MenuItem("Tools/Capstone/Landmarks/Reset Landmark Progress (Seeds And Glyphs)")]
