@@ -17,7 +17,7 @@ using UnityEngine.Rendering;
 /// Chunks are generated on worker threads; meshes and colliders are created on the main thread.
 /// </summary>
 [DisallowMultipleComponent]
-public sealed class ProceduralWorld : MonoBehaviour
+public sealed partial class ProceduralWorld : MonoBehaviour
 {
     [Header("Size")]
     [Tooltip("Horizontal size of the world in metres (x, z), centred on this transform.")]
@@ -75,24 +75,16 @@ public sealed class ProceduralWorld : MonoBehaviour
     [Tooltip("Teleport the player back to spawn if they fall out of the world.")]
     [SerializeField] private bool respawnFallingPlayer = true;
 
-    [Header("Runtime State (Read Only)")]
-    [SerializeField] private int chunksBuilt;
-    [SerializeField] private int chunksTotal;
-
-    private struct Sinkhole
-    {
-        public Vector2 position;
-        public float radius;
-    }
-
-    private sealed class ChunkResult
-    {
-        public Vector3Int coord;
-        public Vector3[] vertices;
-        public int[] surfaceTriangles;
-        public int[] innerTriangles;
-    }
-
+    [Header("Erosion")]
+    [SerializeField] private bool erosionTestCourse;
+    [Min(0f)] [SerializeField] private float erodibility = 1f;
+    [Min(0f)] [SerializeField] private float densityBudgetPerSecond = 8f;
+    [Min(0.01f)] [SerializeField] private float erosionInterval = 0.1f;
+    [Range(1, 8)] [SerializeField] private int erosionMeshesPerFrame = 2;
+    [Range(1, 8)] [SerializeField] private int workerCount = 2;
+    [SerializeField] private AnimationCurve erosionFalloff = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+    [System.Serializable]
+    private struct Sinkhole { public Vector2 position; public float radius; }
     private static readonly Vector3Int[] CornerOffsets =
     {
         new Vector3Int(0, 0, 0), new Vector3Int(1, 0, 0), new Vector3Int(1, 0, 1), new Vector3Int(0, 0, 1),
@@ -110,6 +102,7 @@ public sealed class ProceduralWorld : MonoBehaviour
     private readonly List<GameObject> chunkObjects = new List<GameObject>();
     private readonly List<Mesh> chunkMeshes = new List<Mesh>();
     private Sinkhole[] sinkholes;
+    private DensityField field;
     private Vector3 gridMin;
     private Vector3Int chunkCount;
     private float yMin, yMax;
@@ -283,6 +276,7 @@ public sealed class ProceduralWorld : MonoBehaviour
         yMax = maxHill;
         yMin = -crustThickness - innerGap - surfaceAmplitude * (1f + ridges) * Mathf.Max(innerInvert, ceilingMirror) - innerDetail - caveDepth - 4f;
 
+        if (erosionTestCourse) { yMin = -14f; yMax = 14f; }
         float chunkSize = chunkCells * cellSize;
         chunkCount = new Vector3Int(
             Mathf.CeilToInt(worldSize.x / chunkSize),
@@ -308,13 +302,84 @@ public sealed class ProceduralWorld : MonoBehaviour
             holes.Add(new Sinkhole { position = position, radius = radius });
         }
         sinkholes = holes.ToArray();
+
+        // Snapshot settings for worker threads; must run after noiseOffset and sinkholes are set.
+        field = new DensityField(this);
     }
 
-    // ---------------- Density field (thread safe: pure math only) ----------------
-
-    /// <summary>Surface height above this transform at a local column.</summary>
-    private float SurfaceHeight(float x, float z)
+    private float SurfaceHeight(float x, float z) => field.SurfaceHeight(x, z);
+    private float CeilingHeight(float h) => field.CeilingHeight(h);
+    private float InnerGroundHeight(float x, float z, float h) => field.InnerGroundHeight(x, z, h);
+    [System.Serializable]
+    private sealed class DensityField
     {
+        public Vector2 worldSize;
+        public float cellSize;
+        public int chunkCells;
+        public int seed;
+        public float surfaceAmplitude;
+        public float surfaceFrequency;
+        public float ridges;
+        public float overhangAmplitude;
+        public float overhangFrequency;
+        public float spawnFlatRadius;
+        public float spawnBlend;
+        public float rimHeight;
+        public float crustThickness;
+        public float innerGap;
+        public float ceilingMirror;
+        public float innerInvert;
+        public float innerDetail;
+        public float caveFrequency;
+        public float caveWidth;
+        public float caveDepth;
+        public int sinkholeCount;
+        public Vector2 sinkholeRadius;
+        public float firstSinkholeDistance;
+        public bool erosionTestCourse;
+        public Vector2 noiseOffset;
+        public Sinkhole[] sinkholes;
+        public DensityField(ProceduralWorld world)
+        {
+            worldSize = world.worldSize;
+            seed = world.seed;
+            surfaceAmplitude = world.surfaceAmplitude;
+            surfaceFrequency = world.surfaceFrequency;
+            ridges = world.ridges;
+            overhangAmplitude = world.overhangAmplitude;
+            overhangFrequency = world.overhangFrequency;
+            spawnFlatRadius = world.spawnFlatRadius;
+            spawnBlend = world.spawnBlend;
+            rimHeight = world.rimHeight;
+            crustThickness = world.crustThickness;
+            innerGap = world.innerGap;
+            ceilingMirror = world.ceilingMirror;
+            innerInvert = world.innerInvert;
+            innerDetail = world.innerDetail;
+            caveFrequency = world.caveFrequency;
+            caveWidth = world.caveWidth;
+            caveDepth = world.caveDepth;
+            sinkholeCount = world.sinkholeCount;
+            sinkholeRadius = world.sinkholeRadius;
+            firstSinkholeDistance = world.firstSinkholeDistance;
+            erosionTestCourse = world.erosionTestCourse;
+            noiseOffset = world.noiseOffset;
+            sinkholes = (Sinkhole[])world.sinkholes.Clone();
+            cellSize = world.cellSize;
+            chunkCells = world.chunkCells;
+        }
+        private static float CourseHeight(float x, float z)
+        {
+            if (x < -8f && z < -5f) return 4f;
+            float ramp = Mathf.Max(0f, 6f - (z + 10f) * 0.3f);
+            float fork = 1.2f * Mathf.Exp(-x * x * 0.5f - z * z / 16f);
+            float basinBank = Mathf.Max(0f, z - 10f);
+            return ramp + 0.035f * x * x + 0.08f * x + fork + basinBank * basinBank * 0.2f;
+        }
+    /// <summary>Surface height above this transform at a local column.</summary>
+    public float SurfaceHeight(float x, float z)
+    {
+        if (erosionTestCourse) return CourseHeight(x, z);
         Vector2 p = new Vector2(x, z) * surfaceFrequency + noiseOffset;
         // Domain warp so hills do not line up on a grid.
         Vector2 warp = new Vector2(Fbm2(p * 0.7f + new Vector2(13.1f, 7.7f), 3), Fbm2(p * 0.7f + new Vector2(-4.3f, 21.9f), 3)) * 1.6f;
@@ -332,9 +397,9 @@ public sealed class ProceduralWorld : MonoBehaviour
         return height;
     }
 
-    private float CeilingHeight(float h) => -crustThickness - h * ceilingMirror;
+    public float CeilingHeight(float h) => -crustThickness - h * ceilingMirror;
 
-    private float InnerGroundHeight(float x, float z, float h)
+    public float InnerGroundHeight(float x, float z, float h)
     {
         Vector2 p = new Vector2(x, z) * surfaceFrequency * 2.3f + noiseOffset * 1.37f;
         float detail = Fbm2(p, 4) * innerDetail;
@@ -344,8 +409,13 @@ public sealed class ProceduralWorld : MonoBehaviour
     }
 
     /// <summary>Positive inside rock.</summary>
-    private float Density(Vector3 p, float h, float ceiling, float floor)
+    public float Density(Vector3 p, float h, float ceiling, float floor)
     {
+        if (erosionTestCourse)
+        {
+            float tunnel = Mathf.Max(Mathf.Abs(p.x - 9f) - 3f, Mathf.Max(Mathf.Abs(p.y + 3f) - 3f, 4f - p.z));
+            return Mathf.Min(h - p.y, tunnel);
+        }
         float top = h - p.y;
         float under = p.y - ceiling;
         float crust = Mathf.Min(top, under);
@@ -390,170 +460,7 @@ public sealed class ProceduralWorld : MonoBehaviour
         return density;
     }
 
-    // ---------------- Chunk meshing (worker threads) ----------------
-
-    private ChunkResult BuildChunk(Vector3Int coord)
-    {
-        int n = chunkCells + 1;
-        Vector3 origin = gridMin + new Vector3(coord.x, coord.y, coord.z) * (chunkCells * cellSize);
-
-        // Column heights once per (x, z).
-        var tops = new float[n * n];
-        var ceilings = new float[n * n];
-        var floors = new float[n * n];
-        float maxTop = float.MinValue, minCeiling = float.MaxValue, maxFloor = float.MinValue, minFloor = float.MaxValue;
-        for (int z = 0; z < n; z++)
-        for (int x = 0; x < n; x++)
-        {
-            float wx = origin.x + x * cellSize, wz = origin.z + z * cellSize;
-            float h = SurfaceHeight(wx, wz);
-            int column = z * n + x;
-            tops[column] = h;
-            ceilings[column] = CeilingHeight(h);
-            floors[column] = InnerGroundHeight(wx, wz, h);
-            maxTop = Mathf.Max(maxTop, h);
-            minCeiling = Mathf.Min(minCeiling, ceilings[column]);
-            maxFloor = Mathf.Max(maxFloor, floors[column]);
-            minFloor = Mathf.Min(minFloor, floors[column]);
-        }
-
-        // Skip chunks that are certainly empty sky or deep solid bedrock.
-        float band = overhangAmplitude * 2.5f + 2f;
-        float chunkBottom = origin.y, chunkTop = origin.y + chunkCells * cellSize;
-        if (chunkBottom > maxTop + band) return null;
-        if (chunkTop < minFloor - caveDepth - band) return null;
-
-        var density = new float[n * n * n];
-        bool anyPositive = false, anyNegative = false;
-        for (int y = 0; y < n; y++)
-        for (int z = 0; z < n; z++)
-        for (int x = 0; x < n; x++)
-        {
-            int column = z * n + x;
-            var p = new Vector3(origin.x + x * cellSize, origin.y + y * cellSize, origin.z + z * cellSize);
-            float value = Density(p, tops[column], ceilings[column], floors[column]);
-            density[(y * n + z) * n + x] = value;
-            anyPositive |= value > 0f;
-            anyNegative |= value <= 0f;
-        }
-        if (!anyPositive || !anyNegative) return null;
-
-        var vertices = new List<Vector3>();
-        var surfaceTriangles = new List<int>();
-        var innerTriangles = new List<int>();
-        var edgeLookup = new Dictionary<int, int>();
-        var cornerIndices = new int[8];
-        var edgeVertices = new int[12];
-
-        for (int z = 0; z < chunkCells; z++)
-        for (int y = 0; y < chunkCells; y++)
-        for (int x = 0; x < chunkCells; x++)
-        {
-            int cubeIndex = 0;
-            for (int c = 0; c < 8; c++)
-            {
-                Vector3Int o = CornerOffsets[c];
-                int sample = ((y + o.y) * n + (z + o.z)) * n + (x + o.x);
-                cornerIndices[c] = sample;
-                if (density[sample] > 0f) cubeIndex |= 1 << c;
-            }
-
-            int edgeMask = MarchingCubesTables.EdgeTable[cubeIndex];
-            if (edgeMask == 0) continue;
-
-            for (int e = 0; e < 12; e++)
-            {
-                if ((edgeMask & (1 << e)) == 0) continue;
-                int a = cornerIndices[EdgeConnections[e, 0]];
-                int b = cornerIndices[EdgeConnections[e, 1]];
-                int low = Mathf.Min(a, b), high = Mathf.Max(a, b);
-                // Each sample has at most three edges to higher neighbours: +x, +z, +y.
-                int axis = high - low == 1 ? 0 : high - low == n ? 1 : 2;
-                int key = low * 3 + axis;
-                if (!edgeLookup.TryGetValue(key, out int vertexIndex))
-                {
-                    float da = density[a], db = density[b];
-                    float t = Mathf.Abs(da - db) < 1e-6f ? 0.5f : Mathf.Clamp01(da / (da - db));
-                    vertexIndex = vertices.Count;
-                    vertices.Add(Vector3.Lerp(SampleLocal(a, n), SampleLocal(b, n), t) * cellSize);
-                    edgeLookup.Add(key, vertexIndex);
-                }
-                edgeVertices[e] = vertexIndex;
-            }
-
-            for (int i = 0; MarchingCubesTables.TriTable[cubeIndex, i] != -1; i += 3)
-            {
-                int v0 = edgeVertices[MarchingCubesTables.TriTable[cubeIndex, i]];
-                int v1 = edgeVertices[MarchingCubesTables.TriTable[cubeIndex, i + 1]];
-                int v2 = edgeVertices[MarchingCubesTables.TriTable[cubeIndex, i + 2]];
-
-                // Above the middle of the crust is the surface world; below it, the inner world.
-                Vector3 centroid = (vertices[v0] + vertices[v1] + vertices[v2]) / 3f;
-                int cx = Mathf.Clamp(Mathf.RoundToInt(centroid.x / cellSize), 0, n - 1);
-                int cz = Mathf.Clamp(Mathf.RoundToInt(centroid.z / cellSize), 0, n - 1);
-                int column = cz * n + cx;
-                float crustMiddle = (tops[column] + ceilings[column]) * 0.5f;
-                List<int> target = origin.y + centroid.y >= crustMiddle ? surfaceTriangles : innerTriangles;
-                target.Add(v0);
-                target.Add(v1);
-                target.Add(v2);
-            }
-        }
-
-        if (vertices.Count == 0) return null;
-        return new ChunkResult
-        {
-            coord = coord,
-            vertices = vertices.ToArray(),
-            surfaceTriangles = surfaceTriangles.ToArray(),
-            innerTriangles = innerTriangles.ToArray(),
-        };
     }
-
-    private static Vector3 SampleLocal(int sample, int n)
-    {
-        int x = sample % n;
-        int z = (sample / n) % n;
-        int y = sample / (n * n);
-        return new Vector3(x, y, z);
-    }
-
-    // ---------------- Main thread ----------------
-
-    private void CreateChunkObject(ChunkResult result)
-    {
-        var mesh = new Mesh
-        {
-            name = $"World Chunk {result.coord}",
-            hideFlags = HideFlags.DontSave,
-            indexFormat = result.vertices.Length > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16,
-        };
-        mesh.vertices = result.vertices;
-        mesh.subMeshCount = 2;
-        mesh.SetTriangles(result.surfaceTriangles, 0);
-        mesh.SetTriangles(result.innerTriangles, 1);
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        var chunk = new GameObject(mesh.name, typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))
-        {
-            hideFlags = HideFlags.DontSave,
-            layer = chunkLayer,
-        };
-        chunk.transform.SetParent(transform, false);
-        chunk.transform.localPosition = gridMin + new Vector3(result.coord.x, result.coord.y, result.coord.z) * (chunkCells * cellSize);
-        chunk.GetComponent<MeshFilter>().sharedMesh = mesh;
-        chunk.GetComponent<MeshRenderer>().sharedMaterials = new[] { surfaceMaterial, innerMaterial != null ? innerMaterial : surfaceMaterial };
-        chunk.GetComponent<MeshCollider>().sharedMesh = mesh;
-
-        chunkObjects.Add(chunk);
-        chunkMeshes.Add(mesh);
-        chunksBuilt++;
-        ChunkCreated?.Invoke(chunk, mesh);
-    }
-
-    // ---------------- Noise (thread safe) ----------------
-
     private static float Hash(int x, int y, int z)
     {
         unchecked
@@ -611,12 +518,4 @@ public sealed class ProceduralWorld : MonoBehaviour
         return sum;
     }
 
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.color = new Color(1f, 1f, 1f, 0.25f);
-        Gizmos.DrawWireCube(new Vector3(0f, 0f, 0f), new Vector3(worldSize.x, 1f, worldSize.y));
-        Gizmos.color = new Color(1f, 0.78f, 0.015f, 0.6f);
-        Gizmos.DrawWireCube(new Vector3(0f, -crustThickness - innerGap, 0f), new Vector3(worldSize.x, 1f, worldSize.y));
-    }
 }

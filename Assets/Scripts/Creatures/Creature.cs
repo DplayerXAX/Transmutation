@@ -36,16 +36,20 @@ public readonly struct CreatureInteraction
 [DisallowMultipleComponent]
 public abstract class Creature : MonoBehaviour
 {
-    /// <summary>Shared food categories. Combine tags; Everything also covers future categories.</summary>
-    [System.Flags]
-    public enum FoodTag
-    {
-        None = 0,
-        Meat = 1,
-        Plant = 2,
-        Matter = 4,
-        Everything = -1
-    }
+/// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
+public static event System.Action<Creature> Activated;
+protected virtual void OnEnable() => Activated?.Invoke(this);
+
+/// <summary>Shared food categories. Combine tags; Everything also covers future categories.</summary>
+[System.Flags]
+public enum FoodTag
+{
+    None = 0,
+    Meat = 1,
+    Plant = 2,
+    Matter = 4,
+    Everything = -1
+}
 
     [Header("Creature Identity")]
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
