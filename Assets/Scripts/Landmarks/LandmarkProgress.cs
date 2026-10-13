@@ -114,6 +114,16 @@ public static class LandmarkGlyphs
                     new[] { new Vector2(0.12f, 0.7f), new Vector2(0.42f, 0.74f) },
                     new[] { new Vector2(0.36f, 1.22f) },
                 };
+            case "kiln":
+                // The slanted spine, ribs hanging from it, and the ember beneath.
+                return new List<Vector2[]>
+                {
+                    new[] { new Vector2(-0.45f, 0.1f), new Vector2(0.42f, 1.32f) },
+                    new[] { new Vector2(-0.16f, 0.5f), new Vector2(-0.4f, 0.38f), new Vector2(-0.44f, 0.12f) },
+                    new[] { new Vector2(0.04f, 0.78f), new Vector2(-0.18f, 0.62f), new Vector2(-0.2f, 0.36f) },
+                    new[] { new Vector2(0.22f, 1.04f), new Vector2(0.38f, 0.86f), new Vector2(0.4f, 0.6f) },
+                    new[] { new Vector2(0.06f, 0.2f) },
+                };
             default:
                 return Random(id);
         }
