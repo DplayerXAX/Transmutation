@@ -56,6 +56,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private IEnumerator Start()
     {
         savedProgress = File.Exists(LandmarkProgress.FilePath) ? File.ReadAllText(LandmarkProgress.FilePath) : null;
+        LandmarkProgress.ResetAll(); // start with nothing collected (the real save is put back at the end)
         controller = FindFirstObjectByType<SmoothFirstPersonController>();
         climber = FindFirstObjectByType<HandClimber>();
         world = FindFirstObjectByType<ProceduralWorld>();
@@ -89,6 +90,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestKilnOnly") >= 0)
+        {
+            yield return CheckKiln();
+            Quit();
+            yield break;
+        }
 
         bool spireOnly = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestSpireOnly") >= 0;
         List<Cliff> cliffs = spireOnly ? new List<Cliff>() : FindCliffs(10, 1.5f, 12f, 1, 2f);
@@ -102,9 +109,20 @@ public sealed class ClimbTestDriver : MonoBehaviour
         yield return CheckSpireCreatures();
         int faces = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestCreaturesOnly") >= 0 ? 0 : 4;
         for (int face = 0; face < faces; face++)
-            if (FindSpire(out spire, face * 90f)) yield return Climb(spire, fast: face % 2 == 1, timeout: 200f, fromGround: false, capture: face == 0);
-        else Log("Spire: not found.");
+        {
+            // Faces 0 and 1 with the tentacle creature on the back, 2 and 3 bare-handed (the glazed band should stop those).
+            if (face == 2)
+            {
+                var carrierNow = FindFirstObjectByType<PlayerCreatureCarrier>();
+                if (carrierNow != null) carrierNow.Release();
+                yield return new WaitForSeconds(0.5f);
+                Log($"    released the creature: sticky hands {climber.StickyHands}");
+            }
+            if (FindSpire(out spire, face * 90f)) yield return Climb(spire, fast: face % 2 == 1, timeout: face >= 2 ? 90f : 200f, fromGround: false, capture: face == 0);
+            else Log("Spire: not found.");
+        }
 
+        yield return CheckGlazeRoutes();
         Log($"RESULT {passed}/{total} climbs reached the top.");
         Quit();
     }
@@ -113,6 +131,37 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private IEnumerator CheckSpireCreatures()
     {
         yield return new WaitForSeconds(4f);
+        var eruption = FindFirstObjectByType<SeedEruption>();
+        var seedPickup = FindObjectsByType<LandmarkPickup>(FindObjectsSortMode.None);
+        Log($"Seed eruption: {(eruption != null ? "yes" : "no")}, pickups: {seedPickup.Length}");
+        if (eruption != null && framesPath != null)
+        {
+            // The crown seed: from the crown (a few moments, to catch it cracking) and from the ground 40 m out.
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Directory.CreateDirectory(framesPath);
+            Transform seedPoint = seedPickup.Length > 0 ? System.Array.Find(seedPickup, p => p.kind == LandmarkPickup.Kind.Seed)?.transform : null;
+            for (int i = 0; i < 10 && seedPoint != null; i++)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 from = centre + new Vector3(Mathf.Cos(i * 0.3f), 0f, Mathf.Sin(i * 0.3f)) * 14f + Vector3.down * 3f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                Save(captureCamera, Path.Combine(framesPath, $"seed_{i}.png"));
+                Log($"    seed at {centre.y:0.0}, shards out: {eruption.GetComponentsInChildren<Renderer>().Length}");
+                yield return new WaitForSeconds(0.15f);
+            }
+            if (seedPoint != null)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 flat = new Vector3(centre.x, 0f, centre.z);
+                Vector3 from = flat + Vector3.right * 60f;
+                if (Physics.Raycast(from + Vector3.up * 200f, Vector3.down, out RaycastHit ground, 400f, 1 << 7)) from = ground.point + Vector3.up * 1.7f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                captureCamera.fieldOfView = 70f;
+                Save(captureCamera, Path.Combine(framesPath, "seed_from_ground.png"));
+            }
+        }
         var crawlers = FindObjectsByType<SpireCrawler>(FindObjectsSortMode.None);
         var tentacles = FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None);
         Log($"Tentacle creatures: {tentacles.Length}, crawling on the tower: {crawlers.Length}");
@@ -149,6 +198,220 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield return null;
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { crawlers[0].GetComponent<TentacleCreature>() });
             Log($"    carried: {carrier.CarriesTentacle}, sticky hands: {climber.StickyHands}");
+            // How it looks from the eyes with the creature on the back.
+            yield return new WaitForSeconds(2f);
+            Log($"    still carried after 2 s: {carrier.CarriesTentacle}, creature {(crawlers.Length > 0 && crawlers[0] != null ? "-" : "on back")}");
+            if (framesPath != null) { Capture("Carried", "back"); yield return new WaitForSeconds(0.7f); Capture("Carried", "back"); }
+        }
+    }
+
+    /// <summary>The two other ways past the glazed band: the heated shaft draft and the balcony bounce mushroom.</summary>
+    private IEnumerator CheckGlazeRoutes()
+    {
+        var spireLandmark = FindFirstObjectByType<HangingSpire>();
+        if (spireLandmark == null) yield break;
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        if (carrier != null) carrier.Release();
+        Vector3 probe = spireLandmark.HeatProbe;
+
+        // Into a window from below, from inside the shaft and from outside.
+        for (int side = 0; side < 2; side++)
+        {
+            bool inside = side == 0;
+            if (!spireLandmark.FindWindow(inside, out Vector3 sill, out Vector3 radial)) { Log("Window: none found."); break; }
+            Vector3 inward = inside ? radial : -radial;
+            // Outside, the wall below the sill leans out, so start further out (the hands find it).
+            Vector3 start = sill - inward * (inside ? 0.55f : 1.6f) + Vector3.down * 2.5f;
+            Log($"Window from {(inside ? "inside" : "outside")}: sill {sill.y - probe.y:0.0} m up");
+            yield return Climb(new Cliff { start = start, feet = start + Vector3.down, inward = inward, topY = sill.y, name = inside ? "Window (inside)" : "Window (outside)" },
+                fast: false, timeout: 25f, fromGround: false);
+        }
+
+        // Draft: stand on the hearth, cold, then put a fire bubble on it.
+        body.isKinematic = false;
+        body.position = probe + Vector3.up * 1f;
+        body.linearVelocity = Vector3.zero;
+        Physics.SyncTransforms();
+        yield return new WaitForSeconds(3f);
+        Log($"Draft cold: warmth {spireLandmark.Warmth:0.00}, player {body.position.y - probe.y:0.0} m above the base");
+        Creature warm = null;
+        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubble.prefab");
+        if (bubblePrefab != null) warm = Instantiate(bubblePrefab, probe, Quaternion.identity).GetComponent<Creature>();
+        if (warm == null) { Log("Draft: no creature to warm."); }
+        else
+        {
+            warm.transform.position = probe;
+            var warmBody = warm.GetComponent<Rigidbody>();
+            if (warmBody != null) { warmBody.isKinematic = true; warmBody.position = probe; }
+            warm.SetHeat(100f);
+            body.position = probe + Vector3.up * 1f;
+            body.linearVelocity = Vector3.zero;
+            Physics.SyncTransforms();
+            float best = 0f;
+            for (float t = 0f; t < 14f; t += 0.5f)
+            {
+                warm.SetHeat(100f);
+                warm.transform.position = probe;
+                // Step off the hearth into the shaft once it is warm.
+                if (t > 5f && t < 5.6f) body.position += ShaftOffset(spireLandmark);
+                yield return new WaitForSeconds(0.5f);
+                best = Mathf.Max(best, body.position.y - probe.y);
+            }
+            Log($"Draft warm ({warm.GetType().Name}): warmth {spireLandmark.Warmth:0.00}, player rose to {best:0.0} m above the base");
+            if (framesPath != null) Capture("Draft", "rise");
+            if (warmBody != null) warmBody.isKinematic = false;
+            warm.SetHeat(0f);
+        }
+
+        // Bounce mushroom on the balcony.
+        Transform shroomTransform = null;
+        foreach (BounceShroom shroom in FindObjectsByType<BounceShroom>(FindObjectsSortMode.None))
+            if (shroom.name.StartsWith("Balcony")) shroomTransform = shroom.transform;
+        if (shroomTransform == null) { Log("Bounce: no balcony mushroom."); yield break; }
+        Log($"Bounce: mushroom at {shroomTransform.position.y - probe.y:0.0} m above the base");
+        if (framesPath != null)
+        {
+            // The glazed band and the balcony from 22 m out.
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Vector3 outward = shroomTransform.position - spireLandmark.transform.GetChild(0).position;
+            outward.y = 0f;
+            Vector3 from = shroomTransform.position + outward.normalized * 22f + Vector3.up * 2f;
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(shroomTransform.position + Vector3.up * 3f - from));
+            captureCamera.fieldOfView = 60f;
+            Directory.CreateDirectory(framesPath);
+            Save(captureCamera, Path.Combine(framesPath, "glaze.png"));
+            // The whole tower from 75 m out, to see the patches thicken towards the ring.
+            Vector3 baseCentre = spireLandmark.transform.GetChild(0).position;
+            Vector3 far = baseCentre + outward.normalized * 75f + Vector3.up * 30f;
+            captureCamera.transform.SetPositionAndRotation(far, Quaternion.LookRotation(baseCentre + Vector3.up * 38f - far));
+            captureCamera.fieldOfView = 65f;
+            Save(captureCamera, Path.Combine(framesPath, "tower.png"));
+        }
+        var bounce = shroomTransform.GetComponent<BounceShroom>();
+        bounce.ReceiveInteraction(new CreatureInteraction(body.gameObject, shroomTransform.position, Vector3.down));
+        yield return new WaitForSeconds(1.2f);
+        body.isKinematic = false;
+        body.position = shroomTransform.position + Vector3.up * 2.5f;
+        body.linearVelocity = Vector3.zero;
+        Physics.SyncTransforms();
+        float top = 0f;
+        bool grabbed = false;
+        for (float t = 0f; t < 6f; t += Time.deltaTime)
+        {
+            yield return null;
+            top = Mathf.Max(top, body.position.y - probe.y);
+            grabbed |= climber.IsClimbing;
+        }
+        Log($"Bounce: player rose to {top:0.0} m above the base (glaze ring {spireLandmark.GlazeRing.x:0.0}-{spireLandmark.GlazeRing.y:0.0}), grabbed the wall: {grabbed}");
+    }
+
+    // From the hearth towards the middle of the shaft (the hearth reaches 3.6 m in from the wall).
+    private static Vector3 ShaftOffset(HangingSpire spireLandmark)
+    {
+        Vector3 toCentre = spireLandmark.transform.GetChild(0).position - spireLandmark.HeatProbe;
+        toCentre.y = 0f;
+        return toCentre.normalized * Mathf.Min(4f, toCentre.magnitude);
+    }
+
+    /// <summary>The Bone Kiln: the wave of lifting ribs, a fuzzy creature propping a rib, heat in the kiln heart.</summary>
+    private IEnumerator CheckKiln()
+    {
+        BoneKiln kiln = null;
+        for (float t = 0f; t < 20f && (kiln == null || kiln.Root == null); t += 0.5f)
+        {
+            kiln = FindFirstObjectByType<BoneKiln>();
+            yield return new WaitForSeconds(0.5f);
+        }
+        if (kiln == null || kiln.Root == null) { Log("Kiln: not built."); yield break; }
+        Transform rootT = kiln.Root;
+        Log($"Kiln at {rootT.position}, {kiln.Ribs.Count} ribs, heart {kiln.HeartPoint}");
+        body.isKinematic = true;
+        body.position = rootT.position + rootT.right * 70f + Vector3.up * 40f;
+        if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+        captureCamera.CopyFrom(Camera.main);
+        captureCamera.enabled = false;
+        captureCamera.fieldOfView = 65f;
+        if (framesPath != null) Directory.CreateDirectory(framesPath);
+        void Shot(string name, Vector3 localFrom, Vector3 localAt)
+        {
+            if (framesPath == null) return;
+            Vector3 from = rootT.TransformPoint(localFrom), at = rootT.TransformPoint(localAt);
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(at - from));
+            Save(captureCamera, Path.Combine(framesPath, name + ".png"));
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            Vector2 lift = kiln.Lift;
+            Log($"    cold t {Time.time:0.0}: average lift {lift.x:0.00}, ribs up {lift.y:0}");
+            if (i % 2 == 0) Shot($"kiln_side_{i}", new Vector3(26f, 18f, 4f), new Vector3(0f, 2f, 6f));
+            yield return new WaitForSeconds(1.5f);
+        }
+        Shot("kiln_tail", new Vector3(8f, 10f, 40f), new Vector3(0f, 3f, 4f));
+        Shot("kiln_mouth_inside", new Vector3(0f, 3f, 9f), new Vector3(0f, -4f, -2f));
+        Shot("kiln_skull_below", new Vector3(12f, -30f, 12f), new Vector3(0f, -28f, 0f));
+
+        // A fuzzy creature held in a rib's gap: once that rib has lifted, it should stay up.
+        FuzzCreature fuzz = null;
+        foreach (FuzzCreature f in FindObjectsByType<FuzzCreature>(FindObjectsInactive.Exclude, FindObjectsSortMode.None)) { fuzz = f; break; }
+        if (fuzz != null && kiln.Ribs.Count > 6)
+        {
+            BoneRib rib = kiln.Ribs[6];
+            Vector3 spot = rib.restPoints[1];
+            var fuzzBody = fuzz.GetComponent<Rigidbody>();
+            float lowest = 1f; bool wasUp = false;
+            for (float t = 0f; t < 40f; t += 0.25f)
+            {
+                if (fuzzBody != null) { fuzzBody.isKinematic = true; fuzzBody.position = spot; }
+                fuzz.transform.position = spot;
+                yield return new WaitForSeconds(0.25f);
+                if (rib.open > 0.95f) wasUp = true;
+                if (wasUp) lowest = Mathf.Min(lowest, rib.open);
+            }
+            Log($"    fuzz wedge: rib lifted {wasUp}, lowest after lifting {lowest:0.00} (propped {rib.propped})");
+            var near = new List<string>();
+            foreach (Collider c in Physics.OverlapSphere(spot, 1.5f, ~0, QueryTriggerInteraction.Collide)) near.Add(c.name + (c.GetComponentInParent<FuzzCreature>() != null ? "(fuzz)" : ""));
+            Log($"    near the gap: {string.Join(", ", near)}; fuzz at {fuzz.transform.position}, colliders {fuzz.GetComponentsInChildren<Collider>().Length}");
+            if (fuzzBody != null) fuzzBody.isKinematic = false;
+            fuzz.transform.position = rootT.position + rootT.right * 40f + Vector3.up * 5f;
+        }
+        else Log("    fuzz wedge: no active FuzzCreature in the scene");
+
+        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubble.prefab");
+        if (bubblePrefab != null)
+        {
+            Creature warm = Instantiate(bubblePrefab, kiln.HeartPoint, Quaternion.identity).GetComponent<Creature>();
+            var warmBody = warm.GetComponent<Rigidbody>();
+            for (float t = 0f; t < 14f; t += 0.5f)
+            {
+                warm.SetHeat(100f);
+                if (warmBody != null) { warmBody.isKinematic = true; warmBody.position = kiln.HeartPoint; }
+                warm.transform.position = kiln.HeartPoint;
+                yield return new WaitForSeconds(0.5f);
+            }
+            Vector2 lift = kiln.Lift;
+            Log($"    warm: warmth {kiln.Warmth:0.00}, average lift {lift.x:0.00}, ribs up {lift.y:0} of {kiln.Ribs.Count}");
+            Shot("kiln_warm_side", new Vector3(26f, 18f, 4f), new Vector3(0f, 2f, 6f));
+            // Keep it warm until it wakes, then follow it for a while.
+            for (float t = 0f; t < 6f && !kiln.Awake; t += 0.5f)
+            {
+                warm.SetHeat(100f);
+                yield return new WaitForSeconds(0.5f);
+            }
+            Log($"    awake: {kiln.Awake}");
+            for (int i = 0; i < 10 && kiln.Awake; i++)
+            {
+                yield return new WaitForSeconds(4f);
+                Vector3 h = kiln.Head;
+                Log($"    t {Time.time:0}: head at {h}, {(kiln.Flying ? "flying" : "crawling")}, {h.y - rootT.position.y:0.0} m above the rim");
+                if (framesPath != null && i % 2 == 1)
+                {
+                    Vector3 from = h + new Vector3(30f, 18f, 30f);
+                    captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(h - from + Vector3.down * 4f));
+                    Save(captureCamera, Path.Combine(framesPath, $"kiln_awake_{i}.png"));
+                }
+            }
         }
     }
 

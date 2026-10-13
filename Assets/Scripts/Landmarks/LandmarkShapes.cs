@@ -27,7 +27,79 @@ public sealed class SpireShape
     public float windows = 0.22f;
     public float noiseSeed = 13.7f;
     public int segments = 36;
+    // Smooth glaze: one full ring round the outside (heights from the ground line; no windows or ledges on it),
+    // plus patches that are rare low down and grow denser towards the ring. Off when top <= bottom.
+    public float glazeBottom = -1f;
+    public float glazeTop = -1f;
+    public bool HasGlaze => glazeTop > glazeBottom;
+    // Share of the wall covered by patches just under the ring (outside), and above it.
+    public float glazePatchDensity = 0.6f;
+    // Angle of the wide balcony just below the ring.
+    public float balconyAngle;
     public float ringStep = 1.4f;
+
+    public int Rings => Mathf.Max(2, Mathf.CeilToInt((height + bury) / ringStep));
+    public float RingY(int j) => -bury + j * (height + bury) / Rings;
+
+    /// <summary>Moves the glaze ring's edges onto ring lines, so the ring covers whole wall cells.</summary>
+    public void SnapGlaze()
+    {
+        if (!HasGlaze) return;
+        float step = (height + bury) / Rings;
+        glazeBottom = RingY(Mathf.RoundToInt((glazeBottom + bury) / step));
+        glazeTop = Mathf.Max(glazeBottom + step, RingY(Mathf.RoundToInt((glazeTop + bury) / step)));
+    }
+
+    /// <summary>Wall cell (ring j, segment k) cut away for the door.</summary>
+    public bool DoorCell(int j, int k)
+    {
+        if (j < 0 || j >= Rings) return false;
+        k = (k + segments) % segments;
+        float mid = (k + 0.5f) * Mathf.PI * 2f / segments;
+        return doorHalfAngle > 0f && Mathf.Abs(Mathf.DeltaAngle(mid * Mathf.Rad2Deg, doorAngle * Mathf.Rad2Deg)) < doorHalfAngle * Mathf.Rad2Deg
+            && RingY(j + 1) <= doorHeight + 0.01f;
+    }
+
+    /// <summary>
+    /// Wall cell cut through as a window. Windows come in whole pairs of rings (about 2.8 m tall), so the
+    /// player can stand on the sill and walk through. Never on the glaze ring.
+    /// </summary>
+    public bool WindowCell(int j, int k)
+    {
+        if (j < 0 || j >= Rings || windows <= 0f) return false;
+        k = (k + segments) % segments;
+        int pair = j / 2;
+        int j0 = pair * 2, j1 = j0 + 2;
+        if (j1 > Rings || RingY(j0) < 12f || RingY(j1) > height - 5f || DoorCell(j0, k)) return false;
+        if (HasGlaze && RingY(j1) > glazeBottom - 0.2f && RingY(j0) < glazeTop + 0.2f) return false;
+        // Slow noise along the height, fast around the tower.
+        float slit = Mathf.PerlinNoise(k * 0.93f + noiseSeed * 3.1f, pair * 0.44f + noiseSeed);
+        return slit > 1f - windows * 0.9f;
+    }
+
+    /// <summary>
+    /// Wall cell covered in glaze, on the outside or the inside face. Outside: the full ring, plus patches
+    /// that grow from none near the ground to glazePatchDensity under the ring. Inside: thinner patches, never a ring.
+    /// </summary>
+    public bool GlazeCell(int j, int k, bool inside)
+    {
+        if (!HasGlaze || j < 0 || j >= Rings) return false;
+        k = (k + segments) % segments;
+        if (DoorCell(j, k) || WindowCell(j, k)) return false;
+        float y0 = RingY(j), y1 = RingY(j + 1);
+        if (!inside && y0 >= glazeBottom - 0.01f && y1 <= glazeTop + 0.01f) return true;
+        float y = (y0 + y1) * 0.5f;
+        if (y < 6f || y > height - 3f) return false;
+        float ramp = Mathf.InverseLerp(height * 0.12f, glazeBottom, y);
+        float density = y > glazeTop ? glazePatchDensity * 0.75f : glazePatchDensity * ramp * ramp;
+        if (inside) density = Mathf.Min(density * 0.7f, 0.4f);
+        // Patches a few metres across: noise round the tower (seamless) and up it.
+        float angle = (k + 0.5f) * Mathf.PI * 2f / segments;
+        float offset = inside ? 37.3f : 0f;
+        float n = Mathf.PerlinNoise(Mathf.Cos(angle) * 2.8f + y * 0.21f + noiseSeed * 2.3f + offset, Mathf.Sin(angle) * 2.8f + y * 0.33f + noiseSeed);
+        n = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.28f, 0.72f, n));
+        return n > 1f - density;
+    }
 
     /// <summary>Offset of the spire's axis at a height (it leans and wanders as it rises).</summary>
     public Vector3 Axis(float y)
@@ -141,7 +213,7 @@ public static class LandmarkShapes
     {
         var b = new Builder { height = shape.height };
         int segments = shape.segments;
-        int rings = Mathf.Max(2, Mathf.CeilToInt((shape.height + shape.bury) / shape.ringStep));
+        int rings = shape.Rings;
         float wallPart = (float)random.NextDouble();
 
         // Ring heights per segment; the top ring is flat, the crown teeth are added as blocks below.
@@ -151,7 +223,7 @@ public static class LandmarkShapes
         {
             angles[k] = k * Mathf.PI * 2f / segments;
             for (int j = 0; j <= rings; j++)
-                ringY[j, k] = -shape.bury + j * (shape.height + shape.bury) / rings;
+                ringY[j, k] = shape.RingY(j);
         }
 
         var outer = new int[rings + 1, segments];
@@ -163,69 +235,33 @@ public static class LandmarkShapes
             inner[j, k] = b.Add(Point(shape, angles[k], ringY[j, k], shape.Inner(angles[k], ringY[j, k])), wallPart);
         }
 
-        // The door is cut through the wall.
-        bool Skip(int j, int k)
-        {
-            if (j < 0 || j >= rings) return false;
-            k = (k + segments) % segments;
-            float mid = (k + 0.5f) * Mathf.PI * 2f / segments;
-            return shape.doorHalfAngle > 0f && Mathf.Abs(Mathf.DeltaAngle(mid * Mathf.Rad2Deg, shape.doorAngle * Mathf.Rad2Deg)) < shape.doorHalfAngle * Mathf.Rad2Deg
-                && ringY[j + 1, k] <= shape.doorHeight + 0.01f;
-        }
+        bool Skip(int j, int k) => shape.DoorCell(j, k);
+        // Windows are holes through the wall. Their sills can be stood on and lead into the shaft.
+        bool Window(int j, int k) => shape.WindowCell(j, k);
 
-        // Windows are tall narrow niches set into the wall, not holes, so climbing hands still find their back.
-        bool Window(int j, int k)
-        {
-            if (j < 0 || j >= rings || shape.windows <= 0f) return false;
-            k = (k + segments) % segments;
-            if (ringY[j, k] < 12f || ringY[j + 1, k] > shape.height - 5f || Skip(j, k)) return false;
-            // Slow noise along the height, fast around the tower.
-            float slit = Mathf.PerlinNoise(k * 0.93f + shape.noiseSeed * 3.1f, j * 0.22f + shape.noiseSeed);
-            return slit > 1f - shape.windows * 0.9f;
-        }
-
-        Vector3 Recess(int j, int k)
-        {
-            float angle = angles[k], y = ringY[j, k];
-            float outerRadius = shape.Outer(angle, y);
-            float depth = Mathf.Min(0.6f, outerRadius - shape.Inner(angle, y) - 0.3f);
-            return Point(shape, angle, y, outerRadius - Mathf.Max(0.1f, depth));
-        }
+        bool Open(int j, int k) => Skip(j, k) || Window(j, k);
 
         for (int j = 0; j < rings; j++)
         for (int k = 0; k < segments; k++)
         {
-            if (Skip(j, k)) continue;
+            if (Open(j, k)) continue;
             int k1 = (k + 1) % segments;
             float mid = (k + 0.5f) * Mathf.PI * 2f / segments;
             Vector3 radial = new Vector3(Mathf.Cos(mid), 0f, Mathf.Sin(mid));
             Vector3 tangent = new Vector3(-Mathf.Sin(mid), 0f, Mathf.Cos(mid));
 
             Vector3 P(int[,] grid, int jj, int kk) => b.vertices[grid[jj, kk]];
-            if (Window(j, k))
-            {
-                // Back of the niche, then its sides, sill and lintel wherever the neighbour is solid wall.
-                b.Quad(Recess(j, k), Recess(j, k1), Recess(j + 1, k1), Recess(j + 1, k), radial, wallPart);
-                if (!Window(j, k - 1))
-                    b.Quad(P(outer, j, k), P(outer, j + 1, k), Recess(j + 1, k), Recess(j, k), tangent, wallPart);
-                if (!Window(j, k + 1))
-                    b.Quad(P(outer, j, k1), P(outer, j + 1, k1), Recess(j + 1, k1), Recess(j, k1), -tangent, wallPart);
-                if (!Window(j - 1, k))
-                    b.Quad(P(outer, j, k), P(outer, j, k1), Recess(j, k1), Recess(j, k), Vector3.up, wallPart);
-                if (!Window(j + 1, k))
-                    b.Quad(P(outer, j + 1, k), P(outer, j + 1, k1), Recess(j + 1, k1), Recess(j + 1, k), Vector3.down, wallPart);
-            }
-            else b.Quad(outer[j, k], outer[j, k1], outer[j + 1, k1], outer[j + 1, k], radial);
+            b.Quad(outer[j, k], outer[j, k1], outer[j + 1, k1], outer[j + 1, k], radial);
             b.Quad(inner[j, k], inner[j, k1], inner[j + 1, k1], inner[j + 1, k], -radial);
 
             // Close the wall thickness wherever the neighbour cell is cut away.
-            if (Skip(j, k + 1))
+            if (Open(j, k + 1))
                 b.Quad(P(outer, j, k1), P(outer, j + 1, k1), P(inner, j + 1, k1), P(inner, j, k1), tangent, wallPart);
-            if (Skip(j, k - 1))
+            if (Open(j, k - 1))
                 b.Quad(P(outer, j, k), P(outer, j + 1, k), P(inner, j + 1, k), P(inner, j, k), -tangent, wallPart);
-            if (j == rings - 1 || Skip(j + 1, k))
+            if (j == rings - 1 || Open(j + 1, k))
                 b.Quad(P(outer, j + 1, k), P(outer, j + 1, k1), P(inner, j + 1, k1), P(inner, j + 1, k), Vector3.up, wallPart);
-            if (j > 0 && Skip(j - 1, k))
+            if (j > 0 && Open(j - 1, k))
                 b.Quad(P(outer, j, k), P(outer, j, k1), P(inner, j, k1), P(inner, j, k), Vector3.down, wallPart);
         }
 
@@ -246,9 +282,16 @@ public static class LandmarkShapes
         {
             float y = Mathf.Lerp(5.5f, shape.height - 4f, ledgeCount > 1 ? i / (float)(ledgeCount - 1) : 0f) + Range(random, -0.8f, 0.8f);
             float width = Range(random, 0.45f, 0.8f);
-            Ledge(b, shape, ledgeAngle, ledgeAngle + width, y, Range(random, 1.8f, 2.6f), Range(random, 0.6f, 1f), (float)random.NextDouble());
+            float reach = Range(random, 1.8f, 2.6f), thickness = Range(random, 0.6f, 1f), part = (float)random.NextDouble();
+            // Nothing to rest on across the glazed band.
+            if (!shape.HasGlaze || y < shape.glazeBottom - 2f || y > shape.glazeTop + 1f)
+                Ledge(b, shape, ledgeAngle, ledgeAngle + width, y, reach, thickness, part);
             ledgeAngle += Range(random, 0.9f, 1.5f);
         }
+
+        // A wide balcony just under the glaze: a place to stop, and room for a bounce mushroom.
+        if (shape.HasGlaze)
+            Ledge(b, shape, shape.balconyAngle - BalconyHalfWidth, shape.balconyAngle + BalconyHalfWidth, BalconyY(shape), BalconyReach, 1f, wallPart);
 
         beamCentre = Vector3.zero;
         if (beam)
@@ -265,6 +308,49 @@ public static class LandmarkShapes
 
         if (flipY) beamCentre.y = -beamCentre.y;
         return b.ToMesh("Spire", flipY);
+    }
+
+    private const float BalconyHalfWidth = 0.32f;
+    private const float BalconyReach = 3.8f;
+    private static float BalconyY(SpireShape shape) => shape.glazeBottom - 0.4f;
+
+    /// <summary>Middle of the balcony's top, a little out from the wall (spire local space).</summary>
+    public static Vector3 BalconyTop(SpireShape shape)
+    {
+        float y = BalconyY(shape);
+        return Point(shape, shape.balconyAngle, y, shape.Outer(shape.balconyAngle, y) + BalconyReach * 0.5f);
+    }
+
+    /// <summary>
+    /// Smooth shells over the glazed cells (SpireShape.GlazeCell), just outside the outer wall and just inside
+    /// the inner wall, with thin sills along their top and bottom edges outside so they read as a coat.
+    /// </summary>
+    public static Mesh Glaze(SpireShape shape)
+    {
+        var b = new Builder { height = shape.height };
+        int segments = shape.segments, rings = shape.Rings;
+        const float gap = 0.06f, sill = 0.08f;
+        for (int side = 0; side < 2; side++)
+        {
+            bool inside = side == 1;
+            float R(float angle, float y) => inside ? shape.Inner(angle, y) - gap : shape.Outer(angle, y) + gap;
+            for (int j = 0; j < rings; j++)
+            for (int k = 0; k < segments; k++)
+            {
+                if (!shape.GlazeCell(j, k, inside)) continue;
+                float a0 = k * Mathf.PI * 2f / segments, a1 = (k + 1) * Mathf.PI * 2f / segments;
+                float y0 = shape.RingY(j), y1 = shape.RingY(j + 1);
+                float mid = (a0 + a1) * 0.5f;
+                Vector3 radial = new Vector3(Mathf.Cos(mid), 0f, Mathf.Sin(mid)) * (inside ? -1f : 1f);
+                b.Quad(Point(shape, a0, y0, R(a0, y0)), Point(shape, a1, y0, R(a1, y0)), Point(shape, a1, y1, R(a1, y1)), Point(shape, a0, y1, R(a0, y1)), radial, 0.5f);
+                if (inside) continue;
+                if (!shape.GlazeCell(j - 1, k, false))
+                    b.Quad(Point(shape, a0, y0, R(a0, y0) + sill), Point(shape, a1, y0, R(a1, y0) + sill), Point(shape, a1, y0, R(a1, y0) - gap), Point(shape, a0, y0, R(a0, y0) - gap), Vector3.down, 0.5f);
+                if (!shape.GlazeCell(j + 1, k, false))
+                    b.Quad(Point(shape, a0, y1, R(a0, y1) - gap), Point(shape, a1, y1, R(a1, y1) - gap), Point(shape, a1, y1, R(a1, y1) + sill), Point(shape, a0, y1, R(a0, y1) + sill), Vector3.up, 0.5f);
+            }
+        }
+        return b.ToMesh("Spire Glaze", false);
     }
 
     private static Vector3 Point(SpireShape shape, float angle, float y, float radius)
@@ -345,6 +431,14 @@ public static class LandmarkShapes
     }
 
     /// <summary>A rough rectangular bar from a to b.</summary>
+    /// <summary>A flat slab from a to b; its bottom is on the line, its top 'thickness' above.</summary>
+    public static Mesh Slab(Vector3 from, Vector3 to, float width, float thickness, float part)
+    {
+        var b = new Builder { height = 10f };
+        Bar(b, from, to, width, thickness, part);
+        return b.ToMesh("Slab", false);
+    }
+
     private static void Bar(Builder b, Vector3 from, Vector3 to, float width, float thickness, float part)
     {
         Vector3 along = (to - from).normalized;
