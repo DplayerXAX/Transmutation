@@ -27,6 +27,43 @@ including releases outside the sky volume. Exact spherical queries filter octree
 leaf capacity is 8 and subdivision stops at depth 6. Coincident positions are supported.
 Rendering uses individual cube GameObjects with a shared instanced URP Lit material.
 
+## Food, lifespan, and bones
+
+**Hunt Radius** (25 metres) finds the nearest compatible active creature in the same
+scene. **Hunt Desire** (2) weights food attraction in the same steering sum as separation,
+alignment, cohesion, wandering, and bounds return. It is not a separate movement mode:
+all weights remain active and the combined acceleration/speed limits still apply.
+Food outside the sky bounds remains eligible and competes with inward steering. The
+registry follows creature enable/disable/unload and snapshots food positions once per
+physics step; no per-bird scene searches or allocating overlap queries are used.
+
+Set **Food Tags > Plant** on a food creature, including a harvested item if desired.
+These are the shared Creature enum flags, not Unity GameObject tags. The bird prefab's
+**Diet Tags** accept Plant. Multiple birds can share food. On physical or trigger contact,
+a freely flying bird with positive Hunt Desire consumes compatible food. Desire zero
+disables seeking and eating. Carrying, either capture type, simulation pause, or death
+prevents autonomous eating. A food collider is needed for contact consumption.
+
+Every creature inherits **Age** (remaining lifetime, default 40) and **Age Rate**
+(spent per second, default 0). Simulation pause also pauses aging. Carrying alone
+does not pause Age. At zero `Die()` runs once. Base death disables simulation, preserving
+the object and physics; a release cannot revive a dead creature.
+
+`Consume(consumer)` handles optional nutrition/special effects and does nothing by
+default. It does not call death. The feeding caller uses `TryConsumeFood(food)` to claim
+the target, run Consume, separately run Die, and remove the remaining original. No
+nutrition or Age restoration exists yet. Deferred destruction cannot repeat feeding.
+
+Bird `Die()` creates the referenced **BirdBones** prefab once and removes the bird.
+Hand, web, and bubble attachments release immediately. Bones keep the death pose and
+velocity, use gravity and solid collisions, and have no autonomous movement. Their
+food tag is Matter, diet is None, and Age/Rate default to 40/0. They can be picked up,
+consumed by Matter eaters, or given future interaction/processing overrides. Consuming
+bones removes them without spawning further bones. Runtime birds missing a bones
+prefab reference use a shared-material cube fallback.
+Bones released from silk receive the same half-second recapture grace period as a
+normal web release, allowing them to fall away before another web contact can catch them.
+
 ## Setup and tuning
 
 - `Tools > Creatures > Create Bird Flock Assets` creates the prefab and material while
@@ -50,6 +87,10 @@ Rendering uses individual cube GameObjects with a shared instanced URP Lit mater
   to tune that bird immediately.
 - Selected-object gizmos show sky bounds and spawn areas. Enable `Show Octree` on the
   manager to see occupied leaf cells in Play Mode.
+- Tune Hunt Radius/Hunt Desire alongside other weights on the bird prefab. The selected
+  bird gizmo shows its food detection radius and current target. Create Bird Flock Assets
+  also creates `Assets/Prefabs/Creatures/BirdBones.prefab` and its shared URP material;
+  bones can be spawned independently.
 
 ## Validation
 
@@ -65,6 +106,11 @@ trapped birds even if their simulation is manually reenabled, and exercises pick
 release, and resumed flight with both spring and firm grips. The runtime checks also
 verify spawn speed overrides, initial velocities, and inheritance from the prefab.
 
+`Validate Bird Life and Food (Play Mode)` checks countdown/pause/death, separate Consume
+effects, weighted food steering, actual contact feeding, simultaneous eaters, bone
+creation and settling, and free/held/web/bubble/consumed/fallback transformations.
+The trapping bubble's elapsed timer is separate from inherited remaining Age.
+
 Profiler markers: `BirdFlock.Simulation` and `BirdFlock.NeighborQueries`.
 `CandidateChecks` reports actual point distance tests versus an exhaustive N² search.
 Pooled storage grows when a larger population or tree is first encountered; warmed
@@ -72,18 +118,15 @@ simulation reuses storage. Dense flocks can still approach N² neighbor work whe
 every bird is inside the search radius. The octree is an optimization, not a promise
 that 200 tightly packed birds cost less than 72 widely spaced ones.
 
-Measured in the Unity Editor on this machine: warmed flight updates averaged about
-0.47 ms for 72 birds and 2.21 ms for 200 birds, with zero managed allocations over
-500 steps. These timings exclude the subsequent physics simulation and rendering.
-For the compact initial clusters, octree rebuild plus searches measured 0.14/0.88 ms
-versus 0.10/0.84 ms for exhaustive searches at 72/200 birds. At these small counts,
-tree overhead can exceed the saved comparisons; the octree remains the shared spatial
-index requested for this prototype. Reports include both timings rather than assuming
-spatial partitioning is always faster.
+Runtime reports include 72/200-bird timings and managed allocations both without food
+and with 12 Plant targets. Timings exclude physics and rendering; the food microbenchmark
+holds positions fixed. Octree validation separately compares searches with exhaustive
+scans. At these small counts tree overhead can exceed the saved comparisons; reports
+include both timings rather than assuming spatial partitioning is always faster.
 
 The project includes `com.unity.pipeline` for live Editor automation and verification.
 Bird behavior itself uses Unity physics and ordinary GameObjects.
 
-This prototype has no bird models, wing animation, dedicated audio, feeding rules,
+This prototype has no bird models, wing animation, dedicated audio, nutrition values,
 or waypoint routes. Pausing creature simulation stops steering, while its dynamic
 body can still move under physics, consistent with the shared Creature lifecycle.

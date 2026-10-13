@@ -29,20 +29,61 @@ public readonly struct CreatureInteraction
 /// <summary>
 /// Minimal base type shared by every interactive creature in the project.
 ///
-/// This class owns common lifecycle, interaction, and shared carry movement.
-/// Blooming, movement decisions, feeding, and other specific rules belong in subclasses
+/// This class owns common lifecycle, interaction, shared carry movement, diet, and feeding handoff.
+/// Blooming, movement decisions, nutrition effects, and other specific rules belong in subclasses
 /// or separate components rather than being added to this base class.
 /// </summary>
 [DisallowMultipleComponent]
 public abstract class Creature : MonoBehaviour
 {
+    /// <summary>Shared food categories. Combine tags; Everything also covers future categories.</summary>
+    [System.Flags]
+    public enum FoodTag
+    {
+        None = 0,
+        Meat = 1,
+        Plant = 2,
+        Matter = 4,
+        Everything = -1
+    }
+
     [Header("Creature Identity")]
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
 
+    [Header("Food and Diet")]
+    [Tooltip("What this creature counts as when another creature checks its diet. Multiple tags can be selected.")]
+    [SerializeField] private FoodTag foodTags = FoodTag.None;
+
+    [Tooltip("Food tags this creature accepts. Everything includes untagged creatures, but still respects self and same-type exclusions.")]
+    [SerializeField] private FoodTag dietTags = FoodTag.None;
+
+    [Tooltip("Allows eating another creature with the same concrete script class, provided its food tags also match the diet.")]
+    [SerializeField] private bool canEatSameType = false;
+
     [Header("Runtime")]
     [Tooltip("When disabled, this creature remains in the scene but does not run its creature logic.")]
     [SerializeField] private bool simulationEnabled = true;
+
+    [Header("Lifespan")]
+    [Tooltip("Remaining lifetime. Counts down only while creature simulation is enabled.")]
+    [Min(0f)] [SerializeField] private float age = 40f;
+    [Tooltip("Lifetime spent per second. Zero means this creature does not age automatically.")]
+    [Min(0f)] [SerializeField] private float ageRate = 0f;
+
+    private bool isDead;
+    private bool consumptionPending;
+
+    public float Age => age;
+    public float AgeRate => ageRate;
+    public bool IsDead => isDead;
+    public bool IsConsumptionPending => consumptionPending;
+
+    /// <summary>
+    /// Raised once after death is recorded, while the host still exists and before subclass remains.
+    /// Listeners react independently; a failing listener cannot interrupt other death behavior.
+    /// </summary>
+    public event System.Action<Creature> Died;
 
     [Header("Shared Parameters")]
     [Tooltip("Heat currently stored by this creature. Kept as a float so small changes over time are not lost.")]
@@ -52,11 +93,82 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Editor-facing name of this creature.</summary>
     public string CreatureName => creatureName;
 
+    /// <summary>Food categories this creature provides.</summary>
+    public FoodTag FoodTags => foodTags;
+
+    /// <summary>Food categories this creature accepts.</summary>
+    public FoodTag DietTags => dietTags;
+
+    /// <summary>Whether the diet may include other instances of this concrete creature class.</summary>
+    public bool CanEatSameType => canEatSameType;
+
+    /// <summary>
+    /// Checks shared dietary compatibility only. Individual eating behaviors must also check
+    /// their own conditions, such as readiness, distance, cooldowns, or the target's state.
+    /// </summary>
+    public bool CanEat(Creature target)
+    {
+        if (target == null || target == this)
+        {
+            return false;
+        }
+
+        if (!canEatSameType && target.GetType() == GetType())
+        {
+            return false;
+        }
+
+        if (dietTags == FoodTag.Everything)
+        {
+            return true;
+        }
+
+        return (dietTags & target.foodTags) != FoodTag.None;
+    }
+
     /// <summary>For things spawned at runtime, which have no inspector to set the name.</summary>
     protected void SetCreatureName(string value) => creatureName = value;
 
+    /// <summary>For procedural creature placeholders; authored prefabs use Inspector food fields.</summary>
+    protected void SetFoodAndDiet(FoodTag food, FoodTag diet)
+    {
+        foodTags = food;
+        dietTags = diet;
+    }
+
+    /// <summary>Stops creature logic. Overrides should call base and guard repeated death.</summary>
+    public virtual void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+        age = 0f;
+        SetSimulationEnabled(false);
+        if (Died == null) return;
+        foreach (System.Action<Creature> listener in Died.GetInvocationList())
+        {
+            try { listener(this); }
+            catch (System.Exception exception) { Debug.LogException(exception, this); }
+        }
+    }
+
+    /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
+    public virtual void Consume(Creature consumer) { }
+
+    /// <summary>Completes an eating event once, even when destruction is deferred by Unity.</summary>
+    public virtual bool TryConsumeFood(Creature food)
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || !SimulationEnabled || IsDead || consumptionPending ||
+            food == null || !food.isActiveAndEnabled || food.consumptionPending || !CanEat(food)) return false;
+        food.consumptionPending = true;
+        CreatureRegistry.Unregister(food);
+        food.Consume(this);
+        if (food != null) food.Die();
+        if (food != null) Destroy(food.gameObject);
+        return true;
+    }
+
     /// <summary>Whether this creature currently runs its simulation logic.</summary>
-    public bool SimulationEnabled => simulationEnabled;
+    public bool SimulationEnabled => simulationEnabled && !isDead;
 
     /// <summary>Heat currently stored by this creature.</summary>
     public float Heat => heat;
@@ -200,6 +312,7 @@ public abstract class Creature : MonoBehaviour
 
     protected virtual void OnDisable()
     {
+        CreatureRegistry.Unregister(this);
         if (IsCarried) Carrier.Release();
         if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
@@ -213,18 +326,32 @@ public abstract class Creature : MonoBehaviour
         InitializeCreature();
     }
 
+    protected virtual void OnEnable()
+    {
+        if (Application.isPlaying) CreatureRegistry.Register(this);
+    }
+
     /// <summary>
     /// Unity frame update entry point.
     /// Passes delta time to the subclass while simulation is enabled.
     /// </summary>
     protected virtual void Update()
     {
-        if (!simulationEnabled)
+        if (!SimulationEnabled)
         {
             return;
         }
 
-        TickCreature(Time.deltaTime);
+        AdvanceAge(Time.deltaTime);
+        if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
+    }
+
+    /// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
+    protected void AdvanceAge(float deltaTime)
+    {
+        if (!simulationEnabled || isDead || deltaTime <= 0f) return;
+        age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
+        if (age <= 0f) Die();
     }
 
     /// <summary>
@@ -233,7 +360,7 @@ public abstract class Creature : MonoBehaviour
     /// </summary>
     public void SetSimulationEnabled(bool value)
     {
-        simulationEnabled = value;
+        simulationEnabled = value && !isDead;
     }
 
     /// <summary>

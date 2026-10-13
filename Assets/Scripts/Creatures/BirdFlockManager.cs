@@ -20,6 +20,8 @@ public sealed class BirdFlockManager : MonoBehaviour
     private readonly List<BirdCreature> birds = new List<BirdCreature>(256);
     private readonly List<int> neighbors = new List<int>(256);
     private readonly BirdOctree octree = new BirdOctree();
+    private readonly List<Creature> foods = new List<Creature>(256);
+    private readonly List<Vector3> foodPositionsWS = new List<Vector3>(256);
     private BirdCreature[] activeBirds = new BirdCreature[256];
     private Vector3[] positionsWS = new Vector3[256];
     private Vector3[] velocitiesWS = new Vector3[256];
@@ -67,6 +69,8 @@ public sealed class BirdFlockManager : MonoBehaviour
         managers[registeredScene] = this;
         // Handles Play Mode with domain/scene reload disabled as well as ordinary scene loading.
         birds.Clear();
+        foods.Clear();
+        foodPositionsWS.Clear();
         foreach (GameObject root in gameObject.scene.GetRootGameObjects())
             foreach (BirdCreature bird in root.GetComponentsInChildren<BirdCreature>())
                 if (bird.isActiveAndEnabled) Register(bird);
@@ -77,6 +81,8 @@ public sealed class BirdFlockManager : MonoBehaviour
         if (managers.TryGetValue(registeredScene, out BirdFlockManager current) && current == this)
             managers.Remove(registeredScene);
         birds.Clear();
+        foods.Clear();
+        foodPositionsWS.Clear();
     }
 
     public void Register(BirdCreature bird)
@@ -104,6 +110,7 @@ public sealed class BirdFlockManager : MonoBehaviour
         {
             int previousCount = FlyingBirdCount;
             FlyingBirdCount = 0;
+            bool includeUntaggedFood = false;
             for (int i = birds.Count - 1; i >= 0; i--)
             {
                 BirdCreature bird = birds[i];
@@ -113,12 +120,14 @@ public sealed class BirdFlockManager : MonoBehaviour
                     continue;
                 }
                 if (!bird.CaptureFlightState(out Vector3 position, out Vector3 velocity)) continue;
+                includeUntaggedFood |= bird.DietTags == Creature.FoodTag.Everything && bird.HuntDesire > 0f;
                 int index = FlyingBirdCount++;
                 activeBirds[index] = bird;
                 positionsWS[index] = position;
                 velocitiesWS[index] = velocity;
             }
             for (int i = FlyingBirdCount; i < previousCount; i++) activeBirds[i] = null;
+            CreatureRegistry.SnapshotFood(gameObject.scene, includeUntaggedFood, foods, foodPositionsWS);
             octree.Rebuild(positionsWS, FlyingBirdCount);
             CandidateChecks = 0;
             using (queryMarker.Auto())
@@ -129,7 +138,8 @@ public sealed class BirdFlockManager : MonoBehaviour
                     octree.Query(positionsWS[i], bird.SearchRadius, neighbors);
                     CandidateChecks += octree.LastCandidateChecks;
                     nextVelocitiesWS[i] = bird.CalculateFlightVelocity(i, positionsWS, velocitiesWS, neighbors,
-                        BoundaryDirection(positionsWS[i]), boundaryWeight, simulationTime, deltaTime);
+                        BoundaryDirection(positionsWS[i]), boundaryWeight, simulationTime, deltaTime,
+                        bird.FoodDirection(positionsWS[i], foods, foodPositionsWS));
                 }
             }
             for (int i = 0; i < FlyingBirdCount; i++) activeBirds[i].ApplyFlightVelocity(nextVelocitiesWS[i], deltaTime);

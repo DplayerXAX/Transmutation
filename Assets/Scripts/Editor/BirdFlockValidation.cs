@@ -313,6 +313,36 @@ public static class BirdFlockValidation
                     + " ms/step, " + allocated + " allocated bytes over 500 steps, "
                     + (candidateChecks / 500) + "/" + (count * count) + " average candidate distance checks.");
                 Check(allocated == 0, "warmed simulation has no managed allocations");
+                var foodObjects = new List<GameObject>();
+                for (int i = 0; i < 12; i++)
+                {
+                    GameObject foodObject = new GameObject("Profiling Plant " + i);
+                    SceneManager.MoveGameObjectToScene(foodObject, scene);
+                    foodObject.transform.position = birds[0].FlightBody.position + new Vector3(i - 6f, -2f, 2f);
+                    var food = foodObject.AddComponent<CaveHarvestItem>();
+                    var fields = new SerializedObject(food);
+                    fields.FindProperty("foodTags").intValue = (int)Creature.FoodTag.Plant;
+                    fields.ApplyModifiedPropertiesWithoutUndo();
+                    foodObjects.Add(foodObject);
+                }
+                for (int i = 0; i < 30; i++) manager.SimulateStep(0.02f, 18f);
+                Check(birds[0].FoodTarget != null, "profiling includes live food attraction");
+                allocated = 0;
+                ticks = 0;
+                for (int i = 0; i < 500; i++)
+                {
+                    long memoryBefore = GC.GetAllocatedBytesForCurrentThread();
+                    watch.Restart();
+                    manager.SimulateStep(0.02f, 18f + i * 0.02f);
+                    watch.Stop();
+                    allocated += GC.GetAllocatedBytesForCurrentThread() - memoryBefore;
+                    ticks += watch.ElapsedTicks;
+                }
+                Check(allocated == 0, "warmed food snapshots and attraction allocate no managed memory");
+                reports.Add(count + " birds with 12 Plant targets: " +
+                    (ticks * 1000.0 / Stopwatch.Frequency / 500).ToString("F4") +
+                    " ms/step, " + allocated + " allocated bytes over 500 steps (fixed position snapshot benchmark).");
+                foreach (GameObject foodObject in foodObjects) Object.DestroyImmediate(foodObject);
                 foreach (BirdCreature bird in birds) Object.DestroyImmediate(bird.gameObject);
                 birds.Clear();
             }

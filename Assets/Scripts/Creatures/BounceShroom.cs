@@ -140,8 +140,9 @@ public sealed class BounceShroom : Creature
         if (surface != null) surface.SetBouncy(false);
     }
 
-    private void OnEnable()
+    protected override void OnEnable()
     {
+        base.OnEnable();
         if (surface != null) surface.SetBouncy(IsExpanded);
     }
 

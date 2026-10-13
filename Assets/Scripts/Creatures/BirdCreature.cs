@@ -19,6 +19,15 @@ public sealed class BirdCreature : Creature
     [Min(0f)] [SerializeField] private float cohesionWeight = 0.65f;
     [Min(0f)] [SerializeField] private float wanderWeight = 0.3f;
 
+    [Header("Food Attraction")]
+    [Tooltip("Maximum world-space distance to compatible food, including food outside the sky volume.")]
+    [Min(0f)] [SerializeField] private float huntRadius = 25f;
+    [Tooltip("Food steering weight, combined with all other flock weights. Zero disables seeking and eating.")]
+    [Min(0f)] [SerializeField] private float huntDesire = 2f;
+
+    [Header("Remains")]
+    [SerializeField] private BirdBones bonesPrefab;
+
     private Rigidbody body;
     private WebCapture webCapture;
     private BirdFlockManager manager;
@@ -30,7 +39,11 @@ public sealed class BirdCreature : Creature
     public bool IsWebCaptured => webCapture != null && webCapture.IsCaptured;
     public BirdFlockManager FlockManager => manager;
     public float SearchRadius => Mathf.Max(neighborRadius, separationDistance);
-    public bool IsFlying => isActiveAndEnabled && SimulationEnabled && !IsCarried && !IsBubbleCaptured && !IsWebCaptured && body != null && !body.isKinematic;
+    public float HuntRadius => huntRadius;
+    public float HuntDesire => huntDesire;
+    public Creature FoodTarget { get; private set; }
+    public BirdBones BonesPrefab => bonesPrefab;
+    public bool IsFlying => isActiveAndEnabled && SimulationEnabled && !IsDead && !IsConsumptionPending && !IsCarried && !IsBubbleCaptured && !IsWebCaptured && body != null && !body.isKinematic;
 
     protected override void InitializeCreature()
     {
@@ -46,8 +59,9 @@ public sealed class BirdCreature : Creature
         SetCreatureVelocity(lastHeadingWS * CruiseSpeed);
     }
 
-    private void OnEnable()
+    protected override void OnEnable()
     {
+        base.OnEnable();
         if (Application.isPlaying) EnsureRegistered();
     }
 
@@ -70,6 +84,68 @@ public sealed class BirdCreature : Creature
         base.OnDisable();
         if (manager != null) manager.Unregister(this);
         manager = null;
+        FoodTarget = null;
+    }
+
+    public override void Die()
+    {
+        if (IsDead) return;
+        Vector3 position = body != null ? body.position : transform.position;
+        Quaternion rotation = body != null ? body.rotation : transform.rotation;
+        Vector3 velocity = body != null && !body.isKinematic ? body.linearVelocity : Vector3.zero;
+        Vector3 angularVelocity = body != null && !body.isKinematic ? body.angularVelocity : Vector3.zero;
+        var scene = gameObject.scene;
+        bool wasWebCaptured = IsWebCaptured;
+        base.Die();
+        if (!Application.isPlaying) return;
+        if (IsCarried) Carrier.Release();
+        if (webCapture != null && webCapture.IsCaptured) webCapture.Release();
+        if (TryGetComponent<BubbleCapture>(out var bubble) && bubble.IsCaptured) bubble.Release();
+        // Remove the old collider and flock membership before activating the replacement.
+        gameObject.SetActive(false);
+        BirdBones bones = BirdBones.Spawn(bonesPrefab, scene, position, rotation, velocity, angularVelocity);
+        if (wasWebCaptured)
+        {
+            WebCapture capture = bones.GetComponent<WebCapture>();
+            if (capture == null) capture = bones.gameObject.AddComponent<WebCapture>();
+            capture.DelayCapture(0.5f);
+        }
+        Destroy(gameObject);
+    }
+
+    private void OnCollisionEnter(Collision collision) => EatContact(collision.collider);
+    private void OnCollisionStay(Collision collision) => EatContact(collision.collider);
+    private void OnTriggerEnter(Collider other) => EatContact(other);
+    private void OnTriggerStay(Collider other) => EatContact(other);
+
+    public override bool TryConsumeFood(Creature food) => IsFlying && huntDesire > 0f && base.TryConsumeFood(food);
+
+    private void EatContact(Collider other)
+    {
+        if (!IsFlying || huntDesire <= 0f || other == null) return;
+        Creature food = other.GetComponentInParent<Creature>();
+        if (food != null && food.gameObject.scene == gameObject.scene) TryConsumeFood(food);
+    }
+
+    internal Vector3 FoodDirection(Vector3 position, List<Creature> foods, List<Vector3> foodPositions)
+    {
+        FoodTarget = null;
+        if (huntDesire <= 0f || huntRadius <= 0f) return Vector3.zero;
+        float nearestSquared = huntRadius * huntRadius;
+        Vector3 direction = Vector3.zero;
+        for (int i = 0; i < foods.Count; i++)
+        {
+            Creature food = foods[i];
+            if (food == null || food.IsConsumptionPending || !CanEat(food)) continue;
+            Vector3 offset = foodPositions[i] - position;
+            float distanceSquared = offset.sqrMagnitude;
+            if (distanceSquared > nearestSquared) continue;
+            if (FoodTarget != null && distanceSquared == nearestSquared && food.GetInstanceID() > FoodTarget.GetInstanceID()) continue;
+            FoodTarget = food;
+            nearestSquared = distanceSquared;
+            direction = offset;
+        }
+        return direction;
     }
 
     public void SetFlightSeed(int seed)
@@ -91,7 +167,7 @@ public sealed class BirdCreature : Creature
     {
         positionWS = body != null ? body.position : transform.position;
         velocityWS = Vector3.zero;
-        if (!IsFlying) return false;
+        if (!IsFlying) { FoodTarget = null; return false; }
         velocityWS = body.linearVelocity;
         // A stationary drop or a collision must not strand a bird on the ground.
         if (velocityWS.sqrMagnitude < 0.0001f) velocityWS = lastHeadingWS * speedRange.x;
@@ -105,7 +181,8 @@ public sealed class BirdCreature : Creature
     }
 
     internal Vector3 CalculateFlightVelocity(int self, Vector3[] positionsWS, Vector3[] velocitiesWS,
-        List<int> neighbors, Vector3 boundaryDirectionWS, float boundaryWeight, float time, float deltaTime)
+        List<int> neighbors, Vector3 boundaryDirectionWS, float boundaryWeight, float time, float deltaTime,
+        Vector3 foodDirectionWS = default)
     {
         Vector3 position = positionsWS[self], velocity = velocitiesWS[self];
         Vector3 separation = Vector3.zero, alignment = Vector3.zero, center = Vector3.zero;
@@ -145,6 +222,7 @@ public sealed class BirdCreature : Creature
             Mathf.Cos(phase * 0.87f)) * 0.65f;
         acceleration += Steer(wander, velocity) * wanderWeight;
         acceleration += Steer(boundaryDirectionWS, velocity) * boundaryWeight;
+        acceleration += Steer(foodDirectionWS, velocity) * huntDesire;
         Vector3 nextVelocity = velocity + Vector3.ClampMagnitude(acceleration, steeringStrength) * deltaTime;
         float speed = nextVelocity.magnitude;
         Vector3 heading = speed > 0.0001f ? nextVelocity / speed : lastHeadingWS;
@@ -169,5 +247,14 @@ public sealed class BirdCreature : Creature
         steeringStrength = Mathf.Max(0.1f, steeringStrength);
         neighborRadius = Mathf.Max(0.1f, neighborRadius);
         separationDistance = Mathf.Max(0.01f, separationDistance);
+        huntRadius = Mathf.Max(0f, huntRadius);
+        huntDesire = Mathf.Max(0f, huntDesire);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = new Color(1f, 0.7f, 0.15f, 0.6f);
+        Gizmos.DrawWireSphere(transform.position, huntRadius);
+        if (FoodTarget != null) Gizmos.DrawLine(transform.position, FoodTarget.transform.position);
     }
 }

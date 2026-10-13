@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5901052608009315345}
   - component: {fileID: 8547163191073687528}
   - component: {fileID: 5093084902333548627}
+  - component: {fileID: 8764616129875264311}
   m_Layer: 0
   m_Name: BirdCreature
   m_TagString: Untagged
@@ -96,7 +97,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BirdCreature
   creatureName: Bird
+  foodTags: 1
+  dietTags: 2
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -111,6 +117,21 @@ MonoBehaviour:
   alignmentWeight: 1
   cohesionWeight: 0.65
   wanderWeight: 0.3
+  huntRadius: 25
+  huntDesire: 4
+  bonesPrefab: {fileID: 6826449762699514734, guid: 828fdddfb5dbd7341a721bf20128e4a9, type: 3}
+--- !u!114 &8764616129875264311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1589476739031209822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e1ddf403e7c58cf44b06c6f7101e407a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebCapture
 --- !u!1 &7243460251903097159
 GameObject:
   m_ObjectHideFlags: 0

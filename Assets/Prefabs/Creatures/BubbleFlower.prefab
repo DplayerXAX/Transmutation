@@ -105,7 +105,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BubbleFlower
   creatureName: Bubble Flower
+  foodTags: 2
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12

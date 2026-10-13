@@ -149,7 +149,7 @@ public sealed class FireBubble : Creature
 
     private void FixedUpdate()
     {
-        if (bubbleBody == null || transformationStarted)
+        if (IsDead || bubbleBody == null || transformationStarted)
             return;
 
         if (SimulationEnabled && !descending)

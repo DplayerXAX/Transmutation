@@ -16,6 +16,9 @@ public sealed class WebCapture : MonoBehaviour
 
     public bool CanCapture => !IsCaptured && Time.time >= eligibleAfter;
 
+    /// <summary>Lets freshly released/transformed remains clear the original silk before recapture.</summary>
+    internal void DelayCapture(float seconds) => eligibleAfter = Mathf.Max(eligibleAfter, Time.time + Mathf.Max(0f, seconds));
+
     public bool Attach(SkyWeb web, Rigidbody body, Vector3 contactPoint)
     {
         if (!CanCapture || web == null || body == null || body.gameObject != gameObject || body.isKinematic) return false;

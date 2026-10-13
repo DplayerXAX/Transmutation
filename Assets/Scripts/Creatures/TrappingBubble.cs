@@ -44,7 +44,7 @@ public sealed class TrappingBubble : Creature
     private BubbleFlower flower;
     private GameObject shooter;
     private Vector3 launchVelocity;
-    private float age, riseSeconds, lifetimeSeconds, phase;
+    private float elapsedTime, riseSeconds, lifetimeSeconds, phase;
     private bool popped;
 
     public BubbleCapture Occupant { get; private set; }
@@ -53,7 +53,7 @@ public sealed class TrappingBubble : Creature
     public float ReleaseImmunity => releaseImmunity;
     public float EscapeHeight => escapeHeight;
     public float Radius => solidCollider != null ? solidCollider.radius * Mathf.Abs(transform.lossyScale.x) : initialDiameter * 0.5f;
-    public float Age => age;
+    public float ElapsedTime => elapsedTime;
     public bool RequiresExplicitInteraction { get => requireExplicitInteractionToPop; set => requireExplicitInteractionToPop = value; }
     public override bool CanBeCarried => false;
     public override string PickupActionPrompt => popped ? null : "Pop bubble";
@@ -106,17 +106,17 @@ public sealed class TrappingBubble : Creature
     {
         if (popped || !SimulationEnabled || deltaTime <= 0f) return;
         if (body == null) InitializeCreature();
-        age += deltaTime;
+        elapsedTime += deltaTime;
         RestoreExpiredIgnores();
-        if (age >= lifetimeSeconds) { Pop(); return; }
+        if (elapsedTime >= lifetimeSeconds) { Pop(); return; }
         if (IsOccupied) Occupant.Follow(body.position);
         Vector3 velocity = Vector3.zero;
-        if (age < riseSeconds)
+        if (elapsedTime < riseSeconds)
         {
             float angularSpeed = swayFrequency * Mathf.PI * 2f;
-            velocity = launchVelocity * Mathf.Exp(-age / Mathf.Max(0.01f, launchDecaySeconds)) + Vector3.up * upwardSpeed;
-            velocity += new Vector3(Mathf.Cos(age * angularSpeed + phase), 0f,
-                Mathf.Sin(age * angularSpeed + phase)) * (swayDistance * angularSpeed);
+            velocity = launchVelocity * Mathf.Exp(-elapsedTime / Mathf.Max(0.01f, launchDecaySeconds)) + Vector3.up * upwardSpeed;
+            velocity += new Vector3(Mathf.Cos(elapsedTime * angularSpeed + phase), 0f,
+                Mathf.Sin(elapsedTime * angularSpeed + phase)) * (swayDistance * angularSpeed);
         }
         // Unity's contact solver stops this velocity against walls and ceilings.
         body.linearVelocity = velocity;
@@ -134,7 +134,7 @@ public sealed class TrappingBubble : Creature
     {
         if (target == null || target == gameObject || !target.activeInHierarchy) return true;
         if (flower != null && target == flower.gameObject) return true;
-        if (target == shooter && age < shooterProtection) return true;
+        if (target == shooter && elapsedTime < shooterProtection) return true;
         Creature creature = target.GetComponent<Creature>();
         return creature != null && (creature is TrappingBubble || creature is SkyWeb || creature.IsCarried ||
             creature.IsBubbleCaptured || !creature.isActiveAndEnabled);

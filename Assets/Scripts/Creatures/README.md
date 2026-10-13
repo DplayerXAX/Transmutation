@@ -10,8 +10,19 @@ Shaders for them are in `Assets/Shaders/Creatures`.
 - **Identity:** `creatureName` (shown in prompts and the meditation journal).
 - **Lifecycle:** subclasses override `InitializeCreature()` (instead of Awake) and `TickCreature(dt)`
   (called each frame while `simulationEnabled`). `SetSimulationEnabled` pauses the logic only.
+- **Lifespan:** `Age` is remaining lifetime (default 40), spent at `Age Rate` per second
+  (default 0) while simulation runs. At zero, `Die()` records death and disables logic.
+  `IsDead` prevents capture release from resuming a dead creature. Physics remains active.
+  `Died` notifies independent components once, before subclass remains; listener exceptions
+  are isolated so normal death behavior continues.
+- **Consumption:** `Consume(consumer)` is an overridable effects hook with an empty base implementation.
+  It does not call `Die()` or destroy anything. `TryConsumeFood(food)` checks diet and claims
+  food once, calls its consumption hook, then separately calls death and removes the original.
 - **Heat:** a shared float. `AddHeat`, `SetHeat`, `SpendHeat` (returns the amount actually removed),
   and the `OnHeatChanged()` hook.
+- **Diet:** inherited food tags, accepted diet tags, and a same-type eating option.
+  `CanEat(target)` checks shared dietary compatibility; individual creatures can add further conditions.
+  See [CreatureDietREADME.md](CreatureDietREADME.md) for setup and examples.
 - **Interaction:** `ReceiveInteraction(CreatureInteraction)` is called on left click.
   `InteractionPrompt` (verb, e.g. "Ignite") and `CarriedPrompt` feed the prompt HUD. Null = no prompt.
   `CanUseWhileCarried` explicitly opts into held-use priority. That use consumes left-click even on cooldown.
@@ -44,6 +55,10 @@ The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects inject
 
 ## Other creatures
 
+**Corrupt Seed** is passive Plant food that infects its consumer through a separate
+component. Host death produces 3-5 seeds alongside normal remains, accumulating seed
+and host food flags across generations. See [CorruptSeedREADME.md](CorruptSeedREADME.md).
+
 **BubbleFlower** — a stationary flower emitting trapping bubbles every 3–6 seconds. While held through
 the existing carry system, left-click shoots toward the crosshair with a 0.5-second cooldown and stops
 automatic emission. `TrappingBubble` is separate from `FireBubble`; neither changes the fire cycle.
@@ -53,7 +68,9 @@ See [BubbleFlowerPrototype.md](BubbleFlowerPrototype.md) for setup, controls, an
 Birds register automatically with a scene-local `BirdFlockManager`, which creates a pooled
 octree and snapshots all flight state before movement. Spawn areas only place initial
 clusters; groups merge when they meet. See [BirdFlockPrototype.md](BirdFlockPrototype.md)
-for setup, controls, and validation.
+for setup, controls, and validation. Food attraction is another weighted flock contribution.
+Bird death creates passive `BirdBones` (Matter), releases capture/carry attachments, and
+removes the bird. Bones fall, settle, and can be carried or consumed by compatible creatures.
 
 **FuzzCreature** — a sticky furry blob. Inside `noticeRadius` (6 m) it joins a single-file chain behind the
 player (static `Chain` list); each one follows the one in front, joined by a sagging goo strand. Leaves the
