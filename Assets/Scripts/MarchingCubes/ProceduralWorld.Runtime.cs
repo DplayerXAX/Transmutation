@@ -73,6 +73,8 @@ public sealed partial class ProceduralWorld
     public bool GenerationComplete => LayoutReady && chunksBuilt == chunksTotal;
     public bool UpdatesPending => batch != null || pending.Count > 0 || incoming.Count > 0;
     public int SinkholeCount => sinkholes == null ? 0 : sinkholes.Length;
+    /// <summary>Size of the world on x and z (metres), centred on this transform.</summary>
+    public Vector2 WorldSize => worldSize;
     public int ModifiedSampleCount => modifications.Count;
     public int PendingSampleCount => pending.Count + incoming.Count;
     public int ActiveWorkers => workers.Count;

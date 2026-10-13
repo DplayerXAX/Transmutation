@@ -82,7 +82,11 @@ public sealed class TentacleCreature : Creature
     [SerializeField] private bool canClimbUp;
     [SerializeField] private bool canHang;
 
-    private void OnEnable() => FirstPersonBody.LimbsPosed += StickToArms;
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        FirstPersonBody.LimbsPosed += StickToArms;
+    }
     private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
 
     /// <summary>
@@ -94,7 +98,7 @@ public sealed class TentacleCreature : Creature
         if (!IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
-            if if (tentacle.touchingHand || tentacle.planted || tentacle.stepping) continue;
+            if (tentacle.touchingHand || tentacle.planted || tentacle.stepping) continue;
             tentacle.foot = CoilPoint(tentacle);
             LayoutTentacle(tentacle);
         }
@@ -394,40 +398,40 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle tentacle = tentacles[i];
-if (tentacle.touchingHand && IsPetted)
-{
-    // Held up to the petting hand; no stepping until it lets go.
-    tentacle.foot = FootPosition(tentacle, deltaTime);
-    LayoutTentacle(tentacle);
-    continue;
-}
+            if (tentacle.touchingHand && IsPetted)
+            {
+                // Held up to the petting hand; no stepping until it lets go.
+                tentacle.foot = FootPosition(tentacle, deltaTime);
+                LayoutTentacle(tentacle);
+                continue;
+            }
 
-if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
-{
-    // Back on the hand after a climb: let go of the wall and coil up again.
-    if (tentacle.stepping) stepping--;
-    tentacle.planted = tentacle.stepping = false;
-}
+            if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
+            {
+                // Back on the hand after a climb: let go of the wall and coil up again.
+                if (tentacle.stepping) stepping--;
+                tentacle.planted = tentacle.stepping = false;
+            }
 
-bool hasIdeal = FindIdealHold(
-    tentacle,
-    out Vector3 idealPoint,
-    out Vector3 idealNormal,
-    out Collider idealCollider
-);
+            bool hasIdeal = FindIdealHold(
+                tentacle,
+                out Vector3 idealPoint,
+                out Vector3 idealNormal,
+                out Collider idealCollider
+            );
 
-// Generated colliders retain identity when their mesh changes;
-// a cached world point may no longer exist.
-if (tentacle.planted &&
-    (tentacle.holdCollider == null ||
-    (tentacle.holdCollider.GetComponent<ProceduralWorldChunk>() != null &&
-    !tentacle.holdCollider.Raycast(
-        new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal),
-        out _,
-        0.24f))))
-{
-    tentacle.planted = false;
-}
+            // Generated colliders retain identity when their mesh changes;
+            // a cached world point may no longer exist.
+            if (tentacle.planted &&
+                (tentacle.holdCollider == null ||
+                (tentacle.holdCollider.GetComponent<ProceduralWorldChunk>() != null &&
+                !tentacle.holdCollider.Raycast(
+                    new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal),
+                    out _,
+                    0.24f))))
+            {
+                tentacle.planted = false;
+            }
 
             if (tentacle.stepping)
             {
