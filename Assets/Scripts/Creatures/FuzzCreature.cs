@@ -32,6 +32,13 @@ public sealed class FuzzCreature : Creature
     [Min(0f)] [SerializeField] private float hopHeight = 0.18f;
     [Min(0.1f)] [SerializeField] private float hopRate = 2.2f;
     [SerializeField] private LayerMask groundLayers = (1 << 0) | (1 << 7) | (1 << 8);
+    [Tooltip("Height of the happy hop when petted.")]
+    [Min(0f)] [SerializeField] private float petHopHeight = 0.4f;
+    [Min(0.1f)] [SerializeField] private float petHopTime = 0.55f;
+
+    // Petting: time into the current happy hop (negative = not hopping) and time until the next one.
+    private float petHop = -1f;
+    private float nextPetHop;
 
     [Header("Look")]
     [SerializeField] private Material furMaterial;
@@ -111,6 +118,13 @@ public sealed class FuzzCreature : Creature
         {
             velocity = Vector3.zero;
         }
+        else if (IsPetted)
+        {
+            // Stays under the hand and turns towards it.
+            Vector3 toHand = Vector3.ProjectOnPlane(PetPoint - position, Vector3.up);
+            if (toHand.sqrMagnitude > 1e-4f)
+                FaceCreature(Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toHand.normalized, Vector3.up), 1f - Mathf.Exp(-4f * deltaTime)));
+        }
         else if (following)
         {
             // Rope-like follow: stay `spacing` behind whoever is ahead, on the line towards them.
@@ -143,6 +157,20 @@ public sealed class FuzzCreature : Creature
 
         UpdateBlob(deltaTime);
         UpdateGoo();
+    }
+
+    // ---------------- Petting ----------------
+
+    // A hop straight away when the hand first touches it, and a last one when the hand lets go.
+    protected override void OnPetStart()
+    {
+        petHop = 0f;
+        nextPetHop = 1.2f;
+    }
+
+    protected override void OnPetEnd()
+    {
+        if (petHop < 0f) petHop = 0f;
     }
 
     // ---------------- Chain ----------------
@@ -207,12 +235,39 @@ public sealed class FuzzCreature : Creature
         hopPhase += deltaTime * hopRate * Mathf.Lerp(0.6f, 2.2f, moving) * Mathf.PI;
         float hop = Mathf.Abs(Mathf.Sin(hopPhase)) * hopHeight * moving;
         // Squash on landing, stretch in the air.
-        squash = Mathf.Lerp(squash, 1f - 0.25f * (1f - Mathf.Abs(Mathf.Sin(hopPhase))) * moving + 0.08f * Mathf.Sin(Time.time * 2f + seed), 1f - Mathf.Exp(-14f * deltaTime));
+        float squashTarget = 1f - 0.25f * (1f - Mathf.Abs(Mathf.Sin(hopPhase))) * moving + 0.08f * Mathf.Sin(Time.time * 2f + seed);
+
+        // Petted: it squishes down under each stroke of the hand and now and then hops up happily,
+        // more often the more it likes the player.
+        if (IsPetted)
+        {
+            squashTarget = 0.86f + 0.12f * Mathf.Sin(Time.time * 4.2f);
+            nextPetHop -= deltaTime;
+            if (petHop < 0f && nextPetHop <= 0f)
+            {
+                petHop = 0f;
+                nextPetHop = Mathf.Lerp(2.2f, 0.9f, Affection) + Random.Range(0f, 0.6f);
+            }
+        }
+        if (petHop >= 0f)
+        {
+            float u = petHop / petHopTime;
+            petHop += deltaTime;
+            if (u >= 1f) petHop = -1f;
+            else if (u < 0.18f) squashTarget = 0.62f;                       // crouch to jump
+            else if (u < 0.85f)
+            {
+                hop += Mathf.Sin((u - 0.18f) / 0.67f * Mathf.PI) * petHopHeight; // up and down
+                squashTarget = 1.25f;                                         // stretched in the air
+            }
+            else squashTarget = 0.7f;                                         // squash on landing
+        }
+        squash = Mathf.Lerp(squash, squashTarget, 1f - Mathf.Exp(-(petHop >= 0f ? 22f : 14f) * deltaTime));
 
         if (best < float.MaxValue)
         {
             float targetY = ground.y + radius * squash + groundClearance + hop;
-            float y = Mathf.Lerp(transform.position.y, targetY, 1f - Mathf.Exp(-18f * deltaTime));
+            float y = Mathf.Lerp(transform.position.y, targetY, 1f - Mathf.Exp(-(petHop >= 0f ? 30f : 18f) * deltaTime));
             MoveCreature(Vector3.up * (y - transform.position.y));
         }
         else

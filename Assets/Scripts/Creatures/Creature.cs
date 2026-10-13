@@ -29,24 +29,65 @@ public readonly struct CreatureInteraction
 /// <summary>
 /// Minimal base type shared by every interactive creature in the project.
 ///
-/// This class owns common lifecycle, interaction, and shared carry movement.
-/// Blooming, movement decisions, feeding, and other specific rules belong in subclasses
+/// This class owns common lifecycle, interaction, shared carry movement, diet, and feeding handoff.
+/// Blooming, movement decisions, nutrition effects, and other specific rules belong in subclasses
 /// or separate components rather than being added to this base class.
 /// </summary>
 [DisallowMultipleComponent]
 public abstract class Creature : MonoBehaviour
 {
-    /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
-    public static event System.Action<Creature> Activated;
-    protected virtual void OnEnable() => Activated?.Invoke(this);
+/// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
+public static event System.Action<Creature> Activated;
+protected virtual void OnEnable() => Activated?.Invoke(this);
+
+/// <summary>Shared food categories. Combine tags; Everything also covers future categories.</summary>
+[System.Flags]
+public enum FoodTag
+{
+    None = 0,
+    Meat = 1,
+    Plant = 2,
+    Matter = 4,
+    Everything = -1
+}
 
     [Header("Creature Identity")]
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
 
+    [Header("Food and Diet")]
+    [Tooltip("What this creature counts as when another creature checks its diet. Multiple tags can be selected.")]
+    [SerializeField] private FoodTag foodTags = FoodTag.None;
+
+    [Tooltip("Food tags this creature accepts. Everything includes untagged creatures, but still respects self and same-type exclusions.")]
+    [SerializeField] private FoodTag dietTags = FoodTag.None;
+
+    [Tooltip("Allows eating another creature with the same concrete script class, provided its food tags also match the diet.")]
+    [SerializeField] private bool canEatSameType = false;
+
     [Header("Runtime")]
     [Tooltip("When disabled, this creature remains in the scene but does not run its creature logic.")]
     [SerializeField] private bool simulationEnabled = true;
+
+    [Header("Lifespan")]
+    [Tooltip("Remaining lifetime. Counts down only while creature simulation is enabled.")]
+    [Min(0f)] [SerializeField] private float age = 40f;
+    [Tooltip("Lifetime spent per second. Zero means this creature does not age automatically.")]
+    [Min(0f)] [SerializeField] private float ageRate = 0f;
+
+    private bool isDead;
+    private bool consumptionPending;
+
+    public float Age => age;
+    public float AgeRate => ageRate;
+    public bool IsDead => isDead;
+    public bool IsConsumptionPending => consumptionPending;
+
+    /// <summary>
+    /// Raised once after death is recorded, while the host still exists and before subclass remains.
+    /// Listeners react independently; a failing listener cannot interrupt other death behavior.
+    /// </summary>
+    public event System.Action<Creature> Died;
 
     [Header("Shared Parameters")]
     [Tooltip("Heat currently stored by this creature. Kept as a float so small changes over time are not lost.")]
@@ -56,11 +97,82 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Editor-facing name of this creature.</summary>
     public string CreatureName => creatureName;
 
+    /// <summary>Food categories this creature provides.</summary>
+    public FoodTag FoodTags => foodTags;
+
+    /// <summary>Food categories this creature accepts.</summary>
+    public FoodTag DietTags => dietTags;
+
+    /// <summary>Whether the diet may include other instances of this concrete creature class.</summary>
+    public bool CanEatSameType => canEatSameType;
+
+    /// <summary>
+    /// Checks shared dietary compatibility only. Individual eating behaviors must also check
+    /// their own conditions, such as readiness, distance, cooldowns, or the target's state.
+    /// </summary>
+    public bool CanEat(Creature target)
+    {
+        if (target == null || target == this)
+        {
+            return false;
+        }
+
+        if (!canEatSameType && target.GetType() == GetType())
+        {
+            return false;
+        }
+
+        if (dietTags == FoodTag.Everything)
+        {
+            return true;
+        }
+
+        return (dietTags & target.foodTags) != FoodTag.None;
+    }
+
     /// <summary>For things spawned at runtime, which have no inspector to set the name.</summary>
     protected void SetCreatureName(string value) => creatureName = value;
 
+    /// <summary>For procedural creature placeholders; authored prefabs use Inspector food fields.</summary>
+    protected void SetFoodAndDiet(FoodTag food, FoodTag diet)
+    {
+        foodTags = food;
+        dietTags = diet;
+    }
+
+    /// <summary>Stops creature logic. Overrides should call base and guard repeated death.</summary>
+    public virtual void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+        age = 0f;
+        SetSimulationEnabled(false);
+        if (Died == null) return;
+        foreach (System.Action<Creature> listener in Died.GetInvocationList())
+        {
+            try { listener(this); }
+            catch (System.Exception exception) { Debug.LogException(exception, this); }
+        }
+    }
+
+    /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
+    public virtual void Consume(Creature consumer) { }
+
+    /// <summary>Completes an eating event once, even when destruction is deferred by Unity.</summary>
+    public virtual bool TryConsumeFood(Creature food)
+    {
+        if (!Application.isPlaying || !isActiveAndEnabled || !SimulationEnabled || IsDead || consumptionPending ||
+            food == null || !food.isActiveAndEnabled || food.consumptionPending || !CanEat(food)) return false;
+        food.consumptionPending = true;
+        CreatureRegistry.Unregister(food);
+        food.Consume(this);
+        if (food != null) food.Die();
+        if (food != null) Destroy(food.gameObject);
+        return true;
+    }
+
     /// <summary>Whether this creature currently runs its simulation logic.</summary>
-    public bool SimulationEnabled => simulationEnabled;
+    public bool SimulationEnabled => simulationEnabled && !isDead;
 
     /// <summary>Heat currently stored by this creature.</summary>
     public float Heat => heat;
@@ -69,6 +181,16 @@ public abstract class Creature : MonoBehaviour
     public PlayerCreatureCarrier Carrier { get; private set; }
 
     public bool IsCarried => Carrier != null;
+
+    /// <summary>Whether this creature can currently be picked up.</summary>
+    public virtual bool CanBeCarried => true;
+
+    /// <summary>Left-click uses this creature before the cursor target while held.</summary>
+    public virtual bool CanUseWhileCarried => false;
+    /// <summary>Alternate pickup action, such as popping instead of carrying.</summary>
+    public virtual string PickupActionPrompt => null;
+    public virtual void ReceivePickupAttempt(PlayerCreatureCarrier carrier) { }
+    public bool IsBubbleCaptured => TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured;
 
     [Header("Carry Physics")]
     [Min(0f)] [SerializeField] private float carryStrength = 45f;
@@ -86,7 +208,9 @@ public abstract class Creature : MonoBehaviour
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
-        if (carrier == null || target == null || IsCarried || !isActiveAndEnabled) return false;
+        if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
+        // Silk must release its movement claim before carry physics takes ownership.
+        if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
         movementBody = GetComponent<Rigidbody>();
         if (movementBody == null)
         {
@@ -147,6 +271,11 @@ public abstract class Creature : MonoBehaviour
     {
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody == null) return;
+        if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured)
+        {
+            capture.SetReleasePhysics(movementBody, isKinematic, useGravity);
+            return;
+        }
         if (IsCarried)
         {
             releaseKinematic = isKinematic;
@@ -160,25 +289,36 @@ public abstract class Creature : MonoBehaviour
     // Existing autonomous movement stays unchanged when free. Carry ownership is checked here.
     protected void MoveCreature(Vector3 displacement)
     {
-        if (!IsCarried) transform.position += displacement;
+        if (!IsCarried && !IsBubbleCaptured) transform.position += displacement;
     }
 
     protected void SetCreatureHorizontalVelocity(Vector3 velocity)
     {
-        if (IsCarried) return;
+        if (IsCarried || IsBubbleCaptured) return;
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody != null && !movementBody.isKinematic)
             movementBody.linearVelocity = new Vector3(velocity.x, movementBody.linearVelocity.y, velocity.z);
     }
 
+    /// <summary>Full world-space flight velocity. Carry movement always retains ownership.</summary>
+    protected void SetCreatureVelocity(Vector3 velocity)
+    {
+        if (IsCarried || IsBubbleCaptured) return;
+        if (movementBody == null) movementBody = GetComponent<Rigidbody>();
+        if (movementBody != null && !movementBody.isKinematic)
+            movementBody.linearVelocity = velocity;
+    }
+
     protected void FaceCreature(Quaternion rotation)
     {
-        if (!IsCarried) transform.rotation = rotation;
+        if (!IsCarried && !IsBubbleCaptured) transform.rotation = rotation;
     }
 
     protected virtual void OnDisable()
     {
+        CreatureRegistry.Unregister(this);
         if (IsCarried) Carrier.Release();
+        if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
 
     /// <summary>
@@ -190,18 +330,36 @@ public abstract class Creature : MonoBehaviour
         InitializeCreature();
     }
 
+    protected virtual void OnEnable()
+    {
+        if (Application.isPlaying) CreatureRegistry.Register(this);
+    }
+
     /// <summary>
     /// Unity frame update entry point.
     /// Passes delta time to the subclass while simulation is enabled.
     /// </summary>
     protected virtual void Update()
     {
-        if (!simulationEnabled)
+        if (!SimulationEnabled)
         {
             return;
         }
 
-        TickCreature(Time.deltaTime);
+AdvanceAge(Time.deltaTime);
+if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
+
+// Affection fades slowly once the petting stops.
+if (!IsPetted && Affection > 0f)
+    Affection = Mathf.Max(0f, Affection - Time.deltaTime * affectionFade);
+}
+
+/// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
+protected void AdvanceAge(float deltaTime)
+{
+    if (!simulationEnabled || isDead || deltaTime <= 0f) return;
+    age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
+    if (age <= 0f) Die();
     }
 
     /// <summary>
@@ -210,7 +368,7 @@ public abstract class Creature : MonoBehaviour
     /// </summary>
     public void SetSimulationEnabled(bool value)
     {
-        simulationEnabled = value;
+        simulationEnabled = value && !isDead;
     }
 
     /// <summary>
@@ -275,6 +433,54 @@ public abstract class Creature : MonoBehaviour
     /// Extra control hint shown while the player carries this creature, or null for none.
     /// </summary>
     public virtual string CarriedPrompt => null;
+
+    // ---------------- Petting (the player's left hand) ----------------
+
+    [Header("Petting")]
+    [Tooltip("Affection gained per second of petting (0..1 scale).")]
+    [Min(0f)] [SerializeField] private float affectionGain = 0.35f;
+    [Tooltip("Affection lost per second after petting stops.")]
+    [Min(0f)] [SerializeField] private float affectionFade = 0.05f;
+
+    /// <summary>The player's hand is stroking this creature right now.</summary>
+    public bool IsPetted { get; private set; }
+    /// <summary>0..1: grows while petted and slowly fades. Behaviours can read it (follow, calm down, glow...).</summary>
+    public float Affection { get; private set; }
+    /// <summary>Where the hand touches the creature, and the surface direction there.</summary>
+    public Vector3 PetPoint { get; private set; }
+    public Vector3 PetNormal { get; private set; } = Vector3.up;
+
+    /// <summary>Called by the player's petting hand when it starts stroking this creature.</summary>
+    public void BeginPet(Vector3 point, Vector3 normal)
+    {
+        IsPetted = true;
+        PetPoint = point;
+        PetNormal = normal;
+        OnPetStart();
+    }
+
+    /// <summary>Called every frame while the hand keeps stroking.</summary>
+    public void ContinuePet(Vector3 point, Vector3 normal, float deltaTime)
+    {
+        if (!IsPetted) return;
+        PetPoint = point;
+        PetNormal = normal;
+        Affection = Mathf.Min(1f, Affection + deltaTime * affectionGain);
+        OnPet(deltaTime);
+    }
+
+    /// <summary>Called when the hand lets go.</summary>
+    public void EndPet()
+    {
+        if (!IsPetted) return;
+        IsPetted = false;
+        OnPetEnd();
+    }
+
+    /// <summary>Hooks for each creature's own reaction to being petted (all optional).</summary>
+    protected virtual void OnPetStart() { }
+    protected virtual void OnPet(float deltaTime) { }
+    protected virtual void OnPetEnd() { }
 
     /// <summary>
     /// Receives notification that this creature has met another creature.

@@ -1,0 +1,72 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &893680263479623007
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2425543354228256293}
+  - component: {fileID: 6567200558255696930}
+  m_Layer: 0
+  m_Name: SkyWeb
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2425543354228256293
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893680263479623007}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6567200558255696930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893680263479623007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45bb07c9792b07347b6e67d9309695c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkyWeb
+  creatureName: Sky Web
+  simulationEnabled: 1
+  heat: 0
+  carryStrength: 45
+  carryDamping: 12
+  maximumCarryAcceleration: 60
+  maximumCarryDistance: 8
+  maximumRadius: 6
+  webScale: 1
+  cellCount: 7
+  maximumStrands: 256
+  maximumPatches: 6
+  seed: 37
+  supportThickness: 0.035
+  silkThickness: 0.008
+  clusterSpacing: 0.72
+  clusterSpread: 0.18
+  cellSize: 0.14
+  looseStrandsPerCell: 3
+  growthDuration: 45
+  strandMaterial: {fileID: 2100000, guid: 2b31601c7db3ec242a1aa1edd1768523, type: 2}
+  patchMaterial: {fileID: 2100000, guid: 2420b8a7a23534244bad2b84fdee0aac, type: 2}
+  trappingLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  contactPadding: 0.025

@@ -33,6 +33,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private string pickUpKeyHintFormat = "[{0}]  Pick up";
     [SerializeField] private string dropKeyHintFormat = "[{0}]  Drop";
     [SerializeField] private string interactHintFormat = "[LMB]  {0}";
+    [SerializeField] private string petHint = "[Hold LMB]  Pet";
+    [SerializeField] private string pettingHint = "Petting...";
+    private PlayerCreaturePetter petter;
     [SerializeField] private string climbHint = "[Hold W]  Climb";
     [SerializeField] private string climbJumpHint = "[Space]  Jump off wall";
     [SerializeField] private string wallRunHint = "[Hold W]  Wall run";
@@ -48,6 +51,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     {
         if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (interactor == null) interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
+        petter = FindFirstObjectByType<PlayerCreaturePetter>();
         if (traversal == null) traversal = FindFirstObjectByType<AdvancedFirstPersonTraversal>();
         if (handClimber == null) handClimber = FindFirstObjectByType<HandClimber>();
         BuildCanvas();
@@ -74,12 +78,39 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     /// <summary>Highest priority first: what the player is doing, then what they could do.</summary>
     private void ChoosePrompt(ref string title, ref string hint)
     {
+        BubbleCapture capture = carrier != null ? carrier.GetComponentInParent<BubbleCapture>() : null;
+        if (capture != null && capture.IsCaptured)
+        {
+            title = "TRAPPED IN BUBBLE";
+            hint = "[Space] Escape";
+            Creature held = carrier.CarriedCreature;
+            if (held != null)
+            {
+                if (held.CanUseWhileCarried && !string.IsNullOrEmpty(held.CarriedPrompt)) hint += "\n" + held.CarriedPrompt;
+                hint += "\n" + DropHint();
+            }
+            return;
+        }
         if (carrier != null && carrier.CarriedCreature != null)
         {
             title = NameOf(carrier.CarriedCreature);
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
+            if (!carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
+            {
+                Creature target = interactor.FindCreature();
+                if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))
+                    hint = string.Format(interactHintFormat, target.InteractionPrompt) + "\n" + hint;
+            }
+            return;
+        }
+
+        if (petter == null) petter = FindFirstObjectByType<PlayerCreaturePetter>();
+        if (petter != null && petter.IsPetting)
+        {
+            title = NameOf(petter.Petted);
+            hint = pettingHint;
             return;
         }
 
@@ -101,17 +132,26 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         string interactVerb = interactTarget != null ? interactTarget.InteractionPrompt : null;
         if (string.IsNullOrEmpty(interactVerb)) interactTarget = null;
 
-        if (carryTarget != null || interactTarget != null)
+        Creature petTarget = petter != null && petter.isActiveAndEnabled ? petter.FindPettable() : null;
+        if (carryTarget != null || interactTarget != null || petTarget != null)
         {
-            title = NameOf(carryTarget != null ? carryTarget : interactTarget);
+            Creature shown = carryTarget != null ? carryTarget : interactTarget != null ? interactTarget : petTarget;
+            title = NameOf(shown);
+            string petLine = petTarget == shown ? petHint : null;
+            if (carryTarget == null && interactTarget == null)
+            {
+                hint = petLine;
+                return;
+            }
             if (interactTarget != null && carryTarget != null && interactTarget != carryTarget)
                 carryTarget = null; // Different targets: favour the one left-click reaches.
 
             string interactLine = interactTarget != null ? string.Format(interactHintFormat, interactVerb) : null;
-            string carryLine = carryTarget != null ? PickUpHint() : null;
+            string carryLine = carryTarget != null ? PickupTargetHint(carryTarget) : null;
             hint = interactLine != null && carryLine != null
                 ? interactLine + "    " + carryLine
                 : interactLine ?? carryLine;
+            if (petLine != null) hint += "    " + petLine;
             return;
         }
 
@@ -128,13 +168,20 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         }
     }
 
-    private bool UsesToggleKey => carrier != null && carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleKey;
+    private bool UsesToggleKey => carrier != null && carrier.InputMode != PlayerCreatureCarrier.CarryInput.HoldRightMouse;
+
+    // Click right to pick up and again to drop, or a key in Toggle Key mode.
+    private string ToggleName =>
+        carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse ? "RMB" : carrier.ToggleKeyBinding.ToString();
 
     private string PickUpHint() =>
-        UsesToggleKey ? string.Format(pickUpKeyHintFormat, carrier.ToggleKeyBinding) : carryHint;
+        UsesToggleKey ? string.Format(pickUpKeyHintFormat, ToggleName) : carryHint;
+
+    private string PickupTargetHint(Creature target) => string.IsNullOrEmpty(target.PickupActionPrompt)
+        ? PickUpHint() : "[" + (UsesToggleKey ? ToggleName : "RMB") + "] " + target.PickupActionPrompt;
 
     private string DropHint() =>
-        UsesToggleKey ? string.Format(dropKeyHintFormat, carrier.ToggleKeyBinding) : releaseHint;
+        UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;
 
     private string NameOf(Creature creature)
     {

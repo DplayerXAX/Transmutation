@@ -16,6 +16,8 @@ public sealed class LandmarkPickup : MonoBehaviour
     [Tooltip("Drop onto the ground below once the terrain there exists.")]
     public bool snapToGround;
     public float hoverHeight = 1.1f;
+    [Tooltip("How close the player has to come to take it (metres).")]
+    public float triggerRadius = 1.3f;
 
     private Vector3 home;
     private float taken = -1f;
@@ -32,9 +34,12 @@ public sealed class LandmarkPickup : MonoBehaviour
         phase = Random.value * 10f;
         var trigger = gameObject.AddComponent<SphereCollider>();
         trigger.isTrigger = true;
-        trigger.radius = 1.3f;
+        trigger.radius = triggerRadius;
         gameObject.layer = 2; // Ignore Raycast: climbing and pickup rays pass through.
     }
+
+    /// <summary>Moves the spot it hovers round (for things that drift, like the crown seed).</summary>
+    public void SetHome(Vector3 position) => home = position;
 
     private void Update()
     {

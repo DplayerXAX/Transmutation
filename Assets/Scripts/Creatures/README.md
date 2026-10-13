@@ -1,0 +1,103 @@
+# Creatures
+
+Every living thing the player can meet, carry or interact with derives from `Creature`.
+Shaders for them are in `Assets/Shaders/Creatures`.
+
+## Creature (base class)
+
+`Creature.cs` holds only what all creatures share:
+
+- **Identity:** `creatureName` (shown in prompts and the meditation journal).
+- **Lifecycle:** subclasses override `InitializeCreature()` (instead of Awake) and `TickCreature(dt)`
+  (called each frame while `simulationEnabled`). `SetSimulationEnabled` pauses the logic only.
+- **Lifespan:** `Age` is remaining lifetime (default 40), spent at `Age Rate` per second
+  (default 0) while simulation runs. At zero, `Die()` records death and disables logic.
+  `IsDead` prevents capture release from resuming a dead creature. Physics remains active.
+  `Died` notifies independent components once, before subclass remains; listener exceptions
+  are isolated so normal death behavior continues.
+- **Consumption:** `Consume(consumer)` is an overridable effects hook with an empty base implementation.
+  It does not call `Die()` or destroy anything. `TryConsumeFood(food)` checks diet and claims
+  food once, calls its consumption hook, then separately calls death and removes the original.
+- **Heat:** a shared float. `AddHeat`, `SetHeat`, `SpendHeat` (returns the amount actually removed),
+  and the `OnHeatChanged()` hook.
+- **Diet:** inherited food tags, accepted diet tags, and a same-type eating option.
+  `CanEat(target)` checks shared dietary compatibility; individual creatures can add further conditions.
+  See [CreatureDietREADME.md](CreatureDietREADME.md) for setup and examples.
+- **Interaction:** `ReceiveInteraction(CreatureInteraction)` is called on left click.
+  `InteractionPrompt` (verb, e.g. "Ignite") and `CarriedPrompt` feed the prompt HUD. Null = no prompt.
+  `CanUseWhileCarried` explicitly opts into held-use priority. That use consumes left-click even on cooldown.
+  `PickupActionPrompt` / `ReceivePickupAttempt` allow a pickup action without beginning a carry.
+- **Carry:** `TryBeginCarry` / `PullTowards` / `EndCarry` let `PlayerCreatureCarrier` move the creature with
+  forces without stopping its behaviour. A Rigidbody is added if the creature has none.
+  Subclasses must move through `MoveCreature`, `SetCreatureHorizontalVelocity`, `FaceCreature` and
+  `SetMovementPhysics`, which do nothing while carried, so carrying always wins.
+- Carry Physics settings: `carryStrength`, `carryDamping`, `maximumCarryAcceleration`, `maximumCarryDistance`.
+
+To add a creature: subclass `Creature`, implement `TickCreature`, and use the protected movement helpers.
+
+## The fire cycle
+
+```text
+FireSource --heat--> FireFlower --blooms--> FireBubble --falls, lies still--> new FireFlower
+                                                 \
+                                                  FireEater eats a fallen bubble --digests--> FireFlower
+```
+
+| Script | What it does |
+| --- | --- |
+| `FireSource` | Stores Heat and radiates it each physics step to every creature inside its trigger sphere, less with distance. The trigger radius follows the remaining Heat. |
+| `FireFlower` | States: Closed, Heating, Blooming, Recovering. Heat spreads its linked `DensityShapeOverlay`s outward and grows its body cylinder. At `bloomHeatThreshold` (70) it blooms, spawns one `FireBubble` per shape (sharing leftover Heat), then pulls the shapes back in. |
+| `FireBubble` | Floats on one heading with sway, then falls (lifetime or `fallStartWorldY`). After lying still for a delay it turns into a `fireFlowerPrefab`. Its shader flow speed follows Heat. |
+| `FireEater` | Wanders on the ground (aligns to the surface normal, slides along walls, unsticks itself). Seeks fallen bubbles within `detectionRadius`, flees the player inside `playerAwarenessRadius` unless eating, digests, then plants a Fire Flower. |
+
+The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects injecting density into a
+`MarchingCubesVolume` (see `Scripts/MarchingCubes/README.md`).
+
+## Other creatures
+
+**Corrupt Seed** is passive Plant food that infects its consumer through a separate
+component. Host death produces 3-5 seeds alongside normal remains, accumulating seed
+and host food flags across generations. See [CorruptSeedREADME.md](CorruptSeedREADME.md).
+
+**BubbleFlower** — a stationary flower emitting trapping bubbles every 3–6 seconds. While held through
+the existing carry system, left-click shoots toward the crosshair with a 0.5-second cooldown and stops
+automatic emission. `TrappingBubble` is separate from `FireBubble`; neither changes the fire cycle.
+See [BubbleFlowerPrototype.md](BubbleFlowerPrototype.md) for setup, controls, and tuning.
+
+**BirdCreature** — carryable cube bird with 3D separation, alignment, cohesion, and wandering.
+Birds register automatically with a scene-local `BirdFlockManager`, which creates a pooled
+octree and snapshots all flight state before movement. Spawn areas only place initial
+clusters; groups merge when they meet. See [BirdFlockPrototype.md](BirdFlockPrototype.md)
+for setup, controls, and validation. Food attraction is another weighted flock contribution.
+Bird death creates passive `BirdBones` (Matter), releases capture/carry attachments, and
+removes the bird. Bones fall, settle, and can be carried or consumed by compatible creatures.
+
+**FuzzCreature** — a sticky furry blob. Inside `noticeRadius` (6 m) it joins a single-file chain behind the
+player (static `Chain` list); each one follows the one in front, joined by a sagging goo strand. Leaves the
+chain past `loseRadius`. Body is a procedural lumpy mesh; fur is stacked shells drawn by the `StickyFur`
+shader (`furShells`).
+
+**TentacleCreature** — an abstract octopus: primitive bones wrapped in a translucent membrane rebuilt every
+frame. Tentacles reach for and stick to nearby surfaces and step when stretched. It wanders and floats on
+them. **While carried**, if at least `minGripsToClimb` tentacles hold a surface, the player can climb:
+**Space** up, **Ctrl** down (shown through `CarriedPrompt`).
+
+**CaveHarvestItem** (in `Scripts/World`) — fruit and flowers. Not alive; uses `Creature` only so pickup,
+prompts and carry work.
+
+## Links to other systems
+
+- **Player:** carried by `PlayerCreatureCarrier`, clicked through `PlayerCreatureInteractor`, named by
+  `InteractionPromptHUD`.
+- **Petting:** holding left click on a creature within arm's reach makes the left hand stroke it
+  (`PlayerCreaturePetter`). Override `OnPetStart`, `OnPet(deltaTime)` and `OnPetEnd` to react; read
+  `IsPetted`, `PetPoint`/`PetNormal` (where the hand touches) and `Affection` (0..1, rises while petted,
+  fades slowly). `TentacleCreature` is the example: it stops, turns to the hand and wraps two arms round it.
+- **Meditation:** `CreatureJournal` records each creature type the first time the player is near it and
+  saves a cast of its meshes.
+- **Audio:** the `AudioEventBank`'s creature channels map a creature class name (e.g. `FuzzCreature`) to a
+  music layer that fades in near it.
+
+## Misc
+
+`Scripts/Animation/SkinnedMeshAnimator` ping-pongs blend shapes on SkinnedMeshRenderers (for modelled creatures).
