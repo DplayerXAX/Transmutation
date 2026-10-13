@@ -82,7 +82,11 @@ public sealed class TentacleCreature : Creature
     [SerializeField] private bool canClimbUp;
     [SerializeField] private bool canHang;
 
-    private void OnEnable() => FirstPersonBody.LimbsPosed += StickToArms;
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        FirstPersonBody.LimbsPosed += StickToArms;
+    }
     private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
 
     /// <summary>
@@ -94,7 +98,7 @@ public sealed class TentacleCreature : Creature
         if (!IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
-            if (tentacle.touchingHand) continue;
+            if (tentacle.touchingHand || tentacle.planted || tentacle.stepping) continue;
             tentacle.foot = CoilPoint(tentacle);
             LayoutTentacle(tentacle);
         }
@@ -177,6 +181,8 @@ public sealed class TentacleCreature : Creature
         public bool touchingHand;        // Reaching up to the player's petting hand.
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
+        public Collider holdCollider;
+        public Collider stepCollider;
         public Vector3 foot;
         public bool stepping;
         public float stepTime;
@@ -337,8 +343,10 @@ public sealed class TentacleCreature : Creature
     {
         plantedTentacles = 0;
         gripping = canClimbUp = canHang = false;
+        if (!SimulationEnabled) return;
         Rigidbody player = IsCarried ? Carrier.PlayerBody : null;
         if (player == null || tentacles == null) return;
+        if (Carrier.PlayerController != null && Carrier.PlayerController.BubbleMovementBlocked) return;
 
         // Only holds above the player can pull it up; holds on the floor below only slow a fall.
         int upperHolds = 0;
@@ -397,13 +405,33 @@ public sealed class TentacleCreature : Creature
                 LayoutTentacle(tentacle);
                 continue;
             }
+
             if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
             {
                 // Back on the hand after a climb: let go of the wall and coil up again.
                 if (tentacle.stepping) stepping--;
                 tentacle.planted = tentacle.stepping = false;
             }
-            bool hasIdeal = FindIdealHold(tentacle, out Vector3 idealPoint, out Vector3 idealNormal);
+
+            bool hasIdeal = FindIdealHold(
+                tentacle,
+                out Vector3 idealPoint,
+                out Vector3 idealNormal,
+                out Collider idealCollider
+            );
+
+            // Generated colliders retain identity when their mesh changes;
+            // a cached world point may no longer exist.
+            if (tentacle.planted &&
+                (tentacle.holdCollider == null ||
+                (tentacle.holdCollider.GetComponent<ProceduralWorldChunk>() != null &&
+                !tentacle.holdCollider.Raycast(
+                    new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal),
+                    out _,
+                    0.24f))))
+            {
+                tentacle.planted = false;
+            }
 
             if (tentacle.stepping)
             {
@@ -414,6 +442,7 @@ public sealed class TentacleCreature : Creature
                     tentacle.planted = true;
                     tentacle.hold = tentacle.stepTo;
                     tentacle.holdNormal = tentacle.stepNormal;
+                    tentacle.holdCollider = tentacle.stepCollider;
                     stepping--;
                 }
             }
@@ -433,6 +462,7 @@ public sealed class TentacleCreature : Creature
                     tentacle.stepFrom = tentacle.foot;
                     tentacle.stepTo = idealPoint;
                     tentacle.stepNormal = idealNormal;
+                    tentacle.stepCollider = idealCollider;
                     stepping++;
                 }
                 else if (outOfReach)
@@ -447,13 +477,14 @@ public sealed class TentacleCreature : Creature
     }
 
     /// <summary>Where this tentacle would like to hold right now.</summary>
-    private bool FindIdealHold(Tentacle tentacle, out Vector3 point, out Vector3 normal)
+    private bool FindIdealHold(Tentacle tentacle, out Vector3 point, out Vector3 normal, out Collider collider)
     {
         Vector3 centre = transform.position;
         float reach = tentacle.reach;
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
         point = default;
         normal = Vector3.up;
+        collider = null;
 
         RaycastHit hit;
         if (ExternalMovement && !IsCarried)
@@ -471,7 +502,7 @@ public sealed class TentacleCreature : Creature
             // On the hand it only reaches for surfaces while the player climbs; otherwise it stays coiled
             // so no arms hang across the view.
             // On the player's back its arms stay wrapped round the player's arms, even while climbing.
-            return false;
+            if (!PlayerClimbing) return false;
             reach *= 0.7f;
             // Reach out in a fan around the body so some arms find walls above and some below.
             Vector3 axis = Vector3.Cross(Vector3.up, outward);
@@ -492,6 +523,7 @@ public sealed class TentacleCreature : Creature
         if ((hit.point - centre).sqrMagnitude > reach * reach) return false;
         point = hit.point;
         normal = hit.normal;
+        collider = hit.collider;
         return true;
     }
 
@@ -573,7 +605,7 @@ public sealed class TentacleCreature : Creature
         // On the player's back the arms run low round the body and come up to the wrists from below,
         // instead of arching up past the player's head.
         float arch = tentacle.arch;
-        if (IsCarried)
+        if (IsCarried && !tentacle.planted && !tentacle.stepping)
         {
             tipNormal = Vector3.down;
             arch *= 0.1f;

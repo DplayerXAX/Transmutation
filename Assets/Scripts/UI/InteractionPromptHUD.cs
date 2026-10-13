@@ -78,12 +78,31 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     /// <summary>Highest priority first: what the player is doing, then what they could do.</summary>
     private void ChoosePrompt(ref string title, ref string hint)
     {
+        BubbleCapture capture = carrier != null ? carrier.GetComponentInParent<BubbleCapture>() : null;
+        if (capture != null && capture.IsCaptured)
+        {
+            title = "TRAPPED IN BUBBLE";
+            hint = "[Space] Escape";
+            Creature held = carrier.CarriedCreature;
+            if (held != null)
+            {
+                if (held.CanUseWhileCarried && !string.IsNullOrEmpty(held.CarriedPrompt)) hint += "\n" + held.CarriedPrompt;
+                hint += "\n" + DropHint();
+            }
+            return;
+        }
         if (carrier != null && carrier.CarriedCreature != null)
         {
             title = NameOf(carrier.CarriedCreature);
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
+            if (!carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
+            {
+                Creature target = interactor.FindCreature();
+                if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))
+                    hint = string.Format(interactHintFormat, target.InteractionPrompt) + "\n" + hint;
+            }
             return;
         }
 
@@ -128,7 +147,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
                 carryTarget = null; // Different targets: favour the one left-click reaches.
 
             string interactLine = interactTarget != null ? string.Format(interactHintFormat, interactVerb) : null;
-            string carryLine = carryTarget != null ? PickUpHint() : null;
+            string carryLine = carryTarget != null ? PickupTargetHint(carryTarget) : null;
             hint = interactLine != null && carryLine != null
                 ? interactLine + "    " + carryLine
                 : interactLine ?? carryLine;
@@ -157,6 +176,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private string PickUpHint() =>
         UsesToggleKey ? string.Format(pickUpKeyHintFormat, ToggleName) : carryHint;
+
+    private string PickupTargetHint(Creature target) => string.IsNullOrEmpty(target.PickupActionPrompt)
+        ? PickUpHint() : "[" + (UsesToggleKey ? ToggleName : "RMB") + "] " + target.PickupActionPrompt;
 
     private string DropHint() =>
         UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;

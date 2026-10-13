@@ -199,6 +199,25 @@ public static class SkySpiderValidation
         typeof(SkySpider).GetMethod("TickCreature", PrivateInstance).Invoke(spider, new object[] { 0.02f });
     }
 
+    private static SkySpider SpawnSpiderWithScale(Vector3 position, float scale)
+    {
+        // Match Unity's real spawn lifecycle: configure an inactive clone, then allow Awake.
+        var staging = new GameObject("Validation Spawn Staging");
+        staging.SetActive(false);
+        try
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(SkySpiderSetup.SpiderPath);
+            GameObject clone = Object.Instantiate(prefab, position, Quaternion.identity, staging.transform);
+            SkySpider spider = clone.GetComponent<SkySpider>();
+            var fields = new SerializedObject(spider);
+            fields.FindProperty("webScale").floatValue = scale;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            clone.transform.SetParent(null, true);
+            return spider;
+        }
+        finally { Object.Destroy(staging); }
+    }
+
     private static Vector3 FindGap(SkyWeb web, int seed)
     {
         var random = new System.Random(seed);
@@ -408,6 +427,31 @@ public static class SkySpiderValidation
             typeof(SkyWeb).GetMethod("ScanForCaptures", PrivateInstance));
         scaledScan();
         Check(scaledPrey.GetComponent<WebCapture>() != null, "scaled strands and broad phase capture at visual contact");
+        SkyWeb prefabWeb = AssetDatabase.LoadAssetAtPath<GameObject>(SkySpiderSetup.WebPath).GetComponent<SkyWeb>();
+        float originalPrefabScale = new SerializedObject(prefabWeb).FindProperty("webScale").floatValue;
+        SkySpider scaledSpider = SpawnSpiderWithScale(TestOrigin + Vector3.forward * 120f, 0.5f);
+        SkyWeb spawnedFirst = scaledSpider.CurrentWeb;
+        Check(spawnedFirst.Geometry.Scale == 0.5f && spawnedFirst.MeshRevision == 1,
+            "spider applies Inspector scale before the first mesh build");
+        var spiderFields = new SerializedObject(scaledSpider);
+        spiderFields.FindProperty("webScale").floatValue = 1.5f;
+        spiderFields.ApplyModifiedPropertiesWithoutUndo();
+        for (int frame = 0; frame < 3; frame++) yield return null;
+        Check(spawnedFirst.Geometry.Scale == 0.5f, "changing spider scale leaves its existing web unchanged");
+        typeof(SkySpider).GetMethod("CreateWeb", PrivateInstance).Invoke(scaledSpider,
+            new object[] { spawnedFirst.transform.position + Vector3.right * 30f });
+        Check(scaledSpider.CurrentWeb.Geometry.Scale == 1.5f && scaledSpider.CurrentWeb.MeshRevision == 1,
+            "subsequent spawn applies the new Inspector scale once");
+        Check(scaledSpider.TryBeginCarry(carrier, anchor), "scaled spider can be carried");
+        InvokeTick(scaledSpider);
+        scaledSpider.GetComponent<Rigidbody>().position = spawnedFirst.transform.position + Vector3.up;
+        scaledSpider.EndCarry(carrier);
+        InvokeTick(scaledSpider);
+        Check(scaledSpider.CurrentWeb == spawnedFirst && spawnedFirst.Geometry.Scale == 0.5f,
+            "return to old web retains its original scale");
+        Check(new SerializedObject(prefabWeb).FindProperty("webScale").floatValue == originalPrefabScale,
+            "spider spawning does not change the shared web prefab");
+        Object.Destroy(scaledSpider.gameObject);
         CaptureViews(first);
         Object.Destroy(spider.gameObject);
         yield return null;

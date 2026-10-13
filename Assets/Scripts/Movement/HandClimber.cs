@@ -166,6 +166,8 @@ public sealed class HandClimber : MonoBehaviour
     private float feel, roll, look;
 
     public bool IsClimbing => climbing;
+    public bool Controls(SmoothFirstPersonController player) => controller == player;
+    public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
@@ -235,9 +237,31 @@ public sealed class HandClimber : MonoBehaviour
         }
     }
 
+    private void OnEnable() => ProceduralWorld.AnyTerrainChanged += TerrainChanged;
+    private void TerrainChanged(ProceduralWorld world, Bounds bounds)
+    {
+        if (!climbing || world.gameObject.scene != gameObject.scene) return;
+        for (int i = 0; i < hands.Length; i++)
+        {
+            Vector3 target = HandTarget(i);
+            if (!bounds.Contains(target)) continue;
+            Vector3 normal = hands[i].moving ? hands[i].toNormal : hands[i].normal;
+            if (Physics.Raycast(target + normal * 0.12f, -normal, out RaycastHit hit, 0.24f, climbLayers, QueryTriggerInteraction.Ignore))
+            {
+                if (hands[i].moving) { hands[i].to = hit.point; hands[i].toNormal = hit.normal; }
+                else { hands[i].hold = hit.point; hands[i].normal = hit.normal; }
+                continue;
+            }
+            if (!mantling && ProbeWall(target, out hit) && (hit.point - target).sqrMagnitude <= 0.25f)
+            { hands[i].moving = false; hands[i].hold = hit.point; hands[i].normal = hit.normal; continue; }
+            lastEvent = "Let go: terrain beneath a grip was eroded";
+            Exit(Vector3.zero); return;
+        }
+    }
+
     private void Update()
     {
-        if (controller == null || body == null) return;
+        if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null && ScriptedInput == null) return;
         bool Held(Key key) => keyboard != null && keyboard[key].isPressed;
@@ -1030,6 +1054,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void OnDisable()
     {
+        ProceduralWorld.AnyTerrainChanged -= TerrainChanged;
         if (climbing) Exit(Vector3.zero);
     }
 }

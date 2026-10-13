@@ -7,6 +7,8 @@ public sealed class SkySpider : Creature
 {
     [Header("Web")]
     [SerializeField] private SkyWeb webPrefab;
+    [Tooltip("Scale applied once to each new web. Overrides the web prefab's scale; existing webs keep their size.")]
+    [Min(0.05f)] [SerializeField] private float webScale = 1f;
     [Min(0f)] [SerializeField] private float returnRange = 12f;
 
     [Header("Movement")]
@@ -46,7 +48,7 @@ public sealed class SkySpider : Creature
         // Web lifetime and world position are independent of its spider and carrier.
         web.transform.SetParent(null);
         web.name = "Sky Web " + (webs.Count + 1);
-        web.InitializeGeometry();
+        web.InitializeForSpawn(webScale);
         webs.Add(web);
         SetCurrentWeb(web, false);
     }
