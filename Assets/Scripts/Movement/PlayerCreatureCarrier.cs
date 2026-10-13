@@ -3,8 +3,9 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Attach to the player. Holds any Creature at an anchor without disabling its
-/// simulation, colliders, animation, or heat reactions. Either hold right click to
-/// carry, or press a key once to pick up and again to drop.
+/// simulation, colliders, animation, or heat reactions. Hold right click to carry,
+/// or click right (or press a key) once to pick up and again to drop.
+/// A tentacle creature is not held out in front: it shrinks and sits on the right hand.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(1000)]
@@ -13,7 +14,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     public enum CarryInput
     {
         HoldRightMouse,
-        ToggleKey
+        ToggleKey,
+        ToggleRightMouse
     }
 
     [SerializeField] private Camera carryCamera;
@@ -43,6 +45,23 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+
+    /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
+    public Transform HandAnchor { get; set; }
+    /// <summary>The player's left hand (set by FirstPersonBody).</summary>
+    public Transform LeftHandAnchor { get; set; }
+    /// <summary>When the pickup input was last pressed and what it reached for, so the right hand can reach out.</summary>
+    public float LastGrabTime { get; private set; } = -10f;
+    public Vector3 LastGrabPoint { get; private set; }
+
+    [Tooltip("Seconds from the click until the reaching hand closes on the creature and it is picked up.")]
+    [Min(0f)] [SerializeField] private float grabReachTime = 0.22f;
+    [Tooltip("How fast a picked-up creature is brought from where it was taken to where it is held (m/s).")]
+    [Min(0.1f)] [SerializeField] private float bringInSpeed = 4f;
+    private Creature pendingCreature;
+    private float pendingAt;
+    private Vector3 carryTargetLocal;
+    private bool bringingIn;
 
     private Vector3 carryPointHome;
 
@@ -77,34 +96,69 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
-        if (!Application.isFocused)
+        if (!Application.isFocused && !Application.isBatchMode)
         {
             Release();
             return;
         }
 
-        if (carryInput == CarryInput.ToggleKey)
-            UpdateToggle();
-        else
+        if (carryInput == CarryInput.HoldRightMouse)
             UpdateHoldRightMouse();
+        else
+            UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
+        UpdatePendingGrab();
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             Release();
     }
 
-    private void UpdateToggle()
+    private void UpdateToggle(bool rightMouse)
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !keyboard[toggleKey].wasPressedThisFrame) return;
+        bool pressed;
+        if (rightMouse) pressed = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+        else pressed = Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame;
+        if (!pressed) return;
 
         if (CarriedCreature != null)
         {
             Drop();
             return;
         }
+        if (pendingCreature != null) return;
 
         Creature creature = FindCreature();
-        if (creature != null) BeginCarry(creature);
+        // The right hand reaches out on every press, towards the creature if there is one.
+        LastGrabTime = Time.time;
+        LastGrabPoint = creature != null ? creature.transform.position
+            : carryCamera != null ? carryCamera.transform.position + carryCamera.transform.forward * 1.2f : transform.position;
+        // The creature is taken only when the hand gets there, not at the moment of the click.
+        pendingCreature = creature;
+        pendingAt = Time.time + grabReachTime;
+    }
+
+    private void UpdatePendingGrab()
+    {
+        if (pendingCreature == null) return;
+        if (!pendingCreature.isActiveAndEnabled || pendingCreature.IsCarried)
+        {
+            pendingCreature = null;
+            return;
+        }
+        LastGrabPoint = pendingCreature.transform.position; // The hand follows a creature that moves.
+        if (Time.time < pendingAt) return;
+        Creature creature = pendingCreature;
+        pendingCreature = null;
+        float reach = pickupRange + 1f;
+        if (carryCamera != null && (creature.transform.position - carryCamera.transform.position).sqrMagnitude > reach * reach) return;
+        BeginCarry(creature);
+    }
+
+    /// <summary>Brings a just-taken creature in from where it was grabbed instead of snapping it there.</summary>
+    private void BringIn(float deltaTime)
+    {
+        if (!bringingIn || carryPoint == null) return;
+        carryPoint.localPosition = Vector3.MoveTowards(carryPoint.localPosition, carryTargetLocal, bringInSpeed * deltaTime);
+        if ((carryPoint.localPosition - carryTargetLocal).sqrMagnitude < 1e-4f) bringingIn = false;
     }
 
     private void UpdateHoldRightMouse()
@@ -133,46 +187,72 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         // Ignore heat-volume triggers: pick the visible creature's solid body.
-        if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
-            return null;
-        Creature creature = hit.collider.GetComponentInParent<Creature>();
-        // Too big to hold in one hand: no prompt, no pickup.
-        if (creature != null && MeasureCreature(creature, out _, out _) > maxCarrySize) return null;
-        return creature;
+if (!Physics.Raycast(ray, out RaycastHit hit, pickupRange, pickupLayers, QueryTriggerInteraction.Ignore))
+    return null;
+
+Creature creature = hit.collider.GetComponentInParent<Creature>();
+
+if (creature == null || !creature.CanBeCarried)
+    return null;
+
+// Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
+if (!(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
+    return null;
+
+return creature;
+}
+
+/// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
+private static float MeasureCreature(Creature creature, out float above, out float sideways)
+{
+    above = sideways = 0f;
+    Bounds bounds = default;
+    bool any = false;
+
+    foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
+    {
+        if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer)
+            continue;
+
+        if (!any) bounds = renderer.bounds;
+        else bounds.Encapsulate(renderer.bounds);
+
+        any = true;
     }
 
-    /// <summary>Largest side of the creature's visible shape. Also how far it rises above its pivot and spreads sideways.</summary>
-    private static float MeasureCreature(Creature creature, out float above, out float sideways)
-    {
-        above = sideways = 0f;
-        Bounds bounds = default;
-        bool any = false;
-        foreach (Renderer renderer in creature.GetComponentsInChildren<Renderer>())
-        {
-            if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is TrailRenderer) continue;
-            if (!any) bounds = renderer.bounds;
-            else bounds.Encapsulate(renderer.bounds);
-            any = true;
-        }
-        if (!any) return 0f;
-        Vector3 pivot = creature.transform.position;
-        above = Mathf.Max(0f, bounds.max.y - pivot.y);
-        sideways = Mathf.Max(Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
-            Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z));
-        return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
-    }
+    if (!any) return 0f;
 
-    // Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
-    private void FitCarryPoint(Creature creature)
-    {
-        if (carryPoint == null) return;
-        MeasureCreature(creature, out float above, out float sideways);
-        Vector3 home = carryPointHome;
-        float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
-        float y = Mathf.Min(home.y, -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z));
-        float x = Mathf.Max(home.x, sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z);
-        carryPoint.localPosition = new Vector3(x, y, z);
-    }
+    Vector3 pivot = creature.transform.position;
+    above = Mathf.Max(0f, bounds.max.y - pivot.y);
+    sideways = Mathf.Max(
+        Mathf.Max(bounds.max.x - pivot.x, pivot.x - bounds.min.x),
+        Mathf.Max(bounds.max.z - pivot.z, pivot.z - bounds.min.z)
+    );
+
+    return Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
+}
+
+// Bigger creatures are held lower, further right and further out, so they never cover the crosshair.
+private void FitCarryPoint(Creature creature)
+{
+    if (carryPoint == null) return;
+
+    MeasureCreature(creature, out float above, out float sideways);
+
+    Vector3 home = carryPointHome;
+    float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
+    float y = Mathf.Min(
+        home.y,
+        -(above + Mathf.Tan(clearBelowCrosshair * Mathf.Deg2Rad) * z)
+    );
+    float x = Mathf.Max(
+        home.x,
+        sideways + Mathf.Tan(clearRightOfCrosshair * Mathf.Deg2Rad) * z
+    );
+
+    carryPoint.localPosition = new Vector3(x, y, z);
+
+}
 
     private void BeginCarry(Creature creature)
     {
@@ -184,6 +264,10 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             return;
         }
         CarriedCreature = creature;
+        // Start where the hand took it and bring it in from there.
+        carryTargetLocal = carryPoint.localPosition;
+        carryPoint.position = creature.transform.position;
+        bringingIn = true;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
@@ -205,14 +289,40 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private void FixedUpdate()
     {
         if (CarriedCreature == null || firmGrip) return;
+        if (!CarriesTentacle) BringIn(Time.fixedDeltaTime);
+        FollowHand(Time.fixedDeltaTime);
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
     }
 
     // After the camera has moved this frame, so the held creature never trails behind the view.
     private void LateUpdate()
     {
-        if (firmGrip && CarriedCreature != null) SnapHeld();
+        if (CarriedCreature == null) return;
+        if (firmGrip && !CarriesTentacle) BringIn(Time.deltaTime);
+        FollowHand(Time.deltaTime);
+        if (firmGrip) SnapHeld();
     }
+
+    /// <summary>A tentacle creature clings to the player's back (between the shoulder blades), out of view.</summary>
+    private void FollowHand(float deltaTime)
+    {
+        if (carryPoint == null || !(CarriedCreature is TentacleCreature)) return;
+        Transform player = PlayerBody != null ? PlayerBody.transform : transform;
+        Vector3 forward = carryCamera != null ? Vector3.ProjectOnPlane(carryCamera.transform.forward, Vector3.up) : player.forward;
+        if (forward.sqrMagnitude < 1e-4f) forward = player.forward;
+        forward.Normalize();
+        // Low on the back (below the head), so its body never comes near the camera; only the arms reach forward.
+        Vector3 back = player.position + Vector3.up * 0.02f - forward * 0.5f;
+        // Right after the grab it climbs from the hand round to the back instead of jumping there.
+        if (bringingIn)
+        {
+            carryPoint.position = Vector3.MoveTowards(carryPoint.position, back, bringInSpeed * deltaTime);
+            if ((carryPoint.position - back).sqrMagnitude < 1e-3f) bringingIn = false;
+        }
+        else carryPoint.position = back;
+    }
+
+    public bool CarriesTentacle => CarriedCreature is TentacleCreature;
 
     private void SnapHeld()
     {
@@ -244,6 +354,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
+        bringingIn = false;
         if (heldBody != null) heldBody.interpolation = heldInterpolation;
         heldBody = null;
         SetPlayerCollision(carriedColliders, ignore: false);

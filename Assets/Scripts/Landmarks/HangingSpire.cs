@@ -22,6 +22,20 @@ public sealed class HangingSpire : MonoBehaviour
     [SerializeField] private Material glyphMaterial;
     [SerializeField] private Material seedMaterial;
 
+    [Header("Seed Model")]
+    [Tooltip("An object in the scene to copy as the crown seed (the menu uses the one named Colorful). " +
+             "The copy keeps its materials and parts; the original stays where it is.")]
+    [SerializeField] private GameObject seedSource;
+    [Tooltip("Used when there is no Seed Source: a single mesh for the crown seed. Empty = the built-in pod shape.")]
+    [SerializeField] private Mesh seedModel;
+    [SerializeField] private Material seedModelMaterial;
+    [Tooltip("Turns the model upright (the Cylinder needs -90 on X).")]
+    [SerializeField] private Vector3 seedModelRotation = new Vector3(-90f, 0f, 0f);
+    [Tooltip("Height of the seed at the crown (metres).")]
+    [Min(0.5f)] [SerializeField] private float crownSeedSize = 8f;
+    [Tooltip("How high above the crown teeth it floats (seen from the ground) until the player climbs up.")]
+    [Min(0f)] [SerializeField] private float crownSeedFloat = 5f;
+
     [Header("Placement")]
     [Tooltip("Picks the sinkhole whose distance from the spawn is closest to this.")]
     [Min(0f)] [SerializeField] private float preferredDistance = 85f;
@@ -40,6 +54,12 @@ public sealed class HangingSpire : MonoBehaviour
     [Header("Rewards")]
     [SerializeField] private string seedId = "spire_seed";
     [SerializeField] private string glyphId = "spire";
+
+    [Header("Creatures")]
+    [Tooltip("A tentacle creature in the scene to copy. Copies crawl over the tower and wander round its base.")]
+    [SerializeField] private TentacleCreature tentacleTemplate;
+    [Range(0, 8)] [SerializeField] private int wallCrawlers = 3;
+    [Range(0, 8)] [SerializeField] private int groundCrawlers = 2;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private bool built;
@@ -124,7 +144,7 @@ public sealed class HangingSpire : MonoBehaviour
             noiseSeed = 3.3f + seed * 1.71f,
         };
         Mesh upperMesh = LandmarkShapes.Spire(upper, random, ledgeCount, beam: true, flipY: false, out Vector3 beamCentre);
-        Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
+        GameObject spireObject = Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
 
         // ---- Hanging twin in the inner world ----
         Vector3 ceilingPoint = world.SinkholeCentre(sinkholeIndex, ceilingHigh, out _);
@@ -181,12 +201,46 @@ public sealed class HangingSpire : MonoBehaviour
 
         if (!string.IsNullOrEmpty(seedId))
         {
-            LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * 1.2f, LandmarkPickup.Kind.Seed);
-            seedPickup.id = seedId;
-            GameObject pod = Part("Pod", seedPickup.transform, LandmarkShapes.Seed(seed), seedMaterial, collide: false, shadows: false);
-            // Twice life size so it reads from the rim, two metres away.
-            pod.transform.localPosition = Vector3.down * 0.5f;
-            pod.transform.localScale = Vector3.one * 2f;
+            if (seedSource != null)
+            {
+                // A copy of the scene object, floating high over the crown and cracking apart now and then.
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * (crownSeedSize * 0.5f + 0.4f), LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                seedPickup.hoverHeight = 0f;
+                seedPickup.triggerRadius = crownSeedSize * 0.5f + 1f;
+                Transform body = CopySeed(seedPickup.transform);
+                var cracking = new GameObject("Seed Eruption").AddComponent<SeedEruption>();
+                cracking.transform.SetParent(root, false);
+                cracking.Init(seedPickup, body, crownSeedSize, upper.crown + crownSeedFloat + crownSeedSize * 0.5f);
+            }
+            else if (seedModel != null && seedModelMaterial != null)
+            {
+                // A big seed floating high over the crown and cracking apart now and then.
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * (crownSeedSize * 0.5f + 0.4f), LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                seedPickup.hoverHeight = 0f;
+                seedPickup.triggerRadius = crownSeedSize * 0.5f + 1f;
+                Quaternion upright = Quaternion.Euler(seedModelRotation);
+                GameObject body = Part("Seed Body", seedPickup.transform, seedModel, seedModelMaterial, collide: false, shadows: true);
+                Vector3 extent = SeedEruption.UprightSize(seedModel, upright);
+                float scale = crownSeedSize / Mathf.Max(1e-5f, extent.y);
+                body.transform.localRotation = upright;
+                body.transform.localScale = Vector3.one * scale;
+                body.transform.localPosition = -(upright * seedModel.bounds.center) * scale;
+
+                var cracking = new GameObject("Seed Eruption").AddComponent<SeedEruption>();
+                cracking.transform.SetParent(root, false);
+                cracking.Init(seedPickup, body.transform, crownSeedSize, upper.crown + crownSeedFloat + crownSeedSize * 0.5f);
+            }
+            else
+            {
+                LandmarkPickup seedPickup = Pickup("Seed", basePoint + beamCentre + Vector3.up * 1.2f, LandmarkPickup.Kind.Seed);
+                seedPickup.id = seedId;
+                GameObject pod = Part("Pod", seedPickup.transform, LandmarkShapes.Seed(seed), seedMaterial, collide: false, shadows: false);
+                // Twice life size so it reads from the rim, two metres away.
+                pod.transform.localPosition = Vector3.down * 0.5f;
+                pod.transform.localScale = Vector3.one * 2f;
+            }
         }
 
         if (!string.IsNullOrEmpty(glyphId))
@@ -200,6 +254,7 @@ public sealed class HangingSpire : MonoBehaviour
             mark.transform.localPosition = Vector3.down * 0.6f;
         }
 
+        SpawnCreatures(spireObject.GetComponent<Collider>(), basePoint, upper.height, doorAngle, random);
         Debug.Log($"Hanging Spire built on sinkhole {sinkholeIndex} at {basePoint}.");
     }
 
@@ -267,6 +322,106 @@ public sealed class HangingSpire : MonoBehaviour
         renderer.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
         if (collide) go.AddComponent<MeshCollider>().sharedMesh = mesh;
         return go;
+    }
+
+    /// <summary>Copies of the template tentacle creature: some crawling on the tower walls, some round its base.</summary>
+    private void SpawnCreatures(Collider wall, Vector3 basePoint, float towerHeight, float doorAngle, System.Random random)
+    {
+        if (tentacleTemplate == null || wall == null) return;
+        int total = wallCrawlers + groundCrawlers;
+        for (int i = 0; i < total; i++)
+        {
+            // Spread round the tower, away from the door so the entrance stays clear.
+            float angle = doorAngle * Mathf.Rad2Deg + 60f + i * (240f / Mathf.Max(1, total)) + (float)random.NextDouble() * 20f;
+            TentacleCreature copy = CopyCreature(tentacleTemplate, $"Spire Tentacle {i}");
+            if (i < wallCrawlers)
+            {
+                var crawler = copy.gameObject.AddComponent<SpireCrawler>();
+                crawler.wall = wall;
+                crawler.axisBase = basePoint;
+                crawler.maxHeight = towerHeight - 6f;
+                // Unity angles: 0 = +z. The tower's door angle is measured from +x.
+                crawler.Place(90f - angle, Mathf.Lerp(6f, towerHeight * 0.7f, (float)random.NextDouble()));
+            }
+            else
+            {
+                Vector3 outward = Quaternion.Euler(0f, 90f - angle, 0f) * Vector3.forward;
+                Vector3 start = basePoint + outward * 16f + Vector3.up * 20f;
+                if (Physics.Raycast(start, Vector3.down, out RaycastHit ground, 60f, 1 << 7, QueryTriggerInteraction.Ignore))
+                    start = ground.point + Vector3.up;
+                copy.transform.position = start;
+            }
+            copy.gameObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// A fresh creature with the template's settings. Built inactive so it makes its own body
+    /// (instead of copying the template's already built one) once activated.
+    /// </summary>
+    private TentacleCreature CopyCreature(TentacleCreature template, string name)
+    {
+        var go = new GameObject(name) { layer = template.gameObject.layer };
+        go.SetActive(false);
+        go.transform.SetParent(root, false);
+        go.transform.localScale = template.transform.localScale;
+        var templateCollider = template.GetComponent<SphereCollider>();
+        if (templateCollider != null)
+        {
+            var collider = go.AddComponent<SphereCollider>();
+            collider.radius = templateCollider.radius;
+            collider.center = templateCollider.center;
+            collider.isTrigger = templateCollider.isTrigger;
+        }
+        var copy = go.AddComponent<TentacleCreature>();
+        // Same settings, but each copy grows its own body shape.
+        string settings = System.Text.RegularExpressions.Regex.Replace(JsonUtility.ToJson(template), @"""seed"":-?\d+", $"\"seed\":{name.GetHashCode() & 0xffff}");
+        JsonUtility.FromJsonOverwrite(settings, copy);
+        return copy;
+    }
+
+    public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
+
+    /// <summary>
+    /// Copies seedSource under the pickup, keeps its rotation, scales it to crownSeedSize tall and centres it.
+    /// Its colliders and rigidbodies are removed.
+    /// </summary>
+    private Transform CopySeed(Transform parent)
+    {
+        var holder = new GameObject("Seed Body").transform;
+        holder.SetParent(parent, false);
+        GameObject copy = Instantiate(seedSource, holder);
+        copy.name = seedSource.name;
+        copy.SetActive(true);
+        copy.transform.SetPositionAndRotation(holder.position, seedSource.transform.rotation);
+        copy.transform.localScale = seedSource.transform.lossyScale;
+        foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
+        foreach (Rigidbody r in copy.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+
+        Bounds bounds = new Bounds(holder.position, Vector3.zero);
+        bool any = false;
+        foreach (Renderer r in copy.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r is ParticleSystemRenderer || r is TrailRenderer || r is LineRenderer) continue;
+            if (any) bounds.Encapsulate(r.bounds); else { bounds = r.bounds; any = true; }
+        }
+
+        float scale = crownSeedSize / Mathf.Max(1e-4f, bounds.size.y);
+        Vector3 offset = bounds.center - holder.position;
+        holder.localScale = Vector3.one * scale;
+        holder.position -= offset * scale;
+        return holder;
+    }
+
+    /// <summary>Scene object copied as the crown seed (null = use the single mesh below, or the built-in pod).</summary>
+    public void SetSeedSource(GameObject source) => seedSource = source;
+
+    /// <summary>Model used for the crown seed (null mesh = the built-in pod).</summary>
+    public void SetSeedModel(Mesh mesh, Material material, Vector3 uprightEuler)
+    {
+        seedModel = mesh;
+        seedModelMaterial = material;
+        seedModelRotation = uprightEuler;
     }
 
     public void SetMaterials(Material spire, Material innerSpire, Material glyph, Material seedPod)

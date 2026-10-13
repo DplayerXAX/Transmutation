@@ -56,6 +56,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private IEnumerator Start()
     {
         savedProgress = File.Exists(LandmarkProgress.FilePath) ? File.ReadAllText(LandmarkProgress.FilePath) : null;
+        LandmarkProgress.ResetAll(); // start with nothing collected (the real save is put back at the end)
         controller = FindFirstObjectByType<SmoothFirstPersonController>();
         climber = FindFirstObjectByType<HandClimber>();
         world = FindFirstObjectByType<ProceduralWorld>();
@@ -99,12 +100,92 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield return Climb(cliffs[i], fast: i % 2 == 1, timeout: i < 10 ? 40f : 80f, fromGround: i % 3 == 0);
 
         Cliff spire;
-        for (int face = 0; face < 4; face++)
+        yield return CheckSpireCreatures();
+        int faces = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestCreaturesOnly") >= 0 ? 0 : 4;
+        for (int face = 0; face < faces; face++)
             if (FindSpire(out spire, face * 90f)) yield return Climb(spire, fast: face % 2 == 1, timeout: 200f, fromGround: false, capture: face == 0);
         else Log("Spire: not found.");
 
         Log($"RESULT {passed}/{total} climbs reached the top.");
         Quit();
+    }
+
+    /// <summary>Tentacle creatures on the tower: where they are, then carry one and climb with it.</summary>
+    private IEnumerator CheckSpireCreatures()
+    {
+        yield return new WaitForSeconds(4f);
+        var eruption = FindFirstObjectByType<SeedEruption>();
+        var seedPickup = FindObjectsByType<LandmarkPickup>(FindObjectsSortMode.None);
+        Log($"Seed eruption: {(eruption != null ? "yes" : "no")}, pickups: {seedPickup.Length}");
+        if (eruption != null && framesPath != null)
+        {
+            // The crown seed: from the crown (a few moments, to catch it cracking) and from the ground 40 m out.
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Directory.CreateDirectory(framesPath);
+            Transform seedPoint = seedPickup.Length > 0 ? System.Array.Find(seedPickup, p => p.kind == LandmarkPickup.Kind.Seed)?.transform : null;
+            for (int i = 0; i < 10 && seedPoint != null; i++)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 from = centre + new Vector3(Mathf.Cos(i * 0.3f), 0f, Mathf.Sin(i * 0.3f)) * 14f + Vector3.down * 3f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                Save(captureCamera, Path.Combine(framesPath, $"seed_{i}.png"));
+                Log($"    seed at {centre.y:0.0}, shards out: {eruption.GetComponentsInChildren<Renderer>().Length}");
+                yield return new WaitForSeconds(0.15f);
+            }
+            if (seedPoint != null)
+            {
+                Vector3 centre = seedPoint.position;
+                Vector3 flat = new Vector3(centre.x, 0f, centre.z);
+                Vector3 from = flat + Vector3.right * 60f;
+                if (Physics.Raycast(from + Vector3.up * 200f, Vector3.down, out RaycastHit ground, 400f, 1 << 7)) from = ground.point + Vector3.up * 1.7f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(centre - from));
+                captureCamera.fieldOfView = 70f;
+                Save(captureCamera, Path.Combine(framesPath, "seed_from_ground.png"));
+            }
+        }
+        var crawlers = FindObjectsByType<SpireCrawler>(FindObjectsSortMode.None);
+        var tentacles = FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None);
+        Log($"Tentacle creatures: {tentacles.Length}, crawling on the tower: {crawlers.Length}");
+        foreach (SpireCrawler crawler in crawlers)
+        {
+            float gap = crawler.wall != null ? Vector3.Distance(crawler.wall.ClosestPoint(crawler.transform.position), crawler.transform.position) : -1f;
+            Log($"    {crawler.name} at height {crawler.transform.position.y - crawler.axisBase.y:0.0} m, {gap:0.00} m from the wall");
+        }
+        if (crawlers.Length > 0)
+        {
+            Vector3 before = crawlers[0].transform.position;
+            yield return new WaitForSeconds(6f);
+            Log($"    {crawlers[0].name} moved {Vector3.Distance(before, crawlers[0].transform.position):0.0} m in 6 s");
+            if (framesPath != null)
+            {
+                // A look at it from 4 m out.
+                Camera main = Camera.main;
+                Transform crawlerTransform = crawlers[0].transform;
+                Vector3 normal = crawlerTransform.up;
+                if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+                captureCamera.CopyFrom(main);
+                captureCamera.enabled = false;
+                Vector3 from = crawlerTransform.position + normal * 4f + Vector3.up * 1f;
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(crawlerTransform.position - from));
+                Directory.CreateDirectory(framesPath);
+                Save(captureCamera, Path.Combine(framesPath, "crawler.png"));
+            }
+
+            // Carry it (as a right click would) and climb the tower with it on the hand.
+            var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+            body.isKinematic = false;
+            body.position = crawlers[0].transform.position + Vector3.up * 0.5f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { crawlers[0].GetComponent<TentacleCreature>() });
+            Log($"    carried: {carrier.CarriesTentacle}, sticky hands: {climber.StickyHands}");
+            // How it looks from the eyes with the creature on the back.
+            yield return new WaitForSeconds(2f);
+            Log($"    still carried after 2 s: {carrier.CarriesTentacle}, creature {(crawlers.Length > 0 && crawlers[0] != null ? "-" : "on back")}");
+            if (framesPath != null) { Capture("Carried", "back"); yield return new WaitForSeconds(0.7f); Capture("Carried", "back"); }
+        }
     }
 
     private static string savedProgress;

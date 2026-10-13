@@ -31,13 +31,26 @@ public static class AudioSetup
 
         string note = "";
         HangingSpire spire = Object.FindFirstObjectByType<HangingSpire>();
-        if (spire != null && spire.GetComponent<MusicChannel>() == null)
+        if (spire != null && spire.GetComponent<ClimbMusicChannel>() == null)
+        {
+            ClimbMusicChannel climb = Undo.AddComponent<ClimbMusicChannel>(spire.gameObject);
+            climb.layerEvent = "BGM_climb";
+            note += "\nAdded a BGM_climb channel to the Hanging Spire.";
+        }
+        if (spire != null && !HasPlainChannel(spire.gameObject))
         {
             MusicChannel ch = Undo.AddComponent<MusicChannel>(spire.gameObject);
             ch.layerEvent = "BGM_landmark";
             ch.innerRadius = 15f;
             ch.outerRadius = 70f;
-            note = "\nAdded a BGM_landmark channel to the Hanging Spire.";
+            note += "\nAdded a BGM_landmark channel to the Hanging Spire.";
+        }
+
+        HandClimber climber = Object.FindFirstObjectByType<HandClimber>();
+        if (climber != null && climber.GetComponent<ClimbReachSound>() == null)
+        {
+            Undo.AddComponent<ClimbReachSound>(climber.gameObject);
+            note += "\nAdded ClimbReachSound to the player.";
         }
 
         ProceduralWorld world = Object.FindFirstObjectByType<ProceduralWorld>();
@@ -66,6 +79,13 @@ public static class AudioSetup
             "Switch the AudioManager backend to Unity to hear the placeholder synth instead.\n" +
             "Linked " + linked + " Unity clip(s) by file name." + note +
             "\nSave the scene to keep it.", "OK");
+    }
+
+    private static bool HasPlainChannel(GameObject go)
+    {
+        foreach (MusicChannel ch in go.GetComponents<MusicChannel>())
+            if (ch.GetType() == typeof(MusicChannel)) return true;
+        return false;
     }
 
     [MenuItem("Tools/Capstone/Audio/Add Music Zone At Scene View")]
