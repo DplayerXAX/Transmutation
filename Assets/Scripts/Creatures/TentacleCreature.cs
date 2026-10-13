@@ -337,8 +337,10 @@ public sealed class TentacleCreature : Creature
     {
         plantedTentacles = 0;
         gripping = canClimbUp = canHang = false;
+        if (!SimulationEnabled) return;
         Rigidbody player = IsCarried ? Carrier.PlayerBody : null;
         if (player == null || tentacles == null) return;
+        if (Carrier.PlayerController != null && Carrier.PlayerController.BubbleMovementBlocked) return;
 
         // Only holds above the player can pull it up; holds on the floor below only slow a fall.
         int upperHolds = 0;

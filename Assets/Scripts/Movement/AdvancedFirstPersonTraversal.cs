@@ -145,6 +145,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void Update()
     {
+        if (controller != null && controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || orientation == null)
             return;
@@ -190,11 +191,25 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (controller == null || controller.BubbleMovementBlocked) return;
         if (controller.WallRunning)
             WallRunningMovement();
     }
 
     // ---------------- Wall running (ported directly) ----------------
+
+    public void StopForBubbleCapture()
+    {
+        if (controller == null) controller = GetComponent<SmoothFirstPersonController>();
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        CancelInvoke();
+        StopClimbing();
+        StopWallRun();
+        if (holdingLedge) ExitLedgeHold();
+        holdingLedge = exitingLedge = exitingClimbWall = wallRunExiting = false;
+        controller.SetFreeze(false);
+        controller.SetRestricted(false);
+    }
 
     private void CheckForSideWalls()
     {

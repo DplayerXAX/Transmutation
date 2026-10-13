@@ -288,6 +288,179 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &560265206
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 78356777658104957, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_Name
+      value: BubbleFlower
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2.09
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -2.0131202
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.009281
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+--- !u!1 &614062471
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 614062473}
+  - component: {fileID: 614062472}
+  m_Layer: 0
+  m_Name: Interaction Prompts
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &614062472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614062471}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  carrier: {fileID: 0}
+  interactor: {fileID: 0}
+  traversal: {fileID: 0}
+  handClimber: {fileID: 0}
+  offsetFromCentre: {x: 0, y: -70}
+  titleFontSize: 18
+  hintFontSize: 22
+  titleColor: {r: 1, g: 1, b: 1, a: 0.55}
+  hintColor: {r: 1, g: 1, b: 1, a: 0.92}
+  fadeTime: 0.12
+  showCreatureName: 1
+  carryHint: '[Hold RMB]  Carry'
+  releaseHint: '[Release RMB]  Drop'
+  pickUpKeyHintFormat: '[{0}]  Pick up'
+  dropKeyHintFormat: '[{0}]  Drop'
+  interactHintFormat: '[LMB]  {0}'
+  climbHint: '[Hold W]  Climb'
+  climbJumpHint: '[Space]  Jump off wall'
+  wallRunHint: '[Hold W]  Wall run'
+  wallRunActiveHint: '[Space]  Wall jump    [Shift] / [Ctrl]  Up / Down'
+  ledgeHint: '[Space]  Jump    [WASD]  Let go'
+  handClimbHint: '[WASD]  Climb    [Space]  Push off'
+--- !u!4 &614062473
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614062471}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &618943257
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 618943258}
+  - component: {fileID: 618943259}
+  m_Layer: 0
+  m_Name: Bird Spawn Area 3
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &618943258
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 618943257}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0.58003855, z: -0, w: 0.814589}
+  m_LocalPosition: {x: 26, y: 19, z: -24}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 863794913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &618943259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 618943257}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efdd529e7ad66334e9347cf3eb8b2021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BirdSpawnArea
+  birdPrefab: {fileID: 5093084902333548627, guid: 7e93df72226606c479cd69ed0d8b706c, type: 3}
+  birdCount: 24
+  spawnRadius: 5
+  seed: 1434
+  overrideFlightSpeed: 0
+  flightSpeedRange: {x: 3, y: 6}
 --- !u!1 &636681837
 GameObject:
   m_ObjectHideFlags: 0
@@ -471,6 +644,40 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1948257013}
   m_SourcePrefab: {fileID: 100100000, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+--- !u!1 &863794912
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 863794913}
+  m_Layer: 0
+  m_Name: Bird Flock Setup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &863794913
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 863794912}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1281976460}
+  - {fileID: 1040287273}
+  - {fileID: 618943258}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &896406141
 GameObject:
   m_ObjectHideFlags: 0
@@ -828,6 +1035,106 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1040287272
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1040287273}
+  - component: {fileID: 1040287274}
+  m_Layer: 0
+  m_Name: Bird Spawn Area 2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1040287273
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040287272}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 1, z: -0, w: 0}
+  m_LocalPosition: {x: 0, y: 21, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 863794913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1040287274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1040287272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efdd529e7ad66334e9347cf3eb8b2021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BirdSpawnArea
+  birdPrefab: {fileID: 5093084902333548627, guid: 7e93df72226606c479cd69ed0d8b706c, type: 3}
+  birdCount: 24
+  spawnRadius: 5
+  seed: 1334
+  overrideFlightSpeed: 0
+  flightSpeedRange: {x: 3, y: 6}
+--- !u!1 &1281976459
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1281976460}
+  - component: {fileID: 1281976461}
+  m_Layer: 0
+  m_Name: Bird Spawn Area 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1281976460
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1281976459}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.6308906, z: -0, w: 0.7758718}
+  m_LocalPosition: {x: -3.5, y: 2.4, z: 8.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 863794913}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1281976461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1281976459}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efdd529e7ad66334e9347cf3eb8b2021, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BirdSpawnArea
+  birdPrefab: {fileID: 5093084902333548627, guid: 7e93df72226606c479cd69ed0d8b706c, type: 3}
+  birdCount: 24
+  spawnRadius: 5
+  seed: 1234
+  overrideFlightSpeed: 0
+  flightSpeedRange: {x: 3, y: 6}
 --- !u!1 &1576134644
 GameObject:
   m_ObjectHideFlags: 0
@@ -998,3 +1305,6 @@ SceneRoots:
   - {fileID: 3594501}
   - {fileID: 947516144}
   - {fileID: 398051773}
+  - {fileID: 863794913}
+  - {fileID: 560265206}
+  - {fileID: 614062473}

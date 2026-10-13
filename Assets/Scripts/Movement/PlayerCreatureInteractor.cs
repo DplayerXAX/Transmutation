@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Sends an interaction to the Creature under the centre-screen cursor.
@@ -18,10 +19,14 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     [Tooltip("Physics layers that can be hit by the interaction ray.")]
     [SerializeField] private LayerMask interactionLayers = ~0;
+    [SerializeField] private PlayerCreatureCarrier carrier;
 
     /// <summary>Finds the main Camera when no Camera has been assigned manually.</summary>
     private void Awake()
     {
+        if (carrier == null) carrier = GetComponentInParent<PlayerCreatureCarrier>();
+        // PlayerObjects keeps CameraHolder beside Player, rather than beneath it.
+        if (carrier == null) carrier = transform.root.GetComponentInChildren<PlayerCreatureCarrier>(true);
         if (interactionCamera == null)
         {
             interactionCamera = Camera.main;
@@ -40,6 +45,15 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Raycasts through screen centre and notifies the first Creature hit.</summary>
     public void TryInteract()
     {
+        if (interactionCamera == null) return;
+        Creature held = carrier != null ? carrier.CarriedCreature : null;
+        if (held != null && held.CanUseWhileCarried)
+        {
+            Ray aim = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            held.ReceiveInteraction(new CreatureInteraction(gameObject,
+                aim.GetPoint(interactionRange), aim.direction));
+            return; // Cooldown still consumes the click.
+        }
         Creature creature = FindCreature(out RaycastHit hit, out Ray ray);
 
         if (creature == null)
@@ -74,8 +88,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
 
-        if (!Physics.Raycast(
-                ray,
+        if (!gameObject.scene.GetPhysicsScene().Raycast(
+                ray.origin, ray.direction,
                 out hit,
                 interactionRange,
                 interactionLayers,
