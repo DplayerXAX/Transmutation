@@ -37,6 +37,9 @@ public sealed class HandClimber : MonoBehaviour
     [Tooltip("How far above the player's centre the hands grip.")]
     [SerializeField] private float handHeight = 0.6f;
     [Min(0f)] [SerializeField] private float handSpread = 0.3f;
+    [Tooltip("Where the gripping hand ends up after each pull, above the body centre. Low = the body is pushed up " +
+             "past the hand (the arm presses down at the chest) before the other hand lets go and reaches.")]
+    [SerializeField] private float pressHeight = 0.2f;
     [Tooltip("How fast the arms pull the body towards its hanging spot.")]
     [Min(0.1f)] [SerializeField] private float pullSpeed = 2.4f;
     [Tooltip("How softly the body follows the hands (seconds). Higher = more sway and lag.")]
@@ -46,7 +49,9 @@ public sealed class HandClimber : MonoBehaviour
     [Tooltip("Short reaches used when a full one finds no grip (and when stepping around obstacles).")]
     [Min(0.1f)] [SerializeField] private float reachStep = 0.5f;
     [Tooltip("How far a free hand reaches past the holding one: grab high, pull it down to the chest, then the other hand goes.")]
-    [Min(0.2f)] [SerializeField] private float reachLength = 0.8f;
+    [Min(0.2f)] [SerializeField] private float reachLength = 1.04f;
+    [Tooltip("How far above the gripping hand the free hand reaches when climbing up: from the chest to well above the head.")]
+    [Min(0.2f)] [SerializeField] private float reachAbove = 1.365f;
     [Tooltip("Seconds for a short reach; long reaches take proportionally longer.")]
     [Min(0.05f)] [SerializeField] private float reachTime = 0.22f;
     [Tooltip("Hands let go if the body stays this far from both of them for half a second.")]
@@ -61,6 +66,18 @@ public sealed class HandClimber : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float enterStagger = 0.35f;
     [Tooltip("Radius of the probe that looks for holds; bigger ignores small bumps and cracks.")]
     [Range(0.01f, 0.3f)] [SerializeField] private float probeRadius = 0.08f;
+
+    [Header("Smooth Surfaces")]
+    [Tooltip("Bare hands on a SlipperySurface start sliding at this speed (m/s), speeding up to the max.")]
+    [Min(0f)] [SerializeField] private float slideStartSpeed = 1.5f;
+    [Min(0f)] [SerializeField] private float slideMaxSpeed = 5f;
+    [Min(0f)] [SerializeField] private float slideAcceleration = 6f;
+
+    [Header("Lunge")]
+    [Tooltip("Jump key while climbing up: throw yourself up the wall and grab again.")]
+    [Min(0f)] [SerializeField] private float lungeSpeed = 6.5f;
+    [Tooltip("Seconds after a lunge in which the hands grab any wall in front by themselves.")]
+    [Min(0f)] [SerializeField] private float lungeGrabWindow = 0.7f;
 
     [Header("Over The Top")]
     [Tooltip("Seconds to plant both hands on the edge, pull up, push over and stand.")]
@@ -124,6 +141,8 @@ public sealed class HandClimber : MonoBehaviour
     private float regrabTimer;
     private float stuckTimer;
     private float farTimer;
+    private float slideSpeed;
+    private float lungeTimer;
     // The hand that grabbed last; the body hangs mostly from it.
     private int leadHand;
     // Time since the hands last got higher while "up" is held, and the best height so far.
@@ -147,6 +166,8 @@ public sealed class HandClimber : MonoBehaviour
     private float feel, roll, look;
 
     public bool IsClimbing => climbing;
+    public bool Controls(SmoothFirstPersonController player) => controller == player;
+    public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
@@ -240,7 +261,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
-        if (controller == null || body == null) return;
+        if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null && ScriptedInput == null) return;
         bool Held(Key key) => keyboard != null && keyboard[key].isPressed;
@@ -250,7 +271,15 @@ public sealed class HandClimber : MonoBehaviour
         bool jumpOff = ScriptedInput == null && keyboard != null && keyboard[jumpOffKey].wasPressedThisFrame;
         float deltaTime = Time.deltaTime;
         regrabTimer = Mathf.Max(0f, regrabTimer - deltaTime);
+        lungeTimer = Mathf.Max(0f, lungeTimer - deltaTime);
         fastBlend = Mathf.MoveTowards(fastBlend, fast ? 1f : 0f, deltaTime * 3f);
+
+        // Like PEAK: holding up climbs towards where you look, so the view steers round glaze and bulges.
+        if (climbing && ScriptedInput == null && vertical > 0f && viewCamera != null)
+        {
+            float lookSide = Vector3.Dot(viewCamera.transform.forward, WallRight());
+            horizontal = Mathf.Clamp(horizontal + Mathf.Clamp(lookSide * 2f, -1f, 1f), -1f, 1f);
+        }
 
         if (mantling)
         {
@@ -262,7 +291,10 @@ public sealed class HandClimber : MonoBehaviour
         {
             RaycastHit wall = default;
             canStartClimb = regrabTimer <= 0f && FindWall(out wall);
-            if (canStartClimb && vertical > 0f && !controller.Grounded)
+            // Hands catch the wall by themselves at the end of a lunge.
+            if (canStartClimb && lungeTimer > 0f && !controller.Grounded)
+                TryStartClimb();
+            else if (canStartClimb && vertical > 0f && !controller.Grounded)
                 TryStartClimb();
             else if (canStartClimb && vertical > 0f && controller.Grounded && WallIsTall(wall))
                 TryStartClimb();
@@ -271,6 +303,11 @@ public sealed class HandClimber : MonoBehaviour
 
         canStartClimb = false;
         controller.SetClimbing(true);
+        if (jumpOff && vertical > 0f)
+        {
+            Lunge(horizontal);
+            return;
+        }
         if (jumpOff)
         {
             lastEvent = "Jumped off (jump key)";
@@ -287,6 +324,7 @@ public sealed class HandClimber : MonoBehaviour
         }
 
         AdvanceHands(deltaTime);
+        SlideOnSlippery(deltaTime);
         if (vertical > 0f)
         {
             float height = (HandTarget(0).y + HandTarget(1).y) * 0.5f;
@@ -431,11 +469,10 @@ public sealed class HandClimber : MonoBehaviour
     {
         // Let the body mostly catch up first, so the hands never run far ahead of it.
         // One hand grabs, the arms pull the body up, and only then does the other hand let go and reach.
-        if ((body.position - bodyTarget).magnitude > Mathf.Lerp(0.12f, 0.2f, fastBlend)) return;
-        // The next hand may set off before the other has landed, so the climb flows instead of stepping.
-        if (hands[0].moving && hands[1].moving) return;
-        int moving = hands[0].moving ? 0 : hands[1].moving ? 1 : -1;
-        if (moving >= 0 && hands[moving].t < Mathf.Lerp(1f, 0.7f, fastBlend)) return;
+        if ((body.position - bodyTarget).magnitude > Mathf.Lerp(0.08f, 0.15f, fastBlend)) return;
+        // Like a climber: one hand holds while the body is pushed up past it; only then does the other let go.
+        if (hands[0].moving || hands[1].moving) return;
+        int moving = -1;
 
         Vector3 up = WallUp();
         Vector3 right = WallRight();
@@ -458,11 +495,21 @@ public sealed class HandClimber : MonoBehaviour
             return;
         }
 
+        // An opening right above the hands with a floor in it (a window, a ledge, a gap): climb in
+        // rather than reaching round it.
+        if (vertical > 0f && !WallAbove(anchor) && FindLedgeTop(anchor, false, out Vector3 opening) && opening.y < anchor.y + 1.6f)
+        {
+            StartMantle(anchor, opening, "Climbed into an opening");
+            return;
+        }
+
         // Move the trailing hand: the one furthest behind in the direction of travel.
         int index = moving >= 0 ? 1 - moving
             : Vector3.Dot(holdA - anchor, direction) <= Vector3.Dot(holdB - anchor, direction) ? 0 : 1;
         // Fast climbing takes longer reaches, not just quicker ones.
-        float length = reachLength * Mathf.Lerp(1f, 1.15f, fastBlend) * (StickyHands ? 1.25f : 1f);
+        // Up the wall the free hand goes from below the gripping hand to well above the head; sideways and
+        // down the shorter reach is used.
+        float length = (vertical > 0f ? reachAbove : reachLength) * Mathf.Lerp(1f, 1.15f, fastBlend) * (StickyHands ? 1.2f : 1f);
         if (TryReachWith(index, anchor, direction, length, ReachScales)) return;
 
         // Blocked going up: over the top if there is ground up there.
@@ -617,6 +664,53 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>Too steep to stand on, and not a ceiling (overhangs are fine).</summary>
     private bool Grippable(Vector3 normal) => Vector3.Angle(normal, Vector3.up) >= MinGripAngle && normal.y > (StickyHands ? -1.01f : -0.85f);
 
+    /// <summary>True when a hold at this point is on a smooth surface (see SlipperySurface) that bare hands slide down.</summary>
+    private bool OnSlippery(Vector3 point, Vector3 normal, out RaycastHit hit)
+    {
+        return Physics.Raycast(point + normal * 0.3f, -normal, out hit, 0.6f, climbLayers, QueryTriggerInteraction.Ignore)
+            && hit.collider.GetComponent<SlipperySurface>() != null;
+    }
+
+    /// <summary>
+    /// Bare hands on a smooth surface slide down it, faster the longer they stay, until they reach rough
+    /// stone again. A carried tentacle creature sticks them in place.
+    /// </summary>
+    private void SlideOnSlippery(float deltaTime)
+    {
+        // Any hand on (or reaching for) the smooth surface drags the whole grip down with it.
+        bool sliding = false;
+        if (!StickyHands)
+            for (int i = 0; i < 2 && !sliding; i++)
+                sliding = hands[i].moving ? OnSlippery(hands[i].to, hands[i].toNormal, out _) : OnSlippery(hands[i].hold, hands[i].normal, out _);
+        if (sliding)
+        {
+            Vector3 drop = Vector3.down * (Mathf.Max(slideSpeed, slideStartSpeed) * deltaTime);
+            for (int i = 0; i < 2; i++)
+            {
+                hands[i].from += drop;
+                hands[i].to += drop;
+                Vector3 lower = hands[i].hold + drop;
+                // Stay on the surface as it curves.
+                if (Physics.Raycast(lower + hands[i].normal * 0.3f, -hands[i].normal, out RaycastHit hit, 0.8f, climbLayers, QueryTriggerInteraction.Ignore)
+                    && Grippable(hit.normal))
+                {
+                    hands[i].hold = hit.point;
+                    hands[i].normal = hit.normal;
+                }
+                else hands[i].hold = lower;
+            }
+            slideSpeed = Mathf.MoveTowards(Mathf.Max(slideSpeed, slideStartSpeed), slideMaxSpeed, slideAcceleration * deltaTime);
+            lastEvent = "Sliding down a smooth surface";
+            // Sliding gives back the height gained, so the no-progress scramble does not kick in.
+            bestAnchorHeight = Mathf.Min(bestAnchorHeight, (hands[0].hold.y + hands[1].hold.y) * 0.5f);
+        }
+        else slideSpeed = 0f;
+        IsSliding = sliding;
+    }
+
+    /// <summary>True while bare hands slide down a smooth surface.</summary>
+    public bool IsSliding { get; private set; }
+
     /// <summary>A carried tentacle creature wraps the hand and sticks to anything: ceilings too, from further away, and it never slips.</summary>
     public bool StickyHands => carrier != null && carrier.CarriesTentacle;
 
@@ -655,6 +749,8 @@ public sealed class HandClimber : MonoBehaviour
             }
             if (drawDebug)
                 Debug.DrawLine(origin, ok ? hit.point : origin + Vector3.down * (height + 1f), ok ? Color.green : Color.red, 0.1f);
+            // The body must be able to get there: up past the edge, then in over it, not through a ledge above.
+            if (ok) ok = PathToTopClear(anchor, hit.point);
             if (!ok) continue;
 
             float score = (hit.point - anchor).magnitude + (1f - hit.normal.y) * 4f;
@@ -664,6 +760,19 @@ public sealed class HandClimber : MonoBehaviour
             top = hit.point;
         }
         return best < float.MaxValue;
+    }
+
+    /// <summary>
+    /// True when the body can rise from the hands to just above a standing spot and move in over it
+    /// without passing through stone (for example a ledge overhead when climbing up under it).
+    /// </summary>
+    private bool PathToTopClear(Vector3 anchor, Vector3 top)
+    {
+        Vector3 start = anchor + wallNormal * 0.35f;
+        Vector3 rise = new Vector3(start.x, Mathf.Max(start.y, top.y + 0.6f), start.z);
+        Vector3 over = top + Vector3.up * 0.6f;
+        return !Physics.Linecast(start, rise, climbLayers, QueryTriggerInteraction.Ignore)
+            && !Physics.Linecast(rise, over, climbLayers, QueryTriggerInteraction.Ignore);
     }
 
     // Spots start a little back from the edge so the player is not set down half over it.
@@ -698,12 +807,30 @@ public sealed class HandClimber : MonoBehaviour
         // Ease the wall direction so one odd grip does not swing the body around.
         wallNormal = Vector3.Slerp(wallNormal, normal, 1f - Mathf.Exp(-10f * deltaTime)).normalized;
         // Hang mostly from the hand that grabbed last: it is pulled down to the chest as the body rises.
-        Vector3 grips = Vector3.Lerp(hands[1 - leadHand].hold, hands[leadHand].hold, 0.8f);
+        Vector3 grips = Vector3.Lerp(hands[1 - leadHand].hold, hands[leadHand].hold, 0.9f);
         // Shift weight onto the holding hand while the other one reaches.
         for (int i = 0; i < 2; i++)
             if (hands[i].moving)
                 grips += WallRight() * ((i == 0 ? 0.08f : -0.08f) * Mathf.Sin(Mathf.Clamp01(hands[i].t) * Mathf.PI));
-        bodyTarget = grips - WallUp() * handHeight + wallNormal * wallOffset;
+        bodyTarget = ClearOfWall(grips - WallUp() * pressHeight + wallNormal * wallOffset);
+    }
+
+    /// <summary>
+    /// Moves a body spot out from the wall until the torso has room, so the body never passes through
+    /// ledges or bulges between the hands and the feet (the climbing body is moved directly, not by physics).
+    /// </summary>
+    private Vector3 ClearOfWall(Vector3 target)
+    {
+        const float core = 0.25f; // a thin core: touching the wall itself is fine
+        float reach = Mathf.Max(0f, halfHeight - core - 0.15f);
+        Vector3 outward = wallNormal.sqrMagnitude > 0.5f ? wallNormal : FlatOutward();
+        for (float d = 0f; d <= 2.8f; d += 0.2f)
+        {
+            Vector3 p = target + outward * d;
+            if (!Physics.CheckCapsule(p + Vector3.up * reach, p - Vector3.up * reach, core, climbLayers, QueryTriggerInteraction.Ignore))
+                return p;
+        }
+        return target;
     }
 
     /// <summary>Feet stand on real footholds and step up after the body, one at a time.</summary>
@@ -740,6 +867,18 @@ public sealed class HandClimber : MonoBehaviour
 
     /// <summary>Climb speed now, easing up to the fast speed while the fast climb key is held.</summary>
     private float SpeedScale() => climbSpeed * Mathf.Lerp(1f, fastClimbBoost, fastBlend);
+
+    // ---------------- Lunge ----------------
+
+    /// <summary>Throws the body up the wall (towards where the player looks) and lets the hands grab again on the way.</summary>
+    private void Lunge(float horizontal)
+    {
+        Vector3 direction = (WallUp() + WallRight() * (horizontal * 0.5f)).normalized;
+        lastEvent = "Lunged up the wall";
+        Exit(direction * lungeSpeed - wallNormal * 0.8f);
+        regrabTimer = 0.18f;
+        lungeTimer = lungeGrabWindow;
+    }
 
     private Vector3 WallUp()
     {

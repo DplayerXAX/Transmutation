@@ -1237,6 +1237,7 @@ MonoBehaviour:
   innerSpireMaterial: {fileID: 2100000, guid: 540320eb4426728429946c574809ed69, type: 2}
   glyphMaterial: {fileID: 2100000, guid: ad272fbaef6bfa245962227d45dda480, type: 2}
   seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  glazeMaterial: {fileID: 2100000, guid: e960cf23bc401d04786afd29d7e5ef3e, type: 2}
   seedSource: {fileID: 1017076501}
   seedModel: {fileID: 0}
   seedModelMaterial: {fileID: 0}
@@ -1253,6 +1254,11 @@ MonoBehaviour:
   halo: 1
   seedId: spire_seed
   glyphId: spire
+  glazeRing: {x: 0.72, y: 0.775}
+  glazePatches: 0.6
+  bounceShroomPrefab: {fileID: 7281831412284706066, guid: 4cd6305231c96654dbe803b89538ca5f, type: 3}
+  heatForLift: 25
+  liftSpeed: 9
   tentacleTemplate: {fileID: 1700000015}
   wallCrawlers: 3
   groundCrawlers: 2
@@ -2904,6 +2910,79 @@ Transform:
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 40.7, y: 6.5, z: -9.6}
   m_LocalScale: {x: 1, y: 5.9922175, z: 9.82245}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1672255345
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1672255347}
+  - component: {fileID: 1672255346}
+  m_Layer: 0
+  m_Name: Landmark - Bone Kiln
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1672255346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672255345}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e3da9016d340a74aa26d8828e3594f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BoneKiln
+  world: {fileID: 1700000033}
+  boneMaterial: {fileID: 2100000, guid: 13101d2602b674a4dadaf78740e988f4, type: 2}
+  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
+  glyphMaterial: {fileID: 2100000, guid: ad272fbaef6bfa245962227d45dda480, type: 2}
+  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  preferredDistance: 130
+  sinkholeOverride: -1
+  seed: 5
+  ribSpacing: 1.75
+  spineTwist: 28
+  flowers: 0.5
+  wavePeriod: 7
+  waveLength: 9
+  waveOpenShare: 0.25
+  heatToWarm: 25
+  wakeAfter: 2.5
+  helixTwist: 9
+  helixRoll: 30
+  crawlSpeed: 6
+  flySpeed: 10
+  travelHeights: {x: 3, y: 24}
+  modeTime: {x: 25, y: 45}
+  seedId: kiln_seed
+  glyphId: kiln
+  built: 0
+  sinkholeIndex: -1
+  warmth: 0
+  awake: 0
+  flying: 0
+--- !u!4 &1672255347
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1672255345}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -5514,3 +5593,4 @@ SceneRoots:
   - {fileID: 648466096}
   - {fileID: 663679484}
   - {fileID: 399799290}
+  - {fileID: 1672255347}

@@ -254,7 +254,7 @@ MonoBehaviour:
   pullSpeed: 2.4
   bodySmoothTime: 0.16
   reachStep: 0.5
-  reachLength: 0.8
+  reachLength: 1.04
   reachTime: 0.22
   maxHandDistance: 1.4
   climbSpeed: 1

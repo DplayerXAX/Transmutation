@@ -98,6 +98,175 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 },
     };
 
+    private readonly ConcurrentQueue<ChunkResult> finished = new ConcurrentQueue<ChunkResult>();
+    private readonly List<GameObject> chunkObjects = new List<GameObject>();
+    private readonly List<Mesh> chunkMeshes = new List<Mesh>();
+    private Sinkhole[] sinkholes;
+    private DensityField field;
+    private Vector3 gridMin;
+    private Vector3Int chunkCount;
+    private float yMin, yMax;
+    private Vector2 noiseOffset;
+    private Rigidbody playerBody;
+    private Vector3 spawnPosition;
+    private bool generating;
+
+    /// <summary>Raised on the main thread after each chunk object and its mesh are created.</summary>
+    public event System.Action<GameObject, Mesh> ChunkCreated;
+
+    /// <summary>True once the layout (noise offsets, sinkholes) exists, so the queries below work.</summary>
+    public bool LayoutReady => sinkholes != null;
+    public int SinkholeCount => sinkholes != null ? sinkholes.Length : 0;
+    /// <summary>Size of the world on x and z (metres), centred on this transform.</summary>
+    public Vector2 WorldSize => worldSize;
+
+    /// <summary>Where a sinkhole shaft crosses a world height (shafts lean slightly), and its radius.</summary>
+    public Vector3 SinkholeCentre(int index, float worldY, out float radius)
+    {
+        Sinkhole hole = sinkholes[index];
+        radius = hole.radius;
+        float localY = worldY - transform.position.y;
+        return transform.position + new Vector3(hole.position.x, localY, hole.position.y - localY * 0.07f);
+    }
+
+    /// <summary>Base world heights (no 3D noise) of the surface, inner ceiling and inner ground at a world point.</summary>
+    public void ColumnHeights(Vector3 worldPoint, out float surface, out float ceiling, out float innerGround)
+    {
+        Vector3 local = worldPoint - transform.position;
+        float h = SurfaceHeight(local.x, local.z);
+        surface = transform.position.y + h;
+        ceiling = transform.position.y + CeilingHeight(h);
+        innerGround = transform.position.y + InnerGroundHeight(local.x, local.z, h);
+    }
+
+    private void Start()
+    {
+        Rigidbody[] bodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
+        foreach (Rigidbody body in bodies)
+            if (body.GetComponent<SmoothFirstPersonController>() != null) playerBody = body;
+        if (playerBody != null) spawnPosition = playerBody.position;
+
+        Generate(blockUntilDone: false);
+        PlacePlayerOnSurface();
+    }
+
+    /// <summary>Stands the player on the top surface under the spawn, whatever its exact height.</summary>
+    private void PlacePlayerOnSurface()
+    {
+        if (playerBody == null) return;
+        Physics.SyncTransforms();
+        Vector3 from = new Vector3(spawnPosition.x, transform.position.y + yMax + 5f, spawnPosition.z);
+        float distance = yMax - yMin + 10f;
+        RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, distance, ~0, QueryTriggerInteraction.Ignore);
+        float bestY = float.MinValue;
+        foreach (RaycastHit hit in hits)
+            if (hit.collider.transform.IsChildOf(transform) && hit.point.y > bestY) bestY = hit.point.y;
+        if (bestY == float.MinValue) return;
+
+        Collider playerCollider = playerBody.GetComponent<Collider>();
+        float halfHeight = playerCollider != null ? playerCollider.bounds.extents.y : 1f;
+        spawnPosition = new Vector3(spawnPosition.x, bestY + halfHeight + 0.05f, spawnPosition.z);
+        playerBody.position = spawnPosition;
+        playerBody.transform.position = spawnPosition;
+        playerBody.linearVelocity = Vector3.zero;
+    }
+
+    private void Update()
+    {
+        for (int i = 0; i < meshesPerFrame && finished.TryDequeue(out ChunkResult result); i++)
+            CreateChunkObject(result);
+
+        if (respawnFallingPlayer && playerBody != null && playerBody.position.y < transform.position.y + yMin - 20f)
+        {
+            playerBody.position = spawnPosition + Vector3.up;
+            playerBody.linearVelocity = Vector3.zero;
+        }
+    }
+
+    private void OnDestroy() => Clear();
+
+    [ContextMenu("Preview In Editor")]
+    private void PreviewInEditor() => Generate(blockUntilDone: true);
+
+    [ContextMenu("Clear Preview")]
+    private void Clear()
+    {
+        foreach (GameObject chunk in chunkObjects)
+            if (chunk != null)
+            {
+                if (Application.isPlaying) Destroy(chunk);
+                else DestroyImmediate(chunk);
+            }
+        foreach (Mesh mesh in chunkMeshes)
+            if (mesh != null)
+            {
+                if (Application.isPlaying) Destroy(mesh);
+                else DestroyImmediate(mesh);
+            }
+        chunkObjects.Clear();
+        chunkMeshes.Clear();
+
+        // Editor previews are not saved, but can survive into Play Mode; remove leftovers too.
+        for (int i = transform.childCount - 1; i >= 0; i--)
+        {
+            GameObject child = transform.GetChild(i).gameObject;
+            if (!child.name.StartsWith("World Chunk")) continue;
+            if (Application.isPlaying) Destroy(child);
+            else DestroyImmediate(child);
+        }
+        while (finished.TryDequeue(out _)) { }
+        chunksBuilt = 0;
+    }
+
+    /// <summary>Starts generating every chunk. Nearby chunks are always finished before returning.</summary>
+    public void Generate(bool blockUntilDone)
+    {
+        if (generating && Application.isPlaying) return;
+        Clear();
+        PrepareLayout();
+
+        var near = new List<Vector3Int>();
+        var far = new List<Vector3Int>();
+        Vector3 spawnLocal = transform.InverseTransformPoint(Application.isPlaying && playerBody != null ? spawnPosition : transform.position);
+        for (int cx = 0; cx < chunkCount.x; cx++)
+        for (int cy = 0; cy < chunkCount.y; cy++)
+        for (int cz = 0; cz < chunkCount.z; cz++)
+        {
+            var coord = new Vector3Int(cx, cy, cz);
+            Vector3 centre = gridMin + (new Vector3(cx, 0f, cz) + new Vector3(0.5f, 0f, 0.5f)) * (chunkCells * cellSize);
+            float distance = new Vector2(centre.x - spawnLocal.x, centre.z - spawnLocal.z).magnitude;
+            (blockUntilDone || distance <= blockingRadius ? near : far).Add(coord);
+        }
+        far.Sort((a, b) => ChunkDistance(a, spawnLocal).CompareTo(ChunkDistance(b, spawnLocal)));
+        chunksTotal = near.Count + far.Count;
+
+        // Ground under the player must exist on the first physics step.
+        Parallel.ForEach(near, coord => Enqueue(BuildChunk(coord)));
+        while (finished.TryDequeue(out ChunkResult result)) CreateChunkObject(result);
+
+        if (far.Count == 0) return;
+        generating = true;
+        Task.Run(() =>
+        {
+            Parallel.ForEach(far, new ParallelOptions { MaxDegreeOfParallelism = System.Math.Max(1, System.Environment.ProcessorCount - 1) },
+                coord => Enqueue(BuildChunk(coord)));
+            generating = false;
+        });
+    }
+
+    private float ChunkDistance(Vector3Int coord, Vector3 spawnLocal)
+    {
+        Vector3 centre = gridMin + (new Vector3(coord.x, 0f, coord.z) + new Vector3(0.5f, 0f, 0.5f)) * (chunkCells * cellSize);
+        return new Vector2(centre.x - spawnLocal.x, centre.z - spawnLocal.z).sqrMagnitude;
+    }
+
+    private void Enqueue(ChunkResult result)
+    {
+        if (result != null) finished.Enqueue(result);
+    }
+
+    // ---------------- Layout ----------------
+
     private void PrepareLayout()
     {
         var random = new System.Random(seed);
@@ -133,6 +302,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             holes.Add(new Sinkhole { position = position, radius = radius });
         }
         sinkholes = holes.ToArray();
+
+        // Snapshot settings for worker threads; must run after noiseOffset and sinkholes are set.
+        field = new DensityField(this);
     }
 
     private float SurfaceHeight(float x, float z) => field.SurfaceHeight(x, z);

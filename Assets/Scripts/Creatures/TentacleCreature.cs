@@ -94,7 +94,7 @@ public sealed class TentacleCreature : Creature
         if (!IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
-            if (tentacle.touchingHand) continue;
+            if (tentacle.touchingHand || tentacle.planted || tentacle.stepping) continue;
             tentacle.foot = CoilPoint(tentacle);
             LayoutTentacle(tentacle);
         }
@@ -339,8 +339,10 @@ public sealed class TentacleCreature : Creature
     {
         plantedTentacles = 0;
         gripping = canClimbUp = canHang = false;
+        if (!SimulationEnabled) return;
         Rigidbody player = IsCarried ? Carrier.PlayerBody : null;
         if (player == null || tentacles == null) return;
+        if (Carrier.PlayerController != null && Carrier.PlayerController.BubbleMovementBlocked) return;
 
         // Only holds above the player can pull it up; holds on the floor below only slow a fall.
         int upperHolds = 0;
@@ -481,7 +483,7 @@ public sealed class TentacleCreature : Creature
             // On the hand it only reaches for surfaces while the player climbs; otherwise it stays coiled
             // so no arms hang across the view.
             // On the player's back its arms stay wrapped round the player's arms, even while climbing.
-            return false;
+            if (!PlayerClimbing) return false;
             reach *= 0.7f;
             // Reach out in a fan around the body so some arms find walls above and some below.
             Vector3 axis = Vector3.Cross(Vector3.up, outward);
@@ -584,7 +586,7 @@ public sealed class TentacleCreature : Creature
         // On the player's back the arms run low round the body and come up to the wrists from below,
         // instead of arching up past the player's head.
         float arch = tentacle.arch;
-        if (IsCarried)
+        if (IsCarried && !tentacle.planted && !tentacle.stepping)
         {
             tipNormal = Vector3.down;
             arch *= 0.1f;

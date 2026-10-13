@@ -59,10 +59,20 @@ public sealed class SkyWeb : Creature
     private Dictionary<Rigidbody, Vector3> previousCenters = new Dictionary<Rigidbody, Vector3>(96);
     private Dictionary<Rigidbody, Vector3> currentCenters = new Dictionary<Rigidbody, Vector3>(96);
 
-    protected override void InitializeCreature()
+    private void Start()
     {
-        // Prefabs are configured before their first play-mode initialization.
+        // Leave Awake free of geometry creation so a spawner can supply parameters first.
+        // Standalone webs still initialize automatically on their first frame.
         if (!Application.isPlaying) return;
+        InitializeGeometry();
+    }
+
+    /// <summary>Apply the spider's scale once, before the first mesh is generated.</summary>
+    public void InitializeForSpawn(float scale)
+    {
+        if (geometry != null)
+            throw new InvalidOperationException("SkyWeb spawn parameters must be set before geometry initialization.");
+        webScale = Mathf.Max(0.05f, scale);
         InitializeGeometry();
     }
 
@@ -191,7 +201,8 @@ public sealed class SkyWeb : Creature
             body.GetComponentInParent<AdvancedFirstPersonTraversal>() != null ||
             body.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
         Creature creature = body.GetComponentInParent<Creature>();
-        if (creature != null && creature.IsCarried) return false;
+        if (creature != null && (creature.IsCarried || creature.IsBubbleCaptured || creature is TrappingBubble)) return false;
+        if (body.TryGetComponent<BubbleCapture>(out var bubbleCapture) && !bubbleCapture.CanCapture) return false;
         WebCapture capture = body.GetComponent<WebCapture>();
         return capture == null || capture.CanCapture;
     }
