@@ -36,9 +36,8 @@ public readonly struct CreatureInteraction
 [DisallowMultipleComponent]
 public abstract class Creature : MonoBehaviour
 {
-/// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
-public static event System.Action<Creature> Activated;
-protected virtual void OnEnable() => Activated?.Invoke(this);
+    /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
+    public static event System.Action<Creature> Activated;
 
 /// <summary>Shared food categories. Combine tags; Everything also covers future categories.</summary>
 [System.Flags]
@@ -333,6 +332,7 @@ public enum FoodTag
     protected virtual void OnEnable()
     {
         if (Application.isPlaying) CreatureRegistry.Register(this);
+        Activated?.Invoke(this);
     }
 
     /// <summary>
@@ -346,20 +346,20 @@ public enum FoodTag
             return;
         }
 
-AdvanceAge(Time.deltaTime);
-if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
+        AdvanceAge(Time.deltaTime);
+        if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
 
-// Affection fades slowly once the petting stops.
-if (!IsPetted && Affection > 0f)
-    Affection = Mathf.Max(0f, Affection - Time.deltaTime * affectionFade);
-}
+        // Affection fades slowly once the petting stops.
+        if (!IsPetted && Affection > 0f)
+            Affection = Mathf.Max(0f, Affection - Time.deltaTime * affectionFade);
+    }
 
-/// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
-protected void AdvanceAge(float deltaTime)
-{
-    if (!simulationEnabled || isDead || deltaTime <= 0f) return;
-    age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
-    if (age <= 0f) Die();
+    /// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
+    protected void AdvanceAge(float deltaTime)
+    {
+        if (!simulationEnabled || isDead || deltaTime <= 0f) return;
+        age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
+        if (age <= 0f) Die();
     }
 
     /// <summary>

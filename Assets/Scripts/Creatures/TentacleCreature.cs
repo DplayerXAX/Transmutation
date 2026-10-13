@@ -82,7 +82,11 @@ public sealed class TentacleCreature : Creature
     [SerializeField] private bool canClimbUp;
     [SerializeField] private bool canHang;
 
-    private void OnEnable() => FirstPersonBody.LimbsPosed += StickToArms;
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        FirstPersonBody.LimbsPosed += StickToArms;
+    }
     private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
 
     /// <summary>
@@ -401,18 +405,33 @@ public sealed class TentacleCreature : Creature
                 LayoutTentacle(tentacle);
                 continue;
             }
+
             if (IsCarried && !PlayerClimbing && (tentacle.planted || tentacle.stepping))
             {
                 // Back on the hand after a climb: let go of the wall and coil up again.
                 if (tentacle.stepping) stepping--;
                 tentacle.planted = tentacle.stepping = false;
             }
-            bool hasIdeal = FindIdealHold(tentacle, out Vector3 idealPoint, out Vector3 idealNormal, out Collider idealCollider);
-            // Generated colliders retain identity when their mesh changes; a cached world point may no longer exist.
-            if (tentacle.planted && (tentacle.holdCollider == null ||
+
+            bool hasIdeal = FindIdealHold(
+                tentacle,
+                out Vector3 idealPoint,
+                out Vector3 idealNormal,
+                out Collider idealCollider
+            );
+
+            // Generated colliders retain identity when their mesh changes;
+            // a cached world point may no longer exist.
+            if (tentacle.planted &&
+                (tentacle.holdCollider == null ||
                 (tentacle.holdCollider.GetComponent<ProceduralWorldChunk>() != null &&
-                !tentacle.holdCollider.Raycast(new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal), out _, 0.24f))))
+                !tentacle.holdCollider.Raycast(
+                    new Ray(tentacle.hold + tentacle.holdNormal * 0.12f, -tentacle.holdNormal),
+                    out _,
+                    0.24f))))
+            {
                 tentacle.planted = false;
+            }
 
             if (tentacle.stepping)
             {
