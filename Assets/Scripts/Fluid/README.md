@@ -21,7 +21,7 @@
 - `ProceduralWorld.Erode(Vector3 worldPosition, float radius, float strength)`：在主线程提交笔刷。正 `strength` 是本次密度削减量，不是每秒速率；负值和非有限值忽略。有效半径至少是生成时网格间距的 1.5 倍，衰减由 `erosionFalloff` 控制。
 - `ResetErosion()` 独立恢复基础地形；同一基础地形 `Generate` 保留已经应用的全局整数采样增量。种子、采样网格或基础密度参数改变时清除不兼容增量。当前版本仅保存到本次运行内存。
 - `ChunkCreated` 只在分块首次建立对象时触发。`ChunkUpdated` 通知现有分块替换；`TerrainChanged` 在关联分块全部发布后通知接触失效；`ErosionApplied` 给出已发布的实际削减总量。
-- `ErosiveFluidSystem` 共享对象池、接触采样、数量预算、粒子与波纹池；`ErosiveFluidSource` 配置发射、生命周期和侵蚀强度；`ErosiveFluidDroplet` 承担球形刚体物理。
+- `ErosiveFluidSystem` 共享对象池、接触采样、数量预算、粒子与波纹池；`ErosiveFluidSource` 配置发射、生命周期和侵蚀强度；`ErosiveFluidDroplet` 承担球形刚体物理，并继承 `Creature`：玩家可抓取（搬运时暂停寿命、继续侵蚀）和抚摸，热量达到水源的 `evaporationHeat` 时蒸发。死亡或被吃掉的液滴由系统销毁并补充新的池对象。
 - 侵蚀同时检查层遮罩和分块的直接 `ProceduralWorldChunk.Owner`。普通 Ground 对象、装饰、其他世界和角色不会被当成可侵蚀地形。Water 层参与液滴间碰撞，Player 层排除；Default 层上的现有 `Creature` 通过碰撞对排除，普通环境保持碰撞。生物激活事件立即排除新生物与重新启用的生物；每秒发现后来添加的子碰撞体，池中液滴再启用时重新设置碰撞对。
 - 静止/休眠液滴每个采样周期复查旧接触；多个接触共享同一份物理时间。侵蚀按接触面切向速度调整，暂停时不积累接触时间。
 

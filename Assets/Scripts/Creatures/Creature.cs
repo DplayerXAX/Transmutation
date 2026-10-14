@@ -184,6 +184,9 @@ public enum FoodTag
     /// <summary>Whether this creature can currently be picked up.</summary>
     public virtual bool CanBeCarried => true;
 
+    /// <summary>Held like an item: fixed in view at the right hand, kinematic, without pushing other bodies.</summary>
+    public virtual bool HeldInView => false;
+
     /// <summary>Left-click uses this creature before the cursor target while held.</summary>
     public virtual bool CanUseWhileCarried => false;
     /// <summary>Alternate pickup action, such as popping instead of carrying.</summary>

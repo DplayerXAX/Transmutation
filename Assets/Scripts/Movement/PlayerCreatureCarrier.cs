@@ -45,6 +45,17 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
+    [Header("Held In View")]
+    [Tooltip("Camera-space spot where item-like creatures (Creature.HeldInView) are held. Far and low enough " +
+             "that looking 45-60 degrees down from standing eye height presses the creature into the ground.")]
+    [SerializeField] private Vector3 heldInViewPosition = new Vector3(0.35f, -0.5f, 1.6f);
+    [Tooltip("Surfaces an item-like creature rests against instead of passing through.")]
+    [SerializeField] private LayerMask heldInViewBlockers = (1 << 7) | (1 << 8) | (1 << 9);
+    [Tooltip("Fraction of its radius an item-like creature presses into a blocking surface, so it keeps touching it.")]
+    [Range(0f, 0.9f)] [SerializeField] private float heldInViewPress = 0.3f;
+    [Tooltip("How far in front of the eyes an item-like creature is put down, unless a surface is closer.")]
+    [Min(0.3f)] [SerializeField] private float heldInViewDropDistance = 1f;
+
     public Creature CarriedCreature { get; private set; }
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
@@ -72,6 +83,10 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private Rigidbody heldBody;
     private RigidbodyInterpolation heldInterpolation;
     private Quaternion heldYawOffset;
+    private bool heldInView;
+    private bool heldDetectCollisions;
+    private float heldRadius;
+    private bool Firm => firmGrip || heldInView;
     public CarryInput InputMode => carryInput;
     public Key ToggleKeyBinding => toggleKey;
 
@@ -261,10 +276,13 @@ private void FitCarryPoint(Creature creature)
         }
         if (!creature.CanBeCarried) return;
         if (carryPoint == null) return;
-        FitCarryPoint(creature);
+        heldInView = creature.HeldInView;
+        if (heldInView) carryPoint.localPosition = heldInViewPosition;
+        else FitCarryPoint(creature);
         if (!creature.TryBeginCarry(this, carryPoint))
         {
             carryPoint.localPosition = carryPointHome;
+            heldInView = false;
             return;
         }
         CarriedCreature = creature;
@@ -276,23 +294,32 @@ private void FitCarryPoint(Creature creature)
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
 
-        if (firmGrip)
+        if (Firm)
         {
             heldBody = creature.GetComponent<Rigidbody>();
             if (heldBody != null)
             {
                 heldInterpolation = heldBody.interpolation;
                 heldBody.interpolation = RigidbodyInterpolation.None;
-                heldBody.isKinematic = true; // EndCarry restores the creature's own setting.
+                // Kinematic bodies only support speculative CCD. EndCarry restores both settings.
+                heldBody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+                heldBody.isKinematic = true;
+                if (heldInView)
+                {
+                    // An item in hand must not shove other bodies or catch on walls.
+                    heldDetectCollisions = heldBody.detectCollisions;
+                    heldBody.detectCollisions = false;
+                }
             }
-            heldYawOffset = Quaternion.Inverse(CarryYaw()) * creature.transform.rotation;
+            if (heldInView) heldRadius = MeasureCreature(creature, out _, out _) * 0.5f;
+            heldYawOffset = Quaternion.Inverse(HoldFrame()) * creature.transform.rotation;
             SnapHeld();
         }
     }
 
     private void FixedUpdate()
     {
-        if (CarriedCreature == null || firmGrip) return;
+        if (CarriedCreature == null || Firm) return;
         if (!CarriesTentacle) BringIn(Time.fixedDeltaTime);
         FollowHand(Time.fixedDeltaTime);
         if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
@@ -302,9 +329,9 @@ private void FitCarryPoint(Creature creature)
     private void LateUpdate()
     {
         if (CarriedCreature == null) return;
-        if (firmGrip && !CarriesTentacle) BringIn(Time.deltaTime);
+        if (Firm && !CarriesTentacle) BringIn(Time.deltaTime);
         FollowHand(Time.deltaTime);
-        if (firmGrip) SnapHeld();
+        if (Firm) SnapHeld();
     }
 
     /// <summary>A tentacle creature clings to the player's back (between the shoulder blades), out of view.</summary>
@@ -331,8 +358,37 @@ private void FitCarryPoint(Creature creature)
     private void SnapHeld()
     {
         if (carryPoint == null) return;
-        CarriedCreature.transform.SetPositionAndRotation(carryPoint.position, CarryYaw() * heldYawOffset);
-        if (heldBody != null) heldBody.position = carryPoint.position;
+        Vector3 point = heldInView ? RestAgainstSurfaces(carryPoint.position) : carryPoint.position;
+        CarriedCreature.transform.SetPositionAndRotation(point, HoldFrame() * heldYawOffset);
+        if (heldBody != null) heldBody.position = point;
+    }
+
+    // Terrain colliders are one-sided: a creature pushed fully through stops registering contact.
+    private Vector3 RestAgainstSurfaces(Vector3 point)
+    {
+        if (carryCamera == null || heldRadius <= 0f) return point;
+        Vector3 eye = carryCamera.transform.position;
+        Vector3 toPoint = point - eye;
+        float distance = toPoint.magnitude;
+        if (distance < 1e-4f || !gameObject.scene.GetPhysicsScene().SphereCast(eye, heldRadius, toPoint / distance, out RaycastHit hit,
+                distance, heldInViewBlockers, QueryTriggerInteraction.Ignore)) return point;
+        return eye + toPoint / distance * Mathf.Min(distance, hit.distance + heldRadius * heldInViewPress);
+    }
+
+    // Item-like creatures turn with the full view, like an item in hand; others only turn with yaw.
+    private Quaternion HoldFrame() => heldInView && carryCamera != null ? carryCamera.transform.rotation : CarryYaw();
+
+    /// <summary>Sets an item-like creature down in front of the eyes, clear of the player.</summary>
+    private void PutDownHeldInView(Creature creature)
+    {
+        if (carryCamera == null) return;
+        Transform eye = carryCamera.transform;
+        float distance = heldInViewDropDistance;
+        if (gameObject.scene.GetPhysicsScene().Raycast(eye.position, eye.forward, out RaycastHit hit, distance, pickupLayers, QueryTriggerInteraction.Ignore))
+            distance = Mathf.Max(0.3f, hit.distance - 0.3f);
+        Vector3 point = eye.position + eye.forward * distance;
+        creature.transform.position = point;
+        if (heldBody != null) heldBody.position = point;
     }
 
     private Quaternion CarryYaw()
@@ -356,11 +412,17 @@ private void FitCarryPoint(Creature creature)
 
     public void Release()
     {
+        if (CarriedCreature != null && heldInView) PutDownHeldInView(CarriedCreature);
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
         bringingIn = false;
-        if (heldBody != null) heldBody.interpolation = heldInterpolation;
+        if (heldBody != null)
+        {
+            heldBody.interpolation = heldInterpolation;
+            if (heldInView) heldBody.detectCollisions = heldDetectCollisions;
+        }
         heldBody = null;
+        heldInView = false;
         SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
         if (carryPoint != null) carryPoint.localPosition = carryPointHome;
