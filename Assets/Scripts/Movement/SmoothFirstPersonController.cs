@@ -50,6 +50,23 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [SerializeField] private float jumpCooldown = 0.25f;
     [SerializeField] private float airMultiplier = 0.4f;
 
+    [Header("Feel")]
+    [Tooltip("How fast walking reaches full speed (m/s gained per second). Set to 0 for the old force-and-drag movement.")]
+    [Min(0f)] [SerializeField] private float groundAcceleration = 60f;
+    [Tooltip("How fast walking stops when the keys are let go (m/s lost per second).")]
+    [Min(0f)] [SerializeField] private float groundDeceleration = 80f;
+    [Tooltip("Steering in the air (m/s per second); with no keys held the air slowly takes the sideways speed.")]
+    [Min(0f)] [SerializeField] private float airAcceleration = 22f;
+    [Min(0f)] [SerializeField] private float airBrake = 4f;
+    [Tooltip("Gravity times this while falling, so jumps come down quickly instead of hanging.")]
+    [Min(1f)] [SerializeField] private float fallGravityMultiplier = 1.7f;
+    [Tooltip("Gravity times this while still rising after a jump once the jump key is let go (tap = short hop).")]
+    [Min(1f)] [SerializeField] private float shortHopGravityMultiplier = 2.4f;
+    [Tooltip("A jump still works this long after walking off an edge (seconds).")]
+    [Min(0f)] [SerializeField] private float coyoteTime = 0.1f;
+    [Tooltip("A jump pressed this long before landing still happens on landing (seconds).")]
+    [Min(0f)] [SerializeField] private float jumpBuffer = 0.12f;
+
     [Header("Crouching — FullMovement Values")]
     [SerializeField] private float crouchSpeed = 3.5f;
     [SerializeField] private float crouchYScale = 0.5f;
@@ -231,7 +248,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded ? groundDrag : 0f;
+        rb.linearDamping = grounded && !Flung && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -244,6 +261,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         if (BubbleMovementBlocked) return;
         MovePlayer();
+        ExtraGravity();
 
         if (sliding)
             SlidingMovement();
@@ -286,14 +304,21 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         horizontalInput = ReadAxis(keyboard, Key.A, Key.D);
         verticalInput = ReadAxis(keyboard, Key.S, Key.W);
 
-        // One jump per key press; holding the key no longer hops again on landing.
-        if (keyboard[jumpKey].wasPressedThisFrame && readyToJump && (grounded || allowUngroundedJump))
+        // One jump per key press; holding the key no longer hops again on landing. A press just before landing,
+        // or just after walking off an edge, still counts.
+        if (keyboard[jumpKey].wasPressedThisFrame) jumpPressedAt = Time.time;
+        jumpHeld = keyboard[jumpKey].isPressed;
+        if (grounded) lastGroundedAt = Time.time;
+        bool wantsJump = Time.time - jumpPressedAt <= Mathf.Max(jumpBuffer, 0.0001f);
+        bool canJump = grounded || allowUngroundedJump || (Time.time - lastGroundedAt <= coyoteTime && !ownJumpRising);
+        if (wantsJump && readyToJump && canJump)
         {
             readyToJump = false;
+            jumpPressedAt = float.MinValue;
             Jump();
             Invoke(nameof(ResetJump), jumpCooldown);
         }
-        else if (allowDoubleJump && keyboard[jumpKey].wasPressedThisFrame &&
+        else if (allowDoubleJump && keyboard[jumpKey].wasPressedThisFrame && !wantsJump &&
                  doubleJumpAvailable && !wallRunning)
         {
             doubleJumpAvailable = false;
@@ -472,6 +497,13 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
+        if (groundAcceleration > 0f && !sliding && !wallRunning && !Flung)
+        {
+            SteerVelocity();
+            rb.useGravity = !OnSlope();
+            return;
+        }
+
         if (OnSlope() && !exitingSlope)
         {
             rb.AddForce(GetSlopeMoveDirection(moveDirection) * moveSpeed * 20f, ForceMode.Force);
@@ -491,11 +523,71 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         rb.useGravity = !OnSlope();
     }
 
+    private float jumpPressedAt = float.MinValue, lastGroundedAt = float.MinValue;
+    private bool jumpHeld, ownJumpRising;
+
+    /// <summary>
+    /// Direct, predictable movement: the velocity is steered towards where the keys point, quickly on the
+    /// ground (and stops quickly), more gently in the air. Speed from a throw or a bounce is kept in the air.
+    /// </summary>
+    private void SteerVelocity()
+    {
+        float dt = Time.fixedDeltaTime;
+        bool input = moveDirection.sqrMagnitude > 0.01f;
+        Vector3 velocity = rb.linearVelocity;
+        if (OnSlope() && !exitingSlope)
+        {
+            // Along the slope, so walking up and down hills keeps an even pace and does not bounce off.
+            Vector3 wish = input ? GetSlopeMoveDirection(moveDirection) * moveSpeed : Vector3.zero;
+            rb.linearVelocity = Vector3.MoveTowards(velocity, wish, (input ? groundAcceleration : groundDeceleration) * dt);
+            return;
+        }
+        Vector3 flat = new Vector3(velocity.x, 0f, velocity.z);
+        Vector3 target = input ? moveDirection.normalized * moveSpeed : Vector3.zero;
+        if (grounded)
+            flat = Vector3.MoveTowards(flat, target, (input ? groundAcceleration : groundDeceleration) * dt);
+        else if (input)
+        {
+            // Never brakes a launch that is already faster than walking in the direction held.
+            if (flat.magnitude <= moveSpeed + 0.1f || Vector3.Dot(flat, target) < 0f)
+                flat = Vector3.MoveTowards(flat, target, airAcceleration * dt);
+        }
+        else if (flat.magnitude <= moveSpeed + 0.1f)
+            flat = Vector3.MoveTowards(flat, Vector3.zero, airBrake * dt);
+        rb.linearVelocity = new Vector3(flat.x, velocity.y, flat.z);
+    }
+
+    /// <summary>Heavier falls, and short hops when the jump key is let go early.</summary>
+    private void ExtraGravity()
+    {
+        if (rb.isKinematic || !rb.useGravity || grounded || Flung || restricted || climbing || wallRunning) return;
+        float vy = rb.linearVelocity.y;
+        if (vy <= 0f) ownJumpRising = false;
+        float multiplier = vy < 0f ? fallGravityMultiplier : ownJumpRising && !jumpHeld ? shortHopGravityMultiplier : 1f;
+        if (multiplier > 1f) rb.AddForce(Physics.gravity * (multiplier - 1f), ForceMode.Acceleration);
+    }
+
+    private float flungUntil;
+
+    /// <summary>
+    /// Something outside the player (a stretched tentacle cord, a spring) throws the body: the walking speed
+    /// limit and ground drag are lifted for a moment so the throw is not cut short.
+    /// </summary>
+    public void Fling(Vector3 velocity, float seconds = 0.8f)
+    {
+        if (rb == null || rb.isKinematic) return;
+        rb.linearVelocity = velocity;
+        flungUntil = Time.time + seconds;
+    }
+
+    public bool Flung => Time.time < flungUntil;
+
     private void SpeedControl()
     {
         // A climber drives the body kinematically; its velocity cannot be set.
         if (rb.isKinematic)
             return;
+        if (Flung) return;
         if (OnSlope() && !exitingSlope)
         {
             if (rb.linearVelocity.magnitude > moveSpeed)
@@ -520,6 +612,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         exitingSlope = true;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
         rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+        ownJumpRising = true;
     }
 
     private void ResetJump()
@@ -602,6 +695,17 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public void SetClimbing(bool value)
     {
         climbing = value;
+    }
+
+    /// <summary>Where the view looks: yaw and pitch in degrees (positive pitch looks down).</summary>
+    public float LookYaw => yRotation;
+    public float LookPitch => xRotation;
+
+    /// <summary>Turns the view (used to turn the seated player towards a rest spot's scenic view).</summary>
+    public void SetLook(float yaw, float pitch)
+    {
+        yRotation = yaw;
+        xRotation = pitch;
     }
 
     public void SetRestricted(bool value)

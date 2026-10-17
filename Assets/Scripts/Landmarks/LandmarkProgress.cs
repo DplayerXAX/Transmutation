@@ -14,6 +14,7 @@ public static class LandmarkProgress
     {
         public List<string> seeds = new List<string>();
         public List<string> glyphs = new List<string>();
+        public List<string> rests = new List<string>();
     }
 
     private static Data data;
@@ -28,6 +29,17 @@ public static class LandmarkProgress
 
     public static bool HasSeed(string id) => Current.seeds.Contains(id);
     public static bool HasGlyph(string id) => Current.glyphs.Contains(id);
+
+    /// <summary>Kinds of resting place already meditated at (each new kind allows one meditation).</summary>
+    public static bool HasRested(string kind) => Current.rests != null && Current.rests.Contains(kind);
+
+    public static void AddRest(string kind)
+    {
+        if (string.IsNullOrEmpty(kind) || HasRested(kind)) return;
+        if (Current.rests == null) Current.rests = new List<string>();
+        Current.rests.Add(kind);
+        Save();
+    }
 
     public static void AddSeed(string id)
     {
@@ -127,6 +139,23 @@ public static class LandmarkGlyphs
             default:
                 return Random(id);
         }
+    }
+
+    /// <summary>
+    /// The spire's sign with its crossbar (the ground line) moved to a height: 0 = at the foot of the tower
+    /// stroke, 1 = at its point. Signs on the towers use it to show how high up they are.
+    /// </summary>
+    public static IReadOnlyList<Vector2[]> SpireAtHeight(float t)
+    {
+        float y = Mathf.Lerp(0.15f, 1.2f, Mathf.Clamp01(t));
+        return new List<Vector2[]>
+        {
+            new[] { new Vector2(0f, 0.05f), new Vector2(0f, 1.35f) },
+            new[] { new Vector2(-0.3f, 1.0f), new Vector2(0f, 1.35f), new Vector2(0.24f, 1.08f) },
+            new[] { new Vector2(-0.24f, 0.32f), new Vector2(0f, 0.05f), new Vector2(0.3f, 0.4f) },
+            new[] { new Vector2(-0.48f, y), new Vector2(-0.12f, y) },
+            new[] { new Vector2(0.12f, y), new Vector2(0.42f, y + 0.04f) },
+        };
     }
 
     /// <summary>A simple made-up glyph for ids without a hand-made one.</summary>

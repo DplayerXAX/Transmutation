@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_Realm_Stream
+  m_Shader: {fileID: 4800000, guid: 3fd9d78043734c7e9a9b7862e769de8d, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Bands: 5
+    - _Stretch: 0.18
+    - _Warp: 1.4
+    - _FlowSpeed: 0.5
+    - _VeinWidth: 1.3
+    - _Gloss: 1
+    - _LampReflection: 1
+    - _Sway: 0
+    - _SwaySpeed: 0.6
+    - _Cull: 2
+    m_Colors:
+    - _ColorA: {r: 0.04, g: 0.42, b: 0.44, a: 1}
+    - _ColorB: {r: 0.01, g: 0.15, b: 0.18, a: 1}
+    - _ColorC: {r: 0.96, g: 0.89, b: 0.76, a: 1}
+    - _ColorD: {r: 0.78, g: 0.43, b: 0.14, a: 1}
+    - _ColorE: {r: 0.015, g: 0.015, b: 0.02, a: 1}
+    - _VeinColor: {r: 1, g: 0.8, b: 0.42, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

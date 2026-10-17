@@ -90,6 +90,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestPerf") >= 0)
+        {
+            yield return CheckPerformance();
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestKilnOnly") >= 0)
         {
             yield return CheckKiln();
@@ -122,9 +128,152 @@ public sealed class ClimbTestDriver : MonoBehaviour
             else Log("Spire: not found.");
         }
 
+        // The staged climb, bare-handed: the first tower from the ground, then each next stage from the landing
+        // its bridge arrives at.
+        var spireForShot = FindFirstObjectByType<HangingSpire>();
+        if (FindSpire(out spire, 0f, "Stage Tower 1")) yield return Climb(spire, fast: false, timeout: 80f, fromGround: false, capture: true);
+        else Log("Stage Tower 1: not found.");
+        if (spireForShot != null)
+            for (int l = 0; l < spireForShot.Landings.Count; l++)
+            {
+                var landing = spireForShot.Landings[l];
+                Vector3 standAt = landing.top + Vector3.up * (halfHeight + 0.1f) - landing.inward * 0.3f;
+                // Walk up to the wall, as a player would.
+                if (Physics.Raycast(standAt, landing.inward, out RaycastHit wallAhead, 6f, 1 << 7, QueryTriggerInteraction.Ignore)) standAt = wallAhead.point - landing.inward * 0.6f;
+                bool last = l == spireForShot.Landings.Count - 1;
+                var cliff = new Cliff { start = standAt, feet = landing.top, inward = landing.inward, topY = last ? (spireForShot.CrownSeat(out Vector3 crownTop, out _) ? crownTop.y - 0.5f : spireForShot.GlazeRing.x + 1f) : spireForShot.StageTowers[1].GetComponent<MeshCollider>().bounds.max.y - 3.5f, name = last ? "From landing to the crown" : "Stage Tower 2 (from its landing)" };
+                yield return Climb(cliff, fast: false, timeout: 80f, fromGround: true);
+            }
+        if (framesPath != null && spireForShot != null && spireForShot.StageTowers.Count == 2)
+        {
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Vector3 mid = (spireForShot.StageTowers[0].position + spireForShot.StageTowers[1].position) * 0.5f;
+            Vector3 spireBase = spireForShot.transform.GetChild(0).position;
+            Vector3 away = (mid - spireBase); away.y = 0f;
+            Vector3 from = mid + away.normalized * 55f + Vector3.up * 40f;
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(spireBase + Vector3.up * 30f - from));
+            captureCamera.fieldOfView = 70f;
+            Save(captureCamera, Path.Combine(framesPath, "stages.png"));
+        }
+        yield return CheckFuzzRope();
         yield return CheckGlazeRoutes();
         Log($"RESULT {passed}/{total} climbs reached the top.");
         Quit();
+    }
+
+    /// <summary>
+    /// Frame cost of each kind of creature: average frame time with everything running, then with each kind
+    /// switched off in turn (its scripts disabled). Also counts renderers and colliders per kind.
+    /// </summary>
+    private IEnumerator CheckPerformance()
+    {
+        Time.timeScale = 1f;
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = -1;
+        yield return new WaitForSeconds(3f);
+        var byType = new Dictionary<System.Type, List<MonoBehaviour>>();
+        foreach (MonoBehaviour m in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+        {
+            if (m == null || !m.isActiveAndEnabled) continue;
+            string ns = m.GetType().Namespace ?? "";
+            if (ns.StartsWith("Unity") || ns.StartsWith("AK") || m.GetType().Name.StartsWith("Ak") || m is ClimbTestDriver) continue;
+            if (!byType.TryGetValue(m.GetType(), out var list)) byType[m.GetType()] = list = new List<MonoBehaviour>();
+            list.Add(m);
+        }
+        // Each part of a creature's update, called by itself many times (milliseconds per call).
+        void TimeCall(Object target, string method, params object[] args)
+        {
+            var info = target.GetType().GetMethod(method, Private | BindingFlags.Public);
+            if (info == null) { Log($"    {target.GetType().Name}.{method}: not found"); return; }
+            info.Invoke(target, args);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < 200; i++) info.Invoke(target, args);
+            Log($"    {target.GetType().Name}.{method}: {watch.Elapsed.TotalMilliseconds / 200.0:0.000} ms per call");
+        }
+        TentacleCreature tentacle = FindFirstObjectByType<TentacleCreature>();
+        if (tentacle != null)
+        {
+            TimeCall(tentacle, "UpdateTentacles", 0.016f);
+            TimeCall(tentacle, "UpdateMembrane");
+            TimeCall(tentacle, "UpdateShaderState", 0.016f);
+            TimeCall(tentacle, "UpdateHunt", 0.016f);
+            TimeCall(tentacle, "Wander", 0.016f);
+            TimeCall(tentacle, "UpdateBodyVisual", 0.016f);
+        }
+        FuzzCreature fuzz = FindFirstObjectByType<FuzzCreature>();
+        if (fuzz != null) TimeCall(fuzz, "TickCreature", 0.016f);
+        foreach (MarchingCubesVolume volume in FindObjectsByType<MarchingCubesVolume>(FindObjectsSortMode.None))
+        {
+            Log($"    volume '{volume.name}' under '{(volume.transform.parent != null ? volume.transform.parent.name : "-")}', {volume.NumPointsPerAxis} points per axis");
+            TimeCall(volume, "DecayDensities", 0.05f);
+            TimeCall(volume, "InjectFromOverlays", 0.05f);
+            TimeCall(volume, "RebuildDirtyChunks");
+            TimeCall(volume, "Update");
+            {
+                var decay = typeof(MarchingCubesVolume).GetMethod("DecayDensities", Private);
+                var inject = typeof(MarchingCubesVolume).GetMethod("InjectFromOverlays", Private);
+                var rebuild = typeof(MarchingCubesVolume).GetMethod("RebuildDirtyChunks", Private);
+                double rebuildMs = 0;
+                for (int i = 0; i < 20; i++)
+                {
+                    decay.Invoke(volume, new object[] { 0.05f });
+                    inject.Invoke(volume, new object[] { 0.05f });
+                    var w = System.Diagnostics.Stopwatch.StartNew();
+                    rebuild.Invoke(volume, null);
+                    rebuildMs += w.Elapsed.TotalMilliseconds;
+                }
+                Log($"    MarchingCubesVolume rebuild after a real tick: {rebuildMs / 20.0:0.00} ms");
+            }
+        }
+        BoneRib rib = FindFirstObjectByType<BoneRib>();
+        if (rib != null) TimeCall(rib, "LateUpdate");
+        if (rib != null) TimeCall(rib, "Update");
+        // Every script's Update, LateUpdate and FixedUpdate, timed on one instance and scaled by how many there are.
+        {
+            var costs = new List<(string, double)>();
+            foreach (var pair in byType)
+            {
+                MonoBehaviour one = pair.Value[0];
+                if (one == null || one is ClimbTestDriver) continue;
+                double total = 0;
+                var parts = new List<string>();
+                foreach (string name in new[] { "Update", "LateUpdate", "FixedUpdate" })
+                {
+                    MethodInfo info = null;
+                    for (System.Type t = one.GetType(); t != null && info == null && t != typeof(MonoBehaviour); t = t.BaseType)
+                        info = t.GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly, null, System.Type.EmptyTypes, null);
+                    if (info == null) continue;
+                    try
+                    {
+                        info.Invoke(one, null);
+                        var watch = System.Diagnostics.Stopwatch.StartNew();
+                        for (int i = 0; i < 30; i++) info.Invoke(one, null);
+                        double ms = watch.Elapsed.TotalMilliseconds / 30.0 * pair.Value.Count;
+                        total += ms;
+                        parts.Add($"{name} {ms:0.00}");
+                    }
+                    catch (System.Exception e) { parts.Add($"{name} failed ({e.InnerException?.GetType().Name})"); }
+                }
+                if (parts.Count > 0) costs.Add(($"{pair.Key.Name} x{pair.Value.Count}: {string.Join(", ", parts)}", total));
+            }
+            costs.Sort((x, y) => y.Item2.CompareTo(x.Item2));
+            for (int i = 0; i < Mathf.Min(18, costs.Count); i++) Log($"    script cost {costs[i].Item2:0.00} ms  {costs[i].Item1}");
+        }
+        float baseline = 0f;
+        yield return MeasureFrames(v => baseline = v);
+        Log($"Perf: all running {baseline:0.00} ms per frame (batch mode, no rendering)");
+    }
+
+    private IEnumerator MeasureFrames(System.Action<float> result)
+    {
+        yield return null;
+        yield return null;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        const int frames = 120;
+        for (int i = 0; i < frames; i++) yield return null;
+        result((float)watch.Elapsed.TotalMilliseconds / frames);
     }
 
     /// <summary>Tentacle creatures on the tower: where they are, then carry one and climb with it.</summary>
@@ -162,8 +311,90 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 Save(captureCamera, Path.Combine(framesPath, "seed_from_ground.png"));
             }
         }
+        // Resting places.
+        {
+            yield return new WaitForSeconds(1f);
+            var rests = RestSpotSystem.Instance;
+            if (rests == null) Log("Rest spots: no RestSpotSystem.");
+            else
+            {
+                var kinds = new List<string>();
+                foreach (RestSpot r in rests.Spots) kinds.Add(r.kind);
+                Log($"Rest spots: {rests.Spots.Count} ({string.Join(", ", kinds)}); away from them the meditation gate says: {MeditationController.Gate?.Invoke() ?? "(allowed)"}");
+                if (rests.Spots.Count > 0)
+                {
+                    RestSpot first = rests.Spots[0];
+                    body.isKinematic = false;
+                    body.position = first.Seat + first.transform.forward * 1.2f + Vector3.up * 0.6f;
+                    body.linearVelocity = Vector3.zero;
+                    Physics.SyncTransforms();
+                    yield return new WaitForSeconds(0.5f);
+                    Log($"    beside the {first.kind}: gate says {MeditationController.Gate?.Invoke() ?? "(allowed)"}");
+                    if (framesPath != null)
+                    {
+                        if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+                        captureCamera.CopyFrom(Camera.main);
+                        captureCamera.enabled = false;
+                        Vector3 from = first.transform.position + first.transform.forward * 4f + first.transform.right * 2f + Vector3.up * 2.2f;
+                        captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(first.transform.position + Vector3.up * 0.6f - from));
+                        Directory.CreateDirectory(framesPath);
+                        Save(captureCamera, Path.Combine(framesPath, "rest_spot.png"));
+                    }
+                    // Every resting place has a scenic view; sitting locks the move keys.
+                    for (int v = 0; v < rests.Spots.Count; v++)
+                    {
+                        RestSpot spot = rests.Spots[v];
+                        var scenic = rests.ViewFor(spot);
+                        Log($"    {spot.kind} view: {(scenic == null ? "none" : $"{Vector3.Distance(scenic.position, spot.Seat):0.0} m from the seat, looking {scenic.rotation.eulerAngles}")}");
+                        if (scenic != null && framesPath != null)
+                        {
+                            spot.SetNew(false);
+                            captureCamera.transform.SetPositionAndRotation(scenic.position, scenic.rotation);
+                            captureCamera.fieldOfView = 60f;
+                            Save(captureCamera, Path.Combine(framesPath, $"rest_view_{v}_{spot.kind}.png"));
+                        }
+                    }
+                    var sit = typeof(RestSpotSystem).GetMethod("Sit", Private);
+                    var stand = typeof(RestSpotSystem).GetMethod("Stand", Private);
+                    sit.Invoke(rests, new object[] { first });
+                    yield return new WaitForSeconds(0.3f);
+                    Log($"    seated: Sitting {rests.Sitting}, move keys blocked {controller.BubbleMovementBlocked}, body kinematic {body.isKinematic}");
+                    stand.Invoke(rests, null);
+                    yield return null;
+                }
+            }
+        }
         var crawlers = FindObjectsByType<SpireCrawler>(FindObjectsSortMode.None);
         var tentacles = FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None);
+        // Predation: a tentacle creature on the ground and a fuzzy creature put near it.
+        {
+            TentacleCreature hunter = null;
+            foreach (TentacleCreature t in tentacles) if (t.GetComponent<SpireCrawler>() == null && !t.IsCarried) { hunter = t; break; }
+            FuzzCreature fuzz = FindFirstObjectByType<FuzzCreature>();
+            if (hunter != null && fuzz != null)
+            {
+                Vector3 near = hunter.transform.position + hunter.transform.forward * 3f;
+                var fb = fuzz.GetComponent<Rigidbody>();
+                if (fb != null) fb.position = near;
+                fuzz.transform.position = near;
+                bool caught = false;
+                for (float t = 0f; t < 10f && !caught; t += 0.5f) { yield return new WaitForSeconds(0.5f); caught = fuzz.Caught && hunter.Holding; }
+                Log($"Predation: caught {caught}, distance {Vector3.Distance(fuzz.transform.position, hunter.transform.position):0.0} m");
+                if (framesPath != null && caught)
+                {
+                    if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+                    captureCamera.CopyFrom(Camera.main);
+                    captureCamera.enabled = false;
+                    Vector3 from = hunter.transform.position + new Vector3(3f, 2.2f, 3f);
+                    captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(fuzz.transform.position - from));
+                    Directory.CreateDirectory(framesPath);
+                    Save(captureCamera, Path.Combine(framesPath, "predation.png"));
+                }
+                for (float t = 0f; t < 14f && fuzz.Caught; t += 0.5f) yield return new WaitForSeconds(0.5f);
+                Log($"Predation: still held after the hold time: {fuzz.Caught}");
+            }
+            else Log("Predation: no ground tentacle creature or fuzzy creature.");
+        }
         Log($"Tentacle creatures: {tentacles.Length}, crawling on the tower: {crawlers.Length}");
         foreach (SpireCrawler crawler in crawlers)
         {
@@ -202,6 +433,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield return new WaitForSeconds(2f);
             Log($"    still carried after 2 s: {carrier.CarriesTentacle}, creature {(crawlers.Length > 0 && crawlers[0] != null ? "-" : "on back")}");
             if (framesPath != null) { Capture("Carried", "back"); yield return new WaitForSeconds(0.7f); Capture("Carried", "back"); }
+            yield return CheckTether();
         }
     }
 
@@ -415,6 +647,193 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
     }
 
+    /// <summary>The carried tentacle fired into a cord: stand on it, then use it as a slingshot.</summary>
+    private IEnumerator CheckTether()
+    {
+        var tether = FindFirstObjectByType<TentacleTether>();
+        if (tether == null) { Log("Tether: no TentacleTether on the player."); yield break; }
+        Vector3 spawnFlat = world.transform.position;
+        Vector3 ground = new Vector3(spawnFlat.x, TopHeight(spawnFlat, out _), spawnFlat.z);
+        Vector3 a = ground + Vector3.right * 5f + Vector3.up * 1.2f, b = ground - Vector3.right * 5f + Vector3.up * 1.2f;
+        // Stand a little way off and shoot one arm at the first point: the creature on the back stretches it out.
+        body.isKinematic = false;
+        body.position = (a + b) * 0.5f + Vector3.forward * 6f + Vector3.up * 0.3f;
+        Physics.SyncTransforms();
+        yield return new WaitForSeconds(0.5f);
+        tether.FireAt(a);
+        yield return new WaitForSeconds(0.6f);
+        // Walk away from the stuck arm: it pulls back harder the further the player goes.
+        {
+            Vector3 away = (body.position - a); away.y = 0f; away.Normalize();
+            Vector3 start = body.position;
+            for (float t = 0f; t < 2.5f; t += Time.fixedDeltaTime)
+            {
+                body.AddForce(away * 25f, ForceMode.Acceleration);
+                yield return new WaitForFixedUpdate();
+            }
+            Log($"Tether: walking away for 2.5 s with an arm stuck got {Vector3.Distance(start, body.position):0.0} m (it pulls back)");
+            body.position = start;
+            body.linearVelocity = Vector3.zero;
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(0.3f);
+        }
+        if (framesPath != null)
+        {
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Vector3 from = body.position + new Vector3(4f, 2.5f, 4f);
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation((body.position + a) * 0.5f - from));
+            Directory.CreateDirectory(framesPath);
+            Save(captureCamera, Path.Combine(framesPath, "tether_arm.png"));
+        }
+        tether.FireAt(b);
+        yield return new WaitForSeconds(0.4f);
+        // Dragging a tentacle creature with the left hand (on a ground one).
+        {
+            TentacleCreature other = null;
+            foreach (TentacleCreature t in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None))
+                if (!t.IsCarried && t.GetComponent<SpireCrawler>() == null) { other = t; break; }
+            if (other != null)
+            {
+                Vector3 from = other.transform.position;
+                Vector3 hand = from + Vector3.up * 1.2f;
+                other.Dragged = true;
+                other.BeginPet(hand, Vector3.up);
+                for (float t = 0f; t < 2f; t += Time.deltaTime)
+                {
+                    Vector3 awayFromCord = other.transform.position - (a + b) * 0.5f; awayFromCord.y = 0f;
+                    hand += awayFromCord.normalized * 3f * Time.deltaTime;
+                    other.ContinuePet(hand, Vector3.up, Time.deltaTime);
+                    yield return null;
+                }
+                other.EndPet();
+                other.Dragged = false;
+                Log($"Tether: dragged a tentacle creature by hand {Vector3.Distance(from, other.transform.position):0.0} m (hand moved 6 m)");
+            }
+        }
+        // Set the creature down: it hangs between its two stuck arms.
+        var carrierNow = FindFirstObjectByType<PlayerCreatureCarrier>();
+        TentacleCreature hung = carrierNow.CarriedCreature as TentacleCreature;
+        carrierNow.Release();
+        yield return new WaitForSeconds(1f);
+        Log($"Tether: cords {tether.CordCount}, creature hung {(hung != null && hung.Suspended)} with {(hung != null ? hung.PinnedCount : 0)} arms stuck, at {(hung != null ? (hung.transform.position - (a + b) * 0.5f).ToString() : "-")} from the middle");
+        // Stand on it.
+        body.isKinematic = false;
+        body.linearVelocity = Vector3.zero;
+        body.position = (a + b) * 0.5f + Vector3.up * (halfHeight + 0.6f);
+        Physics.SyncTransforms();
+        yield return new WaitForSeconds(1.5f);
+        Log($"Tether: standing on it, feet {body.position.y - halfHeight - (a.y):0.00} m above the cord (0 = on it), climbing {climber.IsClimbing}, last {climber.LastEvent}, kinematic {body.isKinematic}");
+        // Walk along it from near one end to near the other: the feet should stay on the arms all the way.
+        {
+            Vector3 from = Vector3.Lerp(a, b, 0.15f), to = Vector3.Lerp(a, b, 0.85f);
+            body.position = from + Vector3.up * (halfHeight + 0.5f);
+            body.linearVelocity = Vector3.zero;
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(0.5f);
+            float lowest = float.MaxValue;
+            for (float t = 0f; t < 2.5f; t += Time.deltaTime)
+            {
+                Vector3 along = to - body.position; along.y = 0f;
+                if (along.magnitude < 0.3f) break;
+                body.linearVelocity = new Vector3(0f, body.linearVelocity.y, 0f) + along.normalized * 2.5f;
+                lowest = Mathf.Min(lowest, body.position.y - halfHeight - Mathf.Lerp(a.y, b.y, 0.5f));
+                yield return null;
+            }
+            Log($"Tether: walked along the cord to {Vector3.Distance(body.position, to + Vector3.up * halfHeight):0.0} m from the far end, lowest feet {lowest:0.00} m against the pins' middle (fell off if far below 0)");
+        }
+        // Fuzzy creatures following the player would get in the way of this measurement: send them off.
+        foreach (FuzzCreature f in FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None)) { f.transform.position += Vector3.right * 40f; var fb = f.GetComponent<Rigidbody>(); if (fb != null) fb.position = f.transform.position; }
+        Physics.SyncTransforms();
+        // Walking up close: nothing should pull the player in.
+        body.position = (a + b) * 0.5f + Vector3.forward * 1.6f;
+        body.linearVelocity = Vector3.zero;
+        Physics.SyncTransforms();
+        yield return new WaitForSeconds(1f);
+        Log($"Tether: stood next to the cord for 1 s, moved {Vector3.Distance(body.position, (a + b) * 0.5f + Vector3.forward * 1.6f):0.00} m (should stay put)");
+        // Slingshot: grab the hung creature with the left hand, walk back 3 m drawing the cord, let go.
+        float deepest = 0f, fling = 0f;
+        if (hung != null)
+        {
+            hung.Dragged = true;
+            hung.BeginPet(hung.transform.position, Vector3.forward);
+            for (float t = 0f; t < 1.2f; t += Time.deltaTime)
+            {
+                body.position = (a + b) * 0.5f + Vector3.forward * (1.6f + t * 2.5f);
+                hung.ContinuePet(body.position + Vector3.back * 1.2f, Vector3.forward, Time.deltaTime);
+                yield return null;
+            }
+            yield return new WaitForSeconds(0.2f);
+            hung.EndPet();
+            hung.Dragged = false;
+            for (float t = 0f; t < 1.5f; t += Time.fixedDeltaTime)
+            {
+                yield return new WaitForFixedUpdate();
+                fling = Mathf.Max(fling, -body.linearVelocity.z);
+                deepest = Mathf.Min(deepest, body.position.z - (a.z + b.z) * 0.5f);
+            }
+        }
+        { var names = new List<string>(); foreach (Collider c in Physics.OverlapSphere(body.position + Vector3.back * 0.7f, 0.6f, ~0, QueryTriggerInteraction.Ignore)) names.Add(c.name + "@" + c.gameObject.layer); Log("      blocking: " + string.Join(", ", names)); }
+        Log($"Tether: drew the cord back about 3 m by hand and let go: shot over the line at {fling:0.0} m/s, reaching {-deepest:0.0} m past it (shots {tether.Flung})");
+        if (framesPath != null)
+        {
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Vector3 from = (a + b) * 0.5f + new Vector3(2f, 3f, 9f);
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation((a + b) * 0.5f - from));
+            Directory.CreateDirectory(framesPath);
+            Save(captureCamera, Path.Combine(framesPath, "tether.png"));
+        }
+    }
+
+    /// <summary>A fuzz rope hung from the lip of a bridge landing, then climbed bare-handed from its bottom.</summary>
+    private IEnumerator CheckFuzzRope()
+    {
+        var spireLandmark = FindFirstObjectByType<HangingSpire>();
+        var fuzzes = FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None);
+        if (spireLandmark == null || spireLandmark.Landings.Count == 0 || fuzzes.Length < 2) { Log($"Fuzz rope: skipped ({fuzzes.Length} fuzz creatures)"); yield break; }
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        if (carrier != null) carrier.Release();
+        var landing = spireLandmark.Landings[0];
+        // A rope hung 4.5 m above open ground near the spawn, reaching down to about head height.
+        Vector3 spawnFlat = world.transform.position + Vector3.right * 6f;
+        Vector3 lip = new Vector3(spawnFlat.x, TopHeight(spawnFlat, out _) + 4.5f, spawnFlat.z);
+        landing = (lip, Vector3.forward);
+        // Gather them round the player so they join the chain, then stick the first one at the lip.
+        body.isKinematic = false;
+        body.position = lip + Vector3.down * 6f;
+        body.linearVelocity = Vector3.zero;
+        Physics.SyncTransforms();
+        for (int i = 1; i < fuzzes.Length; i++) { fuzzes[i].transform.position = body.position + Vector3.right * i; var fb = fuzzes[i].GetComponent<Rigidbody>(); if (fb != null) fb.position = fuzzes[i].transform.position; }
+        yield return new WaitForSeconds(0.5f);
+        fuzzes[0].transform.position = lip;
+        var rb0 = fuzzes[0].GetComponent<Rigidbody>(); if (rb0 != null) rb0.position = lip;
+        fuzzes[0].Anchor();
+        yield return new WaitForSeconds(2f);
+        float lowest = float.MaxValue;
+        foreach (FuzzCreature f in fuzzes) if (f.InRope) lowest = Mathf.Min(lowest, f.transform.position.y);
+        Log($"Fuzz rope: {FuzzCreature.RopeLength} creatures hang from the landing lip, down to {lip.y - lowest:0.0} m below it");
+        if (framesPath != null)
+        {
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            Vector3 from = lip + Vector3.Cross(Vector3.up, landing.inward) * 7f - landing.inward * 3f + Vector3.down * 2f;
+            captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(lip + Vector3.down * 2.5f - from));
+            Directory.CreateDirectory(framesPath);
+            Save(captureCamera, Path.Combine(framesPath, "fuzz_rope.png"));
+        }
+        // Climb it from the bottom, bare-handed, facing the rope.
+        // Stand on the ground facing the rope and climb it: success = the feet get up near the top.
+        Vector3 inward = Vector3.forward;
+        float groundY = lip.y - 4.5f;
+        var cliff = new Cliff { start = new Vector3(lip.x, groundY + halfHeight + 0.1f, lip.z) - inward * 0.75f, feet = new Vector3(lip.x, groundY, lip.z), inward = inward, topY = lip.y - 1.5f, name = "Fuzz rope (free hanging, 4.5 m)" };
+        yield return Climb(cliff, fast: false, timeout: 30f, fromGround: true);
+        FuzzCreature.DissolveRope();
+    }
+
     private static string savedProgress;
 
     private static void Quit()
@@ -457,7 +876,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
         climber.ScriptedInput = new Vector2(0f, 1f);
         var events = new List<string>();
         string lastSeen = climber.LastEvent;
-        float start = Time.time, onTopSince = -1f, maxFeet = float.MinValue;
+        float start = Time.time, onTopSince = -1f, maxFeet = float.MinValue, idleSince = -1f;
         bool started = false, success = false, stallReported = false;
         float nextCapture = 0f;
         float lastProgress = Time.time;
@@ -505,6 +924,29 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 }
             }
             else onTopSince = -1f;
+            // Standing on a ledge part way up: walk up to the wall again, as a player would, and carry on.
+            if (started && !active && !onTop && controller.Grounded)
+            {
+                if (idleSince < 0f) idleSince = Time.time;
+                // The nearest tall wall round about (the climb may have wandered round the tower).
+                RaycastHit ahead = default;
+                Vector3 towards = Vector3.zero;
+                float nearest = 6f;
+                for (int d = 0; d < 16 && Time.time - idleSince > 1f; d++)
+                {
+                    Vector3 dir = Quaternion.Euler(0f, d * 22.5f, 0f) * cliff.inward;
+                    if (Physics.Raycast(body.position + Vector3.up * 0.5f, dir, out RaycastHit hit, nearest, 1 << 7, QueryTriggerInteraction.Ignore) && Mathf.Abs(hit.normal.y) < 0.4f)
+                    { nearest = hit.distance; ahead = hit; towards = dir; }
+                }
+                if (towards != Vector3.zero)
+                {
+                    body.position = new Vector3(ahead.point.x, body.position.y, ahead.point.z) - towards * 0.55f;
+                    Teleport(body.position, towards);
+                    events.Add($"    {Time.time - start,5:0.0}s  walked {nearest - 0.55f:0.0} m to the wall");
+                    idleSince = -1f;
+                }
+            }
+            else idleSince = -1f;
             if (!started && Time.time - start > 4f) break;
             yield return null;
         }
@@ -514,6 +956,21 @@ public sealed class ClimbTestDriver : MonoBehaviour
         Log($"{(success ? "PASS" : "FAIL")} {cliff.name}  wall {height:0.0} m  {(fast ? "fast" : "normal")}  " +
             $"{(started ? $"{Time.time - start:0.0}s, {climbs} grab(s), best feet {maxFeet - cliff.topY:+0.0;-0.0} vs top" : "never started climbing")}");
         foreach (string e in events) Log(e);
+        if (!success && started)
+        {
+            bool wallAhead = Physics.Raycast(body.position, cliff.inward, out RaycastHit ahead, 20f, 1 << 7, QueryTriggerInteraction.Ignore);
+            bool floor = Physics.Raycast(body.position, Vector3.down, out RaycastHit under, 3f, 1 << 7, QueryTriggerInteraction.Ignore);
+            if (framesPath != null && captureCamera != null)
+            {
+                captureCamera.CopyFrom(Camera.main);
+                captureCamera.enabled = false;
+                Vector3 eye = body.position + Vector3.up * 6f - cliff.inward * 8f;
+                captureCamera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(body.position - eye));
+                captureCamera.fieldOfView = 70f;
+                Save(captureCamera, Path.Combine(framesPath, "ended_" + cliff.name.Replace(' ', '_') + ".png"));
+            }
+            Log($"    ended: grounded {controller.Grounded}, climbing {climber.IsClimbing}, mantling {climber.IsMantling}, wall ahead {(wallAhead ? $"{ahead.distance:0.0} m ({ahead.collider.name})" : "none")}, floor {(floor ? $"{under.distance:0.0} m ({under.collider.name}, normal y {under.normal.y:0.00})" : "none")}");
+        }
         yield return new WaitForSeconds(0.3f);
     }
 
@@ -770,25 +1227,26 @@ public sealed class ClimbTestDriver : MonoBehaviour
         return hits;
     }
 
-    private bool FindSpire(out Cliff cliff, float startAngle)
+    private bool FindSpire(out Cliff cliff, float startAngle, string towerName = "Spire")
     {
         cliff = default;
         HangingSpire spire = FindFirstObjectByType<HangingSpire>();
         if (spire == null) return false;
         Transform tower = null;
         foreach (MeshCollider collider in spire.GetComponentsInChildren<MeshCollider>())
-            if (collider.name == "Spire") tower = collider.transform;
+            if (collider.name == towerName) tower = collider.transform;
         if (tower == null) return false;
 
-        Vector3 root = tower.parent.position;
+        Vector3 root = tower.position;
+        bool main = towerName == "Spire";
         Bounds bounds = tower.GetComponent<MeshCollider>().bounds;
         for (int a = 0; a < 12; a++)
         {
             float angle = startAngle + a * 30f + 15f;
             Vector3 outward = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
-            float ground = TopHeight(root + outward * 25f, out _);
+            float ground = TopHeight(root + outward * (main ? 25f : 11f), out _);
             if (float.IsNaN(ground)) continue;
-            Vector3 from = root + outward * 40f;
+            Vector3 from = root + outward * (main ? 40f : 20f);
             from.y = ground + 6f;
             if (!Physics.Raycast(from, -outward, out RaycastHit wall, 40f, 1 << 7, QueryTriggerInteraction.Ignore)) continue;
             if (wall.collider.transform != tower) continue;
@@ -799,8 +1257,8 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 start = hang,
                 feet = new Vector3(hang.x, ground, hang.z),
                 inward = inward,
-                topY = bounds.max.y - 9f,
-                name = $"Hanging Spire {startAngle:0}",
+                topY = bounds.max.y - (main ? 9f : 3.5f),
+                name = main ? $"Hanging Spire {startAngle:0}" : $"{towerName} {startAngle:0}",
             };
             return true;
         }

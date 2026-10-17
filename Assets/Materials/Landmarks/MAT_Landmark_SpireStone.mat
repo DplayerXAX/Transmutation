@@ -28,40 +28,42 @@ Material:
     - _ArcRadius: 9
     - _CourseHeight: 1.6
     - _CourseWave: 0.25
-    - _FakeLightAmount: 0.15
-    - _GlitchAmount: 0.4
+    - _FakeLightAmount: 0.35
+    - _GlitchAmount: 0.2
     - _GlitchBands: 0.5
     - _GlitchRate: 3
-    - _GlowStrength: 1.2
+    - _GlowStrength: 2.6
     - _GlyphWidth: 0.45
     - _HatchScale: 5
-    - _HatchStrength: 0.6
+    - _HatchStrength: 0.35
     - _HatchWidth: 1
     - _HazeEnd: 80
     - _HazeStart: 10
     - _LineWidth: 1.1
+    - _JointStrength: 0
     - _MainLightAmount: 1.2
     - _PulseSpacing: 60
     - _PulseSpeed: 3
-    - _PulseWidth: 5
-    - _RimPower: 4
-    - _RimStrength: 0.3
-    - _ScriptChance: 0.22
+    - _PulseWidth: 8
+    - _ScriptGlowBase: 0.25
+    - _RimPower: 3
+    - _RimStrength: 0.25
+    - _ScriptChance: 0.4
     - _ScriptChanceInside: 0.7
     - _ScriptFlicker: 0.25
     - _ShadeLevels: 2
     - _ShadowLineDim: 1
     m_Colors:
     - _BlockWidth: {r: 1.2, g: 3.6, b: 0, a: 0}
-    - _Color: {r: 0.8, g: 0.77, b: 0.7, a: 1}
+    - _Color: {r: 0.95, g: 0.95, b: 0.93, a: 1}
     - _FakeLightDir: {r: 0.3, g: 1, b: 0.2, a: 0}
     - _GlitchColorA: {r: 0.21999997, g: 0.68, b: 0.74, a: 1}
     - _GlitchColorB: {r: 0.78, g: 0.23999995, b: 0.54999995, a: 1}
-    - _GlowColor: {r: 0.15, g: 0.75, b: 0.8, a: 1}
-    - _HatchColor: {r: 0.2, g: 0.19, b: 0.18, a: 1}
+    - _GlowColor: {r: 0.25, g: 0.9, b: 1, a: 1}
+    - _HatchColor: {r: 0.2, g: 0.2, b: 0.22, a: 1}
     - _HazeColor: {r: 0, g: 0, b: 0, a: 0}
-    - _LineColor: {r: 0.07, g: 0.07, b: 0.08, a: 1}
-    - _ScriptColor: {r: 0.1, g: 0.09, b: 0.09, a: 1}
-    - _ShadowColor: {r: 0.42, g: 0.4, b: 0.38, a: 1}
+    - _LineColor: {r: 0.1, g: 0.1, b: 0.12, a: 1}
+    - _ScriptColor: {r: 0.08, g: 0.08, b: 0.1, a: 1}
+    - _ShadowColor: {r: 0.62, g: 0.63, b: 0.66, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

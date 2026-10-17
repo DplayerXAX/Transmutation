@@ -98,7 +98,7 @@ public sealed class TentacleCreature : Creature
         if (!IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
-            if (tentacle.touchingHand || tentacle.planted || tentacle.stepping) continue;
+            if (tentacle.touchingHand || tentacle.planted || tentacle.stepping || tentacle.pinned) continue;
             tentacle.foot = CoilPoint(tentacle);
             LayoutTentacle(tentacle);
         }
@@ -179,6 +179,10 @@ public sealed class TentacleCreature : Creature
         public float phase;
         public bool planted;
         public bool touchingHand;        // Reaching up to the player's petting hand.
+        public bool wrapping;            // Wrapped round caught prey.
+        public bool pinned;              // Shot out and stuck to a point (TentacleTether).
+        public Vector3 pinPoint;
+        public float pinTime;
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
         public Collider holdCollider;
@@ -194,6 +198,10 @@ public sealed class TentacleCreature : Creature
 
         // Curve shared by the bones and the membrane, refreshed every frame.
         public Vector3 root, c1, c2, tip, side, outward;
+        // A shot arm on the player: runs from the body to the player's hand (via), then straight out to the tip.
+        public bool hasVia;
+        public Vector3 via;
+        public float viaShare;
         public float rippleTime;
 
         // Per-limb randomness so no two arms match.
@@ -251,10 +259,156 @@ public sealed class TentacleCreature : Creature
         BuildVisuals();
     }
 
+    // ---------------- Shot-out arms (TentacleTether) ----------------
+
+    /// <summary>Shoots a free arm out to stick at a point. Returns its index, or -1 if every arm is busy.</summary>
+    public int PinArm(Vector3 point)
+    {
+        if (tentacles == null) return -1;
+        // The free arm whose tip is nearest the target goes.
+        int best = -1;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < tentacles.Length; i++)
+        {
+            Tentacle t = tentacles[i];
+            if (t.pinned || t.wrapping || t.touchingHand) continue;
+            float d = (t.foot - point).sqrMagnitude;
+            if (d < bestDistance) { bestDistance = d; best = i; }
+        }
+        if (best < 0) return -1;
+        Tentacle arm = tentacles[best];
+        arm.pinned = true;
+        arm.planted = arm.stepping = false;
+        arm.pinPoint = point;
+        arm.pinTime = Time.time;
+        return best;
+    }
+
+    public void UnpinArm(int index)
+    {
+        if (tentacles == null || index < 0 || index >= tentacles.Length) return;
+        tentacles[index].pinned = false;
+    }
+
+    /// <summary>How many arms are shot out and stuck right now.</summary>
+    public int PinnedCount
+    {
+        get { int n = 0; if (tentacles != null) foreach (Tentacle t in tentacles) if (t.pinned) n++; return n; }
+    }
+
+    /// <summary>Where the pinned arms are stuck.</summary>
+    public List<Vector3> PinnedPoints()
+    {
+        var points = new List<Vector3>();
+        if (tentacles != null) foreach (Tentacle t in tentacles) if (t.pinned) points.Add(t.pinPoint);
+        return points;
+    }
+
+    /// <summary>
+    /// Hung between its stuck arms (set down after shooting two): it stops walking and falling, and something
+    /// else (TentacleTether) moves its body; its pinned arms stay stretched to where they stuck.
+    /// </summary>
+    public bool Suspended { get; private set; }
+
+    /// <summary>Set while the player's left hand holds and drags it (PlayerCreaturePetter).</summary>
+    public bool Dragged { get; set; }
+
+    public void Suspend(bool on)
+    {
+        Suspended = on;
+        ExternalMovement = on;
+        SetMovementPhysics(on, !on);
+    }
+
+    public void UnpinAll()
+    {
+        if (tentacles == null) return;
+        foreach (Tentacle t in tentacles) t.pinned = false;
+    }
+
+    /// <summary>The creature's own looks, for things made of its arms (the tether cords).</summary>
+    public Material MembraneMaterial => membraneMaterial;
+    public Material JointMaterial => jointMaterial;
+    public Material LinkMaterial => bodyMaterial;
+    public Material TipMaterial => tipMaterial;
+
+    // ---------------- Hunting ----------------
+
+    [Header("Hunting")]
+    [Tooltip("Fuzzy creatures nearer than this are stalked and grabbed.")]
+    [Min(0f)] [SerializeField] private float huntRadius = 9f;
+    [Tooltip("Seconds it holds its catch before letting it squirm free (random in this range).")]
+    [SerializeField] private Vector2 holdTime = new Vector2(6f, 11f);
+    [Tooltip("Seconds before it hunts again after letting go.")]
+    [Min(0f)] [SerializeField] private float huntCooldown = 15f;
+
+    private FuzzCreature prey;
+    private bool holding;
+    private float holdTimer, huntCooldownTimer, nextPreyScan;
+
+    /// <summary>True while it has a fuzzy creature wrapped in its arms.</summary>
+    public bool Holding => holding;
+
+    private void UpdateHunt(float deltaTime)
+    {
+        huntCooldownTimer = Mathf.Max(0f, huntCooldownTimer - deltaTime);
+        bool able = !IsCarried && !ExternalMovement && !IsPetted && huntCooldownTimer <= 0f && huntRadius > 0f;
+        if (!able)
+        {
+            if (prey != null) LetGo(cooldown: IsPetted);
+            return;
+        }
+        if (holding)
+        {
+            holdTimer -= deltaTime;
+            // The prey slipped away (the player freed it), or it has held long enough.
+            if (prey == null || !prey.Caught || holdTimer <= 0f) LetGo(cooldown: true);
+            return;
+        }
+        if (prey == null && Time.time >= nextPreyScan)
+        {
+            nextPreyScan = Time.time + 0.5f;
+            float best = huntRadius;
+            foreach (FuzzCreature fuzz in FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None))
+            {
+                if (fuzz.Caught || fuzz.IsCarried) continue;
+                float d = Vector3.Distance(fuzz.transform.position, transform.position);
+                if (d < best) { best = d; prey = fuzz; }
+            }
+        }
+        if (prey == null) return;
+        if (prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
+        // Close enough: the arms nearest it let go of the ground and wrap round it.
+        if (Vector3.Distance(prey.transform.position, transform.position) < reach * 1.1f)
+        {
+            holding = true;
+            holdTimer = Random.Range(holdTime.x, holdTime.y);
+            prey.Catch(transform);
+            var order = new List<int>();
+            for (int i = 0; i < tentacles.Length; i++) order.Add(i);
+            order.Sort((a, b) => (tentacles[a].foot - prey.transform.position).sqrMagnitude.CompareTo((tentacles[b].foot - prey.transform.position).sqrMagnitude));
+            for (int k = 0; k < Mathf.Min(4, order.Count); k++)
+            {
+                tentacles[order[k]].wrapping = true;
+                tentacles[order[k]].planted = tentacles[order[k]].stepping = false;
+            }
+        }
+    }
+
+    private void LetGo(bool cooldown)
+    {
+        if (prey != null && prey.Caught) prey.Free();
+        prey = null;
+        holding = false;
+        if (tentacles != null) foreach (Tentacle tentacle in tentacles) tentacle.wrapping = false;
+        if (cooldown) huntCooldownTimer = huntCooldown;
+    }
+
     protected override void TickCreature(float deltaTime)
     {
         if (wasCarried && !IsCarried) home = transform.position; // Wander around where it was dropped.
         wasCarried = IsCarried;
+        UpdateHunt(deltaTime);
 
         if (!IsCarried && !ExternalMovement) Wander(deltaTime);
         // Shrinks to sit on the hand while carried, grows back when let go.
@@ -263,8 +417,32 @@ public sealed class TentacleCreature : Creature
         limbSize = Mathf.MoveTowards(limbSize, IsCarried ? backScale : 1f, deltaTime * 2f);
         UpdateTentacles(deltaTime);
         UpdateBodyVisual(deltaTime);
-        UpdateMembrane();
+        // The skin is the costly part: rebuilt every frame up close, every few frames far off, not at all
+        // while it is out of view (it catches up the moment it is seen again).
+        if (SkinWorthUpdating()) UpdateMembrane();
         UpdateShaderState(deltaTime);
+    }
+
+    private static readonly Plane[] ViewPlanes = new Plane[6];
+    private static int viewPlanesFrame = -1;
+    private static Camera viewCamera;
+
+    private bool SkinWorthUpdating()
+    {
+        if (IsCarried || IsPetted || Suspended || PinnedCount > 0) return true;
+        if (viewPlanesFrame != Time.frameCount)
+        {
+            viewPlanesFrame = Time.frameCount;
+            if (viewCamera == null) viewCamera = Camera.main;
+            if (viewCamera != null) GeometryUtility.CalculateFrustumPlanes(viewCamera, ViewPlanes);
+        }
+        if (viewCamera == null) return true;
+        Vector3 centre = transform.position;
+        float extent = (reach + bodyRadius) * 1.5f * Mathf.Max(0.1f, transform.lossyScale.x);
+        if (!GeometryUtility.TestPlanesAABB(ViewPlanes, new Bounds(centre, Vector3.one * (extent * 2f)))) return false;
+        float distance = Vector3.Distance(viewCamera.transform.position, centre);
+        int every = distance < 30f ? 1 : distance < 60f ? 2 : 4;
+        return (Time.frameCount + (seed & 3)) % every == 0;
     }
 
     /// <summary>Feeds the line shader its ring centre and how busy the creature is.</summary>
@@ -292,6 +470,17 @@ public sealed class TentacleCreature : Creature
 
     private void Wander(float deltaTime)
     {
+        if (IsPetted && Dragged)
+        {
+            // Held by the hand: pulled along after it, body a little below and behind the grip.
+            Vector3 target = PetPoint + Vector3.down * 0.35f;
+            Vector3 move = target - transform.position;
+            MoveCreature(move * Mathf.Min(1f, 7f * deltaTime));
+            Vector3 flat = Vector3.ProjectOnPlane(move, Vector3.up);
+            if (flat.sqrMagnitude > 0.01f)
+                FaceCreature(Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat.normalized, Vector3.up), turnSpeed * deltaTime));
+            return;
+        }
         if (IsPetted)
         {
             // Stays put and turns towards the hand that strokes it.
@@ -301,9 +490,15 @@ public sealed class TentacleCreature : Creature
             return;
         }
         Vector3 position = transform.position;
+        if (prey != null)
+        {
+            // Stalking: creep straight at it, a little faster than wandering; holding: stay over it.
+            wanderTarget = prey.transform.position;
+            if (holding) wanderTarget = position;
+        }
         Vector3 toTarget = Vector3.ProjectOnPlane(wanderTarget - position, Vector3.up);
 
-        if (toTarget.magnitude < 0.3f)
+        if (toTarget.magnitude < 0.3f && prey == null)
         {
             pauseTimer -= deltaTime;
             if (pauseTimer <= 0f)
@@ -313,13 +508,13 @@ public sealed class TentacleCreature : Creature
                 pauseTimer = Random.Range(pauseTimeRange.x, pauseTimeRange.y);
             }
         }
-        else
+        else if (toTarget.sqrMagnitude > 1e-4f)
         {
             Quaternion facing = Quaternion.LookRotation(toTarget.normalized, Vector3.up);
             FaceCreature(Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * deltaTime));
             // Only crawl roughly the way the body faces, so turns look deliberate.
             float alignment = Mathf.Clamp01(Vector3.Dot(transform.forward, toTarget.normalized));
-            MoveCreature(transform.forward * (moveSpeed * alignment * deltaTime));
+            MoveCreature(transform.forward * (moveSpeed * (prey != null ? 1.5f : 1f) * alignment * deltaTime));
         }
 
         // Float on the tentacles: settle towards hover height above whatever is below.
@@ -398,9 +593,17 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle tentacle = tentacles[i];
-            if (tentacle.touchingHand && IsPetted)
+            if (tentacle.pinned)
             {
-                // Held up to the petting hand; no stepping until it lets go.
+                // Shot out: the arm stretches from the body to where it stuck, whipping out over a moment.
+                float shoot = Mathf.Clamp01((Time.time - tentacle.pinTime) / 0.18f);
+                tentacle.foot = Vector3.Lerp(tentacle.foot, tentacle.pinPoint, shoot < 1f ? 1f - Mathf.Exp(-25f * deltaTime) : 1f);
+                LayoutTentacle(tentacle);
+                continue;
+            }
+            if ((tentacle.touchingHand && IsPetted) || (tentacle.wrapping && holding && prey != null))
+            {
+                // Held up to the petting hand (or wrapped round prey); no stepping until it lets go.
                 tentacle.foot = FootPosition(tentacle, deltaTime);
                 LayoutTentacle(tentacle);
                 continue;
@@ -529,6 +732,15 @@ public sealed class TentacleCreature : Creature
 
     private Vector3 FootPosition(Tentacle tentacle, float deltaTime)
     {
+        if (tentacle.wrapping && holding && prey != null)
+        {
+            // Coiled round the catch, each arm circling it at its own height, squeezing in and out.
+            float wave = Time.time * 3.1f + tentacle.phase * 2f;
+            Vector3 centrePrey = prey.transform.position + Vector3.up * 0.15f;
+            float squeeze = 0.32f + 0.08f * Mathf.Sin(Time.time * 5f + tentacle.phase);
+            Vector3 coil = centrePrey + new Vector3(Mathf.Cos(wave), Mathf.Sin(wave * 0.6f) * 0.5f, Mathf.Sin(wave)) * squeeze;
+            return Vector3.Lerp(tentacle.foot, coil, 1f - Mathf.Exp(-8f * deltaTime));
+        }
         if (tentacle.touchingHand && IsPetted)
         {
             // Wrap gently round the petting hand, each arm at its own spot, slowly feeling about.
@@ -597,6 +809,16 @@ public sealed class TentacleCreature : Creature
     {
         Vector3 outward = Flatten(transform.rotation * tentacle.restDirection);
         Vector3 root = transform.position + outward * (bodyRadius * 0.9f * limbSize) + Vector3.up * (tentacle.rootHeight * limbSize);
+        // A shot arm on the player runs from the creature's body along to the player's right hand, then out of
+        // the hand straight at what it stuck to, so it is one arm from the body and leaves from the hand.
+        tentacle.hasVia = tentacle.pinned && IsCarried && Carrier != null && Carrier.HandAnchor != null;
+        if (tentacle.hasVia)
+        {
+            tentacle.via = Carrier.HandAnchor.position;
+            float toHand = Vector3.Distance(root, tentacle.via), outOfHand = Vector3.Distance(tentacle.via, tentacle.foot);
+            // A good share of the joints for the short stretch to the hand, so it bends smoothly there.
+            tentacle.viaShare = Mathf.Clamp(toHand / Mathf.Max(0.01f, toHand + outOfHand), 0.2f, 0.45f);
+        }
         Vector3 tip = tentacle.foot;
         float length = Vector3.Distance(root, tip);
         Vector3 tipNormal = tentacle.stepping ? tentacle.stepNormal
@@ -605,7 +827,13 @@ public sealed class TentacleCreature : Creature
         // On the player's back the arms run low round the body and come up to the wrists from below,
         // instead of arching up past the player's head.
         float arch = tentacle.arch;
-        if (IsCarried && !tentacle.planted && !tentacle.stepping)
+        if (tentacle.pinned)
+        {
+            // Pulled taut: nearly straight, the tip pressed flat onto what it stuck to.
+            tipNormal = (root - tip).normalized;
+            arch *= 0.05f;
+        }
+        else if (IsCarried && !tentacle.planted && !tentacle.stepping)
         {
             tipNormal = Vector3.down;
             arch *= 0.1f;
@@ -660,6 +888,22 @@ public sealed class TentacleCreature : Creature
     /// <summary>Point on the tentacle centre line, t = 0 at the body and 1 at the tip.</summary>
     private static Vector3 EvaluateTentacle(Tentacle tentacle, float t)
     {
+        if (tentacle.hasVia)
+        {
+            // Body to hand: a soft curve that comes into the hand already pointing at the target.
+            Vector3 outDir = (tentacle.tip - tentacle.via).normalized;
+            if (t <= tentacle.viaShare)
+            {
+                float s = t / tentacle.viaShare, w = 1f - s;
+                float span = Vector3.Distance(tentacle.root, tentacle.via);
+                Vector3 c = tentacle.via - outDir * (span * 0.6f);
+                return w * w * tentacle.root + 2f * w * s * c + s * s * tentacle.via;
+            }
+            // Hand to the stuck tip: nearly straight, a slight sag in the middle.
+            float k = (t - tentacle.viaShare) / (1f - tentacle.viaShare);
+            float length = Vector3.Distance(tentacle.via, tentacle.tip);
+            return Vector3.Lerp(tentacle.via, tentacle.tip, k) + Vector3.down * (Mathf.Sin(k * Mathf.PI) * length * 0.03f);
+        }
         float u = 1f - t;
         Vector3 point = u * u * u * tentacle.root + 3f * u * u * t * tentacle.c1 +
                         3f * u * t * t * tentacle.c2 + t * t * t * tentacle.tip;

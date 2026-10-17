@@ -5,6 +5,18 @@
 // Light is reduced to a few flat steps; dark areas are filled with hand-drawn style hatching
 // instead of smooth gradients. Include after Lighting.hlsl.
 
+// Aerial perspective, set globally by the AerialPerspective component (both 0 = off).
+float _AerialDetailStart;
+float _AerialDetailEnd;
+
+// 1 near the camera, fading to 0 far away: lines and hatching melt into flat tone with distance.
+half LineWorldDetail(float3 positionWS)
+{
+    if (_AerialDetailEnd <= _AerialDetailStart) return 1.0h;
+    float d = distance(positionWS, GetCameraPositionWS());
+    return 1.0h - smoothstep(_AerialDetailStart, _AerialDetailEnd, d);
+}
+
 // Light level 0..1 from the sun (with shadows), a fake fill direction and nearby point lights.
 half LineWorldLight(float3 positionWS, half3 normalWS, float2 screenUV,
     half mainAmount, half3 fakeDirection, half fakeAmount, half levels, out half indirectAO)

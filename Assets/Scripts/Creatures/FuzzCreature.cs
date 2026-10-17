@@ -6,6 +6,11 @@ using UnityEngine;
 /// like the children in "eagle catches chicks": the first one follows the player, every other one
 /// follows the one in front. Neighbours in the chain stay joined by a sagging strand of goo.
 ///
+/// Rope: carry one (right click) to a drop (a cliff edge, a ledge, a rim) and let go over it: being sticky, it
+/// clings where it was let go, and every fuzzy creature following the player hangs down from it in a line,
+/// joined by thick goo. The rope can be climbed (HandClimber grips the bodies and the goo). Pick the top one up
+/// again and the rope comes apart. Other scripts can call Anchor() to make a rope (the bubble well, for one).
+///
 /// The body is a lumpy procedural blob; fur is drawn as stacked shells by the StickyFur shader,
 /// which droops the hair and drags it behind the motion.
 /// </summary>
@@ -13,6 +18,8 @@ using UnityEngine;
 public sealed class FuzzCreature : Creature
 {
     private static readonly List<FuzzCreature> Chain = new List<FuzzCreature>();
+    // A hanging rope: the anchor (stuck where it was let go) first, then the ones hanging below it.
+    private static readonly List<FuzzCreature> Rope = new List<FuzzCreature>();
 
     [Header("Following")]
     [Tooltip("The player joins a creature into the chain when closer than this.")]
@@ -75,6 +82,95 @@ public sealed class FuzzCreature : Creature
     private const int GooRings = 10, GooSides = 6;
 
     public bool IsFollowing => following;
+    /// <summary>True for the top of a hanging rope.</summary>
+    public bool Anchored => Rope.Count > 0 && Rope[0] == this;
+    public bool InRope => Rope.Contains(this);
+    /// <summary>How many fuzzy creatures make up the rope right now (0 = none).</summary>
+    public static int RopeLength => Rope.Count;
+
+    [Header("Rope")]
+    [Tooltip("Let go with at least this much drop below, it sticks there and the chain hangs from it as a rope.")]
+    [Min(0.5f)] [SerializeField] private float ropeDrop = 2f;
+    [Tooltip("Gap between creatures hanging in a rope.")]
+    [Min(0.3f)] [SerializeField] private float ropeSpacing = 1.05f;
+
+    private bool wasCarried;
+    private GameObject ropeGrip;
+    private CapsuleCollider ropeStrand;
+
+    /// <summary>
+    /// Sticks this creature where it is and hangs every fuzzy creature following the player below it, as a rope.
+    /// </summary>
+    public void Anchor()
+    {
+        DissolveRope();
+        LeaveChain();
+        Rope.Add(this);
+        foreach (FuzzCreature f in new List<FuzzCreature>(Chain))
+        {
+            if (f == null || f == this) continue;
+            f.LeaveChain();
+            Rope.Add(f);
+        }
+        foreach (FuzzCreature f in Rope) f.SetGrip(true);
+    }
+
+    /// <summary>The rope comes apart: everyone drops back to the ground and carries on.</summary>
+    public static void DissolveRope()
+    {
+        foreach (FuzzCreature f in Rope) if (f != null) { f.SetGrip(false); f.home = f.transform.position; }
+        Rope.Clear();
+    }
+
+    private void SetGrip(bool on)
+    {
+        if (on && ropeGrip == null)
+        {
+            // Solid, climbable stand-ins for the body and the goo up to the one above.
+            ropeGrip = new GameObject(name + " Rope Grip") { layer = 7 };
+            var bodyGrip = ropeGrip.AddComponent<SphereCollider>();
+            bodyGrip.radius = radius * 1.05f;
+            var strandObject = new GameObject("Strand") { layer = 7 };
+            strandObject.transform.SetParent(ropeGrip.transform, false);
+            ropeStrand = strandObject.AddComponent<CapsuleCollider>();
+            ropeStrand.direction = 2;
+            ropeStrand.radius = 0.18f;
+        }
+        if (ropeGrip != null) ropeGrip.SetActive(on);
+    }
+
+    /// <summary>Hanging in a rope: straight down from the one above, resting on the ground if it reaches it.</summary>
+    private void HangInRope(float deltaTime)
+    {
+        int index = Rope.IndexOf(this);
+        Vector3 position = transform.position;
+        if (index > 0 && Rope[index - 1] != null)
+        {
+            Vector3 above = Rope[index - 1].transform.position;
+            Vector3 target = above + Vector3.down * ropeSpacing + Vector3.ProjectOnPlane(position - above, Vector3.up) * 0.15f;
+            // Rests on the ground below rather than going into it.
+            if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, ropeSpacing + radius, groundLayers, QueryTriggerInteraction.Ignore)
+                && hit.collider.GetComponentInParent<Creature>() == null && (ropeGrip == null || !hit.collider.transform.IsChildOf(ropeGrip.transform)))
+                target.y = Mathf.Max(target.y, hit.point.y + radius);
+            // Sways a little.
+            target += new Vector3(Mathf.Sin(Time.time * 0.8f + index), 0f, Mathf.Cos(Time.time * 0.6f + index * 1.3f)) * 0.06f;
+            MoveCreature((target - position) * Mathf.Min(1f, 8f * deltaTime));
+        }
+        velocity = Vector3.zero;
+        if (ropeGrip != null)
+        {
+            ropeGrip.transform.position = transform.position;
+            if (index > 0 && Rope[index - 1] != null)
+            {
+                Vector3 up = Rope[index - 1].transform.position;
+                Vector3 mid = (transform.position + up) * 0.5f;
+                ropeStrand.transform.SetPositionAndRotation(mid, Quaternion.LookRotation((up - transform.position).normalized + new Vector3(0f, 0f, 1e-4f)));
+                ropeStrand.height = Vector3.Distance(transform.position, up) + ropeStrand.radius * 2f;
+                ropeStrand.enabled = true;
+            }
+            else ropeStrand.enabled = false;
+        }
+    }
 
     protected override void InitializeCreature()
     {
@@ -100,15 +196,67 @@ public sealed class FuzzCreature : Creature
     private void OnDestroy()
     {
         LeaveChain();
+        if (InRope) { if (Anchored) DissolveRope(); else Rope.Remove(this); }
+        if (ropeGrip != null) Destroy(ropeGrip);
         if (visual != null) Destroy(visual.gameObject);
         if (blobMesh != null) Destroy(blobMesh);
         if (gooMesh != null) Destroy(gooMesh);
         if (gooRenderer != null) Destroy(gooRenderer.gameObject);
     }
 
+    // ---------------- Caught ----------------
+
+    /// <summary>True while a tentacle creature has wrapped its arms round this one.</summary>
+    public bool Caught => captor != null;
+    private Transform captor;
+    private Vector3 holdOffset;
+
+    /// <summary>A tentacle creature grabs it: it stops, is held under the hunter's body, and struggles.</summary>
+    public void Catch(Transform by)
+    {
+        captor = by;
+        holdOffset = Vector3.ProjectOnPlane(transform.position - by.position, Vector3.up).normalized * 0.9f;
+    }
+
+    /// <summary>Let go (the hunter gives up, or the player pets or picks it up).</summary>
+    public void Free() => captor = null;
+
     protected override void TickCreature(float deltaTime)
     {
         if (deltaTime <= 0f) return;
+        // Picked up: if it was the top of a rope, the rope comes apart.
+        if (IsCarried && Anchored) DissolveRope();
+        else if (IsCarried && InRope) { Rope.Remove(this); SetGrip(false); }
+        // Let go over a drop: it sticks there and the chain hangs from it.
+        if (wasCarried && !IsCarried && Chain.Count > 0)
+        {
+            bool drop = !Physics.Raycast(transform.position, Vector3.down, out _, ropeDrop + radius, groundLayers, QueryTriggerInteraction.Ignore);
+            if (drop) Anchor();
+        }
+        wasCarried = IsCarried;
+        if (InRope && !IsCarried)
+        {
+            HangInRope(deltaTime);
+            UpdateBlob(deltaTime);
+            UpdateGoo();
+            return;
+        }
+        // The player's touch frees it from a hunter.
+        if (captor != null && (IsPetted || IsCarried || !captor.gameObject.activeInHierarchy)) Free();
+        if (captor != null)
+        {
+            // Held next to the hunter, squirming.
+            Vector3 hold = captor.position + holdOffset + Vector3.down * 0.4f;
+            Vector3 pull = hold - transform.position;
+            pull.y = Mathf.Min(pull.y, 0f);
+            MoveCreature(pull * Mathf.Min(1f, 4f * deltaTime));
+            FaceCreature(Quaternion.Euler(0f, transform.eulerAngles.y + Mathf.Sin(Time.time * 17f) * 40f * deltaTime, 0f));
+            velocity = Vector3.zero;
+            StickToGround(deltaTime);
+            UpdateBlob(deltaTime);
+            UpdateGoo();
+            return;
+        }
         UpdateMembership();
 
         Vector3 position = transform.position;
@@ -177,7 +325,7 @@ public sealed class FuzzCreature : Creature
 
     private void UpdateMembership()
     {
-        if (player == null) return;
+        if (player == null || InRope) return;
         float distance = Vector3.Distance(transform.position, player.position);
         if (IsCarried)
         {
@@ -423,18 +571,20 @@ public sealed class FuzzCreature : Creature
     private void UpdateGoo()
     {
         if (gooMesh == null) return;
+        int ropeIndex = Rope.IndexOf(this);
         int index = following ? Chain.IndexOf(this) : -1;
-        bool linked = index > 0 && Chain[index - 1] != null;
+        bool inRope = ropeIndex > 0 && Rope[ropeIndex - 1] != null;
+        bool linked = inRope || (index > 0 && Chain[index - 1] != null);
         gooRenderer.enabled = linked;
         if (!linked) return;
 
-        Transform ahead = Chain[index - 1].transform;
+        Transform ahead = inRope ? Rope[ropeIndex - 1].transform : Chain[index - 1].transform;
         Vector3 from = transform.position + transform.forward * radius * 0.7f;
         Vector3 to = ahead.position - ahead.forward * radius * 0.7f;
         float length = Vector3.Distance(from, to);
         // Thins as it stretches, sags more when slack.
-        float thickness = Mathf.Lerp(0.05f, 0.012f, Mathf.InverseLerp(spacing * 0.8f, spacing * 2.5f, length));
-        float sag = Mathf.Lerp(0.35f, 0.05f, Mathf.InverseLerp(spacing * 0.8f, spacing * 2.5f, length));
+        float thickness = inRope ? 0.11f : Mathf.Lerp(0.05f, 0.012f, Mathf.InverseLerp(spacing * 0.8f, spacing * 2.5f, length));
+        float sag = inRope ? 0.02f : Mathf.Lerp(0.35f, 0.05f, Mathf.InverseLerp(spacing * 0.8f, spacing * 2.5f, length));
         Vector3 along = (to - from).normalized;
         Vector3 side = Vector3.Cross(along, Vector3.up);
         if (side.sqrMagnitude < 1e-4f) side = Vector3.right;

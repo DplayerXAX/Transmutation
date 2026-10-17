@@ -68,6 +68,14 @@ public sealed class MeditationController : MonoBehaviour
 
     public bool IsMeditating => phase != Phase.World;
 
+    /// <summary>
+    /// Optional rule for when meditation may start (RestSpotSystem: only at a new kind of resting place).
+    /// Returns null to allow it, or a short message to show instead.
+    /// </summary>
+    public static System.Func<string> Gate;
+    /// <summary>Raised once the player has actually started to meditate.</summary>
+    public static event System.Action Entered;
+
     private void Awake()
     {
         space = GetComponent<ReflectionSpace>();
@@ -87,7 +95,12 @@ public sealed class MeditationController : MonoBehaviour
     {
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || !keyboard[meditateKey].wasPressedThisFrame) return;
-        if (phase == Phase.World) StartCoroutine(Enter());
+        if (phase == Phase.World)
+        {
+            string blocked = Gate?.Invoke();
+            if (blocked != null) { hud.Toast(blocked); return; }
+            StartCoroutine(Enter());
+        }
         else if (phase == Phase.Inside) StartCoroutine(Leave());
     }
 
@@ -107,6 +120,7 @@ public sealed class MeditationController : MonoBehaviour
         }
 
         phase = Phase.Entering;
+        Entered?.Invoke();
         journal.Scanning = false;
         worldBodyPosition = body.position;
         worldCameraPosition = cameraHolder.position;

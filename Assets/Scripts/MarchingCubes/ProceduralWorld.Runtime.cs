@@ -71,6 +71,8 @@ public sealed partial class ProceduralWorld
     public event Action<Bounds, float> ErosionApplied;
     public bool LayoutReady => field != null;
     public bool GenerationComplete => LayoutReady && chunksBuilt == chunksTotal;
+    /// <summary>Share of chunks built so far, 0..1. Chunks load outward from the spawn.</summary>
+    public float LoadProgress => chunksTotal == 0 ? 0f : (float)chunksBuilt / chunksTotal;
     public bool UpdatesPending => batch != null || pending.Count > 0 || incoming.Count > 0;
     public int SinkholeCount => sinkholes == null ? 0 : sinkholes.Length;
     /// <summary>Size of the world on x and z (metres), centred on this transform.</summary>

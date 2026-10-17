@@ -257,7 +257,7 @@ MonoBehaviour:
   reachLength: 1.04
   reachTime: 0.22
   maxHandDistance: 1.4
-  climbSpeed: 1
+  climbSpeed: 1.2
   fastClimbBoost: 1.4
   detourDelay: 0.2
   pullUpTime: 1.2

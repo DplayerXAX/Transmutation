@@ -36,7 +36,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Checks for one left-click press and attempts a centre-screen interaction.</summary>
     private void Update()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || !carrier.CarriesTentacle))
         {
             TryInteract();
         }
