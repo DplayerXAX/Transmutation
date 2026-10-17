@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: ba268ec42f384dbd999de0497c08e061, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 02ec9149f3b94035aff10c37f9eaf9a3, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -477,7 +477,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -1259,11 +1264,23 @@ MonoBehaviour:
   bounceShroomPrefab: {fileID: 7281831412284706066, guid: 4cd6305231c96654dbe803b89538ca5f, type: 3}
   heatForLift: 25
   liftSpeed: 9
+  stages: 1
+  stageTops: {x: 0.32, y: 0.62}
+  minStageClimb: 18
+  secondStageClimb: 24
+  finalStageClimb: 22
+  hangBelow: 9
+  bridgeRise: 4
+  bridgeWidth: 3
+  bridgeTemplate: {fileID: 0}
+  drumLength: 12
+  stageDrumLength: 8
   tentacleTemplate: {fileID: 1700000015}
   wallCrawlers: 3
   groundCrawlers: 2
   built: 0
   sinkholeIndex: -1
+  towerSlip: 0.3
 --- !u!4 &648466096
 Transform:
   m_ObjectHideFlags: 0
@@ -1367,6 +1384,214 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &720752128
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 720752131}
+  - component: {fileID: 720752130}
+  - component: {fileID: 720752129}
+  - component: {fileID: 720752132}
+  - component: {fileID: 720752133}
+  - component: {fileID: 720752135}
+  - component: {fileID: 720752134}
+  m_Layer: 0
+  m_Name: Human Realm Sites
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &720752129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0eb3c814ad49024cac18984a9ce9c4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BubbleWell
+  flowerPrefab: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
+  fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
+  stoneMaterial: {fileID: 2100000, guid: 2486ddf48c8940e097437b93aded10d7, type: 2}
+  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
+  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  seed: 33
+  distanceFromSpire: {x: 40, y: 80}
+  innerRadius: 3.6
+  wallThickness: 0.8
+  height: 8.5
+  openingRadius: 2.3
+  plinthHeight: 1.4
+  doorWidth: 1.8
+  doorHeight: 2.8
+  warmRadius: 3
+  warmRate: 8
+  coolRate: 1.5
+  wakeWarmth: 10
+  maxWarmth: 40
+  gardenDistance: 11
+  built: 0
+  warmth: 0
+  flowerAwake: 0
+--- !u!114 &720752130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fc95738be6ca71468008bd4d22cc4dc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebGorge
+  spiderPrefab: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  flowerPrefab: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  rockMaterial: {fileID: 2100000, guid: 2486ddf48c8940e097437b93aded10d7, type: 2}
+  silkMaterial: {fileID: 2100000, guid: 146fbeff2cb54c6e89d31e22c493a613, type: 2}
+  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
+  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  seed: 21
+  distanceFromSpire: {x: 45, y: 85}
+  mesaRadius: 6
+  mesaHeight: 15
+  denDistance: 30
+  windSpeed: 2.6
+  liftSpeed: 1.8
+  windWidth: 7
+  growTime: 6
+  rampWidth: 1.6
+  built: 0
+  rampDone: 0
+  rampGrowth: 0
+  bubblesInWind: 0
+--- !u!4 &720752131
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &720752132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f182cd3cf0e60cd47b43a501c380ca4f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealmDressing
+  lampMaterial: {fileID: 2100000, guid: 5c14ec323cfa4e9b8aeda1dfc5540ecd, type: 2}
+  rootMaterial: {fileID: 2100000, guid: 9b8283266fd04cb4b645f4455ca49ce9, type: 2}
+  anemoneMaterial: {fileID: 2100000, guid: 9d9641187bbc4b33a70c70ca68228daf, type: 2}
+  crystalMaterial: {fileID: 2100000, guid: 76fb9082e5444cdc8e7c96893ff4b66a, type: 2}
+  filmMaterial: {fileID: 2100000, guid: 05fe5e2605bb44d8beab74d420ef3013, type: 2}
+  threadMaterial: {fileID: 2100000, guid: 222fab45fa2d4ba79accaf4fa4a33e86, type: 2}
+  fossilMaterial: {fileID: 2100000, guid: 0c309cf979e34892b8c3f5f63c04bb37, type: 2}
+  streamMaterial: {fileID: 2100000, guid: 1901d58ec9e8461bb070c736c5a54d5e, type: 2}
+  slimeMaterial: {fileID: 2100000, guid: 722e8fabb4664d7299ddb1edf4df44b9, type: 2}
+  mudMaterial: {fileID: 2100000, guid: 8f2dbe12463c47fa9c7cc9eab5d39e49, type: 2}
+  seed: 5
+  lampsPerSide: 7
+  shelters: 2
+  floatingCrystals: 16
+  fossils: 4
+  anemoneClusters: 7
+  slimePatches: 10
+  meander: 7
+  lampLights: 1
+  built: 0
+  pieces: 0
+--- !u!114 &720752133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bf4a5ba1e9343346accc6cee21a8f24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealmPopulation
+  maxNewFireFlowers: 6
+  maxNewFireBubbles: 14
+  keepNearBubbleFlower: 4
+  checkInterval: 2
+  newFireFlowers: 0
+  newFireBubbles: 0
+  trimmed: 0
+--- !u!114 &720752134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: effc73d4ce5d0394d93730f8b5977681, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealmFlora
+  fossilMaterial: {fileID: 2100000, guid: 0c309cf979e34892b8c3f5f63c04bb37, type: 2}
+  frostMaterial: {fileID: 2100000, guid: 2a6c8c60103641e68a8c7b9e50c6903c, type: 2}
+  mushroomMaterial: {fileID: 2100000, guid: 4f056d296434491eb33d713c55584cf8, type: 2}
+  mushroomBlueMaterial: {fileID: 2100000, guid: 09f5a0296ad64944acba81021ec071f3, type: 2}
+  coralMaterial: {fileID: 2100000, guid: ce8152eb0bf24c0e82db2ae5ade65c0d, type: 2}
+  jellyMaterial: {fileID: 2100000, guid: 8c908e2c2f8c4b94ab8af87675d63245, type: 2}
+  slugMaterial: {fileID: 2100000, guid: 722e8fabb4664d7299ddb1edf4df44b9, type: 2}
+  anemoneMaterial: {fileID: 2100000, guid: 9d9641187bbc4b33a70c70ca68228daf, type: 2}
+  seed: 17
+  ring: {x: 3, y: 48}
+  groves: 6
+  built: 0
+  placed: 0
+--- !u!114 &720752135
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94cea41f9157eb343b964aa8e4dbe926, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpireOvergrowth
+  veinMaterial: {fileID: 2100000, guid: c83a677672d04f1bb4770faf6202e555, type: 2}
+  crystalMaterial: {fileID: 2100000, guid: 2a6c8c60103641e68a8c7b9e50c6903c, type: 2}
+  strandMaterial: {fileID: 2100000, guid: 29aaa9ca05114e87aa246286322fb9ee, type: 2}
+  membraneMaterial: {fileID: 2100000, guid: f3d7f9708d124a4eb3337d7cb5892113, type: 2}
+  beadMaterial: {fileID: 2100000, guid: 5c14ec323cfa4e9b8aeda1dfc5540ecd, type: 2}
+  mushroomMaterial: {fileID: 2100000, guid: 4f056d296434491eb33d713c55584cf8, type: 2}
+  seed: 13
+  veinRoots: 22
+  webHubs: 20
+  membraneShare: 0.45
+  maxStrand: 15
+  built: 0
+  strands: 0
+  membranes: 0
 --- !u!1 &748032329
 GameObject:
   m_ObjectHideFlags: 0
@@ -3262,7 +3487,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Tentacle Creature
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -3316,6 +3546,9 @@ MonoBehaviour:
   canClimbUp: 0
   canHang: 0
   backScale: 0.32
+  huntRadius: 9
+  holdTime: {x: 6, y: 11}
+  huntCooldown: 15
 --- !u!1 &1700000021
 GameObject:
   m_ObjectHideFlags: 0
@@ -3506,6 +3739,7 @@ GameObject:
   - component: {fileID: 1700000034}
   - component: {fileID: 1700000035}
   - component: {fileID: 1700000036}
+  - component: {fileID: 1700000037}
   m_Layer: 7
   m_Name: Procedural World
   m_TagString: Untagged
@@ -3569,6 +3803,36 @@ MonoBehaviour:
   blockingRadius: 40
   meshesPerFrame: 6
   respawnFallingPlayer: 1
+  erosionTestCourse: 0
+  erodibility: 1
+  densityBudgetPerSecond: 8
+  erosionInterval: 0.1
+  erosionMeshesPerFrame: 2
+  workerCount: 2
+  erosionFalloff:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   chunksBuilt: 0
   chunksTotal: 0
 --- !u!114 &1700000034
@@ -3586,7 +3850,7 @@ MonoBehaviour:
   stoneMaterial: {fileID: 2100000, guid: 2486ddf48c8940e097437b93aded10d7, type: 2}
   organicMaterial: {fileID: 2100000, guid: 3b424fc7bbee4444849515660dddcc82, type: 2}
   innerMaterial: {fileID: 2100000, guid: 497694e1a34d4486a1b62e0cb92769b8, type: 2}
-  innerGlowMaterial: {fileID: 0}
+  innerGlowMaterial: {fileID: 2100000, guid: 7c1e0b5a4d2f4e6c9a83b1d5e7f20419, type: 2}
   seed: 7
   variantsPerShape: 6
   spawnClearRadius: 6
@@ -3745,6 +4009,62 @@ MonoBehaviour:
     patchSize: 50
     patchCoverage: 0.5
     uniformClusters: 0
+  - name: Mushrooms
+    shape: 15
+    group: 1
+    inner: 0
+    clustersPer1000m2: 1.2
+    membersPerCluster: {x: 2, y: 6}
+    clusterRadius: 3.5
+    scaleRange: {x: 0.7, y: 1.6}
+    normalYRange: {x: 0.55, y: 1}
+    alignToNormal: 0.3
+    sink: 0.02
+    patchSize: 35
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Fronds
+    shape: 17
+    group: 1
+    inner: 0
+    clustersPer1000m2: 0.9
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 4
+    scaleRange: {x: 0.7, y: 1.4}
+    normalYRange: {x: 0.6, y: 1}
+    alignToNormal: 0.4
+    sink: 0.02
+    patchSize: 40
+    patchCoverage: 0.55
+    uniformClusters: 0
+  - name: Pebbles
+    shape: 16
+    group: 0
+    inner: 0
+    clustersPer1000m2: 1.5
+    membersPerCluster: {x: 1, y: 3}
+    clusterRadius: 5
+    scaleRange: {x: 0.7, y: 1.6}
+    normalYRange: {x: 0.5, y: 1}
+    alignToNormal: 0.9
+    sink: 0.02
+    patchSize: 30
+    patchCoverage: 0.65
+    uniformClusters: 0
+  - name: Obelisks
+    shape: 18
+    group: 0
+    inner: 0
+    clustersPer1000m2: 0.08
+    membersPerCluster: {x: 1, y: 2}
+    clusterRadius: 12
+    scaleRange: {x: 0.8, y: 1.4}
+    normalYRange: {x: 0.75, y: 1}
+    alignToNormal: 0.05
+    sink: 0
+    patchSize: 120
+    patchCoverage: 0.6
+    uniformClusters: 0
   - name: Shell Tentacles
     shape: 6
     group: 2
@@ -3787,10 +4107,68 @@ MonoBehaviour:
     patchSize: 35
     patchCoverage: 0.55
     uniformClusters: 1
+  - name: Crystals
+    shape: 0
+    group: 3
+    inner: 1
+    clustersPer1000m2: 0.7
+    membersPerCluster: {x: 2, y: 6}
+    clusterRadius: 3
+    scaleRange: {x: 0.5, y: 1.3}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.8
+    sink: 0.05
+    patchSize: 45
+    patchCoverage: 0.55
+    uniformClusters: 1
+  - name: Hanging Veils
+    shape: 11
+    group: 2
+    inner: 1
+    clustersPer1000m2: 0.5
+    membersPerCluster: {x: 2, y: 5}
+    clusterRadius: 3
+    scaleRange: {x: 0.9, y: 1.8}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.95
+    sink: 0.02
+    patchSize: 40
+    patchCoverage: 0.5
+    uniformClusters: 1
+  - name: Glow Sacs
+    shape: 4
+    group: 3
+    inner: 1
+    clustersPer1000m2: 0.6
+    membersPerCluster: {x: 1, y: 4}
+    clusterRadius: 3
+    scaleRange: {x: 0.5, y: 1.1}
+    normalYRange: {x: -1, y: 1}
+    alignToNormal: 0.8
+    sink: 0.05
+    patchSize: 35
+    patchCoverage: 0.55
+    uniformClusters: 1
+  - name: Cave Pebbles
+    shape: 16
+    group: 2
+    inner: 1
+    clustersPer1000m2: 1.2
+    membersPerCluster: {x: 1, y: 3}
+    clusterRadius: 5
+    scaleRange: {x: 0.7, y: 1.5}
+    normalYRange: {x: 0.5, y: 1}
+    alignToNormal: 0.9
+    sink: 0.02
+    patchSize: 30
+    patchCoverage: 0.6
+    uniformClusters: 1
   stoneColliders: 1
   innerColliders: 0
   decorLayer: 7
+  chunksPerFrame: 2
   piecesPlaced: 0
+  chunksWaiting: 0
 --- !u!114 &1700000035
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3814,7 +4192,9 @@ MonoBehaviour:
   clusterRadius: 2.5
   seed: 11
   variants: 6
+  itemsPerFrame: 12
   itemsGrown: 0
+  itemsWaiting: 0
 --- !u!114 &1700000036
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3832,6 +4212,37 @@ MonoBehaviour:
   outerRadius: 20
   zone: {fileID: 0}
   startDepth: 2
+--- !u!114 &1700000037
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39d087be2d76b3146a960e9c4866c48e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AerialPerspective
+  surfaceFog: {r: 0.82, g: 0.82, b: 0.82, a: 1}
+  clearDistance: 150
+  hazeDepth: 420
+  scaleHeight: 70
+  sunwardFog: {r: 0.95, g: 0.92, b: 0.86, a: 1}
+  awayFog: {r: 0.74, g: 0.76, b: 0.8, a: 1}
+  sunFocus: 0.7
+  sunTint: 0.6
+  innerFog: {r: 0.01, g: 0, b: 0.03, a: 1}
+  innerClearDistance: 4
+  innerHazeDepth: 50
+  blendDistance: 6
+  detailFadeStart: 0.25
+  detailFadeEnd: 0.7
+  loadMargin: 20
+  fogFollowSpeed: 60
+  insideInner: 0
+  loadedRadius: 0
+  fogEnd: 0
 --- !u!1 &1700000051
 GameObject:
   m_ObjectHideFlags: 0
@@ -3927,7 +4338,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -3955,6 +4371,8 @@ MonoBehaviour:
   furShells: 12
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05
 --- !u!1 &1700000061
 GameObject:
   m_ObjectHideFlags: 0
@@ -4050,7 +4468,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -4078,6 +4501,8 @@ MonoBehaviour:
   furShells: 12
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05
 --- !u!1 &1700000071
 GameObject:
   m_ObjectHideFlags: 0
@@ -4173,7 +4598,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -4201,6 +4631,8 @@ MonoBehaviour:
   furShells: 12
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05
 --- !u!1 &1700000081
 GameObject:
   m_ObjectHideFlags: 0
@@ -4296,7 +4728,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -4324,6 +4761,8 @@ MonoBehaviour:
   furShells: 12
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05
 --- !u!1 &1722953792
 GameObject:
   m_ObjectHideFlags: 0
@@ -4487,7 +4926,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -4696,7 +5140,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -4986,7 +5435,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
@@ -5176,6 +5630,22 @@ PrefabInstance:
     - target: {fileID: 1620886074646490580, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_Enabled
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3648896915039600098, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: m_ClearFlags
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3648896915039600098, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: m_BackGroundColor.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3648896915039600098, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: m_BackGroundColor.g
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3648896915039600098, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: m_BackGroundColor.r
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_TagString
@@ -5594,3 +6064,4 @@ SceneRoots:
   - {fileID: 663679484}
   - {fileID: 399799290}
   - {fileID: 1672255347}
+  - {fileID: 720752131}

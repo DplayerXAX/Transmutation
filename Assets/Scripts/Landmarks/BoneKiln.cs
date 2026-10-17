@@ -373,6 +373,9 @@ public sealed class BoneKiln : MonoBehaviour
             draft.AddComponent<ShaftDraft>();
         }
 
+        // Bone shards, loose vertebrae, glassy rib tips and flora scattered round the mouth.
+        LandmarkDecor.Kiln(root, mouth, holeRadius, GroundHeight, boneMaterial, ribMaterial, floraMaterial, seed);
+
         // Bones become climbable ground only now, so the ground probes above never hit them.
         foreach (Station station in stations) station.transform.gameObject.layer = 7;
         skull.gameObject.layer = 7;

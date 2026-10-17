@@ -27,27 +27,160 @@ public sealed class SpireShape
     public float windows = 0.22f;
     public float noiseSeed = 13.7f;
     public int segments = 36;
+    // How lumpy the outer wall is (bulges, courses, ribs); 1 = the original rough rock.
+    public float roughness = 1f;
     // Smooth glaze: one full ring round the outside (heights from the ground line; no windows or ledges on it),
     // plus patches that are rare low down and grow denser towards the ring. Off when top <= bottom.
     public float glazeBottom = -1f;
     public float glazeTop = -1f;
     public bool HasGlaze => glazeTop > glazeBottom;
+    // The ring only covers angles within glazeArc (half-angle, radians) of glazeArcCentre; 0 = all the way round.
+    public float glazeArc;
+    public float glazeArcCentre;
+    // Everything below this height is cut away: the tower floats, its lower end an open cut.
+    public float cutBelow = float.MinValue;
+
+    /// <summary>True for a ring of the wall cut away under a floating tower.</summary>
+    public bool CutCell(int j) => j >= 0 && j < Rings && RingY(j + 1) <= cutBelow + 0.01f;
     // Share of the wall covered by patches just under the ring (outside), and above it.
     public float glazePatchDensity = 0.6f;
     // Angle of the wide balcony just below the ring.
     public float balconyAngle;
     public float ringStep = 1.4f;
 
-    public int Rings => Mathf.Max(2, Mathf.CeilToInt((height + bury) / ringStep));
-    public float RingY(int j) => -bury + j * (height + bury) / Rings;
+    public int Rings => HasDrums ? Layout().Length - 1 : Mathf.Max(2, Mathf.CeilToInt((height + bury) / ringStep));
+    public float RingY(int j) => HasDrums ? Layout()[Mathf.Clamp(j, 0, Rings)] : -bury + j * (height + bury) / Rings;
 
     /// <summary>Moves the glaze ring's edges onto ring lines, so the ring covers whole wall cells.</summary>
     public void SnapGlaze()
     {
         if (!HasGlaze) return;
-        float step = (height + bury) / Rings;
-        glazeBottom = RingY(Mathf.RoundToInt((glazeBottom + bury) / step));
-        glazeTop = Mathf.Max(glazeBottom + step, RingY(Mathf.RoundToInt((glazeTop + bury) / step)));
+        glazeBottom = RingY(NearestRing(glazeBottom));
+        glazeTop = RingY(Mathf.Max(NearestRing(glazeBottom) + 1, NearestRing(glazeTop)));
+    }
+
+    private int NearestRing(float y)
+    {
+        int best = 0;
+        for (int j = 1; j <= Rings; j++)
+            if (Mathf.Abs(RingY(j) - y) < Mathf.Abs(RingY(best) - y)) best = j;
+        return best;
+    }
+
+    // ---------------- Stacked drums ----------------
+    // 0 = one continuous wall. Otherwise the wall is a stack of drums about this tall. Each drum is its own
+    // polygon (square, hexagon, nine or twelve sides), turned and shifted a little against the one below,
+    // with a recessed seam under it. Where the drum below sticks out past the one above, its top is a ledge.
+    public float drumLength;
+    public float seamHeight = 0.7f;
+    public float seamDepth = 0.3f;
+    public float drumShift = 0.6f;
+    public bool HasDrums => drumLength > 0f;
+
+    public sealed class Drum
+    {
+        public float y0, y1;  // y0 = bottom of its seam (or the buried foot), y1 = top
+        public int sides;
+        public float twist;   // radians; corners always fall on wall segments
+        public Vector2 shift; // sideways offset of its axis
+        public bool seam;     // false for the bottom drum
+        public float BodyBottom(float seamHeight) => seam ? y0 + seamHeight : y0;
+    }
+
+    private readonly List<Drum> drums = new List<Drum>();
+    private float[] ringHeights;
+    private Vector4 layoutKey;
+
+    /// <summary>The drums from the bottom up (empty without drumLength).</summary>
+    public IReadOnlyList<Drum> Drums { get { if (HasDrums) Layout(); return drums; } }
+
+    /// <summary>Lays out the drums and the ring heights (again whenever the height or settings change).</summary>
+    private float[] Layout()
+    {
+        var key = new Vector4(height, bury, drumLength + seamHeight * 17f + doorHeight * 0.37f, noiseSeed + segments * 0.01f + ringStep);
+        if (ringHeights != null && key == layoutKey) return ringHeights;
+        layoutKey = key;
+        drums.Clear();
+        var random = new System.Random(Mathf.RoundToInt(noiseSeed * 997f) ^ 0x5d1);
+        var joints = new List<float>();
+        float y = Mathf.Max(doorHeight + 3f, drumLength * 0.75f);
+        while (y < height - Mathf.Max(6f, drumLength * 0.6f))
+        {
+            joints.Add(y);
+            y += drumLength * (0.8f + 0.45f * (float)random.NextDouble());
+        }
+        int[] choices = { 4, 6, 6, 9, 12 };
+        int lastSides = 0;
+        float bottom = -bury;
+        float step = 360f / segments;
+        for (int i = 0; i <= joints.Count; i++)
+        {
+            int sides;
+            int tries = 0;
+            do sides = choices[random.Next(choices.Length)]; while ((sides == lastSides || segments % sides != 0) && ++tries < 40);
+            lastSides = sides;
+            // Corners sit half a face from the face centre; keep them on wall segment lines so the faces are flat.
+            float cornerOffset = Mathf.Repeat(180f / sides, step);
+            float twist = (random.Next(segments) * step - cornerOffset) * Mathf.Deg2Rad;
+            float a = (float)random.NextDouble() * Mathf.PI * 2f;
+            Vector2 shift = i == 0 ? Vector2.zero : new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * drumShift * (0.5f + 0.5f * (float)random.NextDouble());
+            float top = i < joints.Count ? joints[i] : float.MaxValue; // the last one runs on through the crown
+            drums.Add(new Drum { y0 = bottom, y1 = top, sides = sides, twist = twist, shift = shift, seam = i > 0 });
+            bottom = top;
+        }
+
+        // Rings: about ringStep apart, with two close together at each step in the outline (seam bottom and top),
+        // so the steps come out as flat ledges and undersides.
+        var breaks = new List<float>();
+        foreach (float j in joints) { breaks.Add(j - 0.03f); breaks.Add(j); breaks.Add(j + seamHeight - 0.03f); breaks.Add(j + seamHeight); }
+        breaks.Add(height);
+        var list = new List<float> { -bury };
+        foreach (float b in breaks)
+        {
+            float start = list[list.Count - 1];
+            float span = b - start;
+            if (span <= 0.001f) continue;
+            int n = span < 0.2f ? 1 : Mathf.Max(1, Mathf.RoundToInt(span / ringStep));
+            for (int i = 1; i <= n; i++) list.Add(start + span * i / n);
+        }
+        ringHeights = list.ToArray();
+        return ringHeights;
+    }
+
+    /// <summary>The drum a height belongs to (a seam belongs to the drum above it).</summary>
+    public Drum DrumAt(float y)
+    {
+        Layout();
+        foreach (Drum d in drums) if (y < d.y1) return d;
+        return drums[drums.Count - 1];
+    }
+
+    /// <summary>True within a seam between two drums.</summary>
+    public bool InSeam(float y)
+    {
+        if (!HasDrums) return false;
+        Drum d = DrumAt(y);
+        return d.seam && y < d.y0 + seamHeight;
+    }
+
+    /// <summary>True within margin metres of a seam (ledges and windows keep clear of them).</summary>
+    public bool NearSeam(float y, float margin)
+    {
+        if (!HasDrums) return false;
+        foreach (Drum d in Drums)
+            if (d.seam && y > d.y0 - margin && y < d.y0 + seamHeight + margin) return true;
+        return false;
+    }
+
+    /// <summary>Radius of a drum's polygon at an angle, for a drum whose round radius would be radius.</summary>
+    private static float Polygon(Drum d, float angle, float radius)
+    {
+        float half = Mathf.PI / d.sides;
+        float delta = Mathf.Repeat(angle - d.twist + half, 2f * half) - half;
+        // Average radius stays about the same as the round wall's.
+        float meanSecant = Mathf.Log(1f / Mathf.Cos(half) + Mathf.Tan(half)) / half;
+        // Corners are cut off (chamfered), so a drum never juts far out over a smaller one below it.
+        return Mathf.Min(radius / (Mathf.Cos(delta) * meanSecant), radius * 1.1f);
     }
 
     /// <summary>Wall cell (ring j, segment k) cut away for the door.</summary>
@@ -72,6 +205,7 @@ public sealed class SpireShape
         int j0 = pair * 2, j1 = j0 + 2;
         if (j1 > Rings || RingY(j0) < 12f || RingY(j1) > height - 5f || DoorCell(j0, k)) return false;
         if (HasGlaze && RingY(j1) > glazeBottom - 0.2f && RingY(j0) < glazeTop + 0.2f) return false;
+        if (HasDrums && (RingY(j1) - RingY(j0) < 2.3f || NearSeam(RingY(j0), 0.6f) || NearSeam(RingY(j1), 0.6f) || DrumAt(RingY(j0) + 0.01f) != DrumAt(RingY(j1) - 0.01f))) return false;
         // Slow noise along the height, fast around the tower.
         float slit = Mathf.PerlinNoise(k * 0.93f + noiseSeed * 3.1f, pair * 0.44f + noiseSeed);
         return slit > 1f - windows * 0.9f;
@@ -85,9 +219,14 @@ public sealed class SpireShape
     {
         if (!HasGlaze || j < 0 || j >= Rings) return false;
         k = (k + segments) % segments;
-        if (DoorCell(j, k) || WindowCell(j, k)) return false;
+        if (DoorCell(j, k) || WindowCell(j, k) || CutCell(j)) return false;
         float y0 = RingY(j), y1 = RingY(j + 1);
-        if (!inside && y0 >= glazeBottom - 0.01f && y1 <= glazeTop + 0.01f) return true;
+        if (!inside && y0 >= glazeBottom - 0.01f && y1 <= glazeTop + 0.01f)
+        {
+            if (glazeArc <= 0f) return true;
+            float cellAngle = (k + 0.5f) * Mathf.PI * 2f / segments;
+            if (Mathf.Abs(Mathf.DeltaAngle(cellAngle * Mathf.Rad2Deg, glazeArcCentre * Mathf.Rad2Deg)) <= glazeArc * Mathf.Rad2Deg) return true;
+        }
         float y = (y0 + y1) * 0.5f;
         if (y < 6f || y > height - 3f) return false;
         float ramp = Mathf.InverseLerp(height * 0.12f, glazeBottom, y);
@@ -105,14 +244,27 @@ public sealed class SpireShape
     public Vector3 Axis(float y)
     {
         float t = Mathf.Clamp01(y / height);
-        return new Vector3(Mathf.Sin(t * 2.2f + noiseSeed) * lean * t, y, Mathf.Cos(t * 1.7f + noiseSeed * 1.3f) * lean * t * 0.7f);
+        Vector3 axis = new Vector3(Mathf.Sin(t * 2.2f + noiseSeed) * lean * t, y, Mathf.Cos(t * 1.7f + noiseSeed * 1.3f) * lean * t * 0.7f);
+        if (HasDrums)
+        {
+            Vector2 shift = DrumAt(y).shift;
+            axis += new Vector3(shift.x, 0f, shift.y);
+        }
+        return axis;
     }
 
     public float Inner(float angle, float y)
     {
         float t = Mathf.Clamp01(y / height);
         float wobble = (Noise(angle, 1.6f, y * 0.05f, 3.1f) - 0.5f) * 1.2f;
-        return Mathf.Max(1f, Mathf.Lerp(innerRadius, innerRadius * topScale, t) + wobble);
+        float radius = Mathf.Lerp(innerRadius, innerRadius * topScale, t) + wobble;
+        // The shaft stays straight while the drums shift: undo the drum's sideways offset on the inside.
+        if (HasDrums)
+        {
+            Vector2 shift = DrumAt(y).shift;
+            radius -= shift.x * Mathf.Cos(angle) + shift.y * Mathf.Sin(angle);
+        }
+        return Mathf.Max(1f, radius);
     }
 
     public float Outer(float angle, float y)
@@ -120,10 +272,17 @@ public sealed class SpireShape
         float t = Mathf.Clamp01(y / height);
         float radius = Mathf.Lerp(innerRadius + wallBase, innerRadius * topScale + wallTop, t);
         // Big slow bulges, horizontal courses (kept gentle so the wall stays climbable) and a few ribs.
-        radius += (Noise(angle, 2.3f, y * 0.02f, 0f) - 0.5f) * 2.2f;
-        radius += Mathf.Sin(y * (2f * Mathf.PI / 4.2f) + Noise(angle, 1.1f, 0f, 7.7f) * 3f) * 0.22f;
-        radius += Mathf.Pow(Noise(angle, 4.1f, y * 0.012f, 21.3f), 3f) * 2f;
+        radius += (Noise(angle, 2.3f, y * 0.02f, 0f) - 0.5f) * 2.2f * roughness;
+        radius += Mathf.Sin(y * (2f * Mathf.PI / 4.2f) + Noise(angle, 1.1f, 0f, 7.7f) * 3f) * 0.22f * roughness;
+        radius += Mathf.Pow(Noise(angle, 4.1f, y * 0.012f, 21.3f), 3f) * 2f * roughness;
         radius += flare * Mathf.Pow(1f - t, 6f) * (0.6f + 0.8f * Noise(angle, 1.5f, 0f, 41.9f));
+        if (HasDrums)
+        {
+            Drum d = DrumAt(y);
+            // The seam: a round neck set back into the wall. The drum itself: a flat-sided polygon.
+            if (d.seam && y < d.y0 + seamHeight) return Mathf.Max(radius - seamDepth, Inner(angle, y) + 0.8f);
+            radius = Polygon(d, angle, radius);
+        }
         return Mathf.Max(radius, Inner(angle, y) + 0.8f);
     }
 
@@ -235,7 +394,7 @@ public static class LandmarkShapes
             inner[j, k] = b.Add(Point(shape, angles[k], ringY[j, k], shape.Inner(angles[k], ringY[j, k])), wallPart);
         }
 
-        bool Skip(int j, int k) => shape.DoorCell(j, k);
+        bool Skip(int j, int k) => shape.DoorCell(j, k) || shape.CutCell(j);
         // Windows are holes through the wall. Their sills can be stood on and lead into the shaft.
         bool Window(int j, int k) => shape.WindowCell(j, k);
 
@@ -284,7 +443,7 @@ public static class LandmarkShapes
             float width = Range(random, 0.45f, 0.8f);
             float reach = Range(random, 1.8f, 2.6f), thickness = Range(random, 0.6f, 1f), part = (float)random.NextDouble();
             // Nothing to rest on across the glazed band.
-            if (!shape.HasGlaze || y < shape.glazeBottom - 2f || y > shape.glazeTop + 1f)
+            if ((!shape.HasGlaze || y < shape.glazeBottom - 2f || y > shape.glazeTop + 1f) && y > shape.cutBelow + 2.5f && !shape.NearSeam(y, 2f))
                 Ledge(b, shape, ledgeAngle, ledgeAngle + width, y, reach, thickness, part);
             ledgeAngle += Range(random, 0.9f, 1.5f);
         }

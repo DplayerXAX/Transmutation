@@ -21,17 +21,27 @@ public static class LandmarkSetup
             return;
         }
 
-        // Pale stone with ink joints and script: the tower reads against the dark line-world terrain.
+        // A dark silhouette against the pale sky: near-black stone, bright ivory joints, carved script glowing
+        // cyan all the time (brighter as the pulse climbs past), and a pale rim light.
         Material spire = FromShader("MAT_Landmark_SpireStone", "Capstone/Landmarks/SpireStone", m =>
         {
-            m.SetColor("_Color", new Color(0.8f, 0.77f, 0.7f, 1f));
-            m.SetColor("_ShadowColor", new Color(0.42f, 0.4f, 0.38f, 1f));
-            m.SetColor("_LineColor", new Color(0.07f, 0.07f, 0.08f, 1f));
-            m.SetColor("_ScriptColor", new Color(0.1f, 0.09f, 0.09f, 1f));
-            m.SetColor("_HatchColor", new Color(0.2f, 0.19f, 0.18f, 1f));
-            m.SetColor("_GlowColor", new Color(0.15f, 0.75f, 0.8f, 1f));
-            m.SetFloat("_GlowStrength", 1.2f);
-            m.SetFloat("_HatchStrength", 0.6f);
+            // White, seamless stone: no brick joints, dark carved script, soft grey shade.
+            m.SetColor("_Color", new Color(0.95f, 0.95f, 0.93f, 1f));
+            m.SetColor("_ShadowColor", new Color(0.62f, 0.63f, 0.66f, 1f));
+            m.SetColor("_LineColor", new Color(0.1f, 0.1f, 0.12f, 1f));
+            m.SetColor("_ScriptColor", new Color(0.08f, 0.08f, 0.1f, 1f));
+            m.SetFloat("_JointStrength", 0f);
+            m.SetColor("_HatchColor", new Color(0.2f, 0.2f, 0.22f, 1f));
+            m.SetColor("_GlowColor", new Color(0.25f, 0.9f, 1f, 1f));
+            m.SetFloat("_GlowStrength", 2.6f);
+            m.SetFloat("_ScriptGlowBase", 0.25f);
+            m.SetFloat("_ScriptChance", 0.4f);
+            m.SetFloat("_RimStrength", 0.25f);
+            m.SetFloat("_RimPower", 3f);
+            m.SetFloat("_PulseWidth", 8f);
+            m.SetFloat("_FakeLightAmount", 0.35f);
+            m.SetFloat("_GlitchAmount", 0.2f);
+            m.SetFloat("_HatchStrength", 0.35f);
             m.SetFloat("_ShadowLineDim", 1f);
         });
         // Inner world twin: no sun, near-black stone with violet joints and glow, like the cave.

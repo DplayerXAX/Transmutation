@@ -74,3 +74,10 @@ Meditation erases the sky together with the world (see `Scripts/Meditation/READM
 
 `Shaders/Terrain/FBMRisingTerrain` is for Unity Terrain scenes (e.g. `Scene_Lam`).
 **Tools > Capstone > Apply Rising FBM to Scene Terrain** assigns it.
+
+## AerialPerspective (haze)
+
+On the Procedural World object. There is no haze near the player, then a long gentle linear ramp (Unity fog mode Linear) to fully hidden. Settings: **Clear Distance** (no haze nearer than this, default 300 m) and **Haze Depth** (from there to fully hidden, default 420 m),
+**Scale Height** (the air thins as the eye climbs, so the far land clears from up the spire), a sun tint (brighter
+and warmer looking into the sun, cooler away; Mie-style phase), and a separate violet haze in the inner world.
+Line detail fades at given haze strengths. While chunks load, the haze is thickened to hide the unloaded edge.

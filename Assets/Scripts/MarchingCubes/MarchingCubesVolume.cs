@@ -159,7 +159,16 @@ public class MarchingCubesVolume : MonoBehaviour
 		}
 
 		simulationTimer += Time.deltaTime;
-		if (simulationTimer < simulationInterval)
+		// Further from the camera, it simulates less often (the shape is the same, it just updates less smoothly).
+		float interval = simulationInterval;
+		Camera view = Camera.main;
+		if (view != null)
+		{
+			float distance = Vector3.Distance(view.transform.position, transform.position);
+			if (distance > 70f) interval *= 6f;
+			else if (distance > 35f) interval *= 2.5f;
+		}
+		if (simulationTimer < interval)
 		{
 			return;
 		}
@@ -168,9 +177,42 @@ public class MarchingCubesVolume : MonoBehaviour
 		simulationTimer = 0f;
 
 		// Order: Decay → Inject → Rebuild (inject can sustain blobs against decay).
+		// A steady shape decays and is stamped back to exactly the same values every tick, so only chunks whose
+		// samples really changed this tick are rebuilt (rebuilding meshes and colliders is the costly part).
+		if (tickStart == null || tickStart.Length != densities.Length)
+		{
+			tickStart = new float[numPointsPerAxis, numPointsPerAxis, numPointsPerAxis];
+		}
+		System.Array.Copy(densities, tickStart, densities.Length);
+		var dirtyBefore = dirtyChunks.Count > 0 ? new List<MarchingCubesChunk>(dirtyChunks) : null;
 		DecayDensities(dt);
 		InjectFromOverlays(dt);
+		dirtyChunks.Clear();
+		if (dirtyBefore != null) dirtyChunks.UnionWith(dirtyBefore);
+		MarkChangedSince(tickStart);
 		RebuildDirtyChunks();
+	}
+
+	float[,,] tickStart;
+
+	/// <summary>Marks dirty the chunks round every sample that differs from the given copy of the field.</summary>
+	void MarkChangedSince(float[,,] previous)
+	{
+		int n = numPointsPerAxis;
+		int minX = n, maxX = -1, minY = n, maxY = -1, minZ = n, maxZ = -1;
+		for (int x = 0; x < n; x++)
+		for (int y = 0; y < n; y++)
+		for (int z = 0; z < n; z++)
+		{
+			if (Mathf.Abs(densities[x, y, z] - previous[x, y, z]) <= densityEpsilon) continue;
+			if (x < minX) minX = x;
+			if (x > maxX) maxX = x;
+			if (y < minY) minY = y;
+			if (y > maxY) maxY = y;
+			if (z < minZ) minZ = z;
+			if (z > maxZ) maxZ = z;
+		}
+		if (maxX >= 0) MarkSamplesDirty(minX, maxX, minY, maxY, minZ, maxZ);
 	}
 
 	void OnValidate()
@@ -423,6 +465,9 @@ public class MarchingCubesVolume : MonoBehaviour
 			out int minY, out int maxY,
 			out int minZ, out int maxZ);
 
+		// Read both poses once for the whole loop (same results, far fewer transform reads).
+		Matrix4x4 localToWorld = transform.localToWorldMatrix;
+		overlay.BeginBatch();
 		bool any = false;
 		int dirtyMinX = numPointsPerAxis;
 		int dirtyMaxX = -1;
@@ -443,7 +488,7 @@ public class MarchingCubesVolume : MonoBehaviour
 					}
 
 					Vector3 localSample = IndexToLocal(x, y, z);
-					Vector3 worldSample = transform.TransformPoint(localSample);
+					Vector3 worldSample = localToWorld.MultiplyPoint3x4(localSample);
 					float falloff = overlay.EvaluateFalloff(worldSample);
 					if (falloff <= 0f || !float.IsFinite(falloff))
 					{
@@ -492,6 +537,7 @@ public class MarchingCubesVolume : MonoBehaviour
 			}
 		}
 
+		overlay.EndBatch();
 		if (any)
 		{
 			MarkSamplesDirty(dirtyMinX, dirtyMaxX, dirtyMinY, dirtyMaxY, dirtyMinZ, dirtyMaxZ);

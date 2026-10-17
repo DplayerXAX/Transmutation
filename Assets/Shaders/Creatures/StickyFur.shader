@@ -8,6 +8,7 @@ Shader "Capstone/Creatures/StickyFur"
     {
         _RootColor("Root Color", Color) = (0.03, 0.03, 0.035, 1)
         _TipColor("Tip Color", Color) = (0.9, 0.9, 0.88, 1)
+        _GlintColor("Wet Glint Color", Color) = (0.97, 0.97, 0.95, 1)
         _ShadeLevels("Shade Levels", Range(1, 6)) = 3
         _ShadeStrength("Shade Strength", Range(0, 1)) = 0.35
 
@@ -42,6 +43,7 @@ Shader "Capstone/Creatures/StickyFur"
         CBUFFER_START(UnityPerMaterial)
             half4 _RootColor;
             half4 _TipColor;
+            half4 _GlintColor;
             half _ShadeLevels;
             half _ShadeStrength;
             float _FurLength;
@@ -156,7 +158,8 @@ Shader "Capstone/Creatures/StickyFur"
                 // A flat wet glint on the skin and lower fur.
                 float3 halfDir = normalize(mainLight.direction + viewDirWS);
                 half glint = step(1.0 - _HighlightSize, saturate(dot(normalWS, halfDir))) * step(_Shell, 0.3);
-                color = lerp(color, _TipColor.rgb, glint);
+                // The wet glints stay white whatever colour the fur is.
+                color = lerp(color, _GlintColor.rgb, glint);
 
                 return half4(MixFog(color, input.fogFactor), 1.0);
             }

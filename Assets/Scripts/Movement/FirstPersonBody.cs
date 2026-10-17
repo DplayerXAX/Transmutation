@@ -144,7 +144,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame) interactTimer = 0.3f;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || !carrier.CarriesTentacle)) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;
         // Landing after a real jump or fall: knees bend, arms dip, harder the faster the fall.
@@ -250,6 +250,15 @@ public sealed class FirstPersonBody : MonoBehaviour
             palmNormal = normal;
             grip = 0.25f + 0.1f * Mathf.Max(0f, stroke);
             flutter = 0.08f;
+        }
+        else if (side > 0f && TentacleTether.Instance != null && TentacleTether.Instance.Aiming)
+        {
+            // Aiming a tentacle shot: the right arm points out at the marker, hand open.
+            Vector3 toGoal = TentacleTether.Instance.AimPoint - shoulder;
+            target = shoulder + Vector3.ClampMagnitude(toGoal, (upperArmLength + forearmLength) * 0.95f);
+            palmNormal = -toGoal.normalized;
+            grip = 0.1f;
+            spread = 1f;
         }
         else if (grabbing)
         {

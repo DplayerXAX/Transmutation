@@ -239,7 +239,8 @@ Shader "Capstone/World/Decor"
                 half useDots = step(1.0 - _DotChance, pick);
                 half useGrid = step(pick, _GridChance) * (1.0h - useDots);
 
-                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength * (1.0h - useDots);
+                half detail = LineWorldDetail(input.positionWS);
+                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength * (1.0h - useDots) * detail;
                 color = lerp(color, _HatchColor.rgb, hatch);
 
                 // Halftone: a 3D lattice of dots that grow in the dark, like cheap print.
@@ -250,14 +251,14 @@ Shader "Capstone/World/Decor"
                 // Far away the dots blur into their average tone instead of shimmering.
                 dots = lerp(dots, saturate(dotRadius * dotRadius * 4.2), saturate(dotFw * 6.0 - 0.5));
                 half3 printed = lerp(_Color.rgb * lerp(0.6h, 1.0h, ao), _DotColor.rgb, dots);
-                color = lerp(color, printed, useDots);
+                color = lerp(color, printed, useDots * detail);
 
                 // Digital grid in the glitch palette, dimmer in shadow.
                 float3 gridCoord = input.positionWS * _GridScale;
                 half grid = max(max(LineWorldStripe(gridCoord.x, _LineWidth * 0.8), LineWorldStripe(gridCoord.y, _LineWidth * 0.8)),
                     LineWorldStripe(gridCoord.z, _LineWidth * 0.8));
                 half3 gridColor = frac(input.uv.y * 5.1) < 0.5 ? _GlitchColorA.rgb : _GlitchColorB.rgb;
-                color = lerp(color, gridColor * lerp(0.45h, 0.9h, light), grid * useGrid * 0.75h);
+                color = lerp(color, gridColor * lerp(0.45h, 0.9h, light), grid * useGrid * 0.75h * detail);
 
                 // Some pieces carry a faint body tint from the glitch palette.
                 half3 pieceTint = frac(input.uv.y * 7.3) < 0.5 ? _GlitchColorA.rgb : _GlitchColorB.rgb;
@@ -269,12 +270,12 @@ Shader "Capstone/World/Decor"
                 // Strata like contour lines on stone, slightly wavy.
                 float strataCoord = input.positionWS.y * _StrataFrequency
                     + 0.25 * sin(dot(input.positionWS.xz, float2(1.3, 0.9)) + input.uv.y * 6.0);
-                half lines = PatternLines(ringCoord, strataCoord, input.uv.y);
+                half lines = PatternLines(ringCoord, strataCoord, input.uv.y) * detail;
 
                 // Colour split: the same lines drawn slightly shifted, once per glitch colour.
                 float split = _GlitchSplit * _GlitchAmount;
-                half splitA = PatternLines(ringCoord + split, strataCoord + split, input.uv.y) * (1.0h - lines);
-                half splitB = PatternLines(ringCoord - split, strataCoord - split, input.uv.y) * (1.0h - lines);
+                half splitA = PatternLines(ringCoord + split, strataCoord + split, input.uv.y) * (1.0h - lines) * detail;
+                half splitB = PatternLines(ringCoord - split, strataCoord - split, input.uv.y) * (1.0h - lines) * detail;
 
                 half rim = pow(1.0h - saturate(dot(normalWS, viewDirWS)), _RimPower) * _RimStrength;
                 lines = max(lines, saturate(rim));

@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -9,6 +11,8 @@ using UnityEngine.Rendering;
 ///
 /// Pieces gather in patches and clusters so the land has bare and crowded areas.
 /// All pieces of one chunk are merged into one mesh per material, parented to the chunk.
+/// In Play Mode the placement runs on a worker thread and colliders are baked off the main thread,
+/// so new chunks never stall a frame; finished chunks are turned into objects a few per frame.
 /// </summary>
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -70,8 +74,13 @@ public sealed class WorldDecorator : MonoBehaviour
     [Tooltip("7 = Ground, so the player can stand and jump on stones.")]
     [SerializeField] private int decorLayer = 7;
 
+    [Header("Loading")]
+    [Tooltip("Decorated chunks turned into objects per frame.")]
+    [Range(1, 16)] [SerializeField] private int chunksPerFrame = 2;
+
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int piecesPlaced;
+    [SerializeField] private int chunksWaiting;
 
     private sealed class Buffer
     {
@@ -90,6 +99,35 @@ public sealed class WorldDecorator : MonoBehaviour
         public int Count => a.Length;
     }
 
+    /// <summary>Everything a worker needs to decorate one chunk; no Unity objects inside.</summary>
+    private sealed class Job
+    {
+        public GameObject chunk;
+        public Matrix4x4 localToWorld, worldToLocal;
+        public Vector3[] vertices, normals;
+        public int[][] triangles;
+        public int randomSeed;
+        public Vector3 spawn;
+        public Kind[] kinds;
+        public Dictionary<Group, Buffer> result;
+        public int pieces;
+    }
+
+    /// <summary>A decor mesh waiting for its collider to finish baking on a worker.</summary>
+    private sealed class PendingCollider
+    {
+        public GameObject decor;
+        public Mesh mesh;
+        public Task bake;
+    }
+
+    // Same options as the default MeshCollider, so the baked data is reused when assigned.
+    private const MeshColliderCookingOptions Cooking = MeshColliderCookingOptions.CookForFasterSimulation |
+        MeshColliderCookingOptions.EnableMeshCleaning | MeshColliderCookingOptions.WeldColocatedVertices |
+        MeshColliderCookingOptions.UseFastMidphase;
+
+    private readonly ConcurrentQueue<Job> finishedJobs = new ConcurrentQueue<Job>();
+    private readonly List<PendingCollider> pendingColliders = new List<PendingCollider>();
     private readonly Dictionary<DecorShapes.Shape, DecorMesh[]> variants = new Dictionary<DecorShapes.Shape, DecorMesh[]>();
     private readonly List<(GameObject chunk, Mesh mesh)> built = new List<(GameObject, Mesh)>();
     private ProceduralWorld world;
@@ -117,6 +155,35 @@ public sealed class WorldDecorator : MonoBehaviour
         }
         built.Clear();
         variants.Clear();
+        while (finishedJobs.TryDequeue(out _)) { }
+        foreach (PendingCollider pending in pendingColliders) pending.bake?.Wait();
+        pendingColliders.Clear();
+        chunksWaiting = 0;
+    }
+
+    private void Update()
+    {
+        if (!Application.isPlaying) return;
+        for (int i = 0; i < chunksPerFrame && finishedJobs.TryDequeue(out Job job); i++)
+        {
+            chunksWaiting--;
+            if (job.chunk == null) continue; // The chunk went away while the worker ran.
+            piecesPlaced += job.pieces;
+            foreach (var pair in job.result)
+                if (pair.Value.vertices.Count > 0)
+                    CreateDecorObject(job.chunk, pair.Key, pair.Value);
+        }
+        // Attach colliders once their meshes are baked; assigning a baked mesh is cheap.
+        for (int i = pendingColliders.Count - 1; i >= 0; i--)
+        {
+            PendingCollider pending = pendingColliders[i];
+            if (!pending.bake.IsCompleted) continue;
+            pendingColliders.RemoveAt(i);
+            if (pending.decor == null || pending.mesh == null) continue;
+            var meshCollider = pending.decor.AddComponent<MeshCollider>();
+            meshCollider.cookingOptions = Cooking;
+            meshCollider.sharedMesh = pending.mesh;
+        }
     }
 
     public void SetMaterials(Material stone, Material organic, Material innerGrowth, Material innerGlow)
@@ -134,50 +201,76 @@ public sealed class WorldDecorator : MonoBehaviour
         PruneDestroyedChunks();
 
         Vector3 key = chunk.transform.localPosition;
-        var random = new System.Random(unchecked(seed * 73856093 ^ Mathf.RoundToInt(key.x) * 19349663 ^ Mathf.RoundToInt(key.y) * 83492791 ^ Mathf.RoundToInt(key.z) * 2971215));
-        var buffers = new Dictionary<Group, Buffer>();
-        Matrix4x4 worldToChunk = chunk.transform.worldToLocalMatrix;
-
-        Vector3[] vertices = chunkMesh.vertices;
-        Vector3[] normals = chunkMesh.normals;
-        for (int subMesh = 0; subMesh < Mathf.Min(2, chunkMesh.subMeshCount); subMesh++)
+        var job = new Job
         {
-            Ground ground = BuildGround(chunk.transform, vertices, normals, chunkMesh.GetTriangles(subMesh));
+            chunk = chunk,
+            localToWorld = chunk.transform.localToWorldMatrix,
+            worldToLocal = chunk.transform.worldToLocalMatrix,
+            vertices = chunkMesh.vertices,
+            normals = chunkMesh.normals,
+            triangles = new int[Mathf.Min(2, chunkMesh.subMeshCount)][],
+            randomSeed = unchecked(seed * 73856093 ^ Mathf.RoundToInt(key.x) * 19349663 ^ Mathf.RoundToInt(key.y) * 83492791 ^ Mathf.RoundToInt(key.z) * 2971215),
+            spawn = transform.position,
+            kinds = kinds.ToArray(),
+        };
+        for (int subMesh = 0; subMesh < job.triangles.Length; subMesh++) job.triangles[subMesh] = chunkMesh.GetTriangles(subMesh);
+        // Shapes are built here on the main thread; workers only read them.
+        foreach (Kind kind in job.kinds) GetVariants(kind.shape);
+
+        if (!Application.isPlaying)
+        {
+            Compute(job);
+            piecesPlaced += job.pieces;
+            foreach (var pair in job.result)
+                if (pair.Value.vertices.Count > 0)
+                    CreateDecorObject(chunk, pair.Key, pair.Value);
+            return;
+        }
+        chunksWaiting++;
+        Task.Run(() =>
+        {
+            try { Compute(job); }
+            catch (System.Exception error) { Debug.LogException(error); job.result = new Dictionary<Group, Buffer>(); }
+            finishedJobs.Enqueue(job);
+        });
+    }
+
+    /// <summary>Places every piece for one chunk. Pure math: safe on a worker thread.</summary>
+    private void Compute(Job job)
+    {
+        var random = new System.Random(job.randomSeed);
+        job.result = new Dictionary<Group, Buffer>();
+        for (int subMesh = 0; subMesh < job.triangles.Length; subMesh++)
+        {
+            Ground ground = BuildGround(job.localToWorld, job.vertices, job.normals, job.triangles[subMesh]);
             if (ground.totalArea <= 0f) continue;
-            for (int k = 0; k < kinds.Count; k++)
+            for (int k = 0; k < job.kinds.Length; k++)
             {
-                Kind kind = kinds[k];
+                Kind kind = job.kinds[k];
                 if (kind.inner != (subMesh == 1)) continue;
                 float expected = ground.totalArea / 1000f * kind.clustersPer1000m2;
                 int clusters = Mathf.FloorToInt(expected) + (random.NextDouble() < expected % 1f ? 1 : 0);
                 for (int i = 0; i < clusters; i++)
-                    GrowCluster(kind, k, ground, random, GetBuffer(buffers, kind.group), worldToChunk);
+                    job.pieces += GrowCluster(kind, k, ground, random, GetBuffer(job.result, kind.group), job.worldToLocal, job.spawn);
             }
         }
-
-        foreach (var pair in buffers)
-            if (pair.Value.vertices.Count > 0)
-                CreateDecorObject(chunk, pair.Key, pair.Value);
     }
 
-    private void GrowCluster(Kind kind, int kindIndex, Ground ground, System.Random random, Buffer buffer, Matrix4x4 worldToChunk)
+    /// <summary>Grows one cluster and returns how many pieces it placed.</summary>
+    private int GrowCluster(Kind kind, int kindIndex, Ground ground, System.Random random, Buffer buffer, Matrix4x4 worldToChunk, Vector3 spawn)
     {
         int triangle = PickTriangle(ground, random);
         Vector3 centre = PointOn(ground, triangle, random);
         Vector3 normal = ground.normal[triangle];
-        if (normal.y < kind.normalYRange.x || normal.y > kind.normalYRange.y) return;
+        if (normal.y < kind.normalYRange.x || normal.y > kind.normalYRange.y) return 0;
 
-        if (!kind.inner)
-        {
-            Vector3 spawn = transform.position;
-            if (new Vector2(centre.x - spawn.x, centre.z - spawn.z).magnitude < spawnClearRadius) return;
-        }
+        if (!kind.inner && new Vector2(centre.x - spawn.x, centre.z - spawn.z).magnitude < spawnClearRadius) return 0;
 
         // Patches: each kind has its own noise field, so kinds settle in different areas.
-        float patch = Mathf.PerlinNoise(centre.x / kind.patchSize + kindIndex * 37.1f + seed * 0.37f,
-                                        (centre.z + centre.y * 0.5f) / kind.patchSize - kindIndex * 21.7f);
+        float patch = PatchNoise(centre.x / kind.patchSize + kindIndex * 37.1f + seed * 0.37f,
+                                 (centre.z + centre.y * 0.5f) / kind.patchSize - kindIndex * 21.7f);
         float threshold = 1f - kind.patchCoverage;
-        if (random.NextDouble() > Mathf.SmoothStep(0f, 1f, (patch - threshold + 0.12f) / 0.24f)) return;
+        if (random.NextDouble() > Mathf.SmoothStep(0f, 1f, (patch - threshold + 0.12f) / 0.24f)) return 0;
 
         // Nearby triangles that face a similar way, for the other members of the cluster.
         var nearby = new List<int>();
@@ -195,6 +288,7 @@ public sealed class WorldDecorator : MonoBehaviour
         int sharedVariant = random.Next(shapes.Length);
         float sharedScale = Range(random, kind.scaleRange.x, kind.scaleRange.y);
         int members = random.Next(Mathf.Max(1, kind.membersPerCluster.x), Mathf.Max(kind.membersPerCluster.x, kind.membersPerCluster.y) + 1);
+        int placed = 0;
 
         for (int m = 0; m < members; m++)
         {
@@ -209,7 +303,9 @@ public sealed class WorldDecorator : MonoBehaviour
             DecorMesh shape = kind.uniformClusters ? shapes[sharedVariant] : shapes[random.Next(shapes.Length)];
             float scale = kind.uniformClusters ? sharedScale * Range(random, 0.88f, 1.12f) : Range(random, kind.scaleRange.x, kind.scaleRange.y);
             Place(kind, shape, buffer, point, pointNormal, scale, random, worldToChunk);
+            placed++;
         }
+        return placed;
     }
 
     private void Place(Kind kind, DecorMesh shape, Buffer buffer, Vector3 point, Vector3 normal, float scale, System.Random random, Matrix4x4 worldToChunk)
@@ -230,7 +326,6 @@ public sealed class WorldDecorator : MonoBehaviour
             buffer.uvs.Add(new Vector2(shape.lengths[i], pieceRandom));
         }
         foreach (int index in shape.triangles) buffer.triangles.Add(start + index);
-        piecesPlaced++;
     }
 
     private void CreateDecorObject(GameObject chunk, Group group, Buffer buffer)
@@ -265,14 +360,22 @@ public sealed class WorldDecorator : MonoBehaviour
         if (group == Group.Inner || group == Group.InnerGlow) meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
 
         if ((group == Group.Stone && stoneColliders) || (group == Group.Inner && innerColliders))
-            decor.AddComponent<MeshCollider>().sharedMesh = mesh;
+        {
+            if (!Application.isPlaying) decor.AddComponent<MeshCollider>().sharedMesh = mesh;
+            else
+            {
+                // Cook the collider on a worker; Update attaches it when ready.
+                var id = mesh.GetEntityId();
+                pendingColliders.Add(new PendingCollider { decor = decor, mesh = mesh, bake = Task.Run(() => Physics.BakeMesh(id, false, Cooking)) });
+            }
+        }
 
         built.Add((chunk, mesh));
     }
 
     // ---------------- Helpers ----------------
 
-    internal static Ground BuildGround(Transform chunk, Vector3[] vertices, Vector3[] normals, int[] triangles)
+    internal static Ground BuildGround(Matrix4x4 chunk, Vector3[] vertices, Vector3[] normals, int[] triangles)
     {
         int count = triangles.Length / 3;
         var ground = new Ground
@@ -284,12 +387,12 @@ public sealed class WorldDecorator : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             int ia = triangles[i * 3], ib = triangles[i * 3 + 1], ic = triangles[i * 3 + 2];
-            Vector3 a = chunk.TransformPoint(vertices[ia]), b = chunk.TransformPoint(vertices[ib]), c = chunk.TransformPoint(vertices[ic]);
+            Vector3 a = chunk.MultiplyPoint3x4(vertices[ia]), b = chunk.MultiplyPoint3x4(vertices[ib]), c = chunk.MultiplyPoint3x4(vertices[ic]);
             ground.a[i] = a;
             ground.b[i] = b;
             ground.c[i] = c;
             ground.centre[i] = (a + b + c) / 3f;
-            ground.normal[i] = chunk.TransformDirection(normals[ia] + normals[ib] + normals[ic]).normalized;
+            ground.normal[i] = chunk.MultiplyVector(normals[ia] + normals[ib] + normals[ic]).normalized;
             total += Vector3.Cross(b - a, c - a).magnitude * 0.5f;
             ground.cumulativeArea[i] = total;
         }
@@ -355,6 +458,27 @@ public sealed class WorldDecorator : MonoBehaviour
     }
 
     private static float Range(System.Random random, float min, float max) => min + (float)random.NextDouble() * (max - min);
+
+    /// <summary>Smooth value noise 0..1 (thread safe, unlike Mathf.PerlinNoise).</summary>
+    private static float PatchNoise(float x, float y)
+    {
+        int ix = Mathf.FloorToInt(x), iy = Mathf.FloorToInt(y);
+        float fx = x - ix, fy = y - iy;
+        fx = fx * fx * (3f - 2f * fx);
+        fy = fy * fy * (3f - 2f * fy);
+        float a = Lattice(ix, iy), b = Lattice(ix + 1, iy), c = Lattice(ix, iy + 1), d = Lattice(ix + 1, iy + 1);
+        return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, d, fx), fy);
+    }
+
+    private static float Lattice(int x, int y)
+    {
+        unchecked
+        {
+            uint h = (uint)(x * 374761393 + y * 668265263);
+            h = (h ^ (h >> 13)) * 1274126177u;
+            return (h ^ (h >> 16)) / (float)uint.MaxValue;
+        }
+    }
 
     [ContextMenu("Reset Kinds To Defaults")]
     public void ResetKinds() => kinds = DefaultKinds();
