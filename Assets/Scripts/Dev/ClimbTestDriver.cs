@@ -173,6 +173,24 @@ public sealed class ClimbTestDriver : MonoBehaviour
         QualitySettings.vSyncCount = 0;
         Application.targetFrameRate = -1;
         yield return new WaitForSeconds(3f);
+        // The player's body seen from outside (front and side), to check the arms join a torso.
+        if (framesPath != null)
+        {
+            if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+            captureCamera.CopyFrom(Camera.main);
+            captureCamera.enabled = false;
+            captureCamera.nearClipPlane = 0.02f;
+            Transform o = controller.Orientation != null ? controller.Orientation : controller.transform;
+            Directory.CreateDirectory(framesPath);
+            Vector3[] spots = { o.forward * 1.6f + Vector3.up * 0.2f, o.right * 1.6f + o.forward * 0.4f + Vector3.up * 0.4f };
+            for (int i = 0; i < spots.Length; i++)
+            {
+                Vector3 from = body.position + spots[i];
+                captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(body.position + Vector3.up * 0.2f - from));
+                captureCamera.fieldOfView = 60f;
+                Save(captureCamera, Path.Combine(framesPath, $"body_{i}.png"));
+            }
+        }
         var byType = new Dictionary<System.Type, List<MonoBehaviour>>();
         foreach (MonoBehaviour m in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
         {
@@ -850,6 +868,9 @@ public sealed class ClimbTestDriver : MonoBehaviour
     {
         total++;
         climber.ScriptedInput = Vector2.zero;
+        // Leftover from the previous test: let go before moving the player, or the next climb starts from there.
+        climber.StopForBubbleCapture();
+        yield return null;
         // Start standing at the foot of the wall, or next to it in the air as if the player had jumped at it.
         fromGround &= cliff.start.y - cliff.feet.y < 2.5f;
         if (fromGround)
