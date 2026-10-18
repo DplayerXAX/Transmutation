@@ -69,6 +69,20 @@ public static class RealmSitesSetup
             Load("MAT_Realm_Coral"), Load("MAT_Realm_Jelly"), Load("MAT_Realm_Slime"), Load("MAT_Realm_Anemone"));
         EditorUtility.SetDirty(flora);
 
+        // A kelp forest round the first side tower and a geode field round the second.
+        TowerGroves groves = holder.GetComponent<TowerGroves>();
+        if (groves == null) groves = Undo.AddComponent<TowerGroves>(holder);
+        Undo.RecordObject(groves, "Set Tower Groves");
+        groves.Setup(Load("MAT_Realm_Kelp"), Load("MAT_Realm_Jellyfish"), Load("MAT_Realm_Geode"), Load("MAT_Realm_Amethyst"), Load("MAT_Realm_Basalt"));
+        EditorUtility.SetDirty(groves);
+
+        // The light pillar through the spire, lit once its crown seed is taken.
+        SpireBeam beam = holder.GetComponent<SpireBeam>();
+        if (beam == null) beam = Undo.AddComponent<SpireBeam>(holder);
+        Undo.RecordObject(beam, "Set Spire Beam");
+        beam.Setup(Load("MAT_Realm_Beam"), Load("MAT_Realm_Lamp"));
+        EditorUtility.SetDirty(beam);
+
         // Stops self-spreading fire flowers from piling up over a long session (a cause of slowdown).
         if (holder.GetComponent<RealmPopulation>() == null) Undo.AddComponent<RealmPopulation>(holder);
 

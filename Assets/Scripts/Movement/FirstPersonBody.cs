@@ -34,6 +34,15 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Min(0.05f)] [SerializeField] private float forearmLength = 0.34f;
     [Tooltip("How quickly hands chase their targets.")]
     [Min(0.1f)] [SerializeField] private float handFollow = 18f;
+    [Tooltip("How far the arms swing forward and back when walking and running (1 = the original swing).")]
+    [Range(0.5f, 2f)] [SerializeField] private float armSwingScale = 1.1f;
+    [Tooltip("Shoulders, a collar between them and a slim torso down to the hips, so the arms are joined to a " +
+             "body when the camera clips into something and the tops of the arms come into view.")]
+    [SerializeField] private bool showTorso = true;
+    [Tooltip("Eye height above the middle of the player's 2 m capsule (the camera marker's height). 0.75 puts the eyes " +
+             "about 1.75 m off the ground, so the torso between shoulders and hips has a grown-up length. " +
+             "0 leaves the marker where it is in the prefab (0.565).")]
+    [Min(0f)] [SerializeField] private float eyeHeight = 0.75f;
 
     [Header("Legs (body space)")]
     [SerializeField] private float hipHeight = -0.05f;
@@ -97,6 +106,12 @@ public sealed class FirstPersonBody : MonoBehaviour
         body = controller != null ? controller.Body : null;
         if (body == null && controller != null) body = controller.GetComponent<Rigidbody>();
 
+        if (eyeHeight > 0f && controller != null)
+        {
+            Transform marker = controller.transform.Find("CameraPos");
+            if (marker == null) marker = controller.transform.Find("CameraPosition");
+            if (marker != null) marker.localPosition = new Vector3(marker.localPosition.x, eyeHeight, marker.localPosition.z);
+        }
         root = new GameObject("First Person Body").transform;
         leftArm = BuildLimb("Left Arm", armThickness, hand: true, side: -1f);
         rightArm = BuildLimb("Right Arm", armThickness, hand: true, side: 1f);
@@ -105,6 +120,7 @@ public sealed class FirstPersonBody : MonoBehaviour
             leftLeg = BuildLimb("Left Leg", legThickness, hand: false, side: -1f);
             rightLeg = BuildLimb("Right Leg", legThickness, hand: false, side: 1f);
         }
+        if (showTorso) BuildTorso();
         renderers = root.GetComponentsInChildren<Renderer>();
         // Tentacle creatures ride on the right hand.
         if (carrier != null)
@@ -179,7 +195,39 @@ public sealed class FirstPersonBody : MonoBehaviour
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
             part.SetPropertyBlock(block);
         }
+        if (torso != null) PoseTorso();
         LimbsPosed?.Invoke();
+    }
+
+    // ---------------- Torso ----------------
+
+    private Transform torso, collar, leftCap, rightCap;
+    private Vector3 leftShoulder, rightShoulder;
+
+    private void BuildTorso()
+    {
+        var torsoRoot = new GameObject("Torso").transform;
+        torsoRoot.SetParent(root, false);
+        leftCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
+        rightCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
+        collar = Part(PrimitiveType.Capsule, "Collar", torsoRoot, limbMaterial, new Vector3(armThickness * 1.2f, 0.2f, armThickness * 1.2f), true);
+        torso = Part(PrimitiveType.Capsule, "Spine", torsoRoot, limbMaterial, new Vector3(0.21f, 0.2f, 0.12f), true);
+    }
+
+    /// <summary>Joins the two shoulders to each other and, through a slim spine, to the hips.</summary>
+    private void PoseTorso()
+    {
+        leftCap.position = leftShoulder;
+        rightCap.position = rightShoulder;
+        PlaceSegment(collar, leftShoulder, rightShoulder);
+        Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
+        Vector3 neck = (leftShoulder + rightShoulder) * 0.5f - orientation.forward * 0.04f;
+        Vector3 hips = controller.transform.position + Vector3.up * (hipHeight - 0.04f) - orientation.forward * 0.03f;
+        PlaceSegment(torso, neck, hips);
+        // Keep the flat side of the torso facing forward.
+        Vector3 down = hips - neck;
+        if (down.sqrMagnitude > 1e-4f)
+            torso.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(orientation.forward, down).normalized, -down.normalized);
     }
 
     /// <summary>Raised after the arms and legs are posed each frame, for things that must stick to them exactly.</summary>
@@ -209,6 +257,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         Vector3 bodyShoulder = eye + bodyRight * ((shoulderOffset.x + shoulderWiden) * side) + bodyUp * shoulderOffset.y + bodyForward * shoulderOffset.z;
         Vector3 viewShoulder = view.TransformPoint(Vector3.Scale(shoulderOffset, new Vector3(side, 1f, 1f)));
         Vector3 shoulder = Vector3.Lerp(viewShoulder, bodyShoulder, arm.bodyFrame);
+        if (side > 0f) rightShoulder = shoulder; else leftShoulder = shoulder;
         // Elbows point down and out.
         Vector3 pole = Vector3.Lerp(-view.up + view.right * side * 0.6f - view.forward * 0.2f,
                                     -bodyUp + bodyRight * side * 0.6f - bodyForward * 0.2f, arm.bodyFrame);
@@ -314,8 +363,8 @@ public sealed class FirstPersonBody : MonoBehaviour
             // Running: elbows bent and fists pumping in front of the chest, swinging in towards the middle,
             // so at the top of each swing the hand comes up into the bottom of the view, first-person style.
             Vector3 pump = bodyShoulder
-                + bodyForward * (0.24f + (0.26f + 0.12f * reach) * swing)
-                + bodyUp * (-0.4f + (0.24f + 0.1f * reach) * forward - 0.1f * Mathf.Max(0f, -swing))
+                + bodyForward * (0.24f + (0.26f + 0.12f * reach) * swing * armSwingScale)
+                + bodyUp * (-0.4f + ((0.24f + 0.1f * reach) * forward - 0.1f * Mathf.Max(0f, -swing)) * armSwingScale)
                 - bodyRight * (side * (0.03f + 0.12f * forward));
             target = Vector3.Lerp(hang, pump, run);
             target += bodyUp * (Mathf.Sin(Time.time * 1.7f + side) * 0.006f);
