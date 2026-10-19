@@ -111,7 +111,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         UpdatePendingGrab();
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
-            Release();
+            ReleaseCarriedCreature();
     }
 
     private void UpdateToggle(bool rightMouse)
@@ -329,6 +329,9 @@ private void FitCarryPoint(Creature creature)
 
     public bool CarriesTentacle => CarriedCreature is TentacleCreature && !CarriedCreature.IsDead;
 
+    /// <summary>The attached creature stays on the rider while the mouse buttons pull the reins.</summary>
+    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Mount != null;
+
     private void SnapHeld()
     {
         if (carryPoint == null) return;
@@ -346,6 +349,7 @@ private void FitCarryPoint(Creature creature)
     /// <summary>Releases the creature and, if it is a free physics body, sends it slightly forward.</summary>
     public void Drop()
     {
+        if (TentacleLockedForRide) return;
         Creature dropped = CarriedCreature;
         Release();
         if (dropped == null || carryCamera == null) return;
@@ -356,6 +360,12 @@ private void FitCarryPoint(Creature creature)
     }
 
     public void Release()
+    {
+        if (TentacleLockedForRide) return;
+        ReleaseCarriedCreature();
+    }
+
+    private void ReleaseCarriedCreature()
     {
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
@@ -378,6 +388,6 @@ private void FitCarryPoint(Creature creature)
         }
     }
 
-    private void OnDisable() => Release();
+    private void OnDisable() => ReleaseCarriedCreature();
     private void OnApplicationFocus(bool focused) { if (!focused) Release(); }
 }

@@ -222,6 +222,19 @@ public sealed class RealmMeshes
         triangles.Add(c);
     }
 
+    /// <summary>Adds one vertex and returns its index (for shapes built by hand).</summary>
+    public int Vertex(Vector3 position, Vector3 normal, Vector2 uvA, Vector2 uvB)
+    {
+        vertices.Add(position);
+        normals.Add(normal);
+        uv0.Add(uvA);
+        uv1.Add(uvB);
+        return vertices.Count - 1;
+    }
+
+    /// <summary>Adds a triangle from three vertex indices.</summary>
+    public void Triangle(int a, int b, int c) => Add(a, b, c);
+
     public Mesh Build(string name)
     {
         var mesh = new Mesh { name = name, indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };

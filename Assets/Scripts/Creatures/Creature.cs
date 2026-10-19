@@ -201,11 +201,14 @@ public enum FoodTag
     /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
     public virtual void Consume(Creature consumer) { }
 
+    /// <summary>Ownership states may protect a creature from being removed as food.</summary>
+    public virtual bool CanBeConsumed => true;
+
     /// <summary>Completes an eating event once, even when destruction is deferred by Unity.</summary>
     public virtual bool TryConsumeFood(Creature food)
     {
         if (!Application.isPlaying || !isActiveAndEnabled || !SimulationEnabled || IsDead || consumptionPending ||
-            food == null || !food.isActiveAndEnabled || food.consumptionPending || !CanEat(food)) return false;
+            food == null || !food.isActiveAndEnabled || !food.CanBeConsumed || food.consumptionPending || !CanEat(food)) return false;
         food.consumptionPending = true;
         CreatureRegistry.Unregister(food);
         food.Consume(this);

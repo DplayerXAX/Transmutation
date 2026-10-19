@@ -21,8 +21,11 @@ public sealed class TentacleTether : MonoBehaviour
 {
     [Tooltip("Also aims (besides holding the left mouse button): hold to aim, release to shoot.")]
     [SerializeField] private Key fireKey = Key.F;
-    [Tooltip("Pull every shot arm back in.")]
+    [Tooltip("Tap: every shot arm lets go. Hold: the newest stuck arm shortens and hauls the player to where it stuck " +
+             "(across a gap to another tower); hold W on arrival to grab the wall, and the arm lets go once the hands hold.")]
     [SerializeField] private Key reelKey = Key.R;
+    [Min(1f)] [SerializeField] private float reelSpeed = 9f;
+    [Min(1f)] [SerializeField] private float reelAcceleration = 30f;
     [Tooltip("How hard a stuck arm pulls the player back once they walk further than it was shot (acceleration per metre).")]
     [Min(0f)] [SerializeField] private float armPull = 5f;
     [Min(0f)] [SerializeField] private float maxArmPull = 40f;
@@ -141,19 +144,45 @@ public sealed class TentacleTether : MonoBehaviour
             return;
         }
         lastCarried = carried;
+        // While riding, both mouse buttons belong to the reins. Do not fire on release or reel them in.
+        if (BoneRide.Mount != null)
+        {
+            aiming = false;
+            aimValid = false;
+            reeling = false;
+            reelHeldTime = 0f;
+            ShowAim(false);
+            return;
+        }
         if (view == null) view = Camera.main;
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
+        if (keyboard == null && ScriptedReel == null) return;
 
-        // Hold F: aim. Release: the arm shoots where the marker was.
         // Hold the left mouse button (or F): aim. Release: the arm shoots where the marker was.
         Mouse mouse = Mouse.current;
-        bool pressed = (mouse != null && mouse.leftButton.isPressed && Application.isFocused) || keyboard[fireKey].isPressed;
+        bool pressed = (mouse != null && mouse.leftButton.isPressed && Application.isFocused) || (keyboard != null && keyboard[fireKey].isPressed);
         bool aimNow = pressed && Aim(out aimPoint, out aimValid);
         ShowAim(aimNow);
-        if (!pressed && aiming && aimValid) FireAt(aimPoint);
+        if (!pressed && aiming && aimValid) FireAt(aimPoint, aimAnchor);
         aiming = pressed;
-        if (keyboard[reelKey].wasPressedThisFrame) ReelAll();
+        // Tap R: let go. Hold R: reel in on the newest stuck arm.
+        bool reelHeld = ScriptedReel ?? (keyboard != null && keyboard[reelKey].isPressed);
+        if (reelHeld) reelHeldTime += Time.deltaTime;
+        else if (reelHeldTime > 0f)
+        {
+            if (reelHeldTime <= TapTime) ReelAll();
+            reelHeldTime = 0f;
+        }
+        reeling = reelHeld && reelHeldTime > TapTime && pinnedArms.Count > 0;
+        // Once the hands hold a wall, a reeled arm lets go (so it does not pull the climber back down).
+        if (climber == null) climber = FindFirstObjectByType<HandClimber>();
+        if (climber != null && climber.IsClimbing && reeledArm >= 0 && !reeling)
+        {
+            carried.UnpinArm(reeledArm);
+            pinnedArms.Remove(reeledArm);
+            restLengths.Remove(reeledArm);
+            reeledArm = -1;
+        }
 
         shotTimer += Time.deltaTime;
     }
@@ -162,7 +191,10 @@ public sealed class TentacleTether : MonoBehaviour
     /// Fire at a point as if the crosshair were on it (also used by tests). Each shot sends out another of the
     /// carried creature's own arms to stick there; with more than two out, the oldest lets go.
     /// </summary>
-    public void FireAt(Vector3 point)
+    public void FireAt(Vector3 point) => FireAt(point, null);
+
+    /// <summary>Fires at a point on something that may move (anchor): the arm stays stuck to it as it moves.</summary>
+    public void FireAt(Vector3 point, Transform anchor)
     {
         TentacleCreature creature = carrier != null ? carrier.CarriedCreature as TentacleCreature : null;
         if (creature == null || !creature.SimulationEnabled) return;
@@ -171,7 +203,7 @@ public sealed class TentacleTether : MonoBehaviour
             creature.UnpinArm(pinnedArms[0]);
             pinnedArms.RemoveAt(0);
         }
-        int arm = creature.PinArm(point);
+        int arm = creature.PinArm(point, anchor);
         if (arm >= 0)
         {
             pinnedArms.Add(arm);
@@ -182,10 +214,23 @@ public sealed class TentacleTether : MonoBehaviour
     }
 
     private readonly List<int> pinnedArms = new List<int>();
+    private const float TapTime = 0.2f;
+    private float reelHeldTime;
+    private bool reeling;
+    private int reeledArm = -1;
+    private Vector3 reelApproach;
+    private HandClimber climber;
+
+    /// <summary>For tests: holds (true) or lets go of (false) the reel key; null = the keyboard.</summary>
+    public bool? ScriptedReel { get; set; }
+
+    /// <summary>True while the newest stuck arm is hauling the player in.</summary>
+    public bool Reeling => reeling;
     private readonly Dictionary<int, float> restLengths = new Dictionary<int, float>();
 
     private bool aiming, aimValid;
     private Vector3 aimPoint;
+    private Transform aimAnchor;
     private LineRenderer aimLine;
     private Transform aimMarker;
 
@@ -200,6 +245,7 @@ public sealed class TentacleTether : MonoBehaviour
             && (playerBody == null || hit.rigidbody != playerBody))
         {
             point = hit.point + hit.normal * 0.05f;
+            aimAnchor = hit.collider.transform;
             valid = true;
         }
         else point = ray.origin + ray.direction * range;
@@ -209,6 +255,7 @@ public sealed class TentacleTether : MonoBehaviour
     /// <summary>While aiming: a thin line from the hand and a ring on the target (pale when it can stick, dim red when not).</summary>
     private void ShowAim(bool on)
     {
+        if (!on && aimLine == null) return;
         if (aimLine == null)
         {
             var go = new GameObject("Tentacle Aim");
@@ -245,6 +292,9 @@ public sealed class TentacleTether : MonoBehaviour
     }
 
     /// <summary>Hold F: the carried creature pulls every arm back in.</summary>
+    /// <summary>Every shot arm lets go (getting off a bone child or the colossus drops the reins).</summary>
+    public void LetGoAll() => ReelAll();
+
     private void ReelAll()
     {
         pinnedArms.Clear();
@@ -313,14 +363,65 @@ public sealed class TentacleTether : MonoBehaviour
         strip.center = new Vector3(0f, -0.1f, 0f);
     }
 
-    private void FixedUpdate()
-    {
-        for (int i = cords.Count - 1; i >= 0; i--)
-            if (cords[i].creature == null || cords[i].creature.IsDead) RemoveCord(i);
-        foreach (Cord cord in cords)
-            if (cord.creature.SimulationEnabled) Spring(cord, Time.fixedDeltaTime);
+   
+private void FixedUpdate()
+{
+    for (int i = cords.Count - 1; i >= 0; i--)
+        if (cords[i].creature == null || cords[i].creature.IsDead)
+            RemoveCord(i);
+
+    foreach (Cord cord in cords)
+        if (cord.creature.SimulationEnabled)
+            Spring(cord, Time.fixedDeltaTime);
+
+    if (reeling && pinnedArms.Count > 0)
+        ReelIn(Time.fixedDeltaTime);
+    else
         PullBack();
+}
+
+/// <summary>
+/// Holding the reel key: the newest stuck arm shortens, hauling the player along it towards where it stuck,
+/// gravity held off while it pulls. Close to the end the player hangs there until the hands take the wall.
+/// </summary>
+private void ReelIn(float deltaTime)
+{
+    if (playerBody == null || playerBody.isKinematic || carrier == null) return;
+    if (!(carrier.CarriedCreature is TentacleCreature creature)) return;
+    if (pinnedArms.Count == 0) return;
+
+    int arm = pinnedArms[pinnedArms.Count - 1];
+    if (!creature.ArmPin(arm, out Vector3 pin)) return;
+
+    if (reeledArm != arm)
+    {
+        reeledArm = arm;
+        Vector3 flat = Vector3.ProjectOnPlane(pin - playerBody.position, Vector3.up);
+        reelApproach = flat.sqrMagnitude > 1e-4f ? flat.normalized : Vector3.forward;
     }
+
+    Vector3 goal = pin - reelApproach * 0.6f + Vector3.down * 0.5f;
+    Vector3 to = goal - playerBody.position;
+    float distance = to.magnitude;
+    Vector3 want = distance > 0.15f
+        ? to / distance * Mathf.Min(reelSpeed, distance * 4f)
+        : Vector3.zero;
+
+    Vector3 velocity = Vector3.MoveTowards(
+        playerBody.linearVelocity, want, reelAcceleration * deltaTime);
+
+    var controller = playerBody.GetComponent<SmoothFirstPersonController>();
+    if (controller != null)
+        controller.Fling(velocity, 0.15f);
+    else
+        playerBody.linearVelocity = velocity;
+
+    playerBody.AddForce(-Physics.gravity, ForceMode.Acceleration);
+    restLengths[arm] = Mathf.Min(
+        restLengths.TryGetValue(arm, out float r) ? r : distance,
+        distance);
+}
+
 
     /// <summary>
     /// Stuck arms on a carried creature are springs: walk further from where one stuck than it was shot and it

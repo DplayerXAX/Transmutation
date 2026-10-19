@@ -89,6 +89,12 @@ public sealed class HangingSpire : MonoBehaviour
     [Tooltip("How much higher each bridge's far end is than its near end (metres).")]
     [Min(0f)] [SerializeField] private float bridgeRise = 4f;
     [Min(1f)] [SerializeField] private float bridgeWidth = 3f;
+    [Tooltip("Off: no ribbon bridges between the towers; the player has to find a way across (a tentacle arm shot " +
+             "at the next tower and reeled in, a cord, a slingshot). The landings stay where the bridges arrived.")]
+    [SerializeField] private bool bridges = false;
+    [Tooltip("On: bare hands can climb the towers (they only creep down). Off: bare hands slide straight off; only " +
+             "sticky hands (a carried tentacle creature) hold, and ledge tops still stop a slide.")]
+    [SerializeField] private bool climbAlone = false;
     [Tooltip("Scene object whose mesh and material the bridges use (empty = the object named Plane).")]
     [SerializeField] private GameObject bridgeTemplate;
 
@@ -711,7 +717,7 @@ public sealed class HangingSpire : MonoBehaviour
             Vector3 wallPoint = basePoint + new Vector3(axis.x, landingY, axis.z) + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * outer;
             Landing(wallPoint, -toward, landingY + basePoint.y);
             Vector3 start = new Vector3(previousCentre.x, from.y, previousCentre.z) + toward * previousRim;
-            Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, bridgeMesh, bridgeMaterial);
+            if (bridges) Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, bridgeMesh, bridgeMaterial);
         }
     }
 
@@ -726,7 +732,7 @@ public sealed class HangingSpire : MonoBehaviour
         Vector3 wallPoint = toBase + new Vector3(axis.x, landingY, axis.z) + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * outer;
         Landing(wallPoint, -toward, fromTop.y + bridgeRise);
         Vector3 start = new Vector3(fromCentre.x, fromTop.y, fromCentre.z) + toward * fromRim;
-        Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, mesh, material);
+        if (bridges) Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, mesh, material);
     }
 
     private readonly List<(Vector3 top, Vector3 inward)> landings = new List<(Vector3, Vector3)>();
@@ -757,8 +763,8 @@ public sealed class HangingSpire : MonoBehaviour
     private void Slippery(GameObject tower)
     {
         var slip = tower.AddComponent<SlipperySurface>();
-        slip.speedScale = towerSlip;
-        slip.accelerate = false;
+        slip.speedScale = climbAlone ? towerSlip : 1f;
+        slip.accelerate = !climbAlone;
     }
 
     /// <summary>A stone slab sticking out of a wall at a height, its top at topY: where a bridge arrives.</summary>

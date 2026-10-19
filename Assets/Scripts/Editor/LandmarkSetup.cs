@@ -186,6 +186,8 @@ public static class LandmarkSetup
         }
         Undo.RecordObject(kiln, "Set Bone Kiln Materials");
         kiln.SetMaterials(bone, ink, glyph, seed);
+        TentacleCreature tentacle = Object.FindFirstObjectByType<TentacleCreature>();
+        if (tentacle != null) kiln.SetTentacleTemplate(tentacle);
         var serialized = new SerializedObject(kiln);
         serialized.FindProperty("world").objectReferenceValue = world;
         serialized.ApplyModifiedProperties();

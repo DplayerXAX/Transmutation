@@ -47,7 +47,8 @@ public sealed class RealmPopulation : MonoBehaviour
                 if (warm != null && (warm.transform.position - flower.transform.position).sqrMagnitude < keepNearBubbleFlower * keepNearBubbleFlower) return true;
             return false;
         });
-        newFireBubbles = Trim(FindObjectsByType<FireBubble>(FindObjectsSortMode.None), maxNewFireBubbles, bubble => bubble.IsCarried);
+        newFireBubbles = Trim(FindObjectsByType<FireBubble>(FindObjectsSortMode.None), maxNewFireBubbles,
+            bubble => bubble.IsCarried || bubble.IsBoundToBone);
 
         // Forget destroyed ones.
         var gone = new List<Object>();

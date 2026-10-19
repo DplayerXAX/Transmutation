@@ -746,6 +746,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         yRotation = yaw;
         xRotation = pitch;
+        if (cameraHolder != null) cameraHolder.rotation = Quaternion.Euler(xRotation, yRotation, 0f);
+        if (orientation != null) orientation.rotation = Quaternion.Euler(0f, yRotation, 0f);
     }
 
     public void SetRestricted(bool value)
