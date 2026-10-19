@@ -1,4 +1,4 @@
-# Sky Spider prototype
+# Sky Spider / TimeSpider prototype
 
 Run **Tools > Creatures > Create Sky Spider Assets** once, then place
 `Assets/Prefabs/Creatures/SkySpider.prefab` at the desired airborne web center.
@@ -65,9 +65,45 @@ the prior creature simulation setting is restored. A short capture cooldown
 prevents pickup or cleanup from immediately sticking the object again.
 
 `SkyWeb.Captured` supplies the `WebCapture` with `Body`, `ContactPoint`, and
-`OwningWeb` for future prey responses. `SkyWeb` itself derives from `Creature`
-and cannot be carried. Birds, diet/consumability, feeding, escape, destruction,
-terrain-aware placement, and following individual strands are deferred.
+`OwningWeb` for prey responses. `SkyWeb.Captures` is a cached read-only view of its
+live captures. `SkyWeb` itself derives from `Creature` and cannot be carried.
+Escape, terrain-aware placement, and following individual strands are deferred.
+
+## Hunting remaining Age
+
+`SkySpider` implements the TimeSpider behavior; existing script, prefab, and scene
+references keep their names. Initialization sets Food Tag to **Meat** and Diet to
+**Everything**, without introducing another food category or editing the prefab.
+
+The spider chooses the nearest eligible creature captured in its **current web**,
+then keeps that target until it feeds or the target becomes invalid. It completes
+an existing return-to-web movement before hunting. Hunting interrupts patrol pauses
+and uses the existing movement speed and turn speed. Abandoned webs keep trapping,
+but the spider does not hunt their prey until it returns to that web.
+
+**Bite Range** defaults to 0.75 metres, measured from the spider's Rigidbody position
+to the nearest enabled solid collider surface attached to the prey's captured body.
+Compound and offset colliders work without requiring the spider to reach the body origin.
+On arrival, `TryDrainCapturedAge(capture)` revalidates range, ownership, and both creatures.
+It adds the prey's full remaining Age to its own, releases the silk, and sets the victim's
+remaining Age to zero through the shared age-death path. There is no additional Age cap,
+and the spider's existing Age Rate is preserved (default zero).
+
+Prey must be active, alive, not already pending consumption, in the same scene, and
+have positive Age. Their capture-paused simulation and Age Rate zero do not protect
+them from draining. Plain Rigidbody objects and dead remains are ignored. Released,
+carried, bubble-captured, disabled, or removed prey cannot be drained. Carrying,
+bubble capture, pausing, disabling, or death prevents the spider from hunting or biting.
+Invalid targets are discarded; the spider resumes hunting or patrol. Dead, disabled,
+destroyed, or foreign-scene webs cannot be selected as its current web.
+
+This attack does not call `Consume`, use Nutrition, share Hunger gains, or destroy
+the victim separately. Ordinary victims remain dead bodies; birds produce their
+age-death bones. A Corrupt Seed does not infect a spider that drains it, but an
+already-infected victim still produces seeds through its normal death notification.
+Repeated attacks cannot transfer Age or produce death effects twice. The base
+`Creature.SetRemainingAge` helper only controls lifetime and age-death dispatch;
+all Age stealing and hunting logic belongs to `SkySpider`.
 
 ## Validation
 
@@ -79,6 +115,10 @@ terrain-aware placement, and following individual strands are deferred.
   It also measures trapping scans for one and three webs after warmup and renders
   three camera views. Test objects use a temporary unsaved scene; scene files are
   not changed. Reports and images are written to `Temp/SkySpiderValidation`.
+- **Tools > Creatures > Validate TimeSpider Age Hunting (Play Mode)** checks target
+  selection and retention, surface range, fractional and paused Age transfer, interruptions,
+  return priority, foreign captures, ordinary consumption races, bird bones, infection
+  effects, dead-web recovery, and no revival. It uses a disposable local physics scene.
 
 Each web is bounded individually. Repeated distant drops intentionally preserve
 old webs, so total scene cost grows with their number until a later web-lifetime

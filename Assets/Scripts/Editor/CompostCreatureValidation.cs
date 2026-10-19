@@ -34,10 +34,16 @@ public static class CompostCreatureValidation
         var ride = prefab.GetComponent<CompostRideSurface>();
         Check(ride != null && ride.Back == compost.Back, "player support references the actual back collider");
         Vector3 backSize = Vector3.Scale(ride.Back.size, ride.Back.transform.lossyScale);
-        Check(Mathf.Approximately(backSize.x, 1f) && Mathf.Approximately(backSize.z, 1.8f), "flat back has player-scale dimensions");
+        Check(Mathf.Approximately(backSize.x, CompostMossGeometry.Width) && Mathf.Approximately(backSize.z, CompostMossGeometry.Length), "flat back has player-scale dimensions");
         var fields = new SerializedObject(compost);
         Check(fields.FindProperty("gooPrefab").objectReferenceValue != null, "existing Goo Creature prefab assigned");
-        Check(fields.FindProperty("legs").arraySize == 4, "four independent walking legs assigned");
+        Check(prefab.GetComponentsInChildren<Transform>().All(t => !t.name.StartsWith("Leg") && t.name != "Foot" && t.name != "Head"), "no legs, feet or separate head remain");
+        Check(ride.Ramp is MeshCollider ramp && ramp.convex && !ramp.isTrigger, "solid convex tail ramp is assigned");
+        Check(Mathf.Approximately(compost.BackTopWS, CompostMossGeometry.Height), "flat back is one metre high");
+        var tailBounds = ((MeshCollider)ride.Ramp).sharedMesh.bounds;
+        Check(Mathf.Approximately(tailBounds.size.z, 2f) && Mathf.Approximately(tailBounds.min.z, -4f), "tail extends two metres behind the body");
+        Check(Mathf.Abs(tailBounds.max.y - compost.BackTopWS) < 0.001f, "ramp joins the back without a lip");
+        Check(prefab.GetComponentsInChildren<Renderer>().Count(r => r.name.StartsWith("Eye")) == 2, "two embedded eyes remain");
         Check(fields.FindProperty("fullnessThreshold").intValue == 50 && Mathf.Approximately(fields.FindProperty("absorptionSeconds").floatValue, 5f) &&
             Mathf.Approximately(fields.FindProperty("productionSeconds").floatValue, 7f), "default fullness and timing match design");
         Check(prefab.GetComponent<Rigidbody>().isKinematic, "large creature uses controlled platform physics");
@@ -70,7 +76,8 @@ public static class CompostCreatureValidation
             var rider = new GameObject("Live Rider"); rider.transform.SetParent(stage.transform, false);
             var movement = rider.AddComponent<SmoothFirstPersonController>(); rider.AddComponent<CapsuleCollider>().height = 2f;
             Set(movement, "orientation", rider.transform); Set(movement, "whatIsGround", (LayerMask)(1 << 7));
-            Vector3 initialLocal = new Vector3(0f, 3.01f, -0.35f);
+            float deckY = turtle.transform.InverseTransformPoint(new Vector3(origin.x, compost.BackTopWS, origin.z)).y;
+            Vector3 initialLocal = new Vector3(0f, deckY + 1.01f, -0.35f);
             rider.transform.position = origin + initialLocal;
             stage.SetActive(true);
             Set(compost, "destination", origin + Vector3.forward * 8f); Set(compost, "wanderTimer", 100f);
@@ -89,7 +96,7 @@ public static class CompostCreatureValidation
                 {
                     Vector3 local = turtle.transform.InverseTransformPoint(rider.transform.position);
                     maximumDrift = Mathf.Max(maximumDrift, Vector2.Distance(new Vector2(local.x, local.z), new Vector2(initialLocal.x, initialLocal.z)));
-                    if (local.y < 2.85f || maximumDrift > 0.25f)
+                    if (local.y < deckY + 0.85f || maximumDrift > 0.25f)
                         throw new InvalidOperationException("Live rider lost the walking back: local " + local + ", drift " + maximumDrift);
                 }
                 await Task.Yield();
@@ -100,14 +107,14 @@ public static class CompostCreatureValidation
             Call(movement, "Jump");
             float jumpStart = Time.time;
             while (Time.time - jumpStart < 0.2f) await Task.Yield();
-            if (rider.transform.position.y < 3.15f || typeof(SmoothFirstPersonController).GetField("rideSurface", Private).GetValue(movement) != null)
+            if (rider.transform.position.y < origin.y + deckY + 1.15f || typeof(SmoothFirstPersonController).GetField("rideSurface", Private).GetValue(movement) != null)
                 throw new InvalidOperationException("Live rider did not jump free of the back.");
             Set(movement, "ownJumpRising", false); Set(movement, "exitingSlope", false);
-            rb.position = turtle.transform.TransformPoint(new Vector3(0f, 3.02f, 0f)); rb.linearVelocity = Vector3.zero;
+            rb.position = turtle.transform.TransformPoint(new Vector3(0f, deckY + 1.02f, 0f)); rb.linearVelocity = Vector3.zero;
             compost.Die();
             float deathStart = Time.time;
             while (Time.time - deathStart < 0.6f) await Task.Yield();
-            if (Mathf.Abs(turtle.transform.InverseTransformPoint(rider.transform.position).y - 3f) > 0.1f || !movement.Grounded || rider.transform.parent != stage.transform)
+            if (Mathf.Abs(turtle.transform.InverseTransformPoint(rider.transform.position).y - (deckY + 1f)) > 0.1f || !movement.Grounded || rider.transform.parent != stage.transform)
                 throw new InvalidOperationException("Dead back did not retain its unparented rider.");
             return "PASS: live riding translation, turning, jump, and dead-back support; maximum local drift " + maximumDrift.ToString("F3") + " m.";
         }
@@ -116,8 +123,93 @@ public static class CompostCreatureValidation
             if (scene.IsValid() && scene.isLoaded)
             {
                 foreach (GameObject root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
-                SceneManager.UnloadSceneAsync(scene);
+                _ = SceneManager.UnloadSceneAsync(scene);
             }
+        }
+    }
+
+    [MenuItem("Tools/Creatures/Compost/Validate Live Ramp (Play Mode)")]
+    public static async void ValidateLiveRamp()
+    {
+        try { Debug.Log(await RunRampCheck()); }
+        catch (Exception exception) { Debug.LogException(exception); }
+    }
+
+    public static async Task<string> RunRampCheck()
+    {
+        if (!Application.isPlaying) throw new InvalidOperationException("Enter Play Mode before ramp validation.");
+        Scene scene = SceneManager.CreateScene("Compost Ramp " + Guid.NewGuid());
+        var stage = new GameObject("Ramp Staging"); SceneManager.MoveGameObjectToScene(stage, scene); stage.SetActive(false);
+        try
+        {
+            Vector3 origin = new Vector3(1000f, 0f, 1000f);
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube); floor.transform.SetParent(stage.transform, false); floor.layer = 7;
+            floor.transform.position = origin - Vector3.up * 0.25f; floor.transform.localScale = new Vector3(60f, 0.5f, 60f);
+            var platform = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(CompostCreatureSetup.PrefabPath), stage.transform);
+            platform.transform.position = origin;
+            var compost = platform.GetComponent<CompostCreature>(); Set(compost, "walkSpeed", 0f);
+            var rider = new GameObject("Ramp Rider"); rider.transform.SetParent(stage.transform, false);
+            var movement = rider.AddComponent<SmoothFirstPersonController>();
+            var capsule = rider.AddComponent<CapsuleCollider>(); capsule.height = 2f; capsule.radius = 0.3f;
+            Set(movement, "orientation", platform.transform); Set(movement, "whatIsGround", (LayerMask)(1 << 7));
+            var driver = rider.AddComponent<CompostRampRiderDriver>(); driver.Movement = movement;
+            rider.transform.position = origin + new Vector3(0f, 1.02f, -4.8f);
+            stage.SetActive(true); Call(movement, "Start"); movement.enabled = false;
+            var rb = rider.GetComponent<Rigidbody>();
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            Physics.SyncTransforms();
+            float deadline = Time.realtimeSinceStartup + 40f;
+            async Task Step(Vector3 direction)
+            {
+                if (!Application.isPlaying || Time.realtimeSinceStartup > deadline)
+                    throw new InvalidOperationException("Ramp validation stopped or timed out.");
+                driver.DirectionOS = direction;
+                float fixedTime = Time.fixedTime;
+                do { await Task.Yield(); } while (Time.fixedTime == fixedTime && Time.realtimeSinceStartup < deadline);
+            }
+            float start = Time.time;
+            while (platform.transform.InverseTransformPoint(rb.position).z < -0.7f && Time.time - start < 7f)
+                await Step(Vector3.forward);
+            Check(platform.transform.InverseTransformPoint(rb.position).z >= -0.7f && rb.position.y > compost.BackTopWS + 0.85f,
+                "player walks from ground up the ramp and across the deck seam without jumping");
+            while (platform.transform.InverseTransformPoint(rb.position).z > -4.65f && Time.time - start < 14f)
+                await Step(Vector3.back);
+            Check(platform.transform.InverseTransformPoint(rb.position).z < -4.5f && rb.position.y < origin.y + 1.2f,
+                "player walks down the ramp onto the ground");
+            rb.position = platform.transform.TransformPoint(new Vector3(0f, 1.52f, -3f)); rb.linearVelocity = Vector3.zero;
+            Physics.SyncTransforms();
+            start = Time.time;
+            while (Time.time - start < 0.5f) await Step(Vector3.zero);
+            Set(compost, "walkSpeed", 0.6f); Set(compost, "destination", origin + Vector3.forward * 8f); Set(compost, "wanderTimer", 100f);
+            Vector3 initialLocal = platform.transform.InverseTransformPoint(rb.position);
+            float maximumDrift = 0f; bool turned = false; start = Time.time;
+            while (Time.time - start < 4f)
+            {
+                if (!turned && Time.time - start > 1.5f)
+                { Set(compost, "destination", origin + Vector3.right * 8f); Set(compost, "wanderTimer", 100f); turned = true; }
+                await Step(Vector3.zero);
+                Vector3 local = platform.transform.InverseTransformPoint(rb.position);
+                maximumDrift = Mathf.Max(maximumDrift, Vector2.Distance(new Vector2(local.x, local.z), new Vector2(initialLocal.x, initialLocal.z)));
+                Check(maximumDrift < 0.25f && local.y > 1.3f, "ramp rider remains supported during translation and turning");
+            }
+            Check(Vector3.Distance(platform.transform.position, origin) > 1f && Quaternion.Angle(platform.transform.rotation, Quaternion.identity) > 20f,
+                "ramp riding includes actual platform motion and turning");
+            Call(movement, "Jump"); Call(movement, "UpdateRideSupport");
+            Check(typeof(SmoothFirstPersonController).GetField("rideSurface", Private).GetValue(movement) == null,
+                "jumping detaches from the moving ramp");
+            await Step(Vector3.zero); // Consume the queued jump impulse before resetting the death fixture.
+            Set(movement, "ownJumpRising", false); Set(movement, "exitingSlope", false);
+            rb.position = platform.transform.TransformPoint(new Vector3(0f, 1.52f, -3f)); rb.linearVelocity = Vector3.zero;
+            compost.Die(); Physics.SyncTransforms(); start = Time.time;
+            while (Time.time - start < 0.5f) await Step(Vector3.zero);
+            Check(movement.Grounded && compost.RideSurface.Supports(compost.RideSurface.Ramp) && rider.transform.parent == stage.transform,
+                "dead ramp remains solid and supports an unparented player");
+            return "PASS: ramp ascent, descent, translation, turning, jump and death; drift " + maximumDrift.ToString("F3") + " m.";
+        }
+        finally
+        {
+            foreach (GameObject root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            _ = SceneManager.UnloadSceneAsync(scene);
         }
     }
 
@@ -153,7 +245,7 @@ public static class CompostCreatureValidation
             {
                 var target = new GameObject("Compost Validation Body");
                 target.transform.SetParent(stage.transform, false);
-                target.transform.position = origin + new Vector3(x, 2.151f, z);
+                target.transform.position = new Vector3(origin.x + x, compost.BackTopWS + 0.151f, origin.z + z);
                 target.AddComponent<Rigidbody>().useGravity = true;
                 target.AddComponent<BoxCollider>().size = new Vector3(0.25f, 0.3f, 0.3f);
                 var model = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -187,8 +279,12 @@ public static class CompostCreatureValidation
             alive.SetSimulationEnabled(false);
             Check(!alive.IsDead && !Claim(compost, alive), "paused living creature is rejected");
             Clear();
-            var side = Corpse(x: 0.7f);
+            var side = Corpse(x: compost.Back.bounds.extents.x + 0.2f);
             Check(!Claim(compost, side), "side contact does not qualify");
+            Clear();
+            var onRamp = Corpse(z: -3f);
+            onRamp.transform.position = origin + new Vector3(0f, 0.6575f, -3f); Physics.SyncTransforms();
+            Check(!Claim(compost, onRamp), "ramp carries bodies but does not compost them");
             Clear();
             var lower = Corpse();
             var upper = Corpse(); upper.transform.position += Vector3.up * 0.3f; Physics.SyncTransforms();
@@ -204,7 +300,7 @@ public static class CompostCreatureValidation
             Check(!lower.gameObject.activeSelf && compost.StoredCharges == 6, "five active seconds consumes one corpse for six charges");
             Check(lower.DeathCount == 1 && lower.ConsumptionCount == 0, "compost does not repeat death or invoke food effects");
             Call(compost, "FixedUpdate"); Physics.SyncTransforms();
-            upper.transform.position = origin + new Vector3(0f, 2.151f, 0f); Physics.SyncTransforms();
+            upper.transform.position = new Vector3(origin.x, compost.BackTopWS + 0.151f, origin.z); Physics.SyncTransforms();
             Check(Claim(compost, upper), "waiting body is accepted after reaching the back");
             Clear();
 
@@ -244,7 +340,7 @@ public static class CompostCreatureValidation
             player.SetActive(true); Call(controller, "Start"); controller.enabled = false;
             Call(carrier, "BeginCarry", a);
             Check(carrier.CarriedCreature == a && a.GetComponent<CompostAbsorption>().Owner == null, "existing pickup cancels sinking before carry ownership");
-            Check(a.transform.position.y >= 2.14f, "retrieved body is restored above the back");
+            Check(a.transform.position.y >= compost.BackTopWS + 0.14f, "retrieved body is restored above the back");
             Advance(compost, 5f);
             Check(compost.StoredCharges == 0, "retrieval gives no compost credit");
             carrier.Release();
@@ -271,7 +367,7 @@ public static class CompostCreatureValidation
             if (bonesAsset != null)
             {
                 var bones = Object.Instantiate(bonesAsset, stage.transform).GetComponent<BirdBones>();
-                bones.transform.position = origin + Vector3.up * 2.2f; Physics.SyncTransforms();
+                bones.transform.position = new Vector3(origin.x, compost.BackTopWS + 0.2f, origin.z); Physics.SyncTransforms();
                 bones.transform.position += Vector3.up * (compost.BackTopWS - bones.GetComponent<Collider>().bounds.min.y + 0.001f);
                 Physics.SyncTransforms();
                 Check(bones.IsDead && Claim(compost, bones), "Bird Bones compost through the shared IsDead state");
@@ -287,7 +383,7 @@ public static class CompostCreatureValidation
             Check(GooCount() == initialGoo + 1 && !compost.IsProducing, "seven seconds releases one living goo behind the creature");
             foreach (var r in scene.GetRootGameObjects()) if (r.GetComponent<GooCreature>() != null) Object.DestroyImmediate(r);
             var obstruction = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            obstruction.transform.SetParent(stage.transform, false); obstruction.transform.position = origin + new Vector3(0f, 0.4f, -1.55f);
+            obstruction.transform.SetParent(stage.transform, false); obstruction.transform.position = origin + new Vector3(0f, 0.4f, ((MeshCollider)compost.RideSurface.Ramp).sharedMesh.bounds.min.z - 0.55f);
             Physics.SyncTransforms();
             Charges(compost, 10); Advance(compost, 0.01f); Advance(compost, 7f);
             Check(compost.IsProducing && compost.ProductionProgress == 1f && compost.StoredCharges == 0, "blocked output retains the completed batch without another charge");
@@ -319,11 +415,24 @@ public static class CompostCreatureValidation
                 bool result = (bool)Call(compost, "CanWalk", values); ground = (float)values[3]; return result;
             }
             Check(Walks(origin + Vector3.forward * 0.01f, out _), "flat ground is traversable");
-            Check(!Walks(origin + Vector3.forward * 14.6f, out _), "front-foot probes reject a cliff");
+            Check(!Walks(origin + Vector3.forward * 14.6f, out _), "wide-body probes reject a cliff");
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube); wall.transform.SetParent(stage.transform, false);
             wall.transform.position = origin + new Vector3(0f, 1.5f, 1.3f); wall.transform.localScale = new Vector3(2f, 3f, 0.2f);
             Physics.SyncTransforms();
             Check(!Walks(origin + Vector3.forward * 0.01f, out _), "forward obstacle prevents walking through a wall");
+            Object.DestroyImmediate(wall); Physics.SyncTransforms();
+            wall = GameObject.CreatePrimitive(PrimitiveType.Cube); wall.transform.SetParent(stage.transform, false);
+            wall.transform.position = origin + new Vector3(1.4f, 0.5f, 0f); wall.transform.localScale = new Vector3(0.2f, 1f, 0.2f);
+            Physics.SyncTransforms();
+            Check(!Walks(origin + Vector3.forward * 0.01f, out _), "wide flank detects an obstacle missed by the old narrow probes");
+            Object.DestroyImmediate(wall); Physics.SyncTransforms();
+            Check(!Walks(origin - Vector3.forward * 12f, out _), "tail support rejects a rear ledge");
+            wall = GameObject.CreatePrimitive(PrimitiveType.Cube); wall.transform.SetParent(stage.transform, false);
+            Quaternion turn = Quaternion.Euler(0f, 30f, 0f);
+            wall.transform.position = origin + turn * new Vector3(0f, 0.4f, -3.2f);
+            wall.transform.localScale = Vector3.one * 0.25f; Physics.SyncTransforms();
+            object[] turning = { origin, turn * Vector3.forward, turn * Vector3.right, 0f };
+            Check(!(bool)Call(compost, "CanWalk", turning), "tail sweep rejects an obstacle reached during turning");
             Object.DestroyImmediate(wall); Physics.SyncTransforms();
             var slope = GameObject.CreatePrimitive(PrimitiveType.Cube); slope.transform.SetParent(stage.transform, false); slope.layer = 7;
             slope.transform.position = origin + new Vector3(8f, 3f, 0f); slope.transform.localScale = new Vector3(3f, 0.1f, 3f);
@@ -334,13 +443,13 @@ public static class CompostCreatureValidation
             var rider = new GameObject("Compost Rider"); rider.transform.SetParent(stage.transform, false); rider.SetActive(false);
             var movement = rider.AddComponent<SmoothFirstPersonController>(); rider.AddComponent<CapsuleCollider>().height = 2f;
             Set(movement, "orientation", rider.transform); Set(movement, "whatIsGround", (LayerMask)(1 << 7));
-            rider.transform.position = origin + new Vector3(0f, 3.01f, 0f); rider.SetActive(true);
+            rider.transform.position = new Vector3(origin.x, compost.BackTopWS + 1.01f, origin.z); rider.SetActive(true);
             Call(movement, "Start"); movement.enabled = false;
             var playerBody = rider.GetComponent<Rigidbody>();
             Call(compost.RideSurface, "PlanMotion", origin + Vector3.forward * 0.012f, Quaternion.identity, 0.02f);
             Physics.SyncTransforms(); Call(movement, "GroundCheck"); Call(movement, "SteerVelocity");
             Check(Mathf.Abs(playerBody.linearVelocity.z - 0.6f) < 0.03f, "standing movement includes platform translation");
-            playerBody.position = origin + new Vector3(0f, 2.997f, 0f); Physics.SyncTransforms(); Call(movement, "GroundCheck");
+            playerBody.position = new Vector3(origin.x, compost.BackTopWS + 0.997f, origin.z); Physics.SyncTransforms(); Call(movement, "GroundCheck");
             Check(movement.Grounded && typeof(SmoothFirstPersonController).GetField("rideSurface", Private).GetValue(movement) != null,
                 "settled contact inside the thin ground cast retains compost support");
             Set(movement, "moveDirection", Vector3.right); Set(movement, "moveSpeed", 4f); Call(movement, "SteerVelocity");
@@ -360,7 +469,7 @@ public static class CompostCreatureValidation
             Check(compost.IsDead && !compost.CanBeCarried && deaths == 1, "compost leaves an unportable corpse and dies once");
             Check(compost.StoredCharges == 0 && !compost.IsProducing && compost.AbsorbingBodyCount == 0, "own death clears charges, output, and absorption");
             Check(a.GetComponent<CompostAbsorption>().Owner == null && !a.GetComponent<Rigidbody>().isKinematic &&
-                a.GetComponent<Rigidbody>().useGravity && a.transform.position.y >= 2.14f, "own death restores unfinished bodies above the solid back");
+                a.GetComponent<Rigidbody>().useGravity && a.transform.position.y >= compost.BackTopWS + 0.14f, "own death restores unfinished bodies above the solid back");
             Check(compost.Back.enabled && compost.GetComponent<Rigidbody>().isKinematic, "dead back remains a stationary collidable platform");
             Advance(compost, 100f);
             Check(compost.StoredCharges == 0 && !compost.IsProducing, "dead creature cannot continue processing");

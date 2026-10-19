@@ -6,12 +6,14 @@ using UnityEngine;
 public sealed class CompostRideSurface : MonoBehaviour
 {
     [SerializeField] private BoxCollider back;
+    [SerializeField] private Collider ramp;
     private Vector3 fromPosition, toPosition;
     private Quaternion fromRotation = Quaternion.identity, toRotation = Quaternion.identity;
     private float stepDuration;
 
     public BoxCollider Back => back;
-    public bool Supports(Collider collider) => isActiveAndEnabled && collider == back;
+    public Collider Ramp => ramp;
+    public bool Supports(Collider collider) => isActiveAndEnabled && collider != null && (collider == back || collider == ramp);
 
     internal void PlanMotion(Vector3 position, Quaternion rotation, float deltaTime)
     {

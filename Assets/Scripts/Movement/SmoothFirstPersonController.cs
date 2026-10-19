@@ -199,6 +199,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private float yRotation;
     private Coroutine speedLerpCoroutine;
     private CompostRideSurface rideSurface;
+    private RaycastHit rideGround;
     private Vector3 rideVelocity;
 
     private void Reset()
@@ -284,13 +285,17 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.
         // Use a raised support cast; only compost backs accept it, preserving ordinary ground rules.
-        const float supportClearance = 0.12f;
+        // Lift the whole footprint clear of a walkable ramp before casting. A thin cast
+        // starting inside the uphill edge cannot report its supporting surface.
+        float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
+            Mathf.Tan(maxSlopeAngle * Mathf.Deg2Rad);
         if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
             Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
             whatIsGround, QueryTriggerInteraction.Ignore)) return;
         var surface = ground.collider.GetComponentInParent<CompostRideSurface>();
-        if (surface == null || !surface.Supports(ground.collider)) return;
+        if (surface == null || !surface.Supports(ground.collider) || Vector3.Angle(ground.normal, Vector3.up) > maxSlopeAngle) return;
         rideSurface = surface;
+        rideGround = ground;
         grounded = true;
         rideVelocity = surface.VelocityAt(rb.position);
     }
@@ -704,7 +709,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public bool OnSlope()
     {
-        if (CastGround(out slopeHit) && grounded)
+        bool hasGround;
+        if (rideSurface != null) { slopeHit = rideGround; hasGround = true; }
+        else hasGround = CastGround(out slopeHit);
+        if (hasGround && grounded)
         {
             float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
             if (angle < maxSlopeAngle && angle != 0f)

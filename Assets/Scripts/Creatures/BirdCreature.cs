@@ -35,8 +35,9 @@ public sealed class BirdCreature : Creature
     [Tooltip("Other compatible, hungry flying birds within this distance of the food share its fixed nutrition budget.")]
     [Min(0f)] [SerializeField] private float nutritionSharingRadius = 10f;
 
-    // Retained for existing prefab/setup compatibility. Death now keeps the original body.
-    [SerializeField, HideInInspector] private BirdBones bonesPrefab;
+    [Header("Ageing Remains")]
+    [Tooltip("Bones left only when Age expires. Direct death and consumption follow the shared creature lifecycle. An empty reference uses automatic placeholder bones.")]
+    [SerializeField] private BirdBones bonesPrefab;
 
     private Rigidbody body;
     private WebCapture webCapture;
@@ -107,6 +108,17 @@ public sealed class BirdCreature : Creature
         if (manager != null) manager.Unregister(this);
         manager = null;
         FoodTarget = null;
+    }
+
+    protected override void OnAgeDeath()
+    {
+        // Shared death has already released attachments, stopped flight, and notified listeners.
+        BirdBones.Spawn(bonesPrefab, gameObject.scene, transform.position, transform.rotation,
+            body != null ? body.linearVelocity : Vector3.zero,
+            body != null ? body.angularVelocity : Vector3.zero);
+        // Retire the original immediately so its collider/food cannot compete with the remains.
+        gameObject.SetActive(false);
+        Destroy(gameObject);
     }
 
     private void OnCollisionEnter(Collision collision) => EatContact(collision.collider);

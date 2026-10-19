@@ -17,58 +17,25 @@ public static class CompostCreatureSetup
         if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before compost asset setup.");
         var gooAsset = AssetDatabase.LoadAssetAtPath<GameObject>(GooCreatureSetup.PrefabPath);
         if (gooAsset == null) throw new InvalidOperationException("Create the Goo Creature assets before compost setup.");
-        Material shell = Material("Shell", new Color(0.23f, 0.34f, 0.17f));
-        Material soil = Material("Back", new Color(0.22f, 0.12f, 0.065f));
-        Material limb = Material("Legs", new Color(0.43f, 0.39f, 0.23f));
-        Material eye = Material("Eyes", new Color(0.035f, 0.045f, 0.02f));
         if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null)
         {
-            var root = new GameObject("Compost Creature");
-            root.layer = LayerMask.NameToLayer("Ground");
+            var root = new GameObject("CompostCreature");
             try
             {
                 Rigidbody body = root.AddComponent<Rigidbody>();
                 body.mass = 500f; body.isKinematic = true; body.useGravity = false;
                 body.interpolation = RigidbodyInterpolation.Interpolate;
                 body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-                BoxCollider solid = root.AddComponent<BoxCollider>();
-                solid.center = new Vector3(0f, 1.55f, 0f);
-                solid.size = new Vector3(1f, 0.78f, 1.85f);
-                Shape(root.transform, "Shell", PrimitiveType.Sphere, new Vector3(0f, 1.55f, 0f), new Vector3(1f, 0.75f, 1.85f), shell);
-                GameObject deck = Shape(root.transform, "Flat Compost Back", PrimitiveType.Cube,
-                    new Vector3(0f, 1.94f, 0f), new Vector3(1f, 0.12f, 1.8f), soil);
-                BoxCollider back = deck.AddComponent<BoxCollider>();
-                Shape(root.transform, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.35f, 1.03f), new Vector3(0.45f, 0.35f, 0.45f), limb);
-                Shape(root.transform, "Tail", PrimitiveType.Cube, new Vector3(0f, 1.25f, -1.03f), new Vector3(0.15f, 0.15f, 0.3f), limb);
-                for (int side = -1; side <= 1; side += 2)
-                    Shape(root.transform, "Eye", PrimitiveType.Sphere, new Vector3(side * 0.17f, 1.44f, 1.18f), Vector3.one * 0.055f, eye);
-                var legs = new Transform[4];
-                for (int i = 0; i < 4; i++)
-                {
-                    Transform leg = new GameObject("Leg " + (i + 1)).transform;
-                    leg.SetParent(root.transform, false);
-                    leg.localPosition = new Vector3(i < 2 ? -0.44f : 0.44f, 1.25f, i % 2 == 0 ? 0.63f : -0.63f);
-                    Shape(leg, "Leg", PrimitiveType.Cube, new Vector3(0f, -0.55f, 0f), new Vector3(0.2f, 1.1f, 0.24f), limb);
-                    Shape(leg, "Foot", PrimitiveType.Cube, new Vector3(0f, -1.12f, 0.02f), new Vector3(0.28f, 0.2f, 0.36f), limb);
-                    legs[i] = leg;
-                }
-                CompostRideSurface ride = root.AddComponent<CompostRideSurface>();
-                using (var fields = new SerializedObject(ride))
-                {
-                    fields.FindProperty("back").objectReferenceValue = back;
-                    fields.ApplyModifiedPropertiesWithoutUndo();
-                }
+                root.AddComponent<BoxCollider>();
+                root.AddComponent<CompostRideSurface>();
                 CompostCreature compost = root.AddComponent<CompostCreature>();
                 using (var fields = new SerializedObject(compost))
                 {
                     fields.FindProperty("creatureName").stringValue = "Compost Creature";
-                    fields.FindProperty("back").objectReferenceValue = back;
                     fields.FindProperty("gooPrefab").objectReferenceValue = gooAsset.GetComponent<GooCreature>();
-                    SerializedProperty array = fields.FindProperty("legs");
-                    array.arraySize = legs.Length;
-                    for (int i = 0; i < legs.Length; i++) array.GetArrayElementAtIndex(i).objectReferenceValue = legs[i];
                     fields.ApplyModifiedPropertiesWithoutUndo();
                 }
+                CompostMossGeometry.Build(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally { Object.DestroyImmediate(root); }
@@ -76,29 +43,21 @@ public static class CompostCreatureSetup
         AssetDatabase.SaveAssets();
     }
 
-    private static GameObject Shape(Transform parent, string name, PrimitiveType type, Vector3 position, Vector3 scale, Material material)
+    [MenuItem("Tools/Creatures/Compost/Redesign As Moss Platform")]
+    public static void RedesignAsMossPlatform()
     {
-        GameObject shape = GameObject.CreatePrimitive(type);
-        shape.name = name;
-        shape.layer = LayerMask.NameToLayer("Ground");
-        shape.transform.SetParent(parent, false);
-        shape.transform.localPosition = position;
-        shape.transform.localScale = scale;
-        Object.DestroyImmediate(shape.GetComponent<Collider>());
-        shape.GetComponent<Renderer>().sharedMaterial = material;
-        return shape;
-    }
-
-    private static Material Material(string suffix, Color color)
-    {
-        string path = "Assets/Materials/Creatures/MAT_Compost_" + suffix + ".mat";
-        Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-        if (existing != null) return existing;
-        var material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { name = "Compost " + suffix };
-        material.SetColor("_BaseColor", color);
-        material.SetFloat("_Smoothness", 0.18f);
-        AssetDatabase.CreateAsset(material, path);
-        return material;
+        if (EditorApplication.isPlayingOrWillChangePlaymode)
+            throw new InvalidOperationException("Exit Play Mode before compost redesign.");
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { CreateAssets(); return; }
+        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
+        try
+        {
+            CompostMossGeometry.Build(root);
+            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+        AssetDatabase.SaveAssets();
+        Debug.Log("Compost redesigned as a 3 x 4 m moss platform with a 2 m tail ramp. Existing tuning retained.");
     }
 
     [MenuItem("Tools/Creatures/Compost/Add One To Scene Yoyo")]

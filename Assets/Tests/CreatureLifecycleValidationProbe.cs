@@ -5,6 +5,8 @@ using UnityEngine;
 public sealed class CreatureLifecycleValidationProbe : Creature
 {
     public int DeathCount { get; private set; }
+    public int AgeDeathCount { get; private set; }
+    public bool AgeDeathObservedCommittedState { get; private set; }
     public int ConsumptionCount { get; private set; }
     public Creature LastConsumer { get; private set; }
 
@@ -22,5 +24,11 @@ public sealed class CreatureLifecycleValidationProbe : Creature
     }
 
     protected override void TickCreature(float deltaTime) { }
+
+    protected override void OnAgeDeath()
+    {
+        AgeDeathCount++;
+        AgeDeathObservedCommittedState = IsDead && !SimulationEnabled && Age == 0f;
+    }
 }
 #endif

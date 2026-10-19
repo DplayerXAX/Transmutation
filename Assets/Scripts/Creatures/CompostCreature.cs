@@ -12,7 +12,6 @@ public sealed class CompostCreature : Creature
     [Header("Back and Output")]
     [SerializeField] private BoxCollider back;
     [SerializeField] private GooCreature gooPrefab;
-    [SerializeField] private Transform[] legs = Array.Empty<Transform>();
     [Min(0.01f)] [SerializeField] private float absorptionSeconds = 5f;
     [Min(1)] [SerializeField] private int fullnessThreshold = 50;
     [Range(0.1f, 0.95f)] [SerializeField] private float fullSinkFraction = 0.8f;
@@ -33,8 +32,9 @@ public sealed class CompostCreature : Creature
     private readonly Collider[] outputOverlaps = new Collider[32];
     private Rigidbody body;
     private Vector3 home, destination;
-    private Quaternion[] legRest;
-    private float wanderTimer, avoidanceTimer, gait, lastWalkSpeed;
+    private Bounds footprintOS;
+    private readonly Collider[] clearanceOverlaps = new Collider[128];
+    private float wanderTimer, avoidanceTimer;
     private long storedCharges;
     private bool producing;
     private float productionTime;
@@ -60,10 +60,23 @@ public sealed class CompostCreature : Creature
         RideSurface = GetComponent<CompostRideSurface>();
         if (back == null) back = RideSurface.Back;
         BodyColliders = GetComponentsInChildren<Collider>();
+        footprintOS = new Bounds();
+        bool first = true;
+        foreach (Collider solid in BodyColliders)
+        {
+            Bounds bounds = solid is BoxCollider box ? new Bounds(box.center, box.size) :
+                solid is MeshCollider mesh && mesh.sharedMesh != null ? mesh.sharedMesh.bounds : new Bounds();
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 point = bounds.center + Vector3.Scale(bounds.extents, new Vector3(
+                    (corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
+                point = transform.InverseTransformPoint(solid.transform.TransformPoint(point));
+                if (first) { footprintOS = new Bounds(point, Vector3.zero); first = false; }
+                else footprintOS.Encapsulate(point);
+            }
+        }
         home = transform.position;
         destination = home;
-        legRest = new Quaternion[legs.Length];
-        for (int i = 0; i < legs.Length; i++) legRest[i] = legs[i] != null ? legs[i].localRotation : Quaternion.identity;
         RideSurface.PlanMotion(body.position, body.rotation, Time.fixedDeltaTime);
     }
 
@@ -77,14 +90,6 @@ public sealed class CompostCreature : Creature
     protected override void TickCreature(float deltaTime)
     {
         AdvanceProcessing(deltaTime);
-        gait += lastWalkSpeed * deltaTime * 5f;
-        for (int i = 0; i < legs.Length; i++)
-        {
-            if (legs[i] == null) continue;
-            float phase = gait + (i == 0 || i == 3 ? 0f : Mathf.PI);
-            float swing = lastWalkSpeed > 0.01f ? Mathf.Sin(phase) * 16f : 0f;
-            legs[i].localRotation = legRest[i] * Quaternion.Euler(swing, 0f, 0f);
-        }
     }
 
     internal void AdvanceProcessing(float deltaTime)
@@ -133,7 +138,6 @@ public sealed class CompostCreature : Creature
         if (body == null || back == null) return;
         Vector3 next = body.position;
         Quaternion rotation = body.rotation;
-        lastWalkSpeed = 0f;
         if (SimulationEnabled && isActiveAndEnabled && walkSpeed > 0f && roamRadius > 0f)
         {
             wanderTimer -= Time.fixedDeltaTime;
@@ -151,16 +155,20 @@ public sealed class CompostCreature : Creature
                 if (withinHome && CanWalk(candidate, forward, right, out float groundY))
                 {
                     next = new Vector3(candidate.x, groundY, candidate.z);
-                    lastWalkSpeed = walkSpeed;
                 }
-                else if (avoidanceTimer <= 0f)
+                else
                 {
-                    // Hold an escape heading long enough to turn; rerolling every step causes wall jitter.
-                    Vector3 away = -forward + right * (UnityEngine.Random.value < 0.5f ? -0.8f : 0.8f);
-                    Vector3 offset = Vector3.ProjectOnPlane(body.position + away.normalized * 3f - home, Vector3.up);
-                    destination = home + Vector3.ClampMagnitude(offset, roamRadius);
-                    avoidanceTimer = 4f;
-                    wanderTimer = 6f;
+                    // A rejected translation must not rotate the broad tail through an obstacle.
+                    if (!CanWalk(body.position, forward, right, out _)) rotation = body.rotation;
+                    if (avoidanceTimer <= 0f)
+                    {
+                        // Hold an escape heading long enough to turn; rerolling every step causes wall jitter.
+                        Vector3 away = -forward + right * (UnityEngine.Random.value < 0.5f ? -0.8f : 0.8f);
+                        Vector3 offset = Vector3.ProjectOnPlane(body.position + away.normalized * 3f - home, Vector3.up);
+                        destination = home + Vector3.ClampMagnitude(offset, roamRadius);
+                        avoidanceTimer = 4f;
+                        wanderTimer = 6f;
+                    }
                 }
             }
         }
@@ -185,20 +193,61 @@ public sealed class CompostCreature : Creature
         if (!GroundAt(candidate, out RaycastHit ground)) return false;
         groundY = ground.point.y;
         if (Mathf.Abs(groundY - body.position.y) > maxStepHeight) return false;
-        // Both front feet need support; narrow ledges cannot carry the wide shell.
-        if (!GroundAt(candidate + forward * 1.05f + right * 0.4f, out RaycastHit left) ||
-            !GroundAt(candidate + forward * 1.05f - right * 0.4f, out RaycastHit rightHit) ||
-            Mathf.Abs(left.point.y - groundY) > maxStepHeight || Mathf.Abs(rightHit.point.y - groundY) > maxStepHeight) return false;
-        int count = gameObject.scene.GetPhysicsScene().SphereCast(body.position + Vector3.up * 1.3f, 0.44f, forward,
-            hits, 1.15f + walkSpeed * Time.fixedDeltaTime, ~0, QueryTriggerInteraction.Ignore);
+        Quaternion rotation = Quaternion.LookRotation(forward);
+        Vector3 position = new Vector3(candidate.x, groundY, candidate.z);
+        // Probe the body perimeter and the tapered tail, including their swept turn midpoint.
+        return CanOccupy(position, rotation, groundY) && CanOccupy(
+            Vector3.Lerp(body.position, position, 0.5f), Quaternion.Slerp(body.rotation, rotation, 0.5f), groundY);
+    }
+
+    private bool CanOccupy(Vector3 position, Quaternion rotation, float groundY)
+    {
+        Vector3 scale = transform.lossyScale;
+        Vector3 backMin = transform.InverseTransformPoint(back.transform.TransformPoint(back.center - back.size * 0.5f));
+        Vector3 backMax = transform.InverseTransformPoint(back.transform.TransformPoint(back.center + back.size * 0.5f));
+        for (int row = 0; row < 3; row++)
+        for (int side = -1; side <= 1; side++)
+        {
+            Vector3 pointOS = new Vector3(Mathf.Lerp(backMin.x, backMax.x, (side + 1) * 0.5f) * 0.95f,
+                0f, Mathf.Lerp(backMin.z, backMax.z, row * 0.5f) * 0.97f);
+            if (!Supported(pointOS)) return false;
+        }
+        if (RideSurface.Ramp is MeshCollider ramp && ramp.sharedMesh != null)
+        {
+            Bounds tail = ramp.sharedMesh.bounds;
+            for (int side = -1; side <= 1; side++)
+            {
+                Vector3 pointOS = transform.InverseTransformPoint(ramp.transform.TransformPoint(
+                    new Vector3(side * tail.extents.x * 0.7f, 0f, tail.min.z + 0.05f)));
+                if (!Supported(pointOS)) return false;
+            }
+        }
+        Vector3 centre = position + rotation * Vector3.Scale(footprintOS.center, scale);
+        int count = gameObject.scene.GetPhysicsScene().OverlapBox(centre,
+            Vector3.Scale(footprintOS.extents, scale) + Vector3.one * 0.02f, clearanceOverlaps,
+            rotation, ~0, QueryTriggerInteraction.Ignore);
+        if (count == clearanceOverlaps.Length) return false;
         for (int i = 0; i < count; i++)
         {
-            Collider obstacle = hits[i].collider;
+            Collider obstacle = clearanceOverlaps[i];
             if (obstacle.GetComponentInParent<CompostCreature>() == this ||
                 obstacle.GetComponentInParent<CompostAbsorption>()?.Owner == this) continue;
-            return false;
+            foreach (Collider solid in BodyColliders)
+            {
+                Vector3 local = transform.InverseTransformPoint(solid.transform.position);
+                Quaternion localRotation = Quaternion.Inverse(transform.rotation) * solid.transform.rotation;
+                if (Physics.ComputePenetration(solid, position + rotation * Vector3.Scale(local, scale),
+                    rotation * localRotation, obstacle, obstacle.transform.position, obstacle.transform.rotation,
+                    out _, out float depth) && depth > 0.025f) return false;
+            }
         }
         return true;
+
+        bool Supported(Vector3 pointOS)
+        {
+            Vector3 pointWS = position + rotation * Vector3.Scale(pointOS, scale);
+            return GroundAt(pointWS, out RaycastHit support) && Mathf.Abs(support.point.y - groundY) <= maxStepHeight;
+        }
     }
 
     private bool GroundAt(Vector3 position, out RaycastHit ground)
@@ -266,7 +315,7 @@ public sealed class CompostCreature : Creature
     private bool TryReleaseGoo()
     {
         if (gooPrefab == null) return false;
-        Vector3 position = body.position - transform.forward * 1.55f;
+        Vector3 position = transform.TransformPoint(new Vector3(0f, 0f, footprintOS.min.z - 0.55f));
         // Drop just above known ground, or retain the finished batch at an unsafe ledge.
         if (!GroundAt(position, out RaycastHit ground)) return false;
         position.y = ground.point.y + 0.12f;
@@ -292,7 +341,6 @@ public sealed class CompostCreature : Creature
         storedCharges = 0;
         producing = false;
         productionTime = 0f;
-        lastWalkSpeed = 0f;
         if (body != null) RideSurface.PlanMotion(body.position, body.rotation, Time.fixedDeltaTime);
     }
 

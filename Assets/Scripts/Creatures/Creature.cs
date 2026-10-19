@@ -192,6 +192,12 @@ public enum FoodTag
     /// <summary>Stop abilities and release owned occupants here; never remove the body.</summary>
     protected virtual void OnDeath() { }
 
+    /// <summary>
+    /// Runs once when the shared lifespan expires, after Die(), ability cleanup, and Died listeners.
+    /// Override for age-specific remains. Direct death and consumption never invoke this hook.
+    /// </summary>
+    protected virtual void OnAgeDeath() { }
+
     /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
     public virtual void Consume(Creature consumer) { }
 
@@ -402,9 +408,22 @@ public enum FoodTag
     /// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
     protected void AdvanceAge(float deltaTime)
     {
-        if (!simulationEnabled || isDead || deltaTime <= 0f) return;
-        age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
-        if (age <= 0f) Die();
+        if (!simulationEnabled || isDead || consumptionPending || deltaTime <= 0f) return;
+        SetRemainingAge(age - Mathf.Max(0f, ageRate) * deltaTime);
+    }
+
+    /// <summary>
+    /// Controlled lifetime mutation, including while capture pauses simulation. This has no feeding
+    /// or transfer rules; callers own those. Zero follows the same death path as natural ageing.
+    /// </summary>
+    internal void SetRemainingAge(float value)
+    {
+        if (isDead || consumptionPending) return;
+        age = Mathf.Max(0f, value);
+        if (age > 0f) return;
+        Die();
+        // A death listener may consume or remove the original. Eating owns its removal in that case.
+        if (this != null && isDead && !consumptionPending) OnAgeDeath();
     }
 
     /// <summary>

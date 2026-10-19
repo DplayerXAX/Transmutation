@@ -56,7 +56,7 @@ public static class BirdLifeValidation
     private static void NoReplacementBones(Scene scene)
     {
         foreach (GameObject root in scene.GetRootGameObjects())
-            Check(root.GetComponent<BirdBones>() == null, "bird death does not spawn replacement bones");
+            Check(root.GetComponent<BirdBones>() == null, "non-age death and consumption do not spawn replacement bones");
     }
 
     private static PlayerCreatureCarrier Carrier(Scene scene, Vector3 position)
@@ -100,6 +100,8 @@ public static class BirdLifeValidation
             Age(probe, 100f);
             Check(probe.Age == 30f, "simulation pause pauses age");
             probe.SetSimulationEnabled(true);
+            bool eventBeforeAgeHook = false;
+            probe.Died += _ => eventBeforeAgeHook = probe.AgeDeathCount == 0;
             Age(probe, 20f);
             Age(probe, 20f);
             probe.Die();
@@ -107,6 +109,8 @@ public static class BirdLifeValidation
             Check(probe.Age == 0f && probe.IsDead && !probe.SimulationEnabled && probe.DeathCount == 1,
                 "age clamps; death once; cannot resume dead simulation");
             Check(probe.gameObject.activeInHierarchy, "base death retains object");
+            Check(probe.AgeDeathCount == 1 && probe.AgeDeathObservedCommittedState && eventBeforeAgeHook,
+                "shared age hook runs once after committed death and its listeners");
             Object.DestroyImmediate(probe.gameObject);
 
             CreatureLifecycleValidationProbe eater = Create<CreatureLifecycleValidationProbe>(scene, Vector3.zero);
@@ -122,6 +126,8 @@ public static class BirdLifeValidation
             Check(eater.TryConsumeFood(food), "feeding caller completes consumption");
             Check(food.ConsumptionCount == 2 && food.LastConsumer == eater && food.DeathCount == 1 && food.IsConsumptionPending,
                 "feeding calls effects then death once");
+            Age(food, 100f);
+            Check(food.AgeDeathCount == 0, "consumption cannot invoke the age-death hook");
             Check(!eater.TryConsumeFood(food) && food.ConsumptionCount == 2, "deferred destruction blocks duplicate feeding");
             Object.DestroyImmediate(food.gameObject);
             Object.DestroyImmediate(eater.gameObject);
@@ -204,8 +210,6 @@ public static class BirdLifeValidation
             first.FlightBody.position = new Vector3(0f, 10f, 0f);
             Vector3 releaseVelocity = new Vector3(1f, 2f, 3f);
             first.FlightBody.linearVelocity = releaseVelocity;
-            Float(first, "ageRate", 40f);
-            Age(first, 1f);
             first.Die();
             NoReplacementBones(scene);
             Rigidbody corpseBody = first.FlightBody;
@@ -245,6 +249,71 @@ public static class BirdLifeValidation
             Check(eater.TryConsumeFood(bones) && bones.IsDead && bones.IsConsumptionPending, "Matter eater consumes bones");
             Check(!eater.TryConsumeFood(bones), "bones cannot be consumed twice");
             Object.DestroyImmediate(bones.gameObject);
+            Object.DestroyImmediate(eater.gameObject);
+
+            // Only the shared lifespan expiry path replaces birds, with or without an authored prefab.
+            foreach (string ageCase in new[] { "prefab", "automatic", "carried" })
+            {
+                first = Bird(prefab, staging.transform, new Vector3(0f, 10f, 0f));
+                if (ageCase == "automatic")
+                {
+                    var data = new SerializedObject(first);
+                    data.FindProperty("bonesPrefab").objectReferenceValue = null;
+                    data.ApplyModifiedPropertiesWithoutUndo();
+                }
+                first.transform.rotation = Quaternion.Euler(10f, 35f, 20f);
+                first.FlightBody.linearVelocity = releaseVelocity;
+                first.FlightBody.angularVelocity = Vector3.up;
+                PlayerCreatureCarrier ageCarrier = null;
+                if (ageCase == "carried")
+                {
+                    ageCarrier = Carrier(scene, first.transform.position);
+                    typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(ageCarrier, new object[] { first });
+                    Check(first.IsCarried, "ageing bird begins carried");
+                }
+                Vector3 remainsPosition = first.transform.position;
+                Quaternion remainsRotation = first.transform.rotation;
+                int ageDeaths = 0;
+                bool eventSawOriginal = false;
+                first.Died += dead => { ageDeaths++; eventSawOriginal = dead.IsDead && dead.gameObject.activeInHierarchy; dead.Die(); };
+                Float(first, "ageRate", 40f);
+                Age(first, 1f);
+                Age(first, 1f);
+                first.Die();
+                BirdBones remains = null;
+                int remainsCount = 0;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                    if (root.TryGetComponent<BirdBones>(out var candidate)) { remains = candidate; remainsCount++; }
+                Check(remainsCount == 1 && ageDeaths == 1 && eventSawOriginal && first.IsDead && !first.gameObject.activeSelf && first.FlockManager == null,
+                    ageCase + " age death retires the bird and creates one bones object exactly once");
+                Rigidbody remainsBody = remains.GetComponent<Rigidbody>();
+                Check(remains.IsDead && !remains.SimulationEnabled && remainsBody.useGravity && !remainsBody.isKinematic &&
+                    remains.gameObject.scene == scene && remains.transform.position == remainsPosition &&
+                    Quaternion.Angle(remains.transform.rotation, remainsRotation) < 0.001f,
+                    "age remains preserve scene and pose with dead passive physics");
+                if (ageCarrier == null)
+                    Check(remainsBody.linearVelocity == releaseVelocity && remainsBody.angularVelocity == Vector3.up,
+                        "age remains preserve linear and angular velocity");
+                else
+                {
+                    Check(ageCarrier.CarriedCreature == null && !first.IsCarried, "age death releases hand ownership before replacement");
+                    Object.DestroyImmediate(ageCarrier.gameObject);
+                }
+                Object.DestroyImmediate(first.gameObject);
+                Object.DestroyImmediate(remains.gameObject);
+            }
+
+            first = Bird(prefab, staging.transform, Vector3.up * 10f);
+            eater = Create<CreatureLifecycleValidationProbe>(scene, Vector3.zero);
+            Tags(eater, Creature.FoodTag.None, Creature.FoodTag.Everything);
+            bool consumedDuringNotification = false;
+            first.Died += dead => consumedDuringNotification = eater.TryConsumeFood(dead);
+            Float(first, "ageRate", 40f);
+            Age(first, 1f);
+            NoReplacementBones(scene);
+            Check(consumedDuringNotification && first.IsConsumptionPending,
+                "consumption during age-death notification owns removal without extra remains");
+            Object.DestroyImmediate(first.gameObject);
             Object.DestroyImmediate(eater.gameObject);
 
             // Test both consumption of a bird and actual capture/hand ownership on death.

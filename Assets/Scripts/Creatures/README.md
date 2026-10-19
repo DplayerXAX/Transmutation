@@ -21,7 +21,8 @@ This README describes the code contract; the wiki describes behavior and player-
   `Die()` retains the original active, visible, collidable body, releases carry/web/bubble ownership,
   and gives mobile corpses passive gravity physics. Compost and Sky Web stay stationary.
   `Died` notifies independent components once, after ability cleanup; listener exceptions
-  are isolated so normal death behavior continues.
+  are isolated so normal death behavior continues. Only shared lifespan expiry then calls
+  `OnAgeDeath()` for age-specific remains; birds use it to leave bones.
 - **Consumption:** `Consume(consumer)` is an overridable effects hook with an empty base implementation.
   It does not call `Die()` or destroy anything. `TryConsumeFood(food)` checks diet and claims
   food once, calls its consumption hook, then separately calls death and removes the original.
@@ -67,9 +68,18 @@ repeat the meal. Food's simulation may be paused or dead; the eater must be acti
 Override `Consume(consumer)` for the food's special effects; the base hook is empty and does
 not kill or destroy anything. Override `OnDeath()` to stop abilities and release owned occupants;
 never destroy, deactivate, or replace the corpse there. Death sets Age to zero and disables simulation.
-Birds retain their original bodies and leave the flock; no replacement bones spawn.
-Bird Bones initialize as dead remains without a death event. Consuming food removes its original even when base
-death alone would leave that object in place.
+For remains specific to lifespan expiry, override `OnAgeDeath()`. The shared Age countdown
+calls it once after `Die()` and all `Died` listeners; the default hook does nothing. Direct
+`Die()` calls (including Inspector Kill) and consumption never run this hook, even though
+all deaths set Age to zero. A listener consuming or removing the original skips this hook.
+Birds leave the flock on every death. Age expiry replaces the bird with one Bird Bones object,
+preserving pose and motion after attachment release; other deaths retain the original corpse.
+Bird Bones initialize as dead remains without a death event. Consuming food removes its original
+even when base death alone would leave that object in place.
+
+`SetRemainingAge(value)` is an assembly-internal lifetime setter. It clamps at zero and
+uses the same age-death path even during simulation pause; it cannot revive dead creatures
+or mutate food already pending consumption. It contains no food selection or Age-transfer rules.
 
 The inherited Inspector shows read-only **Is Dead** and **Simulation Running** values in Play Mode,
 including mixed values for multiple selections. **Kill** calls normal `Die()` on active scene
@@ -121,7 +131,8 @@ checks. Play Mode checks create disposable test scenes only when invoked. Report
 under `Temp/BirdFlockValidation`.
 
 **Validate Bird Life and Food (Play Mode)** also checks retained bodies, serialized death,
-Inspector multi-selection, passive corpse physics, ability shutdown, and occupant release.
+Inspector multi-selection, passive corpse physics, ability shutdown, occupant release, and
+age-only bird bones (including automatic fallback, carried death, and notification order).
 Goo, Compost, bubble, and infection validations cover intentional consumption/removal separately.
 
 ## The fire cycle
@@ -148,6 +159,16 @@ The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects inject
 component. Host death produces 3-5 seeds alongside normal remains, accumulating seed
 and host food flags across generations. See [CorruptSeedREADME.md](CorruptSeedREADME.md).
 
+**SkySpider (TimeSpider)** hunts living, positive-Age creatures captured by its current
+`SkyWeb`. It keeps a target until invalidated, approaches using existing flight/patrol movement,
+and drains all remaining Age at **Bite Range** (default 0.75 m from its Rigidbody position to
+the prey's nearest solid collider surface). That Age is added to its own lifetime before the
+victim's age-death callbacks. Its runtime Food Tag is Meat and Diet is Everything. This is
+spider-specific Age feeding: no `Consume`, Nutrition, or Hunger sharing; ordinary corpses remain,
+birds leave age-death bones, and existing infection death effects still run. Age Rate stays
+unchanged (default zero). See [SkySpiderPrototype.md](SkySpiderPrototype.md) for eligibility,
+interruption rules, and **Validate TimeSpider Age Hunting (Play Mode)**.
+
 **BubbleFlower** — a stationary flower emitting trapping bubbles every 3–6 seconds. While held through
 the existing carry system, left-click shoots toward the crosshair with a 0.5-second cooldown and stops
 automatic emission. `TrappingBubble` is separate from `FireBubble`; neither changes the fire cycle.
@@ -159,8 +180,9 @@ octree and snapshots all flight state before movement. Spawn areas only place in
 clusters; groups merge when they meet. See [BirdFlockPrototype.md](BirdFlockPrototype.md)
 for setup, controls, and validation. Hunger scales food attraction; accepted meals share
 nutrition with eligible nearby birds while special consumption effects stay with the eater.
-Bird death retains the original falling corpse and releases capture/carry attachments.
-Separately placed `BirdBones` are dead Matter remains; both kinds can be carried or composted.
+Bird age expiry replaces it with falling `BirdBones`; other deaths retain the original falling
+corpse. Shared death releases capture/carry attachments first. Bones are dead Matter remains;
+both kinds can be carried or composted. Eating a living bird leaves no additional bones.
 
 **FuzzCreature** — a sticky furry blob. Inside `noticeRadius` (6 m) it joins a single-file chain behind the
 player (static `Chain` list); each one follows the one in front, joined by a sagging goo strand. Leaves the

@@ -45,6 +45,7 @@ public sealed class SkyWeb : Creature
     public int PatchCount => geometry == null ? 0 : geometry.RenderedPatchCount;
     public int MeshRevision => geometry == null ? 0 : geometry.MeshRevision;
     public int CaptureCount => captures.Count;
+    public IReadOnlyList<WebCapture> Captures => readOnlyCaptures ?? (readOnlyCaptures = captures.AsReadOnly());
     public bool IsFullyGrown => geometry != null && StrandCount == geometry.StrandCount;
     public SkyWebGeometry Geometry => geometry;
     public event Action<WebCapture> Captured;
@@ -56,6 +57,7 @@ public sealed class SkyWeb : Creature
     private float growthTime;
     private Collider[] overlapBuffer = new Collider[96];
     private readonly List<WebCapture> captures = new List<WebCapture>();
+    private System.Collections.ObjectModel.ReadOnlyCollection<WebCapture> readOnlyCaptures;
     private readonly Dictionary<Rigidbody, Bounds> bodyBounds = new Dictionary<Rigidbody, Bounds>(96);
     private Dictionary<Rigidbody, Vector3> previousCenters = new Dictionary<Rigidbody, Vector3>(96);
     private Dictionary<Rigidbody, Vector3> currentCenters = new Dictionary<Rigidbody, Vector3>(96);

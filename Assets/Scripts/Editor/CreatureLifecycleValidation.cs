@@ -51,6 +51,8 @@ internal static class CreatureLifecycleValidation
             probe.BeginPet(Vector3.zero, Vector3.up);
             probe.Die(); probe.Die(); probe.SetSimulationEnabled(true);
             Check(deaths == 1 && probe.DeathCount == 1 && probe.IsDead && !probe.SimulationEnabled, "death and reentrant events happen once and cannot revive");
+            typeof(Creature).GetMethod("AdvanceAge", Private).Invoke(probe, new object[] { 100f });
+            Check(probe.AgeDeathCount == 0, "direct death never becomes age death even though death sets Age to zero");
             Check(!probe.IsPetted && probe.gameObject.activeInHierarchy && probe.GetComponent<Collider>().enabled, "death releases petting and retains active solid body");
             var rb = probe.GetComponent<Rigidbody>();
             Check(!rb.isKinematic && rb.useGravity, "mobile corpse has passive gravity physics");

@@ -49,6 +49,8 @@ Every creature inherits **Age** (remaining lifetime, default 40) and **Age Rate*
 (spent per second, default 0). Simulation pause also pauses aging. Carrying alone
 does not pause Age. At zero `Die()` runs once. Base death disables simulation, retains
 the original body, and enables passive corpse physics; a release cannot revive it.
+After shared death and its notifications, lifespan expiry alone calls `OnAgeDeath()`.
+Birds use that hook to leave bones. Calling `Die()` directly does not invoke age-specific effects.
 
 `Consume(consumer)` handles optional nutrition/special effects and does nothing by
 default. It does not call death. The feeding caller uses `TryConsumeFood(food)` to claim
@@ -88,10 +90,14 @@ while its nearby flock mates receive nutrition without infection. Recipient sele
 uses the manager's existing bird list and current Rigidbody positions, not scene searches
 or the previous flight octree snapshot. Allocation buffers are reused.
 
-Bird `Die()` retains the original active bird body, removes flock membership, and stops flight.
-Hand, web, and bubble attachments release immediately. The original collider and visible body
-remain, with passive gravity physics and the same food tags and Nutrition. The corpse can be
-carried, eaten, or composted. Death does not spawn replacement bones.
+Bird `Die()` removes flock membership, stops flight, and releases hand, web, and bubble
+attachments through the shared lifecycle. Direct death (including Inspector Kill) retains the
+original active, visible, collidable body with passive gravity, food tags, and Nutrition.
+Consumption runs shared death then removes that original, without leaving extra bones.
+Only Age expiry replaces the bird with one **BirdBones** after death notifications, preserving
+its current scene, pose, linear velocity, and angular velocity. Configure **Bones Prefab** on
+the bird; an empty reference creates automatic placeholder bones. Original colliders and food
+registration retire immediately. Repeated death calls do not create extra remains.
 Independently placed **BirdBones** initialize as dead Matter remains (Age 0, simulation off),
 without firing another death event. They remain portable and edible by Matter eaters.
 Web release gives the retained corpse the normal half-second recapture grace period.
@@ -140,7 +146,8 @@ verify spawn speed overrides, initial velocities, and inheritance from the prefa
 
 `Validate Bird Life and Food (Play Mode)` checks countdown/pause/death, separate Consume
 effects, weighted food steering, actual contact feeding, simultaneous eaters, retained
-bird corpse physics, dead bones, and free/held/web/bubble/consumed death paths.
+bird corpse physics, age-only bones with prefab/fallback, notification order, dead bones,
+and free/held/web/bubble/consumed death paths.
 The trapping bubble's elapsed timer is separate from inherited remaining Age.
 
 `Validate Bird Hunger and Sharing (Play Mode)` checks hunger clocks and appetite,

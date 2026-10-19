@@ -315,6 +315,28 @@ public static class CorruptSeedValidation
                 "infected bird retains its original corpse alongside seeds");
             Clear(scene, staging);
 
+            bird = Object.Instantiate(birdPrefab, Vector3.up * 2f, Quaternion.identity, staging.transform)
+                .GetComponent<BirdCreature>();
+            bird.transform.SetParent(null, true);
+            bird.FlockManager.enabled = false;
+            Feed(bird, Seed(prefab, staging.transform));
+            deathPosition = bird.transform.position;
+            birdTags = bird.FoodTags;
+            using (var fields = new SerializedObject(bird))
+            {
+                fields.FindProperty("ageRate").floatValue = 40f;
+                fields.ApplyModifiedPropertiesWithoutUndo();
+            }
+            typeof(Creature).GetMethod("AdvanceAge", Private).Invoke(bird, new object[] { 1f });
+            bird.Die();
+            Brood(scene, deathPosition, FoodTag.Plant | birdTags);
+            bonesCount = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+                if (root.GetComponent<BirdBones>() != null) bonesCount++;
+            Check(bonesCount == 1 && bird.IsDead && !bird.gameObject.activeSelf,
+                "infected bird age death creates one bones object alongside one seed brood");
+            Clear(scene, staging);
+
             // Gravity, normal ground collision, and zero aging use the actual prefab components.
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
             SceneManager.MoveGameObjectToScene(ground, scene);
