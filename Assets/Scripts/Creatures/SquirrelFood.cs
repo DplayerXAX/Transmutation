@@ -36,7 +36,7 @@ public sealed class SquirrelFood : MonoBehaviour
 
     public bool Store(Squirrel squirrel, SquirrelNest nest)
     {
-        if (Owner != squirrel || IsStored || nest == null) return false;
+        if (Owner != squirrel || IsStored || nest == null || nest.Owner != squirrel) return false;
         IsStored = true;
         Owner = null;
         transform.SetParent(nest.transform, false);

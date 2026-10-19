@@ -31,6 +31,11 @@ public static class AriiaSquirrelSetup
             {
                 if (node.GetComponent<SquirrelManager>() != null || node.GetComponent<FoodManager>() != null)
                     continue;
+                var tree = node.GetComponent<SquirrelTree>();
+                if (tree == null && (node.name.StartsWith("Environment Trunk ", StringComparison.OrdinalIgnoreCase) ||
+                    Matches(node.name, "Tree")))
+                    tree = node.gameObject.AddComponent<SquirrelTree>();
+                if (tree != null) squirrels.Register(tree);
                 var squirrel = node.GetComponent<Squirrel>();
                 if (squirrel == null && Matches(node.name, "Squirrel") &&
                     node.GetComponentInParent<Squirrel>() == null)

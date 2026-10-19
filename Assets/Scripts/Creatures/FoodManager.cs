@@ -8,21 +8,30 @@ public sealed class FoodManager : MonoBehaviour
     [SerializeField] private List<SquirrelFood> foods = new List<SquirrelFood>();
     [Tooltip("Initial food population, using the first scene food as a template. No automatic refill.")]
     [SerializeField, Min(0)] private int initialFoodCount = 15;
-    [SerializeField, Min(0f)] private float spawnRadius = 8f;
+    [SerializeField, Min(0.1f)] private float spawnRadius = 6f;
+    [SerializeField, Min(0.1f)] private float minimumTreeDistance = 1.5f;
     public IReadOnlyList<SquirrelFood> Foods => foods;
 
-    private void Start()
+    public void GenerateAroundTrees(IReadOnlyList<SquirrelTree> trees)
     {
         foods.RemoveAll(food => food == null);
-        if (foods.Count == 0) return;
+        if (foods.Count == 0 || trees == null || trees.Count == 0) return;
         var template = foods[0];
         while (foods.Count < initialFoodCount)
         {
-            Vector2 offset = Random.insideUnitCircle * spawnRadius;
-            var food = Instantiate(template, template.transform.position + new Vector3(offset.x, 0f, offset.y),
+            var food = Instantiate(template, template.transform.position,
                 template.transform.rotation, template.transform.parent);
             food.name = template.name + " " + (foods.Count + 1);
             Register(food);
+        }
+        for (int i = 0; i < foods.Count; i++)
+        {
+            var food = foods[i];
+            if (!food.IsAvailable) continue;
+            var tree = trees[i % trees.Count];
+            if (tree == null) continue;
+            float outer = Mathf.Max(minimumTreeDistance, spawnRadius);
+            SquirrelTree.PlaceOnGround(food.transform, tree.SampleGround(minimumTreeDistance, outer));
         }
     }
 
@@ -39,12 +48,14 @@ public sealed class FoodManager : MonoBehaviour
         {
             var food = foods[i];
             if (food == null) { foods.RemoveAt(i); continue; }
-            if (!food.IsAvailable) continue;
+            // Reserved ground food remains a valid goal: rivals can contest it on arrival.
+            if (food.IsStored || !food.isActiveAndEnabled || !squirrel.ContainsInTerritory(food.transform.position)) continue;
             float distance = (food.transform.position - squirrel.transform.position).sqrMagnitude;
             if (distance > best) continue;
             best = distance;
             nearest = food;
         }
-        return nearest != null && nearest.Reserve(squirrel) ? nearest : null;
+        if (nearest != null && nearest.IsAvailable) nearest.Reserve(squirrel);
+        return nearest;
     }
 }
