@@ -6,15 +6,17 @@ using UnityEngine;
 public sealed class SquirrelManager : MonoBehaviour
 {
     [SerializeField] private FoodManager foodManager;
+    [SerializeField] private GameObject squirrelPrefab;
+    [SerializeField] private GameObject nestPrefab;
     [SerializeField] private List<Squirrel> squirrels = new List<Squirrel>();
     [SerializeField] private List<SquirrelNest> nests = new List<SquirrelNest>();
     [SerializeField] private List<SquirrelTree> trees = new List<SquirrelTree>();
     [SerializeField] private Vector2 sizeRange = new Vector2(0.7f, 1.4f);
     [SerializeField, Min(1)] private int baseCapacity = 3;
-    [Tooltip("Minimum population. Clones the first squirrel when fewer exist.")]
+    [Tooltip("Minimum population spawned from Squirrel Prefab.")]
     [SerializeField, Min(1)] private int population = 3;
     [SerializeField, Min(0f)] private float spawnRadius = 2f;
-    [Header("Homes and fixed territories")]
+    [Header("Homes and territories")]
     [SerializeField, Min(1f)] private float territoryRadius = 12f;
     [SerializeField, Min(0.5f)] private float nestTreeDistance = 1.8f;
     [Header("Food fights")]
@@ -120,32 +122,31 @@ public sealed class SquirrelManager : MonoBehaviour
         squirrels.RemoveAll(squirrel => squirrel == null);
         nests.RemoveAll(nest => nest == null);
         trees.RemoveAll(tree => tree == null);
-        if (foodManager == null || nests.Count == 0 || squirrels.Count == 0 || trees.Count == 0)
+        if (foodManager == null || trees.Count == 0 ||
+            (squirrels.Count < population && squirrelPrefab == null) ||
+            (nests.Count < Mathf.Max(population, squirrels.Count) && nestPrefab == null))
         {
-            Debug.LogWarning("SquirrelManager needs a FoodManager, a Squirrel, a Nest and tree anchors in this scene.", this);
+            Debug.LogWarning("SquirrelManager needs a FoodManager, Squirrel Prefab, Nest Prefab and tree anchors.", this);
             return;
         }
-        // Clone before randomizing so every squirrel starts from the authored model scale.
-        Squirrel template = squirrels[0];
+        // Instantiate the asset so runtime changes never become the next spawn template.
         while (squirrels.Count < population)
         {
-            Vector2 offset = Random.insideUnitCircle * spawnRadius;
-            var squirrel = Instantiate(template, template.transform.position + new Vector3(offset.x, 0f, offset.y),
-                template.transform.rotation, template.transform.parent);
-            squirrel.name = template.name + " " + (squirrels.Count + 1);
+            var instance = Instantiate(squirrelPrefab, transform);
+            var squirrel = instance.GetComponent<Squirrel>() ?? instance.AddComponent<Squirrel>();
+            squirrel.name = squirrelPrefab.name + " " + (squirrels.Count + 1);
             squirrels.Add(squirrel);
         }
         float minimum = Mathf.Max(0.1f, Mathf.Min(sizeRange.x, sizeRange.y));
         float maximum = Mathf.Max(minimum, Mathf.Max(sizeRange.x, sizeRange.y));
         // Each squirrel receives a distinct nest. Prefer different trees before sharing an anchor.
-        SquirrelNest nestTemplate = nests[0];
-        Vector3 originalHome = nestTemplate.transform.position;
+        Vector3 originalHome = nestPrefab != null ? nestPrefab.transform.position : nests[0].transform.position;
         trees.Sort((a, b) => (a.GroundPosition - originalHome).sqrMagnitude.CompareTo(
             (b.GroundPosition - originalHome).sqrMagnitude));
         while (nests.Count < squirrels.Count)
         {
-            var home = Instantiate(nestTemplate, nestTemplate.transform.position,
-                nestTemplate.transform.rotation, nestTemplate.transform.parent);
+            var instance = Instantiate(nestPrefab, transform);
+            var home = instance.GetComponent<SquirrelNest>() ?? instance.AddComponent<SquirrelNest>();
             nests.Add(home);
         }
         for (int i = 0; i < squirrels.Count; i++)
@@ -172,5 +173,6 @@ public sealed class SquirrelManager : MonoBehaviour
         }
         // Explicit initialization order: relocate both existing food and new food only after trees are known.
         foodManager.GenerateAroundTrees(trees);
+        Physics.SyncTransforms();
     }
 }

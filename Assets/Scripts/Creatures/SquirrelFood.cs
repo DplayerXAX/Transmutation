@@ -8,6 +8,15 @@ public sealed class SquirrelFood : MonoBehaviour
     public bool IsStored { get; private set; }
     public bool IsAvailable => !IsStored && Owner == null && isActiveAndEnabled;
 
+    // Stored objects are recycled; the nest's accumulated count remains intact.
+    internal void Respawn(Transform parent)
+    {
+        Owner = null;
+        IsStored = false;
+        transform.SetParent(parent, true);
+        gameObject.SetActive(true);
+    }
+
     public bool Reserve(Squirrel squirrel)
     {
         if (!IsAvailable || squirrel == null) return false;

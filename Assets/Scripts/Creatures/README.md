@@ -101,3 +101,26 @@ prompts and carry work.
 ## Misc
 
 `Scripts/Animation/SkinnedMeshAnimator` ping-pongs blend shapes on SkinnedMeshRenderers (for modelled creatures).
+
+## Squirrels: food growth and migration
+
+`Scene_Ariia` uses `AriiaSquirrelSetup` to register its tree trunks and connect the authored managers.
+`SquirrelManager` instantiates the Squirrel and Nest prefabs; `FoodManager` instantiates the Food prefab.
+
+- Food grows around tree anchors every **15 seconds**, **3 per cycle**, up to **24 unstored items**
+  (including items being carried). These settings are on Food Manager. Stored objects are recycled;
+  the nest keeps its cumulative `StoredFoodCount`. Growth uses scaled time and pauses with the game.
+- A squirrel searches within its **12 m territory**. After **30 seconds** continuously finding no local
+  food, it looks for available food outside its territory within **45 m** of its home.
+- Migration states are `PackingNest` then `Migrating`: the squirrel returns home, visibly carries its
+  existing nest at **70% walking speed**, and places it on clear, supported ground near the new food.
+  It then moves its territory centre to the new nest and resumes foraging. Owner and stored food survive.
+- Migration settings are on the Squirrel prefab's Squirrel component, or on runtime Squirrel instances
+  when the source prefab only contains the model. There is a **90 second** timeout for blocked moves.
+  No available food or safe destination means the squirrel waits and checks again. Migrating squirrels
+  cannot start food fights. Creature simulation pause/capture pauses migration; death or disabling the
+  squirrel detaches its nest, restores collisions and preserves its stored-food count.
+- Play Mode checks: **Tools > Creatures > Validate Squirrel Physics** and **Validate Squirrel Ecology**.
+  Ecology validation uses a disposable local physics scene and checks growth limits, recycling, shortage
+  timing, pause, actual movement beyond the old territory, nest ownership/stores, post-move foraging and
+  death cleanup.
