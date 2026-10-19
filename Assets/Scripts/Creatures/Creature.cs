@@ -64,6 +64,11 @@ public enum FoodTag
     [Tooltip("Allows eating another creature with the same concrete script class, provided its food tags also match the diet.")]
     [SerializeField] private bool canEatSameType = false;
 
+    [Tooltip("Total nutrition available from one meal. Shared by nearby eligible birds; does not change dietary compatibility.")]
+    [Min(0f)] [SerializeField] private float nutrition = 120f;
+
+    public float Nutrition => Mathf.Max(0f, nutrition);
+
     [Header("Runtime")]
     [Tooltip("When disabled, this creature remains in the scene but does not run its creature logic.")]
     [SerializeField] private bool simulationEnabled = true;
@@ -74,7 +79,7 @@ public enum FoodTag
     [Tooltip("Lifetime spent per second. Zero means this creature does not age automatically.")]
     [Min(0f)] [SerializeField] private float ageRate = 0f;
 
-    private bool isDead;
+    [SerializeField, HideInInspector] private bool isDead;
     private bool consumptionPending;
 
     public float Age => age;
@@ -83,7 +88,7 @@ public enum FoodTag
     public bool IsConsumptionPending => consumptionPending;
 
     /// <summary>
-    /// Raised once after death is recorded, while the host still exists and before subclass remains.
+    /// Raised once after death and ability cleanup, while the original body still exists.
     /// Listeners react independently; a failing listener cannot interrupt other death behavior.
     /// </summary>
     public event System.Action<Creature> Died;
@@ -116,7 +121,13 @@ public enum FoodTag
             return false;
         }
 
-        if (!canEatSameType && target.GetType() == GetType())
+        return AcceptsFood(target.foodTags, target.GetType());
+    }
+
+    /// <summary>Checks cached food metadata after a feeding callback has removed the original.</summary>
+    protected bool AcceptsFood(FoodTag tags, System.Type foodType)
+    {
+        if (foodType == null || (!canEatSameType && foodType == GetType()))
         {
             return false;
         }
@@ -126,7 +137,7 @@ public enum FoodTag
             return true;
         }
 
-        return (dietTags & target.foodTags) != FoodTag.None;
+        return (dietTags & tags) != FoodTag.None;
     }
 
     /// <summary>For things spawned at runtime, which have no inspector to set the name.</summary>
@@ -139,13 +150,17 @@ public enum FoodTag
         dietTags = diet;
     }
 
-    /// <summary>Stops creature logic. Overrides should call base and guard repeated death.</summary>
+    /// <summary>Records death once, releases active ownership, and retains the original body.</summary>
     public virtual void Die()
     {
         if (isDead) return;
-        isDead = true;
-        age = 0f;
-        SetSimulationEnabled(false);
+        InitializeDeadRemains();
+        EndPet();
+        if (IsCarried) Carrier.Release();
+        if (TryGetComponent<WebCapture>(out var webCapture)) webCapture.Release();
+        if (TryGetComponent<BubbleCapture>(out var bubbleCapture) && bubbleCapture.IsCaptured) bubbleCapture.Release();
+        ApplyCorpsePhysics();
+        OnDeath();
         if (Died == null) return;
         foreach (System.Action<Creature> listener in Died.GetInvocationList())
         {
@@ -153,6 +168,29 @@ public enum FoodTag
             catch (System.Exception exception) { Debug.LogException(exception, this); }
         }
     }
+
+    /// <summary>Initializes existing remains without another death event or death effects.</summary>
+    protected void InitializeDeadRemains()
+    {
+        isDead = true;
+        age = 0f;
+        simulationEnabled = false;
+    }
+
+    /// <summary>Structural creatures retain their stationary body after death.</summary>
+    protected virtual bool KeepCorpseStationary => false;
+
+    private void ApplyCorpsePhysics()
+    {
+        if (KeepCorpseStationary) return;
+        SetMovementPhysics(false, true);
+        if (movementBody == null) return;
+        movementBody.constraints &= ~RigidbodyConstraints.FreezePosition;
+        movementBody.WakeUp();
+    }
+
+    /// <summary>Stop abilities and release owned occupants here; never remove the body.</summary>
+    protected virtual void OnDeath() { }
 
     /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
     public virtual void Consume(Creature consumer) { }
@@ -327,6 +365,12 @@ public enum FoodTag
     protected virtual void Awake()
     {
         InitializeCreature();
+        // Serialized death survives a script reload; initialization must not restore living physics.
+        if (isDead)
+        {
+            InitializeDeadRemains();
+            ApplyCorpsePhysics();
+        }
     }
 
     protected virtual void OnEnable()
@@ -347,7 +391,8 @@ public enum FoodTag
         }
 
         AdvanceAge(Time.deltaTime);
-        if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
+        if (!SimulationEnabled) return;
+        TickCreature(Time.deltaTime);
 
         // Affection fades slowly once the petting stops.
         if (!IsPetted && Affection > 0f)
@@ -453,6 +498,7 @@ public enum FoodTag
     /// <summary>Called by the player's petting hand when it starts stroking this creature.</summary>
     public void BeginPet(Vector3 point, Vector3 normal)
     {
+        if (IsDead) return;
         IsPetted = true;
         PetPoint = point;
         PetNormal = normal;
@@ -462,7 +508,7 @@ public enum FoodTag
     /// <summary>Called every frame while the hand keeps stroking.</summary>
     public void ContinuePet(Vector3 point, Vector3 normal, float deltaTime)
     {
-        if (!IsPetted) return;
+        if (!IsPetted || IsDead) return;
         PetPoint = point;
         PetNormal = normal;
         Affection = Mathf.Min(1f, Affection + deltaTime * affectionGain);

@@ -38,6 +38,7 @@ public sealed class SkyWeb : Creature
     [Min(0f)] [SerializeField] private float contactPadding = 0.025f;
 
     public override bool CanBeCarried => false;
+    protected override bool KeepCorpseStationary => true;
     public float MaximumRadius => geometry == null ? Mathf.Max(0.2f, maximumRadius) * Mathf.Max(0.05f, webScale) : geometry.MaximumRadius;
     public float Growth => geometry == null ? 0f : (float)geometry.RenderedStrandCount / geometry.StrandCount;
     public int StrandCount => geometry == null ? 0 : geometry.RenderedStrandCount;
@@ -226,6 +227,13 @@ public sealed class SkyWeb : Creature
     protected override void OnDisable()
     {
         base.OnDisable();
+        ReleaseCaptures();
+    }
+
+    protected override void OnDeath() => ReleaseCaptures();
+
+    private void ReleaseCaptures()
+    {
         while (captures.Count > 0)
         {
             WebCapture capture = captures[captures.Count - 1];

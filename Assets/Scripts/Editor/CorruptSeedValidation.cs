@@ -291,8 +291,7 @@ public static class CorruptSeedValidation
             Clear(scene, staging);
 
             GameObject birdPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BirdFlockSetup.BirdPath);
-            Check(birdPrefab != null && birdPrefab.GetComponent<BirdCreature>().BonesPrefab != null,
-                "bird integration fixture has its normal bones reference");
+            Check(birdPrefab != null, "bird integration fixture exists");
             var bird = Object.Instantiate(birdPrefab, Vector3.up * 2f, Quaternion.identity, staging.transform)
                 .GetComponent<BirdCreature>();
             bird.transform.SetParent(null, true);
@@ -312,7 +311,8 @@ public static class CorruptSeedValidation
             int bonesCount = 0;
             foreach (GameObject root in scene.GetRootGameObjects())
                 if (root.GetComponent<BirdBones>() != null) bonesCount++;
-            Check(bonesCount == 1 && !bird.gameObject.activeInHierarchy, "infected bird leaves normal bones alongside seeds");
+            Check(bonesCount == 0 && bird.IsDead && bird.gameObject.activeInHierarchy && bird.FlightBody.useGravity,
+                "infected bird retains its original corpse alongside seeds");
             Clear(scene, staging);
 
             // Gravity, normal ground collision, and zero aging use the actual prefab components.

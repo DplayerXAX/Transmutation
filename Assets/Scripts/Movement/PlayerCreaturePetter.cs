@@ -40,6 +40,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
 
     private void Update()
     {
+        if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
         // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
         bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && (carrier == null || !carrier.CarriesTentacle);
@@ -90,7 +91,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         if (!Physics.Raycast(ray, out hit, petRange, petLayers, QueryTriggerInteraction.Ignore)) return null;
         Creature creature = hit.collider.GetComponentInParent<Creature>();
         // The creature already held in the right hand is not petted.
-        if (creature == null || (carrier != null && carrier.CarriedCreature == creature)) return null;
+        if (creature == null || creature.IsDead || (carrier != null && carrier.CarriedCreature == creature)) return null;
         return creature;
     }
 

@@ -11,6 +11,7 @@ public sealed class BirdBones : Creature
     {
         SetCreatureName("Bird Bones");
         SetFoodAndDiet(FoodTag.Matter, FoodTag.None);
+        InitializeDeadRemains();
         SetMovementPhysics(false, true);
     }
 

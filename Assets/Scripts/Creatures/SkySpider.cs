@@ -28,7 +28,7 @@ public sealed class SkySpider : Creature
 
     protected override void InitializeCreature()
     {
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying || IsDead) return;
         body = GetComponent<Rigidbody>();
         body.isKinematic = true;
         body.useGravity = false;
@@ -118,5 +118,13 @@ public sealed class SkySpider : Creature
     private void OnDestroy()
     {
         if (CurrentWeb != null) CurrentWeb.SetBuilder(null);
+    }
+
+    protected override void OnDeath()
+    {
+        if (CurrentWeb != null) CurrentWeb.SetBuilder(null);
+        CurrentWeb = null;
+        IsReturning = false;
+        wasCarried = false;
     }
 }

@@ -32,6 +32,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private ProceduralWorld world;
     private Rigidbody body;
     private float halfHeight = 1f;
+    private PlayerGooCoating testGoo;
     private int passed, total;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -67,6 +68,10 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield break;
         }
         body = controller.GetComponent<Rigidbody>();
+        testGoo = controller.GetComponent<PlayerGooCoating>();
+        if (testGoo == null) testGoo = controller.gameObject.AddComponent<PlayerGooCoating>();
+        testGoo.TryApplyGoo();
+        // Fixture supply supports long geometry regressions; finite supply is tested by GooCreatureValidation.
         var capsule = controller.GetComponent<CapsuleCollider>();
         if (capsule != null) halfHeight = capsule.height * 0.5f * controller.transform.lossyScale.y;
         climber.ScriptedInput = Vector2.zero;
@@ -1116,6 +1121,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         var holder = typeof(SmoothFirstPersonController).GetField("cameraHolder", Private)?.GetValue(controller) as Transform;
         if (holder != null) holder.rotation = Quaternion.Euler(0f, yaw, 0f);
         Physics.SyncTransforms();
+    }
+
+    private void Update()
+    {
+        if (testGoo != null && testGoo.RemainingSeconds < testGoo.SecondsPerCreature)
+            testGoo.TryApplyGoo();
     }
 
     // ---------------- Finding test walls ----------------

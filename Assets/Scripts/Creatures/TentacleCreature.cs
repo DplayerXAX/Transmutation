@@ -85,7 +85,7 @@ public sealed class TentacleCreature : Creature
     protected override void OnEnable()
     {
         base.OnEnable();
-        FirstPersonBody.LimbsPosed += StickToArms;
+        if (!IsDead) FirstPersonBody.LimbsPosed += StickToArms;
     }
     private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
 
@@ -95,7 +95,7 @@ public sealed class TentacleCreature : Creature
     /// </summary>
     private void StickToArms()
     {
-        if (!IsCarried || Carrier == null || tentacles == null) return;
+        if (!SimulationEnabled || !IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
             if (tentacle.touchingHand || tentacle.planted || tentacle.stepping || tentacle.pinned) continue;
@@ -264,7 +264,7 @@ public sealed class TentacleCreature : Creature
     /// <summary>Shoots a free arm out to stick at a point. Returns its index, or -1 if every arm is busy.</summary>
     public int PinArm(Vector3 point)
     {
-        if (tentacles == null) return -1;
+        if (!SimulationEnabled || tentacles == null) return -1;
         // The free arm whose tip is nearest the target goes.
         int best = -1;
         float bestDistance = float.MaxValue;
@@ -315,6 +315,7 @@ public sealed class TentacleCreature : Creature
 
     public void Suspend(bool on)
     {
+        if (IsDead) on = false;
         Suspended = on;
         ExternalMovement = on;
         SetMovementPhysics(on, !on);
@@ -371,13 +372,13 @@ public sealed class TentacleCreature : Creature
             float best = huntRadius;
             foreach (FuzzCreature fuzz in FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None))
             {
-                if (fuzz.Caught || fuzz.IsCarried) continue;
+                if (fuzz.IsDead || fuzz.Caught || fuzz.IsCarried) continue;
                 float d = Vector3.Distance(fuzz.transform.position, transform.position);
                 if (d < best) { best = d; prey = fuzz; }
             }
         }
         if (prey == null) return;
-        if (prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
+        if (prey.IsDead || prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
         // Close enough: the arms nearest it let go of the ground and wrap round it.
         if (Vector3.Distance(prey.transform.position, transform.position) < reach * 1.1f)
         {
@@ -402,6 +403,19 @@ public sealed class TentacleCreature : Creature
         holding = false;
         if (tentacles != null) foreach (Tentacle tentacle in tentacles) tentacle.wrapping = false;
         if (cooldown) huntCooldownTimer = huntCooldown;
+    }
+
+    protected override void OnDeath()
+    {
+        LetGo(false);
+        UnpinAll();
+        Suspended = ExternalMovement = Dragged = false;
+        gripping = canClimbUp = canHang = false;
+        plantedTentacles = 0;
+        OnDisableHook();
+        // These meshes were authored in world space. Preserve their pose, then move with the corpse.
+        if (tentacleRoot != null) tentacleRoot.SetParent(transform, true);
+        if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
     }
 
     protected override void TickCreature(float deltaTime)

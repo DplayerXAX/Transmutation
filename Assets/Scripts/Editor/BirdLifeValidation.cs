@@ -53,18 +53,10 @@ public static class BirdLifeValidation
         return root.GetComponent<BirdCreature>();
     }
 
-    private static BirdBones SingleBones(Scene scene)
+    private static void NoReplacementBones(Scene scene)
     {
-        BirdBones found = null;
         foreach (GameObject root in scene.GetRootGameObjects())
-        {
-            BirdBones bones = root.GetComponent<BirdBones>();
-            if (bones == null) continue;
-            Check(found == null, "one remains object per bird");
-            found = bones;
-        }
-        Check(found != null, "death creates bones");
-        return found;
+            Check(root.GetComponent<BirdBones>() == null, "bird death does not spawn replacement bones");
     }
 
     private static PlayerCreatureCarrier Carrier(Scene scene, Vector3 position)
@@ -86,6 +78,7 @@ public static class BirdLifeValidation
     public static string Run()
     {
         if (!Application.isPlaying) throw new InvalidOperationException("Enter Play Mode first.");
+        string lifecycleReport = CreatureLifecycleValidation.Run();
         checks = 0;
         Scene scene = SceneManager.CreateScene("Bird Life Validation " + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
         PhysicsScene physics = scene.GetPhysicsScene();
@@ -95,7 +88,7 @@ public static class BirdLifeValidation
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(BirdFlockSetup.BirdPath);
         try
         {
-            Check(prefab != null && prefab.GetComponent<BirdCreature>().BonesPrefab != null, "authored bird references bones prefab");
+            Check(prefab != null, "authored bird prefab exists");
             CreatureLifecycleValidationProbe probe = Create<CreatureLifecycleValidationProbe>(scene, Vector3.zero);
             Check(probe.Age == 40f && probe.AgeRate == 0f && !probe.IsDead, "shared defaults");
             Age(probe, 100f);
@@ -137,7 +130,8 @@ public static class BirdLifeValidation
             BirdCreature second = Bird(prefab, staging.transform, new Vector3(-2f, 20f, 0f));
             BirdFlockManager manager = first.FlockManager;
             manager.SkyBounds = new Bounds(new Vector3(0f, 20f, 0f), new Vector3(20f, 10f, 20f));
-            Check(first.HuntRadius == 25f && first.HuntDesire == 2f && first.DietTags == Creature.FoodTag.Plant, "bird hunt defaults and plant diet");
+            Check(first.HuntRadius == 25f && first.HuntDesire == prefab.GetComponent<BirdCreature>().HuntDesire &&
+                first.DietTags == Creature.FoodTag.Plant, "bird retains authored hunt tuning and plant diet");
             food = Create<CreatureLifecycleValidationProbe>(scene, new Vector3(0f, 0f, 0f));
             Tags(food, Creature.FoodTag.Plant, Creature.FoodTag.None);
             manager.SimulateStep(0.02f, 0f);
@@ -213,20 +207,31 @@ public static class BirdLifeValidation
             Float(first, "ageRate", 40f);
             Age(first, 1f);
             first.Die();
-            BirdBones bones = SingleBones(scene);
-            Rigidbody boneBody = bones.GetComponent<Rigidbody>();
-            Check(!first.gameObject.activeInHierarchy && manager.RegisteredBirdCount == 0, "dead bird leaves flock immediately");
-            Check(bones.FoodTags == Creature.FoodTag.Matter && bones.DietTags == Creature.FoodTag.None && bones.Age == 40f && bones.AgeRate == 0f,
-                "bones are passive Matter with shared lifespan defaults");
-            Check(boneBody.position == new Vector3(0f, 10f, 0f) && boneBody.linearVelocity == releaseVelocity && boneBody.useGravity,
-                "bones retain death position and velocity with gravity");
+            NoReplacementBones(scene);
+            Rigidbody corpseBody = first.FlightBody;
+            Check(first.gameObject.activeInHierarchy && first.IsDead && manager.RegisteredBirdCount == 0, "dead bird retains its original body and leaves flock immediately");
+            Check(corpseBody.position == new Vector3(0f, 10f, 0f) && corpseBody.linearVelocity == releaseVelocity && corpseBody.useGravity,
+                "original bird retains death position and velocity with gravity");
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
             SceneManager.MoveGameObjectToScene(ground, scene);
             ground.transform.localScale = new Vector3(50f, 1f, 50f);
             ground.transform.position = Vector3.down * 0.5f;
             for (int i = 0; i < 500; i++) physics.Simulate(0.02f);
-            Check(boneBody.position.y > -0.1f && boneBody.position.y < 0.5f && boneBody.linearVelocity.sqrMagnitude < 0.1f,
-                "bones fall and settle on normal ground collisions");
+            Check(corpseBody.position.y > -0.1f && corpseBody.position.y < 0.5f && corpseBody.linearVelocity.sqrMagnitude < 0.1f,
+                "bird corpse falls and settles on normal ground collisions");
+            PlayerCreatureCarrier corpseCarrier = Carrier(scene, corpseBody.position);
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(corpseCarrier, new object[] { first });
+            Check(first.IsCarried && first.IsDead, "original dead bird remains portable");
+            corpseCarrier.Release();
+            Object.DestroyImmediate(corpseCarrier.gameObject);
+            Object.DestroyImmediate(first.gameObject);
+
+            BirdBones bones = Create<BirdBones>(scene, Vector3.up);
+            Rigidbody boneBody = bones.GetComponent<Rigidbody>();
+            Check(bones.IsDead && !bones.SimulationEnabled && bones.Age == 0f && bones.FoodTags == Creature.FoodTag.Matter && bones.DietTags == Creature.FoodTag.None,
+                "existing bones initialize as dead Matter remains");
+            int boneDeaths = 0; bones.Died += _ => boneDeaths++; bones.Die();
+            Check(boneDeaths == 0, "existing remains do not die a second time");
             PlayerCreatureCarrier boneCarrier = Carrier(scene, boneBody.position);
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(boneCarrier, new object[] { bones });
             Check(bones.IsCarried && boneCarrier.CarriedCreature == bones, "bones can be picked up with normal carrier");
@@ -234,7 +239,7 @@ public static class BirdLifeValidation
             Check(!bones.IsCarried && boneBody.useGravity && !boneBody.isKinematic, "released bones resume falling physics");
             Object.DestroyImmediate(boneCarrier.gameObject);
             bones.Consume(null);
-            Check(!bones.IsDead && bones.gameObject.activeInHierarchy, "base Consume hook alone leaves bones intact");
+            Check(bones.IsDead && bones.gameObject.activeInHierarchy, "base Consume hook alone leaves dead bones intact");
             eater = Create<CreatureLifecycleValidationProbe>(scene, Vector3.up);
             Tags(eater, Creature.FoodTag.None, Creature.FoodTag.Matter);
             Check(eater.TryConsumeFood(bones) && bones.IsDead && bones.IsConsumptionPending, "Matter eater consumes bones");
@@ -243,7 +248,7 @@ public static class BirdLifeValidation
             Object.DestroyImmediate(eater.gameObject);
 
             // Test both consumption of a bird and actual capture/hand ownership on death.
-            foreach (string attachment in new[] { "consume", "carry", "web", "bubble", "fallback" })
+            foreach (string attachment in new[] { "consume", "carry", "web", "bubble", "free" })
             {
                 first = Bird(prefab, staging.transform, new Vector3(0f, 10f, 0f));
                 PlayerCreatureCarrier carrier = null;
@@ -254,7 +259,7 @@ public static class BirdLifeValidation
                 {
                     carrier = Carrier(scene, first.transform.position);
                     typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { first });
-                    Check(first.IsCarried, "bird is carried before transformation");
+                    Check(first.IsCarried, "bird is carried before death");
                     Float(first, "ageRate", 1f);
                     Age(first, 1f);
                     Check(first.Age == 39f, "carrying alone does not pause aging");
@@ -277,8 +282,6 @@ public static class BirdLifeValidation
                     Age(first, 10f);
                     Check(first.Age == 40f, "bubble pause freezes age");
                 }
-                if (attachment == "fallback")
-                    typeof(BirdCreature).GetField("bonesPrefab", Private).SetValue(first, null);
                 if (attachment == "carry" || attachment == "web" || attachment == "bubble")
                 {
                     CreatureLifecycleValidationProbe contactFood = Create<CreatureLifecycleValidationProbe>(scene, first.transform.position);
@@ -293,22 +296,21 @@ public static class BirdLifeValidation
                 {
                     eater = Create<CreatureLifecycleValidationProbe>(scene, Vector3.zero);
                     Tags(eater, Creature.FoodTag.None, Creature.FoodTag.Everything);
-                    Check(eater.TryConsumeFood(first), "consuming bird calls its death transformation");
+                    Check(eater.TryConsumeFood(first), "consuming bird records death before intentional removal");
                     Check(!eater.TryConsumeFood(first), "consumed bird cannot produce duplicate remains");
                 }
                 else first.Die();
                 first.Die();
-                bones = SingleBones(scene);
-                Check(!bones.IsCarried && !bones.IsBubbleCaptured && !bones.IsDead && bones.GetComponent<Rigidbody>().useGravity,
-                    attachment + " death releases all ownership and creates falling bones");
+                NoReplacementBones(scene);
+                Check(!first.IsCarried && !first.IsBubbleCaptured && first.IsDead && first.gameObject.activeInHierarchy && first.FlightBody.useGravity,
+                    attachment + " death releases ownership and retains the falling original body");
                 if (carrier != null) Check(carrier.CarriedCreature == null, "death clears carrier ownership");
                 if (webCapture != null)
                 {
                     Check(!webCapture.IsCaptured && !first.SimulationEnabled && web.CaptureCount == 0, "web release cannot revive dead bird");
-                    Check(!web.IsEligible(bones.GetComponent<Rigidbody>()), "released bones inherit a short silk recapture cooldown");
+                    Check(!web.IsEligible(first.FlightBody), "released corpse has a short silk recapture cooldown");
                 }
                 if (bubbleCapture != null) Check(!bubbleCapture.IsCaptured && !first.SimulationEnabled, "bubble release cannot revive dead bird");
-                Object.DestroyImmediate(bones.gameObject);
                 Object.DestroyImmediate(first.gameObject);
                 if (eater != null) Object.DestroyImmediate(eater.gameObject);
                 if (web != null) Object.DestroyImmediate(web.gameObject);
@@ -326,7 +328,7 @@ public static class BirdLifeValidation
             timerBubble.SimulateStep(1f);
             Check(timerBubble.IsPopped, "existing bubble timeout still pops");
 
-            string report = "Bird life and food passed: " + checks + " assertions.";
+            string report = "Bird life and food passed: " + checks + " assertions. " + lifecycleReport;
             Directory.CreateDirectory("Temp/BirdFlockValidation");
             File.WriteAllText("Temp/BirdFlockValidation/life-food.txt", report);
             Debug.Log(report);

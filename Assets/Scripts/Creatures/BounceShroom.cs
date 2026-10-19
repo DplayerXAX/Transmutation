@@ -36,9 +36,9 @@ public sealed class BounceShroom : Creature
     public bool IsExpanded => currentState == ShroomState.Expanded;
     public override bool CanBeCarried => currentState == ShroomState.Compact;
     public override string InteractionPrompt =>
-        currentState == ShroomState.Compact || currentState == ShroomState.Shrinking ? "Expand" : null;
-    public override string CarriedPrompt => "[LMB] Expand and place";
-    public override bool CanUseWhileCarried => true;
+        !IsDead && (currentState == ShroomState.Compact || currentState == ShroomState.Shrinking) ? "Expand" : null;
+    public override string CarriedPrompt => IsDead ? null : "[LMB] Expand and place";
+    public override bool CanUseWhileCarried => !IsDead;
 
     protected override void InitializeCreature()
     {
@@ -126,6 +126,11 @@ public sealed class BounceShroom : Creature
     }
 
     protected override void TickCreature(float deltaTime) { }
+
+    protected override void OnDeath()
+    {
+        if (surface != null) surface.SetBouncy(false);
+    }
 
     private void ApplySize()
     {
