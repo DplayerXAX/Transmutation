@@ -171,7 +171,31 @@ public sealed class HandClimber : MonoBehaviour
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
-    public bool CanStartClimb => canStartClimb;
+    public bool CanStartClimb => GooAllowsClimbing && canStartClimb;
+    private PlayerGooCoating gooCoating;
+    private bool GooAllowsClimbing
+    {
+        get
+        {
+            // Also supports a supply component added by an explicit runtime test fixture.
+            if (gooCoating == null && controller != null)
+            {
+                gooCoating = controller.GetComponent<PlayerGooCoating>();
+                if (gooCoating != null) gooCoating.RegisterClimber(this);
+            }
+            return gooCoating != null && gooCoating.CanClimb;
+        }
+    }
+
+    public void StopForGooDepletion()
+    {
+        canStartClimb = false;
+        lungeTimer = 0f;
+        if (!climbing) return;
+        lastEvent = "Let go: goo depleted";
+        Exit(Vector3.zero);
+        if (body != null) body.useGravity = true;
+    }
     public string LastEvent => lastEvent;
 
     /// <summary>For automated tests: when set, used instead of the keyboard (x = right, y = up).</summary>
@@ -224,6 +248,8 @@ public sealed class HandClimber : MonoBehaviour
     {
         if (controller == null) controller = FindFirstObjectByType<SmoothFirstPersonController>();
         if (controller == null) return;
+        gooCoating = controller.GetComponent<PlayerGooCoating>();
+        if (gooCoating != null) gooCoating.RegisterClimber(this);
         body = controller.GetComponent<Rigidbody>();
         orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         var capsule = controller.GetComponent<CapsuleCollider>();
@@ -261,6 +287,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
+        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
         if (BoneRide.Mount != null) { canStartClimb = false; return; }
         if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
@@ -357,6 +384,8 @@ public sealed class HandClimber : MonoBehaviour
 
     private void FixedUpdate()
     {
+
+        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
         if (BoneRide.Mount != null || !climbing || mantling || body == null) return;
         // Eased pull: the body speeds up and settles instead of sliding at a constant speed.
         float scale = SpeedScale();
@@ -404,6 +433,8 @@ public sealed class HandClimber : MonoBehaviour
 
     private bool FindWall(out RaycastHit hit)
     {
+        hit = default;
+        if (!GooAllowsClimbing) return false;
         Vector3 origin = controller.transform.position + Vector3.up * 0.3f;
         if (!Physics.SphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
             return false;
@@ -426,6 +457,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void TryStartClimb()
     {
+        if (!GooAllowsClimbing) return;
         if (!FindWall(out RaycastHit wall)) return;
         wallNormal = wall.normal;
         for (int i = 0; i < 2; i++)

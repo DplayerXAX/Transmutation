@@ -543,7 +543,7 @@ public sealed class FireEater : Creature
 
     private void TryEat(Collider touchedObject)
     {
-        if (digestionTimer > 0f)
+        if (!SimulationEnabled || !isActiveAndEnabled || digestionTimer > 0f)
         {
             return;
         }

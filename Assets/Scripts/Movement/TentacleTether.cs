@@ -89,6 +89,19 @@ public sealed class TentacleTether : MonoBehaviour
 
     public int CordCount => cords.Count;
 
+    public void ReleaseCreature(TentacleCreature creature)
+    {
+        for (int i = cords.Count - 1; i >= 0; i--)
+            if (cords[i].creature == creature) RemoveCord(i);
+        if (lastCarried == creature)
+        {
+            lastCarried = null;
+            pinnedArms.Clear();
+            restLengths.Clear();
+            aiming = aimValid = false;
+        }
+    }
+
     /// <summary>The player's tether (for the arm pose while aiming).</summary>
     public static TentacleTether Instance { get; private set; }
     public bool Aiming => aiming;
@@ -113,13 +126,14 @@ public sealed class TentacleTether : MonoBehaviour
         if (carrier == null) return;
         // A hung creature picked up again: the cord is gone and its arms come back.
         for (int i = cords.Count - 1; i >= 0; i--)
-            if (cords[i].creature == null || cords[i].creature.IsCarried) RemoveCord(i);
+            if (cords[i].creature == null || cords[i].creature.IsDead || cords[i].creature.IsCarried) RemoveCord(i);
 
         TentacleCreature carried = carrier.CarriedCreature as TentacleCreature;
+        if (carried != null && carried.IsDead) carried = null;
         if (carried == null)
         {
             // Just set down: with two arms stuck it hangs between them as a cord; otherwise its arms come back.
-            if (lastCarried != null)
+            if (lastCarried != null && !lastCarried.IsDead)
             {
                 List<Vector3> pins = lastCarried.PinnedPoints();
                 if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], lastCarried);
@@ -183,7 +197,7 @@ public sealed class TentacleTether : MonoBehaviour
     public void FireAt(Vector3 point, Transform anchor)
     {
         TentacleCreature creature = carrier != null ? carrier.CarriedCreature as TentacleCreature : null;
-        if (creature == null) return;
+        if (creature == null || !creature.SimulationEnabled) return;
         if (pinnedArms.Count >= 2)
         {
             creature.UnpinArm(pinnedArms[0]);
@@ -349,41 +363,65 @@ public sealed class TentacleTether : MonoBehaviour
         strip.center = new Vector3(0f, -0.1f, 0f);
     }
 
-    private void FixedUpdate()
+   
+private void FixedUpdate()
+{
+    for (int i = cords.Count - 1; i >= 0; i--)
+        if (cords[i].creature == null || cords[i].creature.IsDead)
+            RemoveCord(i);
+
+    foreach (Cord cord in cords)
+        if (cord.creature.SimulationEnabled)
+            Spring(cord, Time.fixedDeltaTime);
+
+    if (reeling && pinnedArms.Count > 0)
+        ReelIn(Time.fixedDeltaTime);
+    else
+        PullBack();
+}
+
+/// <summary>
+/// Holding the reel key: the newest stuck arm shortens, hauling the player along it towards where it stuck,
+/// gravity held off while it pulls. Close to the end the player hangs there until the hands take the wall.
+/// </summary>
+private void ReelIn(float deltaTime)
+{
+    if (playerBody == null || playerBody.isKinematic || carrier == null) return;
+    if (!(carrier.CarriedCreature is TentacleCreature creature)) return;
+    if (pinnedArms.Count == 0) return;
+
+    int arm = pinnedArms[pinnedArms.Count - 1];
+    if (!creature.ArmPin(arm, out Vector3 pin)) return;
+
+    if (reeledArm != arm)
     {
-        foreach (Cord cord in cords) Spring(cord, Time.fixedDeltaTime);
-        if (reeling) ReelIn(Time.fixedDeltaTime);
-        else PullBack();
+        reeledArm = arm;
+        Vector3 flat = Vector3.ProjectOnPlane(pin - playerBody.position, Vector3.up);
+        reelApproach = flat.sqrMagnitude > 1e-4f ? flat.normalized : Vector3.forward;
     }
 
-    /// <summary>
-    /// Holding the reel key: the newest stuck arm shortens, hauling the player along it towards where it stuck,
-    /// gravity held off while it pulls. Close to the end the player hangs there until the hands take the wall.
-    /// </summary>
-    private void ReelIn(float deltaTime)
-    {
-        if (playerBody == null || playerBody.isKinematic || carrier == null) return;
-        if (!(carrier.CarriedCreature is TentacleCreature creature)) return;
-        int arm = pinnedArms[pinnedArms.Count - 1];
-        if (!creature.ArmPin(arm, out Vector3 pin)) return;
-        if (reeledArm != arm)
-        {
-            // Hauled to just in front of where it stuck, the hands about level with it: close enough to grab.
-            reeledArm = arm;
-            Vector3 flat = Vector3.ProjectOnPlane(pin - playerBody.position, Vector3.up);
-            reelApproach = flat.sqrMagnitude > 1e-4f ? flat.normalized : Vector3.forward;
-        }
-        Vector3 goal = pin - reelApproach * 0.6f + Vector3.down * 0.5f;
-        Vector3 to = goal - playerBody.position;
-        float distance = to.magnitude;
-        Vector3 want = distance > 0.15f ? to / distance * Mathf.Min(reelSpeed, distance * 4f) : Vector3.zero;
-        Vector3 velocity = Vector3.MoveTowards(playerBody.linearVelocity, want, reelAcceleration * deltaTime);
-        var controller = playerBody.GetComponent<SmoothFirstPersonController>();
-        // Fling lifts the walking limits and the heavier fall for a moment, so the pull is not fought.
-        if (controller != null) controller.Fling(velocity, 0.15f); else playerBody.linearVelocity = velocity;
-        playerBody.AddForce(-Physics.gravity, ForceMode.Acceleration);
-        restLengths[arm] = Mathf.Min(restLengths.TryGetValue(arm, out float r) ? r : distance, distance);
-    }
+    Vector3 goal = pin - reelApproach * 0.6f + Vector3.down * 0.5f;
+    Vector3 to = goal - playerBody.position;
+    float distance = to.magnitude;
+    Vector3 want = distance > 0.15f
+        ? to / distance * Mathf.Min(reelSpeed, distance * 4f)
+        : Vector3.zero;
+
+    Vector3 velocity = Vector3.MoveTowards(
+        playerBody.linearVelocity, want, reelAcceleration * deltaTime);
+
+    var controller = playerBody.GetComponent<SmoothFirstPersonController>();
+    if (controller != null)
+        controller.Fling(velocity, 0.15f);
+    else
+        playerBody.linearVelocity = velocity;
+
+    playerBody.AddForce(-Physics.gravity, ForceMode.Acceleration);
+    restLengths[arm] = Mathf.Min(
+        restLengths.TryGetValue(arm, out float r) ? r : distance,
+        distance);
+}
+
 
     /// <summary>
     /// Stuck arms on a carried creature are springs: walk further from where one stuck than it was shot and it
@@ -393,6 +431,7 @@ public sealed class TentacleTether : MonoBehaviour
     {
         if (playerBody == null || playerBody.isKinematic || carrier == null) return;
         if (!(carrier.CarriedCreature is TentacleCreature creature)) return;
+        if (!creature.SimulationEnabled) return;
         List<Vector3> pins = creature.PinnedPoints();
         if (pins.Count == 0) return;
         Vector3 pull = Vector3.zero;
