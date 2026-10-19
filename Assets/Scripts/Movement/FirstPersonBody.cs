@@ -160,7 +160,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || !carrier.CarriesTentacle)) interactTimer = 0.3f;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)))) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;
         // Landing after a real jump or fall: knees bend, arms dip, harder the faster the fall.
@@ -241,6 +241,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         bool tentacleOnHand = false;
         bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null && !carrier.CarriesTentacle;
         bool petting = side < 0f && petter != null && petter.IsPetting && !climbing;
+        bool riding = carrier != null && carrier.TentacleLockedForRide;
         bool poking = side < 0f && interactTimer > 0f && !petting;
         // Right hand reaching out for a creature when the pickup button is pressed.
         float grabAge = side > 0f && carrier != null ? Time.time - carrier.LastGrabTime : 10f;
@@ -248,7 +249,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         bool grabbing = grabAge < GrabTime && !climbing && carrier.CarriedCreature == null;
         carrying |= grabbing;
         // Arms hang from the body (so looking around does not swing them), except while holding or poking something in view.
-        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || petting || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
+        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, riding || carrying || poking || petting || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
 
         Vector3 eye = view.position;
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
@@ -268,7 +269,16 @@ public sealed class FirstPersonBody : MonoBehaviour
         int pointing = -1;   // A finger that stays straight (index finger when poking).
         float flutter = 0f;  // Small independent finger movement.
 
-        if (climbing && climber.GetHand(side > 0f ? 1 : 0, out Vector3 hold, out Vector3 wallNormal, out bool gripping))
+        if (riding)
+        {
+            // Each hand holds a rein; pulling it brings that hand back towards the shoulder.
+            bool pulling = side < 0f ? BoneRide.LeftReinHeld : BoneRide.RightReinHeld;
+            Vector3 local = new Vector3(side * 0.3f, pulling ? -0.32f : -0.42f, pulling ? 0.3f : 0.58f);
+            target = Vector3.Lerp(arm.end.position, view.TransformPoint(local), 1f - Mathf.Exp(-12f * deltaTime));
+            palmNormal = -view.up;
+            grip = pulling ? 1f : 0.7f;
+        }
+        else if (climbing && climber.GetHand(side > 0f ? 1 : 0, out Vector3 hold, out Vector3 wallNormal, out bool gripping))
         {
             target = hold + wallNormal * 0.04f;
             palmNormal = wallNormal;

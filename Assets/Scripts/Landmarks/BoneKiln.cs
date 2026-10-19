@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 /// <summary>
@@ -17,6 +18,7 @@ using UnityEngine.Rendering;
 /// (every vertebra turned further round, its ribs turning with it) and it roams the whole map, crawling over
 /// the ground and taking to the air, its ribs rippling like legs and fins. The mouth of the cave is left open.
 /// </summary>
+[DefaultExecutionOrder(-40)] // moves before the player's camera follows a rider
 public sealed class BoneKiln : MonoBehaviour
 {
     [SerializeField] private ProceduralWorld world;
@@ -65,6 +67,15 @@ public sealed class BoneKiln : MonoBehaviour
     [SerializeField] private Vector2 travelHeights = new Vector2(3f, 24f);
     [Tooltip("Seconds between switching from crawling to flying and back (random in this range).")]
     [SerializeField] private Vector2 modeTime = new Vector2(25f, 45f);
+
+    [Header("Children")]
+    [Tooltip("Her young, curled up round the mouth of the hole (BoneChild). Warm one with fire to ride it.")]
+    [Range(0, 6)] [SerializeField] private int children = 3;
+
+    [Header("Nearby Tentacles")]
+    [Tooltip("Creature settings to copy for the tentacles wandering near the children and bubble nests.")]
+    [SerializeField] private TentacleCreature tentacleTemplate;
+    [Range(0, 6)] [SerializeField] private int nearbyTentacles = 3;
 
     [Header("Rewards")]
     [SerializeField] private string seedId = "kiln_seed";
@@ -165,9 +176,28 @@ public sealed class BoneKiln : MonoBehaviour
 
         if (awake)
         {
+            // Ridden: [C] by the skull climbs on (and off). With tentacle reins in her spine she goes where the rider looks.
+            if (Ridden) { if (BoneRide.CanToggle && BoneRide.PressedC()) { BoneRide.GetOff(); PickWaypoint(); } }
+            else if (BoneRide.Mount == null && BoneRide.CanToggle && skull != null && BoneRide.Near(skull.position, 6f, root) && BoneRide.PressedC())
+                BoneRide.GetOn(this, root, skull, ReinPoints());
             MoveHead(Time.deltaTime);
             PlaceBody();
+            if (Ridden && skull != null) BoneRide.Seat(skull.position + skull.up * 2.6f);
         }
+    }
+
+    /// <summary>True while the player rides her.</summary>
+    public bool Ridden => BoneRide.Mount == (object)this;
+    public bool Reined => BoneRide.Reins(root) >= 2;
+    public Transform Skull => skull;
+
+    /// <summary>Two vertebrae just behind the skull, for the reins.</summary>
+    private IEnumerable<Transform> ReinPoints()
+    {
+        var near = new List<Station>(stations);
+        near.Sort((x, y) => Vector3.Distance(x.transform.position, skull.position).CompareTo(Vector3.Distance(y.transform.position, skull.position)));
+        if (near.Count > 1) yield return near[1].transform;
+        if (near.Count > 3) yield return near[3].transform;
     }
 
     // ---------------- Building ----------------
@@ -376,6 +406,30 @@ public sealed class BoneKiln : MonoBehaviour
         // Bone shards, loose vertebrae, glassy rib tips and flora scattered round the mouth.
         LandmarkDecor.Kiln(root, mouth, holeRadius, GroundHeight, boneMaterial, ribMaterial, floraMaterial, seed);
 
+        // Her young, curled up round the mouth, away from where her tail lies.
+        for (int c = 0; c < children; c++)
+        {
+            float angle = 120f + c * (120f / Mathf.Max(1, children - 1)) + (float)random.NextDouble() * 15f;
+            Vector3 dir = Quaternion.Euler(0f, angle, 0f) * heading;
+            Vector3 spot = mouth + dir * (R + 10f + (float)random.NextDouble() * 4f);
+            spot.y = GroundHeight(spot);
+            BoneChild.Spawn(root, spot, Quaternion.LookRotation(-dir).eulerAngles.y, seed * 31 + c, boneMaterial, ribMaterial != null ? ribMaterial : boneMaterial, mouth);
+        }
+        // Three little nests on the children's side that let fire bubbles float up; the bubbles drift over to her.
+        if (children > 0)
+            for (int n = 0; n < 3; n++)
+            {
+                Vector3 dir = Quaternion.Euler(0f, 130f + n * 50f, 0f) * heading;
+                Vector3 spot = mouth + dir * (R + 16f);
+                spot.y = GroundHeight(spot);
+                // They gather in front of her face, just outside the fence of her ribs (so the children are not under them).
+                Vector3 gather = mouth - heading * (R + 9f);
+                gather.y = GroundHeight(gather);
+                KilnBubbleNest.Build(root, spot, boneMaterial, seed * 17 + n, gather, heartPoint);
+            }
+
+        SpawnNearbyTentacles(heading, R);
+
         // Bones become climbable ground only now, so the ground probes above never hit them.
         foreach (Station station in stations) station.transform.gameObject.layer = 7;
         skull.gameObject.layer = 7;
@@ -527,6 +581,12 @@ public sealed class BoneKiln : MonoBehaviour
             desired = (waypoint - head).normalized;
             speed = crawlSpeed * 0.7f;
             if ((waypoint - head).magnitude < 3f) { emerging = false; PickWaypoint(); }
+        }
+        else if (Ridden && Reined)
+        {
+            desired = BoneRide.Steer(deltaTime);
+            speed = flySpeed;
+            flying = head.y > GroundHeight(head) + 6f;
         }
         else
         {
@@ -740,6 +800,38 @@ public sealed class BoneKiln : MonoBehaviour
 
     // ---------------- Helpers ----------------
 
+    private void SpawnNearbyTentacles(Vector3 heading, float radius)
+    {
+        if (nearbyTentacles <= 0) return;
+        if (tentacleTemplate == null)
+            foreach (TentacleCreature creature in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None))
+                if (!creature.IsCarried && !creature.IsDead && creature.GetComponent<SpireCrawler>() == null)
+                { tentacleTemplate = creature; break; }
+        if (tentacleTemplate == null) return;
+
+        string settings = JsonUtility.ToJson(tentacleTemplate);
+        for (int i = 0; i < nearbyTentacles; i++)
+        {
+            float angle = nearbyTentacles == 1 ? 180f : Mathf.Lerp(105f, 255f, i / (float)(nearbyTentacles - 1));
+            Vector3 spot = mouth + Quaternion.Euler(0f, angle, 0f) * heading * (radius + 21f);
+            spot.y = GroundHeight(spot) + 1f;
+            // Activate only after placement/settings, so it builds its own body and wanders around this spot.
+            var go = new GameObject($"Kiln Tentacle {i + 1}") { layer = tentacleTemplate.gameObject.layer };
+            go.SetActive(false);
+            go.transform.SetParent(root, false);
+            go.transform.position = spot;
+            go.transform.localScale = tentacleTemplate.transform.localScale;
+            var collider = go.AddComponent<SphereCollider>();
+            SphereCollider sourceCollider = tentacleTemplate.GetComponent<SphereCollider>();
+            collider.radius = sourceCollider != null ? sourceCollider.radius : 0.45f;
+            collider.center = sourceCollider != null ? sourceCollider.center : Vector3.zero;
+            var copy = go.AddComponent<TentacleCreature>();
+            JsonUtility.FromJsonOverwrite(settings, copy);
+            JsonUtility.FromJsonOverwrite($"{{\"seed\":{seed * 53 + i},\"wanderRadius\":3,\"simulationEnabled\":true}}", copy);
+            go.SetActive(true);
+        }
+    }
+
     private LandmarkPickup Pickup(string name, Vector3 position, LandmarkPickup.Kind kind)
     {
         var go = new GameObject(name);
@@ -774,4 +866,6 @@ public sealed class BoneKiln : MonoBehaviour
         glyphMaterial = glyph;
         seedMaterial = seedPod;
     }
+
+    public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
 }
