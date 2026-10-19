@@ -1,7 +1,8 @@
 # Corrupt Seed
 
 A passive, carryable seed with Plant food tags, no diet, and zero automatic aging.
-It has no movement decisions, direct-use action, nutrition, or autonomous reproduction.
+It has no movement decisions, direct-use action, or autonomous reproduction. Its inherited
+Nutrition supplies a meal budget (default 120); only the actual eater receives infection.
 
 Run **Tools > Creatures > Create Corrupt Seed Assets** outside Play Mode, then place
 `Assets/Prefabs/Creatures/CorruptSeed.prefab` wherever you want. Setup is repeatable:
@@ -14,10 +15,14 @@ adds or updates a `CorruptSeedInfection` component on the consumer. Its presence
 represents infection; the parent has no parasite-specific flag. Additional seed meals
 merge food flags into one infection, retaining its first offspring template.
 
+TimeSpider's Age drain is separate from ordinary consumption and never calls this
+effect: draining a seed does not infect the spider. A victim infected before being
+drained still produces its normal brood when Age reaches zero.
+
 `Creature.Died` is a synchronous C# event, raised exactly once from `base.Die()` after
-the creature becomes dead and simulation stops. It runs before subclass death
-transformations remove the host. Overrides must call `base.Die()` and guard repeated
-death. Listeners must react independently, leave host removal to its lifecycle code,
+the creature becomes dead, simulation stops, and `OnDeath()` cleans up abilities. Shared
+Age expiry then invokes `OnAgeDeath()` for age-specific remains. Direct death and consumption
+do not invoke that hook. Listeners must react independently, leave host removal to its lifecycle code,
 and unsubscribe when their owner is removed. Listener exceptions are logged separately
 so other listeners and normal death behavior can continue. No scene-wide event bus is used.
 
@@ -30,8 +35,9 @@ Creature.FoodTag.Plant | accumulatedSeedTags | deadHost.FoodTags
 ```
 
 Flags accumulate across generations. Plant seeds from a Meat host become Plant + Meat;
-a later Matter host adds Matter. Untagged hosts add nothing. The bird prefab is currently
-untagged; its normal bones are Matter, but bones tags are not the dead bird's tags.
+a later Matter host adds Matter. Untagged hosts add nothing. Offspring use the original bird's
+tags, not the Matter tags of its bones. An infected bird's age death leaves bones plus seeds;
+other deaths follow the normal corpse or consumption behavior and still produce seeds.
 Infection does not change the host's food, diet, age, movement, or heat. Eating an infected
 host does not directly infect its predator. Seeds never eat, even after gaining Meat tags.
 

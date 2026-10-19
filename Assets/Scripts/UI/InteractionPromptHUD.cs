@@ -181,6 +181,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         ? PickUpHint() : "[" + (UsesToggleKey ? ToggleName : "RMB") + "] " + target.PickupActionPrompt;
 
     private string DropHint() =>
+        carrier != null && carrier.TentacleLockedForRide ? "Dismount before dropping the tentacle" :
         UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;
 
     private string NameOf(Creature creature)

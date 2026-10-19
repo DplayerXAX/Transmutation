@@ -15,9 +15,9 @@ public sealed class BubbleFlower : Creature
     private bool wasCarried;
 
     public TrappingBubble LastShot { get; private set; }
-    public override bool CanUseWhileCarried => true;
-    public override string CarriedPrompt => "[LMB] Shoot bubble";
-    public override string InteractionPrompt => IsCarried ? "Shoot bubble" : null;
+    public override bool CanUseWhileCarried => !IsDead;
+    public override string CarriedPrompt => IsDead ? null : "[LMB] Shoot bubble";
+    public override string InteractionPrompt => !IsDead && IsCarried ? "Shoot bubble" : null;
 
     protected override void InitializeCreature()
     {

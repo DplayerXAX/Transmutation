@@ -85,7 +85,7 @@ public sealed class TentacleCreature : Creature
     protected override void OnEnable()
     {
         base.OnEnable();
-        FirstPersonBody.LimbsPosed += StickToArms;
+        if (!IsDead) FirstPersonBody.LimbsPosed += StickToArms;
     }
     private void OnDisableHook() => FirstPersonBody.LimbsPosed -= StickToArms;
 
@@ -95,7 +95,7 @@ public sealed class TentacleCreature : Creature
     /// </summary>
     private void StickToArms()
     {
-        if (!IsCarried || Carrier == null || tentacles == null) return;
+        if (!SimulationEnabled || !IsCarried || Carrier == null || tentacles == null) return;
         foreach (Tentacle tentacle in tentacles)
         {
             if (tentacle.touchingHand || tentacle.planted || tentacle.stepping || tentacle.pinned) continue;
@@ -139,7 +139,7 @@ public sealed class TentacleCreature : Creature
     }
 
     /// <summary>The player carrying this creature is climbing (the climber drives the body kinematically).</summary>
-    private bool PlayerClimbing => IsCarried && Carrier.PlayerBody != null && Carrier.PlayerBody.isKinematic;
+    private bool PlayerClimbing => IsCarried && BoneRide.Mount == null && Carrier.PlayerBody != null && Carrier.PlayerBody.isKinematic;
 
     /// <summary>Enough tentacles are holding a surface to support the player.</summary>
     public bool IsGripping => gripping;
@@ -163,6 +163,8 @@ public sealed class TentacleCreature : Creature
     {
         get
         {
+            if (Carrier != null && Carrier.TentacleLockedForRide)
+                return "[LMB] Turn left    [RMB] Turn right    [W/S] Up/Down    [C] Dismount";
             if (!gripping) return null;
             bool grounded = Carrier != null && Carrier.PlayerController != null && Carrier.PlayerController.Grounded;
             string up = canClimbUp ? climbUpPrompt : null;
@@ -182,6 +184,10 @@ public sealed class TentacleCreature : Creature
         public bool wrapping;            // Wrapped round caught prey.
         public bool pinned;              // Shot out and stuck to a point (TentacleTether).
         public Vector3 pinPoint;
+        // Stuck to something that moves (a bone child, the colossus): the point rides along with it.
+        public Transform pinAnchor;
+        public Vector3 pinLocal;
+        public Vector3 Pin => pinAnchor != null ? pinAnchor.TransformPoint(pinLocal) : pinPoint;
         public float pinTime;
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
@@ -262,9 +268,12 @@ public sealed class TentacleCreature : Creature
     // ---------------- Shot-out arms (TentacleTether) ----------------
 
     /// <summary>Shoots a free arm out to stick at a point. Returns its index, or -1 if every arm is busy.</summary>
-    public int PinArm(Vector3 point)
+    public int PinArm(Vector3 point) => PinArm(point, null);
+
+    /// <summary>Like PinArm, but stuck to anchor: the arm's end moves with it.</summary>
+    public int PinArm(Vector3 point, Transform anchor)
     {
-        if (tentacles == null) return -1;
+        if (!SimulationEnabled || tentacles == null) return -1;
         // The free arm whose tip is nearest the target goes.
         int best = -1;
         float bestDistance = float.MaxValue;
@@ -280,14 +289,35 @@ public sealed class TentacleCreature : Creature
         arm.pinned = true;
         arm.planted = arm.stepping = false;
         arm.pinPoint = point;
+        arm.pinAnchor = anchor;
+        arm.pinLocal = anchor != null ? anchor.InverseTransformPoint(point) : Vector3.zero;
         arm.pinTime = Time.time;
         return best;
+    }
+
+    /// <summary>Where a shot arm is stuck (false if that arm is not stuck).</summary>
+    public bool ArmPin(int index, out Vector3 point)
+    {
+        point = default;
+        if (tentacles == null || index < 0 || index >= tentacles.Length || !tentacles[index].pinned) return false;
+        point = tentacles[index].Pin;
+        return true;
     }
 
     public void UnpinArm(int index)
     {
         if (tentacles == null || index < 0 || index >= tentacles.Length) return;
         tentacles[index].pinned = false;
+    }
+
+    /// <summary>How many arms are stuck into something under root (reins in a bone child or the colossus).</summary>
+    public int PinnedInto(Transform root)
+    {
+        int n = 0;
+        if (tentacles != null && root != null)
+            foreach (Tentacle t in tentacles)
+                if (t.pinned && t.pinAnchor != null && t.pinAnchor.IsChildOf(root)) n++;
+        return n;
     }
 
     /// <summary>How many arms are shot out and stuck right now.</summary>
@@ -300,7 +330,7 @@ public sealed class TentacleCreature : Creature
     public List<Vector3> PinnedPoints()
     {
         var points = new List<Vector3>();
-        if (tentacles != null) foreach (Tentacle t in tentacles) if (t.pinned) points.Add(t.pinPoint);
+        if (tentacles != null) foreach (Tentacle t in tentacles) if (t.pinned) points.Add(t.Pin);
         return points;
     }
 
@@ -315,6 +345,7 @@ public sealed class TentacleCreature : Creature
 
     public void Suspend(bool on)
     {
+        if (IsDead) on = false;
         Suspended = on;
         ExternalMovement = on;
         SetMovementPhysics(on, !on);
@@ -371,13 +402,13 @@ public sealed class TentacleCreature : Creature
             float best = huntRadius;
             foreach (FuzzCreature fuzz in FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None))
             {
-                if (fuzz.Caught || fuzz.IsCarried) continue;
+                if (fuzz.IsDead || fuzz.Caught || fuzz.IsCarried) continue;
                 float d = Vector3.Distance(fuzz.transform.position, transform.position);
                 if (d < best) { best = d; prey = fuzz; }
             }
         }
         if (prey == null) return;
-        if (prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
+        if (prey.IsDead || prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
         // Close enough: the arms nearest it let go of the ground and wrap round it.
         if (Vector3.Distance(prey.transform.position, transform.position) < reach * 1.1f)
         {
@@ -402,6 +433,19 @@ public sealed class TentacleCreature : Creature
         holding = false;
         if (tentacles != null) foreach (Tentacle tentacle in tentacles) tentacle.wrapping = false;
         if (cooldown) huntCooldownTimer = huntCooldown;
+    }
+
+    protected override void OnDeath()
+    {
+        LetGo(false);
+        UnpinAll();
+        Suspended = ExternalMovement = Dragged = false;
+        gripping = canClimbUp = canHang = false;
+        plantedTentacles = 0;
+        OnDisableHook();
+        // These meshes were authored in world space. Preserve their pose, then move with the corpse.
+        if (tentacleRoot != null) tentacleRoot.SetParent(transform, true);
+        if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
     }
 
     protected override void TickCreature(float deltaTime)
@@ -597,7 +641,7 @@ public sealed class TentacleCreature : Creature
             {
                 // Shot out: the arm stretches from the body to where it stuck, whipping out over a moment.
                 float shoot = Mathf.Clamp01((Time.time - tentacle.pinTime) / 0.18f);
-                tentacle.foot = Vector3.Lerp(tentacle.foot, tentacle.pinPoint, shoot < 1f ? 1f - Mathf.Exp(-25f * deltaTime) : 1f);
+                tentacle.foot = Vector3.Lerp(tentacle.foot, tentacle.Pin, shoot < 1f ? 1f - Mathf.Exp(-25f * deltaTime) : 1f);
                 LayoutTentacle(tentacle);
                 continue;
             }
@@ -814,7 +858,18 @@ public sealed class TentacleCreature : Creature
         tentacle.hasVia = tentacle.pinned && IsCarried && Carrier != null && Carrier.HandAnchor != null;
         if (tentacle.hasVia)
         {
-            tentacle.via = Carrier.HandAnchor.position;
+            Transform hand = Carrier.HandAnchor;
+            if (BoneRide.MountRoot != null && tentacle.pinAnchor != null && tentacle.pinAnchor.IsChildOf(BoneRide.MountRoot))
+            {
+                // The first rein goes through the left hand, the second through the right.
+                foreach (Tentacle other in tentacles)
+                {
+                    if (!other.pinned || other.pinAnchor == null || !other.pinAnchor.IsChildOf(BoneRide.MountRoot)) continue;
+                    if (other == tentacle && Carrier.LeftHandAnchor != null) hand = Carrier.LeftHandAnchor;
+                    break;
+                }
+            }
+            tentacle.via = hand.position;
             float toHand = Vector3.Distance(root, tentacle.via), outOfHand = Vector3.Distance(tentacle.via, tentacle.foot);
             // A good share of the joints for the short stretch to the hand, so it bends smoothly there.
             tentacle.viaShare = Mathf.Clamp(toHand / Mathf.Max(0.01f, toHand + outOfHand), 0.2f, 0.45f);

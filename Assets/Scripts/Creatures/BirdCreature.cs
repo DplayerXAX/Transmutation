@@ -22,10 +22,21 @@ public sealed class BirdCreature : Creature
     [Header("Food Attraction")]
     [Tooltip("Maximum world-space distance to compatible food, including food outside the sky volume.")]
     [Min(0f)] [SerializeField] private float huntRadius = 25f;
-    [Tooltip("Food steering weight, combined with all other flock weights. Zero disables seeking and eating.")]
+    [Tooltip("Maximum food steering weight, scaled by Hunger. Zero disables seeking and eating.")]
     [Min(0f)] [SerializeField] private float huntDesire = 2f;
 
-    [Header("Remains")]
+    [Header("Hunger")]
+    [Tooltip("0 is full; 100 is very hungry. Hunger does not cause starvation death.")]
+    [Range(0f, 100f)] [SerializeField] private float hunger = 50f;
+    [Tooltip("Hunger gained per second while creature simulation runs, including carrying.")]
+    [Min(0f)] [SerializeField] private float hungerRate = 0.25f;
+    [Tooltip("Minimum Hunger required to seek or physically eat food. Shared meals can feed less hungry birds.")]
+    [Range(0f, 100f)] [SerializeField] private float appetiteThreshold = 20f;
+    [Tooltip("Other compatible, hungry flying birds within this distance of the food share its fixed nutrition budget.")]
+    [Min(0f)] [SerializeField] private float nutritionSharingRadius = 10f;
+
+    [Header("Ageing Remains")]
+    [Tooltip("Bones left only when Age expires. Direct death and consumption follow the shared creature lifecycle. An empty reference uses automatic placeholder bones.")]
     [SerializeField] private BirdBones bonesPrefab;
 
     private Rigidbody body;
@@ -41,6 +52,9 @@ public sealed class BirdCreature : Creature
     public float SearchRadius => Mathf.Max(neighborRadius, separationDistance);
     public float HuntRadius => huntRadius;
     public float HuntDesire => huntDesire;
+    public float Hunger => Mathf.Clamp(hunger, 0f, 100f);
+    public float EffectiveHuntDesire => Hunger > 0f && Hunger >= appetiteThreshold
+        ? Mathf.Max(0f, huntDesire) * Hunger / 100f : 0f;
     public Creature FoodTarget { get; private set; }
     public BirdBones BonesPrefab => bonesPrefab;
     public bool IsFlying => isActiveAndEnabled && SimulationEnabled && !IsDead && !IsConsumptionPending && !IsCarried && !IsBubbleCaptured && !IsWebCaptured && body != null && !body.isKinematic;
@@ -51,7 +65,7 @@ public sealed class BirdCreature : Creature
         webCapture = GetComponent<WebCapture>();
         lastHeadingWS = transform.forward;
         SetCreatureName("Bird");
-        if (!Application.isPlaying) return;
+        if (!Application.isPlaying || IsDead) return;
         SetMovementPhysics(false, false);
         body.interpolation = RigidbodyInterpolation.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
@@ -62,7 +76,7 @@ public sealed class BirdCreature : Creature
     protected override void OnEnable()
     {
         base.OnEnable();
-        if (Application.isPlaying) EnsureRegistered();
+        if (Application.isPlaying && !IsDead) EnsureRegistered();
     }
 
     private void EnsureRegistered()
@@ -75,6 +89,8 @@ public sealed class BirdCreature : Creature
 
     protected override void TickCreature(float deltaTime)
     {
+        if (!isActiveAndEnabled || !SimulationEnabled || IsDead || IsConsumptionPending) return;
+        if (deltaTime > 0f) hunger = Mathf.Clamp(Hunger + Mathf.Max(0f, hungerRate) * deltaTime, 0f, 100f);
         // Also repairs registration after a manager is destroyed or this bird moves between scenes.
         EnsureRegistered();
     }
@@ -87,29 +103,21 @@ public sealed class BirdCreature : Creature
         FoodTarget = null;
     }
 
-    public override void Die()
+    protected override void OnDeath()
     {
-        if (IsDead) return;
-        Vector3 position = body != null ? body.position : transform.position;
-        Quaternion rotation = body != null ? body.rotation : transform.rotation;
-        Vector3 velocity = body != null && !body.isKinematic ? body.linearVelocity : Vector3.zero;
-        Vector3 angularVelocity = body != null && !body.isKinematic ? body.angularVelocity : Vector3.zero;
-        var scene = gameObject.scene;
-        bool wasWebCaptured = IsWebCaptured;
-        base.Die();
-        if (!Application.isPlaying) return;
-        if (IsCarried) Carrier.Release();
-        if (webCapture != null && webCapture.IsCaptured) webCapture.Release();
-        if (TryGetComponent<BubbleCapture>(out var bubble) && bubble.IsCaptured) bubble.Release();
-        // Remove the old collider and flock membership before activating the replacement.
+        if (manager != null) manager.Unregister(this);
+        manager = null;
+        FoodTarget = null;
+    }
+
+    protected override void OnAgeDeath()
+    {
+        // Shared death has already released attachments, stopped flight, and notified listeners.
+        BirdBones.Spawn(bonesPrefab, gameObject.scene, transform.position, transform.rotation,
+            body != null ? body.linearVelocity : Vector3.zero,
+            body != null ? body.angularVelocity : Vector3.zero);
+        // Retire the original immediately so its collider/food cannot compete with the remains.
         gameObject.SetActive(false);
-        BirdBones bones = BirdBones.Spawn(bonesPrefab, scene, position, rotation, velocity, angularVelocity);
-        if (wasWebCaptured)
-        {
-            WebCapture capture = bones.GetComponent<WebCapture>();
-            if (capture == null) capture = bones.gameObject.AddComponent<WebCapture>();
-            capture.DelayCapture(0.5f);
-        }
         Destroy(gameObject);
     }
 
@@ -118,11 +126,32 @@ public sealed class BirdCreature : Creature
     private void OnTriggerEnter(Collider other) => EatContact(other);
     private void OnTriggerStay(Collider other) => EatContact(other);
 
-    public override bool TryConsumeFood(Creature food) => IsFlying && huntDesire > 0f && base.TryConsumeFood(food);
+    public override bool TryConsumeFood(Creature food)
+    {
+        if (!IsFlying || EffectiveHuntDesire <= 0f || food == null) return false;
+        // Special effects and death can change tags, move objects, or remove the food immediately.
+        var meal = new BirdMeal(food, nutritionSharingRadius);
+        BirdFlockManager mealManager = manager;
+        if (!base.TryConsumeFood(food)) return false;
+        if (mealManager != null) mealManager.ShareNutrition(this, meal);
+        return true;
+    }
+
+    internal bool CanReceiveNutrition(BirdMeal meal) => IsFlying && Hunger > 0f &&
+        gameObject.scene == meal.Scene && AcceptsFood(meal.FoodTags, meal.FoodType);
+
+    internal float ReceiveNutrition(float amount)
+    {
+        if (!IsFlying || amount <= 0f) return 0f;
+        float received = Mathf.Min(Hunger, amount);
+        hunger = Mathf.Max(0f, Hunger - received);
+        if (EffectiveHuntDesire <= 0f) FoodTarget = null;
+        return received;
+    }
 
     private void EatContact(Collider other)
     {
-        if (!IsFlying || huntDesire <= 0f || other == null) return;
+        if (!IsFlying || EffectiveHuntDesire <= 0f || other == null) return;
         Creature food = other.GetComponentInParent<Creature>();
         if (food != null && food.gameObject.scene == gameObject.scene) TryConsumeFood(food);
     }
@@ -130,7 +159,7 @@ public sealed class BirdCreature : Creature
     internal Vector3 FoodDirection(Vector3 position, List<Creature> foods, List<Vector3> foodPositions)
     {
         FoodTarget = null;
-        if (huntDesire <= 0f || huntRadius <= 0f) return Vector3.zero;
+        if (EffectiveHuntDesire <= 0f || huntRadius <= 0f) return Vector3.zero;
         float nearestSquared = huntRadius * huntRadius;
         Vector3 direction = Vector3.zero;
         for (int i = 0; i < foods.Count; i++)
@@ -222,7 +251,7 @@ public sealed class BirdCreature : Creature
             Mathf.Cos(phase * 0.87f)) * 0.65f;
         acceleration += Steer(wander, velocity) * wanderWeight;
         acceleration += Steer(boundaryDirectionWS, velocity) * boundaryWeight;
-        acceleration += Steer(foodDirectionWS, velocity) * huntDesire;
+        acceleration += Steer(foodDirectionWS, velocity) * EffectiveHuntDesire;
         Vector3 nextVelocity = velocity + Vector3.ClampMagnitude(acceleration, steeringStrength) * deltaTime;
         float speed = nextVelocity.magnitude;
         Vector3 heading = speed > 0.0001f ? nextVelocity / speed : lastHeadingWS;
@@ -249,6 +278,10 @@ public sealed class BirdCreature : Creature
         separationDistance = Mathf.Max(0.01f, separationDistance);
         huntRadius = Mathf.Max(0f, huntRadius);
         huntDesire = Mathf.Max(0f, huntDesire);
+        hunger = Mathf.Clamp(hunger, 0f, 100f);
+        hungerRate = Mathf.Max(0f, hungerRate);
+        appetiteThreshold = Mathf.Clamp(appetiteThreshold, 0f, 100f);
+        nutritionSharingRadius = Mathf.Max(0f, nutritionSharingRadius);
     }
 
     private void OnDrawGizmosSelected()

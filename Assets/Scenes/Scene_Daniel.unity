@@ -1272,6 +1272,8 @@ MonoBehaviour:
   hangBelow: 9
   bridgeRise: 4
   bridgeWidth: 3
+  bridges: 0
+  climbAlone: 0
   bridgeTemplate: {fileID: 0}
   drumLength: 12
   stageDrumLength: 8
@@ -1399,6 +1401,8 @@ GameObject:
   - component: {fileID: 720752133}
   - component: {fileID: 720752135}
   - component: {fileID: 720752134}
+  - component: {fileID: 720752137}
+  - component: {fileID: 720752136}
   m_Layer: 0
   m_Name: Human Realm Sites
   m_TagString: Untagged
@@ -1592,6 +1596,54 @@ MonoBehaviour:
   built: 0
   strands: 0
   membranes: 0
+--- !u!114 &720752136
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eeafc1090229a3409a50e30052ecfbd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpireBeam
+  beamMaterial: {fileID: 2100000, guid: 25d0013405fe4ca696d37e514cd83b1d, type: 2}
+  ringMaterial: {fileID: 2100000, guid: 5c14ec323cfa4e9b8aeda1dfc5540ecd, type: 2}
+  unlockSeed: spire_seed
+  beamRadius: 1.3
+  ringRadius: 1.4
+  rideTime: 1.6
+  upKey: 1
+  downKey: 55
+  built: 0
+  unlocked: 0
+  nearStop: -1
+--- !u!114 &720752137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 720752128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36b187c2cc7b8734db7eef6cee2a5d0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TowerGroves
+  kelpMaterial: {fileID: 2100000, guid: 57332a2bbd5d4bc298878710aab666a8, type: 2}
+  jellyfishMaterial: {fileID: 2100000, guid: 1950b28e17114a598ed3cf347a46c199, type: 2}
+  geodeMaterial: {fileID: 2100000, guid: 33d82eca6bcc408c8af69cb50f24083d, type: 2}
+  amethystMaterial: {fileID: 2100000, guid: 4877bb49899648b88376f4871900ebff, type: 2}
+  basaltMaterial: {fileID: 2100000, guid: d3fac740f7d647cd960afab501cb0b69, type: 2}
+  seed: 29
+  ring: {x: 2, y: 16}
+  kelpClumps: 9
+  jellyfish: 7
+  geodes: 6
+  basaltClusters: 3
+  built: 0
+  placed: 0
 --- !u!1 &748032329
 GameObject:
   m_ObjectHideFlags: 0
@@ -3190,6 +3242,9 @@ MonoBehaviour:
   flySpeed: 10
   travelHeights: {x: 3, y: 24}
   modeTime: {x: 25, y: 45}
+  children: 3
+  tentacleTemplate: {fileID: 1700000015}
+  nearbyTentacles: 3
   seedId: kiln_seed
   glyphId: kiln
   built: 0

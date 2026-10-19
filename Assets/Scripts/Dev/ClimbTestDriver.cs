@@ -32,6 +32,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
     private ProceduralWorld world;
     private Rigidbody body;
     private float halfHeight = 1f;
+    private PlayerGooCoating testGoo;
     private int passed, total;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -67,6 +68,10 @@ public sealed class ClimbTestDriver : MonoBehaviour
             yield break;
         }
         body = controller.GetComponent<Rigidbody>();
+        testGoo = controller.GetComponent<PlayerGooCoating>();
+        if (testGoo == null) testGoo = controller.gameObject.AddComponent<PlayerGooCoating>();
+        testGoo.TryApplyGoo();
+        // Fixture supply supports long geometry regressions; finite supply is tested by GooCreatureValidation.
         var capsule = controller.GetComponent<CapsuleCollider>();
         if (capsule != null) halfHeight = capsule.height * 0.5f * controller.transform.lossyScale.y;
         climber.ScriptedInput = Vector2.zero;
@@ -90,6 +95,24 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestClip") >= 0)
+        {
+            yield return CheckTowerClipping();
+            Quit();
+            yield break;
+        }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestBones") >= 0)
+        {
+            yield return CheckBoneRiding();
+            Quit();
+            yield break;
+        }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestRoute") >= 0)
+        {
+            yield return CheckTentacleRoute();
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestPerf") >= 0)
         {
             yield return CheckPerformance();
@@ -161,6 +184,390 @@ public sealed class ClimbTestDriver : MonoBehaviour
         yield return CheckGlazeRoutes();
         Log($"RESULT {passed}/{total} climbs reached the top.");
         Quit();
+    }
+
+    /// <summary>
+    /// Climbs the first tower from several sides, bare-handed and with a tentacle creature, watching how far the
+    /// player's body ever sinks into a tower (it should never pass through).
+    /// </summary>
+    private IEnumerator CheckTowerClipping()
+    {
+        HangingSpire spire = FindFirstObjectByType<HangingSpire>();
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        // The chest and head only (legs brushing a flared foot or a rim while pulling up are fine).
+        var probeObject = new GameObject("Test Chest Probe") { layer = 2 };
+        var capsule = probeObject.AddComponent<CapsuleCollider>();
+        capsule.isTrigger = true;
+        capsule.radius = 0.3f;
+        capsule.height = 1.2f;
+        capsule.center = new Vector3(0f, 0.35f, 0f);
+        Physics.SyncTransforms();
+        {
+            MeshCollider t1 = null;
+            foreach (MeshCollider m in spire.GetComponentsInChildren<MeshCollider>()) if (m.name == "Stage Tower 1") t1 = m;
+            Vector3 inWall = t1.ClosestPointOnBounds(t1.bounds.center + Vector3.right * 100f) ;
+            Physics.Raycast(t1.bounds.center + Vector3.right * 30f + Vector3.up * 2f, Vector3.left, out RaycastHit wallHit, 60f, 1 << 7);
+            bool hitTrigger = Physics.ComputePenetration(capsule, wallHit.point + Vector3.left * 0.2f, Quaternion.identity, t1, t1.transform.position, t1.transform.rotation, out _, out float d1);
+            capsule.isTrigger = false;
+            bool hitSolid = Physics.ComputePenetration(capsule, wallHit.point + Vector3.left * 0.2f, Quaternion.identity, t1, t1.transform.position, t1.transform.rotation, out _, out float d2);
+            capsule.isTrigger = true;
+            var playerCapsule = controller.GetComponent<CapsuleCollider>();
+            bool hitPlayer = Physics.ComputePenetration(playerCapsule, wallHit.point + Vector3.left * 0.2f, Quaternion.identity, t1, t1.transform.position, t1.transform.rotation, out _, out float d3);
+            bool overlap = Physics.CheckCapsule(wallHit.point + Vector3.left * 0.2f + Vector3.up * 0.05f, wallHit.point + Vector3.left * 0.2f + Vector3.up * 0.65f, 0.3f, 1 << 7);
+            Log($"Probe check at the wall of {wallHit.collider?.name} (point {wallHit.point}, normal {wallHit.normal}): trigger probe {hitTrigger} {d1:0.00}, solid probe {hitSolid} {d2:0.00}, player capsule {hitPlayer} {d3:0.00}, overlap {overlap}");
+        }
+        TentacleCreature tentacle = null;
+        foreach (TentacleCreature t in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None)) { tentacle = t; if (t.GetComponent<SpireCrawler>() == null) break; }
+        HandClimber.SweepBody = System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-noSweep") < 0;
+        Log($"Clip test, body sweep {HandClimber.SweepBody}");
+        for (int run = 0; run < 2; run++)
+        {
+            bool sticky = run == 1;
+            if (sticky && tentacle != null)
+            {
+                var crawl = tentacle.GetComponent<SpireCrawler>();
+                if (crawl != null) Destroy(crawl);
+                body.isKinematic = false;
+                body.position = tentacle.transform.position + Vector3.up * 0.5f;
+                Physics.SyncTransforms();
+                yield return null;
+                typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+                yield return new WaitForSeconds(0.5f);
+            }
+            foreach (string towerName in new[] { "Stage Tower 1", "Spire" })
+            for (int face = 0; face < 4; face++)
+            {
+                if (!FindSpire(out Cliff cliff, face * 90f + 20f, towerName)) continue;
+                MeshCollider tower = null;
+                foreach (MeshCollider m in spire.GetComponentsInChildren<MeshCollider>()) if (m.name == towerName) tower = m;
+                // Watch penetration while the climb runs.
+                float deepest = 0f;
+                Vector3 deepestAt = Vector3.zero;
+                bool watching = true;
+                IEnumerator Watch()
+                {
+                    while (watching)
+                    {
+                        // Inside: the chest point is in the wall (a ray out from the middle of the tower meets the wall's
+                        // outside face beyond it, or no wall at all from inside).
+                        Vector3 chest = body.position + Vector3.up * 0.4f;
+                        Vector3 outward = chest - tower.bounds.center; outward.y = 0f;
+                        outward = outward.sqrMagnitude > 1e-4f ? outward.normalized : Vector3.forward;
+                        Vector3 outside = chest + outward * 12f;
+                        if (tower.Raycast(new Ray(outside, -outward), out RaycastHit face, 12f) && face.distance < 12f - 0.15f)
+                        { deepest += Time.deltaTime; deepestAt = body.position; }
+                        yield return null;
+                    }
+                }
+                Coroutine watcher = StartCoroutine(Watch());
+                cliff.name = $"{towerName} face {face} {(sticky ? "with tentacle" : "bare hands")}";
+                yield return Climb(cliff, fast: false, timeout: sticky ? 60f : 25f, fromGround: false);
+                watching = false;
+                StopCoroutine(watcher);
+                Log($"    chest inside rock for {deepest:0.00} s (last at height {deepestAt.y - tower.transform.position.y:0.0}); ended {(Physics.CheckSphere(body.position, 0.2f, 1 << 7, QueryTriggerInteraction.Ignore) ? "INSIDE" : "clear")}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The bone children and their mother: warm a child with a fire creature in its ribs, climb on with a tentacle
+    /// creature carried (reins), fly it where the view looks; then wake the mother, climb onto her skull and steer her.
+    /// </summary>
+    private IEnumerator CheckBoneRiding()
+    {
+        BoneKiln kiln = FindFirstObjectByType<BoneKiln>();
+        float wait = Time.time;
+        while ((kiln == null || kiln.Root == null) && Time.time - wait < 30f) { yield return null; kiln = FindFirstObjectByType<BoneKiln>(); }
+        Log($"Bones: kiln {(kiln != null && kiln.Root != null)}, children {BoneChild.All.Count}");
+        if (BoneChild.All.Count == 0) yield break;
+        for (int i = 0; i < BoneChild.All.Count; i++)
+        {
+            BoneChild c = BoneChild.All[i];
+            float under = Physics.Raycast(c.Chest + Vector3.up * 3f, Vector3.down, out RaycastHit floorHit, 20f, 1 << 7) ? floorHit.point.y : float.NaN;
+            Log($"    child {i} at {c.Chest}, ground below {under:0.00}, {Vector3.Distance(c.Chest, kiln.Root.position):0.0} m from the mouth, renderers {c.GetComponentsInChildren<Renderer>().Length}");
+            if (framesPath != null) ShotOf(c.Chest, $"child_{i}_lying.png");
+        }
+        // Habits: crawling round the mother, going after fire bubbles from the nests.
+        {
+            var starts = new List<Vector3>();
+            foreach (BoneChild c in BoneChild.All) starts.Add(c.Chest);
+            Log($"    nests {FindObjectsByType<KilnBubbleNest>(FindObjectsSortMode.None).Length}");
+            float maxLively = 0f;
+            int chases = 0;
+            bool shot = false;
+            for (float t = 0f; t < 40f; t += 0.5f)
+            {
+                yield return new WaitForSeconds(0.5f);
+                foreach (BoneChild c in BoneChild.All)
+                {
+                    maxLively = Mathf.Max(maxLively, c.Lively);
+                    if (c.Chasing != null) chases++;
+                    if (!shot && framesPath != null && c.Lively > 0.5f) { ShotOf(c.Chest, "child_chasing.png"); shot = true; }
+                }
+            }
+            int bubbles = 0;
+            foreach (FireBubble b in FindObjectsByType<FireBubble>(FindObjectsSortMode.None)) if (b.name.Contains("kiln nest")) bubbles++;
+            for (int i = 0; i < BoneChild.All.Count; i++)
+                Log($"    child {i} moved {Vector3.Distance(starts[i], BoneChild.All[i].Chest):0.0} m in 40 s, resting {BoneChild.All[i].Resting}, lively {BoneChild.All[i].Lively:0.00}, warmth {BoneChild.All[i].Warmth:0.00}");
+            Log($"    nest bubbles alive {bubbles}; chasing seen {chases} times; most lively {maxLively:0.00}");
+            foreach (FireBubble b in FindObjectsByType<FireBubble>(FindObjectsSortMode.None))
+                if (b.name.Contains("kiln nest"))
+                    Log($"      bubble {Vector3.Distance(b.transform.position, kiln.Root.position):0.0} m from her mouth, {Vector3.Distance(b.transform.position, kiln.HeartPoint):0.0} m from her heart, {b.transform.position.y - kiln.Root.position.y:+0.0;-0.0} m up");
+            Log($"    mother warmth {kiln.Warmth:0.00}, awake {kiln.Awake}");
+            if (framesPath != null) ShotOf(kiln.Root.position + Vector3.up * 3f, "bubbles_at_mother.png");
+        }
+        // The one furthest from its mother (her ribs are not in the way of a throw there).
+        BoneChild child = BoneChild.All[0];
+        foreach (BoneChild c in BoneChild.All)
+            if (c.Warmth < 0.1f && Vector3.Distance(c.Chest, kiln.Root.position) > Vector3.Distance(child.Chest, kiln.Root.position)) child = c;
+        Vector3 lying = child.Head.position;
+        Log($"    child lies at {lying}, warmth {child.Warmth:0.00}");
+
+        // Fire in its ribs.
+        Creature fire = FindFirstObjectByType<FireBubble>();
+        if (fire == null) foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None)) if (c.Heat > 0.5f) { fire = c; break; }
+        if (fire == null) { Log("    no warm creature in the scene"); yield break; }
+        fire.SetHeat(0f); // Regression: the authored FireBubble has zero Heat and must still be caught.
+        Log($"    fire creature {fire.GetType().Name} heat {fire.Heat:0.0}");
+        // As a player would: carry it over and let go of it over the child's ribs.
+        var fireCarrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        body.isKinematic = false;
+        body.position = fire.transform.position + Vector3.up * 0.5f;
+        Physics.SyncTransforms();
+        yield return null;
+        typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(fireCarrier, new object[] { fire });
+        yield return new WaitForSeconds(0.3f);
+        // Stand a few metres off, look at its chest and throw (up to three tries: it keeps crawling about).
+        for (int attempt = 0; attempt < 3 && child.Cradled != fire; attempt++)
+        {
+            if (fireCarrier.CarriedCreature != fire)
+            {
+                body.position = fire.transform.position + Vector3.up * 0.5f;
+                Physics.SyncTransforms();
+                yield return null;
+                typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(fireCarrier, new object[] { fire });
+                yield return new WaitForSeconds(0.3f);
+            }
+            // From the side away from the mother.
+            Vector3 side = Vector3.ProjectOnPlane(child.Chest - kiln.Root.position, Vector3.up).normalized;
+            Vector3 stand = child.Chest + side * 5f;
+            if (Physics.Raycast(stand + Vector3.up * 10f, Vector3.down, out RaycastHit standGround, 30f, 1 << 7)) stand = standGround.point + Vector3.up * (halfHeight + 0.05f);
+            body.position = stand;
+            body.transform.position = stand;
+            Physics.SyncTransforms();
+            yield return null;
+            Vector3 eye = Camera.main.transform.position;
+            Vector3 toChest = child.Chest - eye;
+            controller.SetLook(Mathf.Atan2(toChest.x, toChest.z) * Mathf.Rad2Deg, -Mathf.Atan2(toChest.y, new Vector2(toChest.x, toChest.z).magnitude) * Mathf.Rad2Deg + 4f);
+            Log($"    try {attempt + 1}: carrying the fire {fireCarrier.CarriedCreature == fire}, {toChest.magnitude:0.0} m from the chest; throwing");
+            CreatureThrower.Instance.Throw();
+            for (int k = 0; k < 8; k++)
+            {
+                yield return new WaitForSeconds(0.2f);
+                if (framesPath != null && (k == 0 || k == 2 || k == 5)) ShotOf(child.Chest, $"catch_{attempt}_{k}.png");
+                Log($"      {0.2f * (k + 1):0.0}s after the throw: fire {Vector3.Distance(fire.transform.position, child.Chest):0.0} m from the chest, caught {child.Cradled == fire}, hit {CreatureThrower.Instance.LastHit}");
+            }
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            yield return new WaitForSeconds(0.25f);
+            Log($"      {i * 0.25f + 0.25f:0.00}s: fire {(fire == null ? "gone" : $"{Vector3.Distance(fire.transform.position, child.Chest):0.0} m from the chest, active {fire.isActiveAndEnabled}, heat {fire.Heat:0}")}, warmth {child.Warmth:0.00}");
+        }
+        yield return new WaitForSeconds(4.5f);
+        float ground = Physics.Raycast(child.Head.position + Vector3.up, Vector3.down, out RaycastHit g, 50f, 1 << 7) ? g.point.y : float.NaN;
+        Log($"    warmed: warmth {child.Warmth:0.00}, fire heat {fire.Heat:0.0}, head {child.Head.position.y - lying.y:+0.0;-0.0} m from where it lay");
+        if (framesPath != null) ShotOf(child.Head.position, "child_warm.png");
+
+        // Carry a tentacle creature and climb on.
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        TentacleCreature tentacle = null;
+        foreach (TentacleCreature t in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None)) { tentacle = t; if (t.GetComponent<SpireCrawler>() == null) break; }
+        if (tentacle != null)
+        {
+            var crawl = tentacle.GetComponent<SpireCrawler>();
+            if (crawl != null) Destroy(crawl);
+            body.isKinematic = false;
+            body.position = tentacle.transform.position + Vector3.up * 0.5f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+            yield return new WaitForSeconds(0.5f);
+        }
+        body.position = child.Chest + Vector3.up * 1.2f;
+        Physics.SyncTransforms();
+        yield return null;
+        BoneRide.ScriptedToggle = true;
+        yield return new WaitForSeconds(0.6f);
+        Log($"    climbed on: ridden {child.Ridden}, reins {BoneRide.Reins(child.transform)}, carrying a tentacle {carrier.CarriesTentacle}");
+
+        // Pull the right rein and climb, independently of the view.
+        yield return Steer(child.Head, "child", 5f);
+        if (framesPath != null) ShotOf(child.Head.position, "child_ridden.png");
+        BoneRide.ScriptedToggle = true;
+        yield return new WaitForSeconds(0.3f);
+        Log($"    got off: ridden {child.Ridden}, player kinematic {body.isKinematic}");
+
+        // The mother: wake her, climb onto her skull, steer.
+        kiln.Wake();
+        yield return new WaitForSeconds(10f);
+        if (tentacle != null && !carrier.CarriesTentacle)
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+        body.isKinematic = false;
+        body.position = kiln.Skull.position + Vector3.up * 3f;
+        Physics.SyncTransforms();
+        yield return null;
+        BoneRide.ScriptedToggle = true;
+        yield return new WaitForSeconds(0.6f);
+        Log($"    mother: awake {kiln.Awake}, ridden {kiln.Ridden}, reins {BoneRide.Reins(kiln.Root)}");
+        yield return Steer(kiln.Skull, "mother", 6f);
+        if (framesPath != null) ShotOf(kiln.Skull.position, "mother_ridden.png");
+        BoneRide.ScriptedToggle = true;
+        yield return new WaitForSeconds(0.3f);
+        Log($"    got off the mother: ridden {kiln.Ridden}");
+        // Throwing a fuzzy creature.
+        {
+            FuzzCreature fuzz = FindFirstObjectByType<FuzzCreature>();
+            var thrower = CreatureThrower.Instance;
+            var fuzzCarrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+            fuzzCarrier.Release();
+            if (fuzz != null && thrower != null)
+            {
+                body.isKinematic = false;
+                body.position = fuzz.transform.position + Vector3.up * 1f;
+                Physics.SyncTransforms();
+                yield return null;
+                typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(fuzzCarrier, new object[] { fuzz });
+                yield return new WaitForSeconds(0.5f);
+                controller.SetLook(controller.LookYaw, -10f);
+                yield return null;
+                Vector3 from = fuzz.transform.position;
+                thrower.Throw();
+                yield return new WaitForSeconds(3f);
+                Log($"    threw a fuzzy creature {Vector3.Distance(from, fuzz.transform.position):0.0} m, hit {thrower.LastHit}, carried {fuzz.IsCarried}, moving on its own again {fuzz.SimulationEnabled}");
+            }
+        }
+        BoneRide.ScriptedTurn = null;
+        BoneRide.ScriptedRise = 0f;
+    }
+
+    /// <summary>Pulls the right rein and climbs while looking elsewhere, then measures the mount's movement.</summary>
+    private IEnumerator Steer(Transform headPart, string label, float seconds)
+    {
+        Vector3 start = headPart.position;
+        float yaw = controller.LookYaw + 70f;
+        controller.SetLook(yaw, -10f);
+        BoneRide.ScriptedTurn = 1f;
+        BoneRide.ScriptedRise = 1f;
+        yield return new WaitForSeconds(seconds);
+        BoneRide.ScriptedTurn = null;
+        BoneRide.ScriptedRise = 0f;
+        Vector3 moved = headPart.position - start;
+        Vector3 rider = body.position - headPart.position;
+        Log($"    steered the {label} with the right rein for {seconds:0} s: moved {moved.magnitude:0.0} m, rose {moved.y:+0.0;-0.0} m; rider {rider.magnitude:0.0} m from its head");
+    }
+
+    private void ShotOf(Vector3 target, string file)
+    {
+        if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }
+        captureCamera.CopyFrom(Camera.main);
+        captureCamera.enabled = false;
+        Vector3 from = target + new Vector3(4f, 2.5f, 4f);
+        captureCamera.transform.SetPositionAndRotation(from, Quaternion.LookRotation(target - from));
+        captureCamera.fieldOfView = 60f;
+        Directory.CreateDirectory(framesPath);
+        Save(captureCamera, Path.Combine(framesPath, file));
+    }
+
+    /// <summary>
+    /// The towers without bridges: bare hands should slide off; with a tentacle creature carried the player climbs
+    /// the first tower, shoots an arm at the second, reels across, climbs it, and does the same to the spire's crown.
+    /// </summary>
+    private IEnumerator CheckTentacleRoute()
+    {
+        HangingSpire spire = FindFirstObjectByType<HangingSpire>();
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        TentacleTether tether = carrier != null ? carrier.GetComponent<TentacleTether>() : null;
+        if (spire == null || carrier == null || tether == null || spire.StageTowers.Count < 2) { Log("Route: missing spire, carrier or tether."); yield break; }
+        int ribbons = 0;
+        foreach (Transform t in spire.GetComponentsInChildren<Transform>()) if (t.name == "Bridge") ribbons++;
+        Log($"Route: bridges left {ribbons}, landings {spire.Landings.Count}");
+
+        // 1. Bare hands.
+        carrier.Release();
+        if (FindSpire(out Cliff bare, 0f, "Stage Tower 1")) yield return Climb(bare, fast: false, timeout: 30f, fromGround: false);
+
+        // 2. Carry a tentacle creature and climb the first tower.
+        TentacleCreature tentacle = null;
+        foreach (TentacleCreature t in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None)) { tentacle = t; if (t.GetComponent<SpireCrawler>() == null) break; }
+        if (tentacle == null) { Log("Route: no tentacle creature."); yield break; }
+        var crawl = tentacle.GetComponent<SpireCrawler>();
+        if (crawl != null) Destroy(crawl);
+        body.isKinematic = false;
+        body.position = tentacle.transform.position + Vector3.up * 0.5f;
+        Physics.SyncTransforms();
+        yield return null;
+        typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+        yield return new WaitForSeconds(0.5f);
+        Log($"Route: carrying a tentacle creature {carrier.CarriesTentacle}, sticky hands {climber.StickyHands}");
+        if (FindSpire(out Cliff first, 0f, "Stage Tower 1")) yield return Climb(first, fast: false, timeout: 60f, fromGround: false, capture: true);
+
+        // 3. and 4. Shoot an arm across, reel in, climb on.
+        Transform second = spire.StageTowers[1];
+        float secondTop = second.GetComponent<MeshCollider>().bounds.max.y - 3.5f;
+        yield return Cross("Tower 1 -> Tower 2", spire.Landings[0], secondTop, tether);
+        float crownTop = spire.CrownSeat(out Vector3 crown, out _) ? crown.y - 0.5f : float.NaN;
+        if (spire.Landings.Count > 1) yield return Cross("Tower 2 -> Spire", spire.Landings[1], crownTop, tether);
+    }
+
+    private IEnumerator Cross(string label, (Vector3 top, Vector3 inward) landing, float topY, TentacleTether tether)
+    {
+        climber.ScriptedInput = Vector2.zero;
+        yield return new WaitForSeconds(0.5f);
+        Vector3 eye = Camera.main.transform.position;
+        // A spot on the next tower's wall a little above where the bridge used to arrive.
+        Vector3 goal = landing.top + landing.inward * 0.45f + Vector3.up * 2.5f;
+        Vector3 toGoal = goal - eye;
+        if (!Physics.Raycast(eye, toGoal.normalized, out RaycastHit hit, toGoal.magnitude + 3f, 1 << 7, QueryTriggerInteraction.Ignore))
+        { Log($"Route {label}: nothing to shoot at ({toGoal.magnitude:0.0} m)"); yield break; }
+        Log($"Route {label}: standing at feet {body.position.y - halfHeight:0.0}, grounded {controller.Grounded}; shooting {hit.distance:0.0} m at {hit.collider.name}");
+        // The player looks where they shoot, so they face the wall they are hauled to.
+        Vector3 facing = Vector3.ProjectOnPlane(hit.point - body.position, Vector3.up).normalized;
+        float yaw = Mathf.Atan2(facing.x, facing.z) * Mathf.Rad2Deg;
+        controller.SetLook(yaw, 0f);
+        tether.FireAt(hit.point + hit.normal * 0.05f);
+        yield return new WaitForSeconds(0.3f);
+        tether.ScriptedReel = true;
+        float start = Time.time;
+        while (Time.time - start < 8f && Vector3.Distance(body.position, hit.point) > 1.0f) yield return null;
+        yield return new WaitForSeconds(0.3f);
+        Log($"Route {label}: reeled for {Time.time - start:0.0} s, now {Vector3.Distance(body.position, hit.point):0.0} m from the arm's end, reeling {tether.Reeling}");
+        {
+            object[] wallArgs = { null };
+            bool sees = (bool)typeof(HandClimber).GetMethod("FindWall", Private).Invoke(climber, wallArgs);
+            var seen = (RaycastHit)wallArgs[0];
+            Vector3 fwd = controller.Orientation != null ? controller.Orientation.forward : controller.transform.forward;
+            Log($"    at the wall: sees wall {sees} ({seen.distance:0.00} m, normal {seen.normal}), facing off by {Vector3.Angle(fwd, Vector3.ProjectOnPlane(hit.point - body.position, Vector3.up)):0} deg, grounded {controller.Grounded}, regrab {typeof(HandClimber).GetField("regrabTimer", Private)?.GetValue(climber)}, kinematic {body.isKinematic}");
+        }
+        climber.ScriptedInput = new Vector2(0f, 1f);
+        yield return new WaitForSeconds(0.3f);
+        tether.ScriptedReel = false;
+        start = Time.time;
+        bool grabbed = false;
+        float best = float.MinValue;
+        while (Time.time - start < 70f)
+        {
+            grabbed |= climber.IsClimbing;
+            float feet = body.position.y - halfHeight;
+            best = Mathf.Max(best, feet);
+            if (!climber.IsClimbing && !climber.IsMantling && controller.Grounded && feet > topY - 1f && Time.time - start > 1f) break;
+            if (!grabbed && Time.time - start > 4f) break;
+            yield return null;
+        }
+        bool success = best > topY - 1f;
+        total++;
+        if (success) passed++;
+        Log($"{(success ? "PASS" : "FAIL")} Route {label}: grabbed the wall {grabbed}, best feet {best - topY:+0.0;-0.0} vs top, {Time.time - start:0.0} s, last {climber.LastEvent}");
+        climber.ScriptedInput = Vector2.zero;
     }
 
     /// <summary>
@@ -1137,6 +1544,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         var holder = typeof(SmoothFirstPersonController).GetField("cameraHolder", Private)?.GetValue(controller) as Transform;
         if (holder != null) holder.rotation = Quaternion.Euler(0f, yaw, 0f);
         Physics.SyncTransforms();
+    }
+
+    private void Update()
+    {
+        if (testGoo != null && testGoo.RemainingSeconds < testGoo.SecondsPerCreature)
+            testGoo.TryApplyGoo();
     }
 
     // ---------------- Finding test walls ----------------
