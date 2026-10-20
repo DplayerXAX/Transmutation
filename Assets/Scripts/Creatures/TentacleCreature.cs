@@ -402,13 +402,13 @@ public sealed class TentacleCreature : Creature
             float best = huntRadius;
             foreach (FuzzCreature fuzz in FindObjectsByType<FuzzCreature>(FindObjectsSortMode.None))
             {
-                if (fuzz.IsDead || fuzz.Caught || fuzz.IsCarried) continue;
+                if (!fuzz.CanBeAITargeted || fuzz.IsDead || fuzz.Caught || fuzz.IsCarried) continue;
                 float d = Vector3.Distance(fuzz.transform.position, transform.position);
                 if (d < best) { best = d; prey = fuzz; }
             }
         }
         if (prey == null) return;
-        if (prey.IsDead || prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
+        if (!prey.CanBeAITargeted || prey.IsDead || prey.Caught || prey.IsCarried || Vector3.Distance(prey.transform.position, transform.position) > huntRadius * 1.5f) { prey = null; return; }
         // Close enough: the arms nearest it let go of the ground and wrap round it.
         if (Vector3.Distance(prey.transform.position, transform.position) < reach * 1.1f)
         {

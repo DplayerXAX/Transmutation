@@ -228,7 +228,8 @@ public sealed class FireBubble : Creature
             return;
         }
 
-        Instantiate(fireFlowerPrefab, transform.position, Quaternion.identity);
+        FireFlower replacement = Instantiate(fireFlowerPrefab, transform.position, Quaternion.identity);
+        replacement.SetResolvedPolarity(Polarity);
         Destroy(gameObject);
     }
 

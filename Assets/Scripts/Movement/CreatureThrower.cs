@@ -30,6 +30,7 @@ public sealed class CreatureThrower : MonoBehaviour
         public Creature creature;
         public Vector3 position, velocity;
         public float time;
+        public bool previousSimulation, previousKinematic;
     }
 
     private PlayerCreatureCarrier carrier;
@@ -91,11 +92,29 @@ public sealed class CreatureThrower : MonoBehaviour
         Vector3 start = StartPoint();
         Vector3 velocity = LaunchVelocity();
         carrier.Release();
+        bool previousSimulation = creature.SimulationEnabled;
         // It flies by itself: its own walking, floating and physics pause until it lands.
         creature.SetSimulationEnabled(false);
         var body = creature.GetComponent<Rigidbody>();
+        bool previousKinematic = body != null && body.isKinematic;
         if (body != null) body.isKinematic = true;
-        flights.Add(new Flight { creature = creature, position = start, velocity = velocity });
+        flights.Add(new Flight { creature = creature, position = start, velocity = velocity,
+            previousSimulation = previousSimulation, previousKinematic = previousKinematic });
+    }
+
+    /// <summary>Return temporary throw ownership before carry, capture, or death takes over.</summary>
+    internal static void ReleaseFlight(Creature creature)
+    {
+        if (Instance == null || creature == null) return;
+        for (int i = Instance.flights.Count - 1; i >= 0; i--)
+        {
+            Flight flight = Instance.flights[i];
+            if (flight.creature != creature) continue;
+            Instance.flights.RemoveAt(i);
+            var body = creature.GetComponent<Rigidbody>();
+            if (body != null) body.isKinematic = flight.previousKinematic;
+            if (!creature.IsConsumptionPending) creature.SetSimulationEnabled(flight.previousSimulation);
+        }
     }
 
     private void FixedUpdate()
@@ -105,6 +124,7 @@ public sealed class CreatureThrower : MonoBehaviour
         {
             Flight f = flights[i];
             if (f.creature == null) { flights.RemoveAt(i); continue; }
+            if (f.creature.IsConsumptionPending) { flights.RemoveAt(i); continue; }
             // Snatched out of the air by a bone child passing close: the child has it now.
             if (BoneChild.IsCradled(f.creature)) { f.creature.SetSimulationEnabled(true); flights.RemoveAt(i); continue; }
             f.time += dt;
@@ -153,7 +173,7 @@ public sealed class CreatureThrower : MonoBehaviour
                 body.linearVelocity = Vector3.zero;
             }
         }
-        f.creature.SetSimulationEnabled(true);
+        f.creature.SetSimulationEnabled(f.previousSimulation);
     }
 
     private bool IsPlayer(Collider c)

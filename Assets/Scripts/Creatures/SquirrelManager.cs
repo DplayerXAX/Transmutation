@@ -79,11 +79,11 @@ public sealed class SquirrelManager : MonoBehaviour
         for (int i = 0; i < squirrels.Count; i++)
         {
             var first = squirrels[i];
-            if (first == null || !first.CanFight) continue;
+            if (first == null || !first.CanBeAITargeted || !first.CanFight) continue;
             for (int j = i + 1; j < squirrels.Count; j++)
             {
                 var second = squirrels[j];
-                if (second == null || !second.CanFight ||
+                if (second == null || !second.CanBeAITargeted || !second.CanFight ||
                     (!first.WantsToChallenge(second) && !second.WantsToChallenge(first))) continue;
                 Vector3 separation = first.transform.position - second.transform.position;
                 separation.y = 0f;

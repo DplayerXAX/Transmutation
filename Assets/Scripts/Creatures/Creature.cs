@@ -1,5 +1,8 @@
 using UnityEngine;
 
+public enum CreaturePolarity { None, Light, Dark, Random }
+public enum CreatureDeathCause { None, Direct, Damage, Age, Consumed }
+
 /// <summary>
 /// Information passed to a creature when the player or another object interacts with it.
 /// This keeps individual creatures independent from specific keyboard or mouse buttons.
@@ -53,6 +56,68 @@ public enum FoodTag
     [Header("Creature Identity")]
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
+
+    [Header("Health and Polarity")]
+    [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private CreaturePolarity initialPolarity = CreaturePolarity.Random;
+    [SerializeField, HideInInspector] private float health;
+    [SerializeField, HideInInspector] private CreaturePolarity polarity;
+    [SerializeField, HideInInspector] private int identityOwner;
+    [SerializeField, HideInInspector] private CreatureDeathCause deathCause;
+    [Tooltip("Optional aim point; otherwise combat uses the physical body center.")]
+    [SerializeField] private Transform aimPoint;
+    public float MaxHealth => maxHealth;
+    public float Health => health;
+    public CreaturePolarity Polarity => polarity;
+    public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    public CreatureDeathCause DeathCause => deathCause;
+    public Vector3 AimPosition => aimPoint != null ? aimPoint.position :
+        (TryGetComponent<Rigidbody>(out var body) ? body.worldCenterOfMass : transform.position);
+    public event System.Action<Creature, float, Creature> Damaged;
+
+    /// <summary>Runtime template copies are new individuals, not copies of depleted runtime state.</summary>
+    internal void InitializeNewIndividual()
+    {
+        identityOwner = GetInstanceID();
+        isDead = false;
+        consumptionPending = false;
+        simulationEnabled = true;
+        deathCause = CreatureDeathCause.None;
+        health = Mathf.Max(0.01f, maxHealth);
+        polarity = initialPolarity == CreaturePolarity.Random ?
+            (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
+    }
+
+    internal void SetResolvedPolarity(CreaturePolarity value)
+    {
+        if (value == CreaturePolarity.Random) throw new System.ArgumentException("Resolved polarity cannot be Random.");
+        polarity = value;
+    }
+
+    public bool ApplyDamage(float amount, Creature source = null)
+    {
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending) return false;
+        float applied = Mathf.Min(health, amount);
+        health = Mathf.Max(0f, health - amount);
+        if (Damaged != null)
+            foreach (System.Action<Creature, float, Creature> listener in Damaged.GetInvocationList())
+                try { listener(this, applied, source); }
+                catch (System.Exception exception) { Debug.LogException(exception, this); }
+        if (health <= 0f && !isDead && !consumptionPending) DieWithCause(CreatureDeathCause.Damage);
+        return true;
+    }
+
+    private void DieWithCause(CreatureDeathCause cause)
+    {
+        if (isDead) return;
+        deathCause = cause;
+        Die(); // Keep virtual dispatch, including legacy squirrel cleanup.
+    }
+
+    protected virtual void OnCarryStarted() { }
+    protected virtual void OnCaptureStarted() { }
+    internal void NotifyCaptureStarted() => OnCaptureStarted();
+    protected virtual void OnSimulationChanged() { }
 
     [Header("Food and Diet")]
     [Tooltip("What this creature counts as when another creature checks its diet. Multiple tags can be selected.")]
@@ -154,7 +219,9 @@ public enum FoodTag
     public virtual void Die()
     {
         if (isDead) return;
+        if (deathCause == CreatureDeathCause.None) deathCause = CreatureDeathCause.Direct;
         InitializeDeadRemains();
+        CreatureThrower.ReleaseFlight(this);
         EndPet();
         if (IsCarried) Carrier.Release();
         if (TryGetComponent<WebCapture>(out var webCapture)) webCapture.Release();
@@ -173,6 +240,7 @@ public enum FoodTag
     protected void InitializeDeadRemains()
     {
         isDead = true;
+        health = 0f;
         age = 0f;
         simulationEnabled = false;
     }
@@ -209,11 +277,21 @@ public enum FoodTag
     {
         if (!Application.isPlaying || !isActiveAndEnabled || !SimulationEnabled || IsDead || consumptionPending ||
             food == null || !food.isActiveAndEnabled || !food.CanBeConsumed || food.consumptionPending || !CanEat(food)) return false;
-        food.consumptionPending = true;
-        CreatureRegistry.Unregister(food);
-        food.Consume(this);
-        if (food != null) food.Die();
-        if (food != null) Destroy(food.gameObject);
+        return food.CompleteConsumption(this);
+    }
+
+    /// <summary>Completes a species-approved physical meal without imposing ordinary diet rules.</summary>
+    internal bool CompleteConsumption(Creature consumer)
+    {
+        if (consumptionPending || !CanBeConsumed) return false;
+        consumptionPending = true;
+        CreatureRegistry.Unregister(this);
+        try { Consume(consumer); }
+        finally
+        {
+            if (this != null && !isDead) DieWithCause(CreatureDeathCause.Consumed);
+            if (this != null) Destroy(gameObject);
+        }
         return true;
     }
 
@@ -255,6 +333,7 @@ public enum FoodTag
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
         if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
+        CreatureThrower.ReleaseFlight(this);
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
         movementBody = GetComponent<Rigidbody>();
@@ -276,6 +355,7 @@ public enum FoodTag
         movementBody.constraints &= ~RigidbodyConstraints.FreezePosition;
         movementBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         movementBody.WakeUp();
+        OnCarryStarted();
         return true;
     }
 
@@ -373,6 +453,14 @@ public enum FoodTag
     /// </summary>
     protected virtual void Awake()
     {
+        // The owner id survives script reloads, while instantiated copies have a new id.
+        if (identityOwner != GetInstanceID())
+        {
+            identityOwner = GetInstanceID();
+            health = isDead ? 0f : Mathf.Max(0.01f, maxHealth);
+            polarity = initialPolarity == CreaturePolarity.Random ?
+                (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
+        }
         InitializeCreature();
         // Serialized death survives a script reload; initialization must not restore living physics.
         if (isDead)
@@ -424,7 +512,7 @@ public enum FoodTag
         if (isDead || consumptionPending) return;
         age = Mathf.Max(0f, value);
         if (age > 0f) return;
-        Die();
+        DieWithCause(CreatureDeathCause.Age);
         // A death listener may consume or remove the original. Eating owns its removal in that case.
         if (this != null && isDead && !consumptionPending) OnAgeDeath();
     }
@@ -436,6 +524,7 @@ public enum FoodTag
     public void SetSimulationEnabled(bool value)
     {
         simulationEnabled = value && !isDead;
+        OnSimulationChanged();
     }
 
     /// <summary>

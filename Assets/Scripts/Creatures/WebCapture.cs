@@ -45,6 +45,7 @@ public sealed class WebCapture : MonoBehaviour
         silkJoint.connectedAnchor = contactPoint;
         silkJoint.breakForce = float.PositiveInfinity;
         silkJoint.breakTorque = float.PositiveInfinity;
+        if (creature != null) creature.NotifyCaptureStarted();
         return true;
     }
 

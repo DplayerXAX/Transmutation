@@ -68,7 +68,7 @@ public sealed class Squirrel : Creature
         Time.time >= fightCooldownUntil && activity != Activity.Fighting && activity != Activity.Retreating &&
         activity != Activity.PackingNest && !IsMigrating;
 
-    public bool WantsToChallenge(Squirrel other) => ContainsInTerritory(other.transform.position) && carried.Count < capacity &&
+    public bool WantsToChallenge(Squirrel other) => other != null && other.CanBeAITargeted && ContainsInTerritory(other.transform.position) && carried.Count < capacity &&
         ((other.carried.Count > 0) || (target != null && (target == other.target || target.Owner == other)));
 
     public void BeginFight()

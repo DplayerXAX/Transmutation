@@ -145,7 +145,7 @@ public sealed class SkySpider : Creature
             !capture.Body.gameObject.activeInHierarchy || capture.gameObject.scene != gameObject.scene) return false;
         prey = capture.Body.GetComponentInParent<Creature>();
         return prey != null && prey != this && prey.isActiveAndEnabled && prey.gameObject.scene == gameObject.scene &&
-            !prey.IsDead && !prey.IsConsumptionPending && !prey.IsCarried && !prey.IsBubbleCaptured && prey.Age > 0f;
+            prey.CanBeAITargeted && !prey.IsDead && !prey.IsConsumptionPending && !prey.IsCarried && !prey.IsBubbleCaptured && prey.Age > 0f;
     }
 
     private bool TryGetPreyPoint(WebCapture capture, out Vector3 point, out float distanceSquared)
