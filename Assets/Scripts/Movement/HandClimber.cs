@@ -57,7 +57,7 @@ public sealed class HandClimber : MonoBehaviour
     [Tooltip("Hands let go if the body stays this far from both of them for half a second.")]
     [Min(0.5f)] [SerializeField] private float maxHandDistance = 1.4f;
     [Tooltip("Speed of reaching and pulling, relative to the values above (lower = slower, steadier climb).")]
-    [Range(0.2f, 2f)] [SerializeField] private float climbSpeed = 1f;
+    [Range(0.2f, 2f)] [SerializeField] private float climbSpeed = 1.2f;
     [Tooltip("Speed multiplier while holding the fast climb key.")]
     [Range(1f, 3f)] [SerializeField] private float fastClimbBoost = 1.4f;
     [Tooltip("Seconds of being blocked before the hands try to reach around the obstacle.")]
@@ -171,7 +171,31 @@ public sealed class HandClimber : MonoBehaviour
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
-    public bool CanStartClimb => canStartClimb;
+    public bool CanStartClimb => GooAllowsClimbing && canStartClimb;
+    private PlayerGooCoating gooCoating;
+    private bool GooAllowsClimbing
+    {
+        get
+        {
+            // Also supports a supply component added by an explicit runtime test fixture.
+            if (gooCoating == null && controller != null)
+            {
+                gooCoating = controller.GetComponent<PlayerGooCoating>();
+                if (gooCoating != null) gooCoating.RegisterClimber(this);
+            }
+            return gooCoating != null && gooCoating.CanClimb;
+        }
+    }
+
+    public void StopForGooDepletion()
+    {
+        canStartClimb = false;
+        lungeTimer = 0f;
+        if (!climbing) return;
+        lastEvent = "Let go: goo depleted";
+        Exit(Vector3.zero);
+        if (body != null) body.useGravity = true;
+    }
     public string LastEvent => lastEvent;
 
     /// <summary>For automated tests: when set, used instead of the keyboard (x = right, y = up).</summary>
@@ -224,6 +248,8 @@ public sealed class HandClimber : MonoBehaviour
     {
         if (controller == null) controller = FindFirstObjectByType<SmoothFirstPersonController>();
         if (controller == null) return;
+        gooCoating = controller.GetComponent<PlayerGooCoating>();
+        if (gooCoating != null) gooCoating.RegisterClimber(this);
         body = controller.GetComponent<Rigidbody>();
         orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         var capsule = controller.GetComponent<CapsuleCollider>();
@@ -261,6 +287,8 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
+        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
+        if (BoneRide.Mount != null) { canStartClimb = false; return; }
         if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null && ScriptedInput == null) return;
@@ -356,18 +384,57 @@ public sealed class HandClimber : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (!climbing || mantling || body == null) return;
+
+        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
+        if (BoneRide.Mount != null || !climbing || mantling || body == null) return;
         // Eased pull: the body speeds up and settles instead of sliding at a constant speed.
         float scale = SpeedScale();
         Vector3 next = Vector3.SmoothDamp(body.position, bodyTarget, ref bodyVelocity,
             bodySmoothTime / scale, pullSpeed * scale * 1.6f, Time.fixedDeltaTime);
-        body.MovePosition(next);
+        body.MovePosition(OutOfWalls(body.position, next));
+    }
+
+    /// <summary>
+    /// The climbing body is moved by hand (kinematic), so nothing stops it entering the wall. Each move is swept
+    /// with a slim capsule round the chest and head first: it stops at anything solid in the way (a ledge or drum
+    /// step overhead, a rim) and slides along it instead. The legs are left out, so a flared foot of a wall does
+    /// not hold the climber off.
+    /// </summary>
+    /// <summary>For tests: off moves the body exactly as before (no sweep).</summary>
+    public static bool SweepBody = true;
+
+    private Vector3 OutOfWalls(Vector3 from, Vector3 to)
+    {
+        if (!SweepBody) return to;
+        const float radius = 0.3f, skin = 0.03f;
+        Vector3 low = from + Vector3.up * 0.05f, high = from + Vector3.up * 0.65f;
+        Vector3 delta = to - from;
+        Vector3 moved = Vector3.zero;
+        for (int pass = 0; pass < 2; pass++)
+        {
+            float length = delta.magnitude;
+            if (length < 1e-4f) break;
+            Vector3 dir = delta / length;
+            if (!Physics.CapsuleCast(low + moved, high + moved, radius, dir, out RaycastHit hit, length + skin, climbLayers, QueryTriggerInteraction.Ignore)
+                || hit.collider.attachedRigidbody == body)
+            {
+                moved += delta;
+                break;
+            }
+            // Up to the wall, then what is left of the move slides along it.
+            float allowed = Mathf.Max(0f, hit.distance - skin);
+            moved += dir * allowed;
+            delta = Vector3.ProjectOnPlane(dir * (length - allowed), hit.normal);
+        }
+        return from + moved;
     }
 
     // ---------------- Starting ----------------
 
     private bool FindWall(out RaycastHit hit)
     {
+        hit = default;
+        if (!GooAllowsClimbing) return false;
         Vector3 origin = controller.transform.position + Vector3.up * 0.3f;
         if (!Physics.SphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
             return false;
@@ -390,6 +457,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void TryStartClimb()
     {
+        if (!GooAllowsClimbing) return;
         if (!FindWall(out RaycastHit wall)) return;
         wallNormal = wall.normal;
         for (int i = 0; i < 2; i++)
@@ -667,9 +735,16 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>True when a hold at this point is on a smooth surface (see SlipperySurface) that bare hands slide down.</summary>
     private bool OnSlippery(Vector3 point, Vector3 normal, out RaycastHit hit)
     {
-        return Physics.Raycast(point + normal * 0.3f, -normal, out hit, 0.6f, climbLayers, QueryTriggerInteraction.Ignore)
-            && hit.collider.GetComponent<SlipperySurface>() != null;
+        slipSurface = null;
+        // Ledge tops and lips hold: hands resting on something flat-ish do not slide.
+        if (normal.y > 0.45f) { hit = default; return false; }
+        if (!Physics.Raycast(point + normal * 0.3f, -normal, out hit, 0.6f, climbLayers, QueryTriggerInteraction.Ignore)) return false;
+        if (hit.normal.y > 0.45f) return false;
+        slipSurface = hit.collider.GetComponent<SlipperySurface>();
+        return slipSurface != null;
     }
+
+    private SlipperySurface slipSurface;
 
     /// <summary>
     /// Bare hands on a smooth surface slide down it, faster the longer they stay, until they reach rough
@@ -679,12 +754,22 @@ public sealed class HandClimber : MonoBehaviour
     {
         // Any hand on (or reaching for) the smooth surface drags the whole grip down with it.
         bool sliding = false;
+        SlipperySurface surface = null;
         if (!StickyHands)
             for (int i = 0; i < 2 && !sliding; i++)
+            {
                 sliding = hands[i].moving ? OnSlippery(hands[i].to, hands[i].toNormal, out _) : OnSlippery(hands[i].hold, hands[i].normal, out _);
+                if (sliding) surface = slipSurface;
+            }
+        // A hand still holding a ledge top stops the slide.
+        if (sliding)
+            for (int i = 0; i < 2; i++)
+                if (!hands[i].moving && hands[i].normal.y > 0.45f) sliding = false;
         if (sliding)
         {
-            Vector3 drop = Vector3.down * (Mathf.Max(slideSpeed, slideStartSpeed) * deltaTime);
+            float scale = surface != null ? surface.speedScale : 1f;
+            bool speedsUp = surface == null || surface.accelerate;
+            Vector3 drop = Vector3.down * (Mathf.Max(speedsUp ? slideSpeed : 0f, slideStartSpeed) * scale * deltaTime);
             for (int i = 0; i < 2; i++)
             {
                 hands[i].from += drop;
@@ -768,11 +853,22 @@ public sealed class HandClimber : MonoBehaviour
     /// </summary>
     private bool PathToTopClear(Vector3 anchor, Vector3 top)
     {
-        Vector3 start = anchor + wallNormal * 0.35f;
-        Vector3 rise = new Vector3(start.x, Mathf.Max(start.y, top.y + 0.6f), start.z);
-        Vector3 over = top + Vector3.up * 0.6f;
-        return !Physics.Linecast(start, rise, climbLayers, QueryTriggerInteraction.Ignore)
-            && !Physics.Linecast(rise, over, climbLayers, QueryTriggerInteraction.Ignore);
+        // A body-thick probe, not a thin line, so the pull-up never scrapes through a ledge edge.
+        const float body = 0.32f;
+        Vector3 start = anchor + wallNormal * 0.55f;
+        Vector3 rise = new Vector3(start.x, Mathf.Max(start.y, top.y + 0.7f), start.z);
+        Vector3 over = top + Vector3.up * 0.7f;
+        return !Sweep(start, rise, body) && !Sweep(rise, over, body);
+    }
+
+    private bool Sweep(Vector3 from, Vector3 to, float radius)
+    {
+        Vector3 path = to - from;
+        float length = path.magnitude;
+        if (length < 1e-3f) return false;
+        // Starting against the wall itself: judge by a thin line instead.
+        if (Physics.CheckSphere(from, radius, climbLayers, QueryTriggerInteraction.Ignore)) return Physics.Linecast(from, to, climbLayers, QueryTriggerInteraction.Ignore);
+        return Physics.SphereCast(from, radius, path / length, out _, length, climbLayers, QueryTriggerInteraction.Ignore);
     }
 
     // Spots start a little back from the edge so the player is not set down half over it.
@@ -821,7 +917,7 @@ public sealed class HandClimber : MonoBehaviour
     /// </summary>
     private Vector3 ClearOfWall(Vector3 target)
     {
-        const float core = 0.25f; // a thin core: touching the wall itself is fine
+        const float core = 0.38f; // most of the body: only grazing the wall itself is fine
         float reach = Mathf.Max(0f, halfHeight - core - 0.15f);
         Vector3 outward = wallNormal.sqrMagnitude > 0.5f ? wallNormal : FlatOutward();
         for (float d = 0f; d <= 2.8f; d += 0.2f)
@@ -900,7 +996,7 @@ public sealed class HandClimber : MonoBehaviour
         mantleT = 0f;
         mantleFrom = body.position;
         // Pull: chest up to the edge, body close to the wall.
-        mantlePull = new Vector3(lip.x, lip.y - halfHeight * 0.2f, lip.z) - inward * 0.4f;
+        mantlePull = new Vector3(lip.x, lip.y - halfHeight * 0.2f, lip.z) - inward * 0.6f;
         mantlePull.y = Mathf.Max(mantlePull.y, mantleFrom.y);
         mantleTo = top + Vector3.up * (halfHeight + 0.05f);
         // Push: arms straighten, hips come up over the edge.
@@ -941,7 +1037,7 @@ public sealed class HandClimber : MonoBehaviour
 
         Vector3 position = MantlePoint(t);
         mantleVelocity = deltaTime > 0f ? (position - before) / deltaTime : Vector3.zero;
-        body.MovePosition(position);
+        body.MovePosition(OutOfWalls(body.position, position));
         UpdateFeet(deltaTime);
 
         if (mantleT >= 1f)

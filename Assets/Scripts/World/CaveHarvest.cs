@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -7,6 +9,7 @@ using UnityEngine.Rendering;
 /// Fruit bunches hang on thin stalks from the cave ceiling; flowers stand on floors and walls.
 /// Each fruit / flower is its own object with a CaveHarvestItem, so the player can pick it with E.
 /// Stalks stay behind and are merged into one mesh per chunk. Only grows in Play Mode.
+/// Placement runs on a worker thread; the items are then created a few per frame so loading never stalls.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(ProceduralWorld))]
@@ -31,8 +34,38 @@ public sealed class CaveHarvest : MonoBehaviour
     [SerializeField] private int seed = 11;
     [Range(1, 12)] [SerializeField] private int variants = 6;
 
+    [Header("Loading")]
+    [Tooltip("Fruit / flower objects created per frame.")]
+    [Range(1, 64)] [SerializeField] private int itemsPerFrame = 12;
+
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int itemsGrown;
+    [SerializeField] private int itemsWaiting;
+
+    /// <summary>One fruit or flower to create, decided on a worker.</summary>
+    private struct Spawn
+    {
+        public bool fruit;
+        public int variant;
+        public Vector3 position;
+        public Quaternion rotation;
+        public float scale;
+    }
+
+    private sealed class Job
+    {
+        public GameObject chunk;
+        public Matrix4x4 localToWorld, worldToLocal;
+        public Vector3[] vertices, normals;
+        public int[] triangles;
+        public int randomSeed;
+        public readonly List<Spawn> spawns = new List<Spawn>();
+        public readonly List<Matrix4x4> stalks = new List<Matrix4x4>();
+    }
+
+    private readonly ConcurrentQueue<Job> finishedJobs = new ConcurrentQueue<Job>();
+    private readonly Queue<(Transform chunk, Spawn spawn)> spawnQueue = new Queue<(Transform, Spawn)>();
+    private float[] flowerHeadHeights;
 
     private ProceduralWorld world;
     private DecorMesh stalkShape;
@@ -68,25 +101,63 @@ public sealed class CaveHarvest : MonoBehaviour
         if (!Application.isPlaying || chunkMesh.subMeshCount < 2) return;
         BuildShapes();
 
-        WorldDecorator.Ground ground = WorldDecorator.BuildGround(chunk.transform, chunkMesh.vertices, chunkMesh.normals, chunkMesh.GetTriangles(1));
-        if (ground.totalArea <= 0f) return;
-
         Vector3 key = chunk.transform.localPosition;
-        var random = new System.Random(unchecked(seed * 92821 ^ Mathf.RoundToInt(key.x) * 19349663 ^ Mathf.RoundToInt(key.y) * 83492791 ^ Mathf.RoundToInt(key.z) * 2971215));
-        var stalks = new List<CombineInstance>();
-
-        int fruitClusters = Count(ground.totalArea * fruitClustersPer1000m2 / 1000f, random);
-        for (int i = 0; i < fruitClusters; i++)
-            GrowCluster(ground, random, chunk.transform, fruit: true, stalks);
-
-        int flowerClusters = Count(ground.totalArea * flowerClustersPer1000m2 / 1000f, random);
-        for (int i = 0; i < flowerClusters; i++)
-            GrowCluster(ground, random, chunk.transform, fruit: false, stalks);
-
-        if (stalks.Count > 0) CreateStalks(chunk, stalks);
+        var job = new Job
+        {
+            chunk = chunk,
+            localToWorld = chunk.transform.localToWorldMatrix,
+            worldToLocal = chunk.transform.worldToLocalMatrix,
+            vertices = chunkMesh.vertices,
+            normals = chunkMesh.normals,
+            triangles = chunkMesh.GetTriangles(1),
+            randomSeed = unchecked(seed * 92821 ^ Mathf.RoundToInt(key.x) * 19349663 ^ Mathf.RoundToInt(key.y) * 83492791 ^ Mathf.RoundToInt(key.z) * 2971215),
+        };
+        Task.Run(() =>
+        {
+            try { Compute(job); }
+            catch (System.Exception error) { Debug.LogException(error); job.spawns.Clear(); job.stalks.Clear(); }
+            finishedJobs.Enqueue(job);
+        });
     }
 
-    private void GrowCluster(WorldDecorator.Ground ground, System.Random random, Transform chunk, bool fruit, List<CombineInstance> stalks)
+    private void Update()
+    {
+        // Stalks for a whole chunk are one mesh; its fruit and flowers join the spawn queue.
+        while (finishedJobs.TryDequeue(out Job job))
+        {
+            if (job.chunk == null) continue;
+            if (job.stalks.Count > 0) CreateStalks(job.chunk, job.stalks);
+            foreach (Spawn spawn in job.spawns) spawnQueue.Enqueue((job.chunk.transform, spawn));
+        }
+        for (int i = 0; i < itemsPerFrame && spawnQueue.Count > 0; i++)
+        {
+            var (chunk, spawn) = spawnQueue.Dequeue();
+            if (chunk == null) continue;
+            if (spawn.fruit)
+                CreateItem("Cave Fruit", fruitMeshes[spawn.variant], fruitMaterial, spawn.position, spawn.rotation, spawn.scale,
+                    new Vector3(0f, -0.18f, 0f), 0.16f, chunk);
+            else
+                CreateItem("Cave Flower", flowerMeshes[spawn.variant], flowerMaterial, spawn.position, spawn.rotation, spawn.scale,
+                    new Vector3(0f, flowerHeadHeights[spawn.variant] * 0.75f, 0f), 0.13f, chunk);
+        }
+        itemsWaiting = spawnQueue.Count;
+    }
+
+    /// <summary>Decides every fruit, flower and stalk for one chunk. Pure math: safe on a worker thread.</summary>
+    private void Compute(Job job)
+    {
+        WorldDecorator.Ground ground = WorldDecorator.BuildGround(job.localToWorld, job.vertices, job.normals, job.triangles);
+        if (ground.totalArea <= 0f) return;
+        var random = new System.Random(job.randomSeed);
+
+        int fruitClusters = Count(ground.totalArea * fruitClustersPer1000m2 / 1000f, random);
+        for (int i = 0; i < fruitClusters; i++) GrowCluster(ground, random, job, fruit: true);
+
+        int flowerClusters = Count(ground.totalArea * flowerClustersPer1000m2 / 1000f, random);
+        for (int i = 0; i < flowerClusters; i++) GrowCluster(ground, random, job, fruit: false);
+    }
+
+    private void GrowCluster(WorldDecorator.Ground ground, System.Random random, Job job, bool fruit)
     {
         int triangle = WorldDecorator.PickTriangle(ground, random);
         Vector3 centre = WorldDecorator.PointOn(ground, triangle, random);
@@ -113,37 +184,40 @@ public sealed class CaveHarvest : MonoBehaviour
                 point = WorldDecorator.PointOn(ground, t, random);
                 pointNormal = ground.normal[t];
             }
-            if (fruit) GrowFruit(point, random, chunk, stalks);
-            else GrowFlower(point, pointNormal, random, chunk);
+            if (fruit) GrowFruit(point, random, job);
+            else GrowFlower(point, pointNormal, random, job);
         }
     }
 
-    private void GrowFruit(Vector3 ceilingPoint, System.Random random, Transform chunk, List<CombineInstance> stalks)
+    private void GrowFruit(Vector3 ceilingPoint, System.Random random, Job job)
     {
         float length = Range(random, stalkLength.x, stalkLength.y);
         // The stalk mesh grows along +y; turn it upside down so it hangs from the ceiling.
         Vector3 top = ceilingPoint + Vector3.up * 0.05f;
         Quaternion hang = Quaternion.Euler(180f + Range(random, -8f, 8f), Range(random, 0f, 360f), 0f);
-        stalks.Add(new CombineInstance
-        {
-            mesh = ToMesh(stalkShape, "Stalk"),
-            transform = chunk.worldToLocalMatrix * Matrix4x4.TRS(top, hang, Vector3.one * length),
-        });
+        job.stalks.Add(job.worldToLocal * Matrix4x4.TRS(top, hang, Vector3.one * length));
 
-        Vector3 end = top + hang * Vector3.up * length;
-        Mesh mesh = fruitMeshes[random.Next(fruitMeshes.Length)];
-        CreateItem("Cave Fruit", mesh, fruitMaterial, end, Quaternion.Euler(0f, Range(random, 0f, 360f), 0f),
-            Range(random, 0.85f, 1.3f), new Vector3(0f, -0.18f, 0f), 0.16f, chunk);
+        job.spawns.Add(new Spawn
+        {
+            fruit = true,
+            variant = random.Next(variants),
+            position = top + hang * Vector3.up * length,
+            rotation = Quaternion.Euler(0f, Range(random, 0f, 360f), 0f),
+            scale = Range(random, 0.85f, 1.3f),
+        });
     }
 
-    private void GrowFlower(Vector3 point, Vector3 normal, System.Random random, Transform chunk)
+    private void GrowFlower(Vector3 point, Vector3 normal, System.Random random, Job job)
     {
         Vector3 up = Vector3.Slerp(Vector3.up, normal, 0.6f).normalized;
-        Quaternion rotation = Quaternion.FromToRotation(Vector3.up, up) * Quaternion.Euler(0f, Range(random, 0f, 360f), 0f);
-        Mesh mesh = flowerMeshes[random.Next(flowerMeshes.Length)];
-        float scale = Range(random, 0.9f, 1.5f);
-        CreateItem("Cave Flower", mesh, flowerMaterial, point - up * 0.02f, rotation, scale,
-            new Vector3(0f, mesh.bounds.max.y * 0.75f, 0f), 0.13f, chunk);
+        job.spawns.Add(new Spawn
+        {
+            fruit = false,
+            rotation = Quaternion.FromToRotation(Vector3.up, up) * Quaternion.Euler(0f, Range(random, 0f, 360f), 0f),
+            variant = random.Next(variants),
+            scale = Range(random, 0.9f, 1.5f),
+            position = point - up * 0.02f,
+        });
     }
 
     private void CreateItem(string itemName, Mesh mesh, Material material, Vector3 position, Quaternion rotation, float scale,
@@ -175,10 +249,13 @@ public sealed class CaveHarvest : MonoBehaviour
         itemsGrown++;
     }
 
-    private void CreateStalks(GameObject chunk, List<CombineInstance> stalks)
+    private void CreateStalks(GameObject chunk, List<Matrix4x4> stalkMatrices)
     {
+        Mesh stalk = ToMesh(stalkShape, "Stalk");
+        var stalks = new CombineInstance[stalkMatrices.Count];
+        for (int i = 0; i < stalks.Length; i++) stalks[i] = new CombineInstance { mesh = stalk, transform = stalkMatrices[i] };
         var mesh = new Mesh { name = "Harvest Stalks " + chunk.name, hideFlags = HideFlags.DontSave, indexFormat = IndexFormat.UInt32 };
-        mesh.CombineMeshes(stalks.ToArray(), true, true);
+        mesh.CombineMeshes(stalks, true, true);
         mesh.RecalculateBounds();
         stalkMeshes.Add(mesh);
 
@@ -205,6 +282,8 @@ public sealed class CaveHarvest : MonoBehaviour
             fruitMeshes[i] = ToMesh(DecorShapes.Build(DecorShapes.Shape.Fruit, seed * 7919 + i * 104729), "Cave Fruit " + i);
             flowerMeshes[i] = ToMesh(DecorShapes.Build(DecorShapes.Shape.Flower, seed * 6151 + i * 1299709), "Cave Flower " + i);
         }
+        flowerHeadHeights = new float[variants];
+        for (int i = 0; i < variants; i++) flowerHeadHeights[i] = flowerMeshes[i].bounds.max.y;
     }
 
     /// <summary>Unity mesh for a shape; uv.y gets a fixed random per variant so pieces differ in the shader.</summary>

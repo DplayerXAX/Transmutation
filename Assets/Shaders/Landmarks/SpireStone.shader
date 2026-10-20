@@ -12,6 +12,7 @@ Shader "Capstone/Landmarks/SpireStone"
         _LineColor("Joint Line Color", Color) = (0.8, 0.8, 0.78, 1)
         _ShadowLineDim("Line Brightness In Shadow", Range(0, 1)) = 0.35
         _LineWidth("Line Width (pixels)", Range(0.3, 4)) = 1.1
+        _JointStrength("Brick Joints", Range(0, 1)) = 1
 
         [Header(Lighting)]
         _MainLightAmount("Sun Amount", Range(0, 2)) = 1.2
@@ -44,6 +45,7 @@ Shader "Capstone/Landmarks/SpireStone"
         _PulseSpacing("Pulse Spacing (metres)", Float) = 60
         _PulseWidth("Pulse Width (metres)", Float) = 5
         _ScriptFlicker("Glyph Flicker", Range(0, 1)) = 0.25
+        _ScriptGlowBase("Glyph Glow Between Pulses", Range(0, 2)) = 0
 
         [Header(Glitch)]
         _GlitchAmount("Glitch Amount", Range(0, 1)) = 0.4
@@ -76,6 +78,7 @@ Shader "Capstone/Landmarks/SpireStone"
             half4 _LineColor;
             half _ShadowLineDim;
             half _LineWidth;
+            half _JointStrength;
             half _MainLightAmount;
             float4 _FakeLightDir;
             half _FakeLightAmount;
@@ -96,6 +99,7 @@ Shader "Capstone/Landmarks/SpireStone"
             half4 _ScriptColor;
             half4 _GlowColor;
             half _GlowStrength;
+            half _ScriptGlowBase;
             float _PulseSpeed;
             float _PulseSpacing;
             float _PulseWidth;
@@ -237,7 +241,9 @@ Shader "Capstone/Landmarks/SpireStone"
                 half vertical = Line(min(blockFrac, 1.0 - blockFrac), fwU / width, _LineWidth);
                 // Not every vertical joint is cut, so long blocks appear.
                 vertical *= step(0.3, Hash11(floor(blockCoord) * 1.93 + course * 5.7));
-                joints = max(joints, vertical);
+                joints = max(joints, vertical) * _JointStrength;
+                // Thin out the joints far away, where they would crowd the blocks and wash the tower out.
+                joints *= saturate(1.6h - max(fwCourse, fwU / width) * 5.0h);
 
                 // Carved script on some courses; the inside of the tower is mostly written on.
                 half facingIn = step(dot(input.normalOS.xz, p.xz), 0.0);
@@ -262,6 +268,8 @@ Shader "Capstone/Landmarks/SpireStone"
                 color = lerp(color, _ScriptColor.rgb * lineLight, script);
                 // Glow ignores lighting so it reads in shadow and at night.
                 color += _GlowColor.rgb * script * pulse * flicker * _GlowStrength;
+                // Carved glyphs keep a steady glow of their own, so the tower reads from far away.
+                color += _GlowColor.rgb * script * _ScriptGlowBase;
                 color += _GlowColor.rgb * joints * pulse * 0.25h * _GlowStrength;
 
                 // Glitch: thin bands where the pulse light tears into the palette colours.

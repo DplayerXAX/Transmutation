@@ -239,7 +239,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 40e76d05e1a1453ab221bb632d7bd3d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandClimber
-  controller: {fileID: 0}
+  controller: {fileID: 9096247247460234985}
   viewCamera: {fileID: 0}
   climbLayers:
     serializedVersion: 2
@@ -251,15 +251,24 @@ MonoBehaviour:
   wallOffset: 0.5
   handHeight: 0.6
   handSpread: 0.3
+  pressHeight: 0.2
   pullSpeed: 2.4
   bodySmoothTime: 0.16
   reachStep: 0.5
   reachLength: 1.04
+  reachAbove: 1.365
   reachTime: 0.22
   maxHandDistance: 1.4
-  climbSpeed: 1
+  climbSpeed: 1.2
   fastClimbBoost: 1.4
   detourDelay: 0.2
+  enterStagger: 0.35
+  probeRadius: 0.08
+  slideStartSpeed: 1.5
+  slideMaxSpeed: 5
+  slideAcceleration: 6
+  lungeSpeed: 6.5
+  lungeGrabWindow: 0.7
   pullUpTime: 1.2
   jumpOffVelocity: {x: 5, y: 5}
   regrabDelay: 0.35
@@ -291,16 +300,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62ec318a6e27422dbf235651446d2e77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FirstPersonBody
-  controller: {fileID: 0}
+  controller: {fileID: 9096247247460234985}
   viewCamera: {fileID: 0}
   carrier: {fileID: 0}
   climber: {fileID: 0}
   limbMaterial: {fileID: 2100000, guid: 97b46b0a5d754ad78a98689664392761, type: 2}
   jointMaterial: {fileID: 2100000, guid: 6a62aff1be3543cf923dead093f70001, type: 2}
+  gooMaterial: {fileID: 2100000, guid: 3db0b5c64a71e424eac1e75b9b838489, type: 2}
   armThickness: 0.075
   legThickness: 0.11
   showLegs: 1
   shoulderOffset: {x: 0.24, y: -0.3, z: -0.05}
+  shoulderWiden: 0.08
+  armHangOut: 0.14
   idleHandOffset: {x: 0.24, y: -0.34, z: 0.5}
   upperArmLength: 0.36
   forearmLength: 0.34
@@ -310,6 +322,8 @@ MonoBehaviour:
   thighLength: 0.5
   shinLength: 0.48
   strideLength: 0.9
+  stepRate: {x: 2, y: 3}
+  gaitSpeeds: {x: 5, y: 7.5}
 --- !u!114 &2613620289114762461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -342,6 +356,7 @@ GameObject:
   - component: {fileID: 9193611089624520312}
   - component: {fileID: 8888969591394796978}
   - component: {fileID: 5322836975175712463}
+  - component: {fileID: 8471188044157651221}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -404,6 +419,14 @@ MonoBehaviour:
   jumpForce: 12
   jumpCooldown: 0.25
   airMultiplier: 0.4
+  groundAcceleration: 60
+  groundDeceleration: 80
+  airAcceleration: 22
+  airBrake: 4
+  fallGravityMultiplier: 1.7
+  shortHopGravityMultiplier: 2.4
+  coyoteTime: 0.1
+  jumpBuffer: 0.12
   crouchSpeed: 3.5
   crouchYScale: 0.5
   maxSlideTime: 2
@@ -649,6 +672,20 @@ MonoBehaviour:
   releaseSpeed: 1.5
   nearClipPlane: 0.05
   pulledBack: 0
+--- !u!114 &8471188044157651221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4143822023010584049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e67150c0cf5c35e4e9e6c7804455ed9d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerGooCoating
+  secondsPerCreature: 20
+  capacityMultiplier: 1.5
 --- !u!1 &6924890591384260322
 GameObject:
   m_ObjectHideFlags: 0
@@ -812,6 +849,7 @@ MonoBehaviour:
   interactionLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  carrier: {fileID: 0}
 --- !u!1 &7285722104702189515
 GameObject:
   m_ObjectHideFlags: 0

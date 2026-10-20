@@ -19,6 +19,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Header("Look")]
     [SerializeField] private Material limbMaterial;
     [SerializeField] private Material jointMaterial;
+    [SerializeField] private Material gooMaterial;
     [Min(0.01f)] [SerializeField] private float armThickness = 0.075f;
     [Min(0.01f)] [SerializeField] private float legThickness = 0.11f;
     [SerializeField] private bool showLegs = true;
@@ -34,6 +35,15 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Min(0.05f)] [SerializeField] private float forearmLength = 0.34f;
     [Tooltip("How quickly hands chase their targets.")]
     [Min(0.1f)] [SerializeField] private float handFollow = 18f;
+    [Tooltip("How far the arms swing forward and back when walking and running (1 = the original swing).")]
+    [Range(0.5f, 2f)] [SerializeField] private float armSwingScale = 1.1f;
+    [Tooltip("Shoulders, a collar between them and a slim torso down to the hips, so the arms are joined to a " +
+             "body when the camera clips into something and the tops of the arms come into view.")]
+    [SerializeField] private bool showTorso = true;
+    [Tooltip("Eye height above the middle of the player's 2 m capsule (the camera marker's height). 0.75 puts the eyes " +
+             "about 1.75 m off the ground, so the torso between shoulders and hips has a grown-up length. " +
+             "0 leaves the marker where it is in the prefab (0.565).")]
+    [Min(0f)] [SerializeField] private float eyeHeight = 0.75f;
 
     [Header("Legs (body space)")]
     [SerializeField] private float hipHeight = -0.05f;
@@ -87,6 +97,8 @@ public sealed class FirstPersonBody : MonoBehaviour
     private const float LandTime = 0.4f;
     private MaterialPropertyBlock block;
     private Renderer[] renderers;
+    private PlayerGooCoating gooCoating;
+    private readonly System.Collections.Generic.List<Renderer> gooRenderers = new System.Collections.Generic.List<Renderer>();
 
     private void Awake()
     {
@@ -97,6 +109,12 @@ public sealed class FirstPersonBody : MonoBehaviour
         body = controller != null ? controller.Body : null;
         if (body == null && controller != null) body = controller.GetComponent<Rigidbody>();
 
+        if (eyeHeight > 0f && controller != null)
+        {
+            Transform marker = controller.transform.Find("CameraPos");
+            if (marker == null) marker = controller.transform.Find("CameraPosition");
+            if (marker != null) marker.localPosition = new Vector3(marker.localPosition.x, eyeHeight, marker.localPosition.z);
+        }
         root = new GameObject("First Person Body").transform;
         leftArm = BuildLimb("Left Arm", armThickness, hand: true, side: -1f);
         rightArm = BuildLimb("Right Arm", armThickness, hand: true, side: 1f);
@@ -105,6 +123,7 @@ public sealed class FirstPersonBody : MonoBehaviour
             leftLeg = BuildLimb("Left Leg", legThickness, hand: false, side: -1f);
             rightLeg = BuildLimb("Right Leg", legThickness, hand: false, side: 1f);
         }
+        if (showTorso) BuildTorso();
         renderers = root.GetComponentsInChildren<Renderer>();
         // Tentacle creatures ride on the right hand.
         if (carrier != null)
@@ -115,6 +134,12 @@ public sealed class FirstPersonBody : MonoBehaviour
         // The left hand pets creatures.
         petter = FindFirstObjectByType<PlayerCreaturePetter>();
         if (petter == null) petter = gameObject.AddComponent<PlayerCreaturePetter>();
+        gooCoating = controller != null ? controller.GetComponent<PlayerGooCoating>() : null;
+        if (gooMaterial != null)
+        {
+            BuildGooArm(leftArm);
+            BuildGooArm(rightArm);
+        }
     }
 
     private void OnDestroy()
@@ -144,7 +169,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame) interactTimer = 0.3f;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)))) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;
         // Landing after a real jump or fall: knees bend, arms dip, harder the faster the fall.
@@ -179,11 +204,95 @@ public sealed class FirstPersonBody : MonoBehaviour
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
             part.SetPropertyBlock(block);
         }
+        UpdateGooCoating();
+        if (torso != null) PoseTorso();
         LimbsPosed?.Invoke();
+    }
+
+    // ---------------- Torso ----------------
+
+    private Transform torso, collar, leftCap, rightCap;
+    private Vector3 leftShoulder, rightShoulder;
+
+    private void BuildTorso()
+    {
+        var torsoRoot = new GameObject("Torso").transform;
+        torsoRoot.SetParent(root, false);
+        leftCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
+        rightCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
+        collar = Part(PrimitiveType.Capsule, "Collar", torsoRoot, limbMaterial, new Vector3(armThickness * 1.2f, 0.2f, armThickness * 1.2f), true);
+        torso = Part(PrimitiveType.Capsule, "Spine", torsoRoot, limbMaterial, new Vector3(0.21f, 0.2f, 0.12f), true);
+    }
+
+    /// <summary>Joins the two shoulders to each other and, through a slim spine, to the hips.</summary>
+    private void PoseTorso()
+    {
+        leftCap.position = leftShoulder;
+        rightCap.position = rightShoulder;
+        PlaceSegment(collar, leftShoulder, rightShoulder);
+        Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
+        Vector3 neck = (leftShoulder + rightShoulder) * 0.5f - orientation.forward * 0.04f;
+        Vector3 hips = controller.transform.position + Vector3.up * (hipHeight - 0.04f) - orientation.forward * 0.03f;
+        PlaceSegment(torso, neck, hips);
+        // Keep the flat side of the torso facing forward.
+        Vector3 down = hips - neck;
+        if (down.sqrMagnitude > 1e-4f)
+            torso.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(orientation.forward, down).normalized, -down.normalized);
     }
 
     /// <summary>Raised after the arms and legs are posed each frame, for things that must stick to them exactly.</summary>
     public static event System.Action LimbsPosed;
+
+    private void BuildGooArm(Limb arm)
+    {
+        // Anatomical progress increases from shoulder (0) to fingertip (1), independently of pose.
+        AddGooPart(arm.upper, 0f, 0.38f, Vector3.up);
+        AddGooPart(arm.elbow, 0.35f, 0.41f, Vector3.up);
+        AddGooPart(arm.lower, 0.38f, 0.78f, Vector3.up);
+        foreach (MeshFilter mesh in arm.end.GetComponentsInChildren<MeshFilter>())
+        {
+            bool palm = mesh.name == "Palm";
+            bool thumb = mesh.transform.parent.name == "Thumb";
+            bool tip = mesh.transform.parent.name == "Knuckle";
+            AddGooPart(mesh.transform, palm ? 0.78f : thumb ? 0.84f : tip ? 0.95f : 0.9f,
+                palm ? 0.9f : thumb ? 0.98f : tip ? 1f : 0.95f, Vector3.forward);
+        }
+    }
+
+    private void AddGooPart(Transform part, float pathStart, float pathEnd, Vector3 axisOS)
+    {
+        Mesh mesh = part.GetComponent<MeshFilter>().sharedMesh;
+        var shell = new GameObject("Goo Coating", typeof(MeshFilter), typeof(MeshRenderer));
+        shell.transform.SetParent(part, false);
+        shell.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var renderer = shell.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = gooMaterial;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.enabled = false;
+        Bounds boundsOS = mesh.bounds;
+        float minimumOS = Vector3.Dot(boundsOS.min, axisOS);
+        float lengthOS = Vector3.Dot(boundsOS.size, axisOS);
+        var properties = new MaterialPropertyBlock();
+        properties.SetVector("_PathRange", new Vector4(pathStart, pathEnd, minimumOS, 1f / Mathf.Max(lengthOS, 0.001f)));
+        properties.SetVector("_AxisOS", axisOS);
+        renderer.SetPropertyBlock(properties);
+        gooRenderers.Add(renderer);
+    }
+
+    private void UpdateGooCoating()
+    {
+        float coverage = gooCoating != null && gooCoating.CanClimb ? gooCoating.Coverage : 0f;
+        float extra = gooCoating != null ? gooCoating.ExtraThickness : 0f;
+        foreach (Renderer renderer in gooRenderers)
+        {
+            renderer.enabled = coverage > 0f;
+            if (!renderer.enabled) continue;
+            renderer.GetPropertyBlock(block);
+            block.SetFloat("_Coverage", coverage);
+            block.SetFloat("_Thickness", Mathf.Lerp(0.002f, 0.006f, extra));
+            renderer.SetPropertyBlock(block);
+        }
+    }
 
     // ---------------- Arms ----------------
 
@@ -193,6 +302,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         bool tentacleOnHand = false;
         bool carrying = side > 0f && carrier != null && carrier.CarriedCreature != null && !carrier.CarriesTentacle;
         bool petting = side < 0f && petter != null && petter.IsPetting && !climbing;
+        bool riding = carrier != null && carrier.TentacleLockedForRide;
         bool poking = side < 0f && interactTimer > 0f && !petting;
         // Right hand reaching out for a creature when the pickup button is pressed.
         float grabAge = side > 0f && carrier != null ? Time.time - carrier.LastGrabTime : 10f;
@@ -200,7 +310,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         bool grabbing = grabAge < GrabTime && !climbing && carrier.CarriedCreature == null;
         carrying |= grabbing;
         // Arms hang from the body (so looking around does not swing them), except while holding or poking something in view.
-        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, carrying || poking || petting || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
+        arm.bodyFrame = Mathf.MoveTowards(arm.bodyFrame, riding || carrying || poking || petting || (tentacleOnHand && !climbing) ? 0f : 1f, deltaTime * 5f);
 
         Vector3 eye = view.position;
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
@@ -209,6 +319,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         Vector3 bodyShoulder = eye + bodyRight * ((shoulderOffset.x + shoulderWiden) * side) + bodyUp * shoulderOffset.y + bodyForward * shoulderOffset.z;
         Vector3 viewShoulder = view.TransformPoint(Vector3.Scale(shoulderOffset, new Vector3(side, 1f, 1f)));
         Vector3 shoulder = Vector3.Lerp(viewShoulder, bodyShoulder, arm.bodyFrame);
+        if (side > 0f) rightShoulder = shoulder; else leftShoulder = shoulder;
         // Elbows point down and out.
         Vector3 pole = Vector3.Lerp(-view.up + view.right * side * 0.6f - view.forward * 0.2f,
                                     -bodyUp + bodyRight * side * 0.6f - bodyForward * 0.2f, arm.bodyFrame);
@@ -219,7 +330,16 @@ public sealed class FirstPersonBody : MonoBehaviour
         int pointing = -1;   // A finger that stays straight (index finger when poking).
         float flutter = 0f;  // Small independent finger movement.
 
-        if (climbing && climber.GetHand(side > 0f ? 1 : 0, out Vector3 hold, out Vector3 wallNormal, out bool gripping))
+        if (riding)
+        {
+            // Each hand holds a rein; pulling it brings that hand back towards the shoulder.
+            bool pulling = side < 0f ? BoneRide.LeftReinHeld : BoneRide.RightReinHeld;
+            Vector3 local = new Vector3(side * 0.3f, pulling ? -0.32f : -0.42f, pulling ? 0.3f : 0.58f);
+            target = Vector3.Lerp(arm.end.position, view.TransformPoint(local), 1f - Mathf.Exp(-12f * deltaTime));
+            palmNormal = -view.up;
+            grip = pulling ? 1f : 0.7f;
+        }
+        else if (climbing && climber.GetHand(side > 0f ? 1 : 0, out Vector3 hold, out Vector3 wallNormal, out bool gripping))
         {
             target = hold + wallNormal * 0.04f;
             palmNormal = wallNormal;
@@ -250,6 +370,15 @@ public sealed class FirstPersonBody : MonoBehaviour
             palmNormal = normal;
             grip = 0.25f + 0.1f * Mathf.Max(0f, stroke);
             flutter = 0.08f;
+        }
+        else if (side > 0f && TentacleTether.Instance != null && TentacleTether.Instance.Aiming)
+        {
+            // Aiming a tentacle shot: the right arm points out at the marker, hand open.
+            Vector3 toGoal = TentacleTether.Instance.AimPoint - shoulder;
+            target = shoulder + Vector3.ClampMagnitude(toGoal, (upperArmLength + forearmLength) * 0.95f);
+            palmNormal = -toGoal.normalized;
+            grip = 0.1f;
+            spread = 1f;
         }
         else if (grabbing)
         {
@@ -305,8 +434,8 @@ public sealed class FirstPersonBody : MonoBehaviour
             // Running: elbows bent and fists pumping in front of the chest, swinging in towards the middle,
             // so at the top of each swing the hand comes up into the bottom of the view, first-person style.
             Vector3 pump = bodyShoulder
-                + bodyForward * (0.24f + (0.26f + 0.12f * reach) * swing)
-                + bodyUp * (-0.4f + (0.24f + 0.1f * reach) * forward - 0.1f * Mathf.Max(0f, -swing))
+                + bodyForward * (0.24f + (0.26f + 0.12f * reach) * swing * armSwingScale)
+                + bodyUp * (-0.4f + ((0.24f + 0.1f * reach) * forward - 0.1f * Mathf.Max(0f, -swing)) * armSwingScale)
                 - bodyRight * (side * (0.03f + 0.12f * forward));
             target = Vector3.Lerp(hang, pump, run);
             target += bodyUp * (Mathf.Sin(Time.time * 1.7f + side) * 0.006f);

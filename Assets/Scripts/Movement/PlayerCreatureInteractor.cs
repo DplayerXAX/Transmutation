@@ -36,7 +36,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Checks for one left-click press and attempts a centre-screen interaction.</summary>
     private void Update()
     {
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))))
         {
             TryInteract();
         }
@@ -47,7 +48,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     {
         if (interactionCamera == null) return;
         Creature held = carrier != null ? carrier.CarriedCreature : null;
-        if (held != null && held.CanUseWhileCarried)
+        if (held != null && !held.IsDead && held.CanUseWhileCarried)
         {
             Ray aim = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             held.ReceiveInteraction(new CreatureInteraction(gameObject,
@@ -98,6 +99,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             return null;
         }
 
-        return hit.collider.GetComponentInParent<Creature>();
+        Creature creature = hit.collider.GetComponentInParent<Creature>();
+        return creature != null && !creature.IsDead ? creature : null;
     }
 }

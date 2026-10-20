@@ -126,7 +126,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         UpdatePendingGrab();
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
-            Release();
+            ReleaseCarriedCreature();
     }
 
     private void UpdateToggle(bool rightMouse)
@@ -276,6 +276,7 @@ private void FitCarryPoint(Creature creature)
         }
         if (!creature.CanBeCarried) return;
         if (carryPoint == null) return;
+        if (creature.TryGetComponent<CompostAbsorption>(out var absorption)) absorption.CancelForPickup();
         heldInView = creature.HeldInView;
         if (heldInView) carryPoint.localPosition = heldInViewPosition;
         else FitCarryPoint(creature);
@@ -337,7 +338,7 @@ private void FitCarryPoint(Creature creature)
     /// <summary>A tentacle creature clings to the player's back (between the shoulder blades), out of view.</summary>
     private void FollowHand(float deltaTime)
     {
-        if (carryPoint == null || !(CarriedCreature is TentacleCreature)) return;
+        if (carryPoint == null || !CarriesTentacle) return;
         Transform player = PlayerBody != null ? PlayerBody.transform : transform;
         Vector3 forward = carryCamera != null ? Vector3.ProjectOnPlane(carryCamera.transform.forward, Vector3.up) : player.forward;
         if (forward.sqrMagnitude < 1e-4f) forward = player.forward;
@@ -353,7 +354,10 @@ private void FitCarryPoint(Creature creature)
         else carryPoint.position = back;
     }
 
-    public bool CarriesTentacle => CarriedCreature is TentacleCreature;
+    public bool CarriesTentacle => CarriedCreature is TentacleCreature && !CarriedCreature.IsDead;
+
+    /// <summary>The attached creature stays on the rider while the mouse buttons pull the reins.</summary>
+    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Mount != null;
 
     private void SnapHeld()
     {
@@ -401,6 +405,7 @@ private void FitCarryPoint(Creature creature)
     /// <summary>Releases the creature and, if it is a free physics body, sends it slightly forward.</summary>
     public void Drop()
     {
+        if (TentacleLockedForRide) return;
         Creature dropped = CarriedCreature;
         Release();
         if (dropped == null || carryCamera == null) return;
@@ -411,6 +416,12 @@ private void FitCarryPoint(Creature creature)
     }
 
     public void Release()
+    {
+        if (TentacleLockedForRide) return;
+        ReleaseCarriedCreature();
+    }
+
+    private void ReleaseCarriedCreature()
     {
         if (CarriedCreature != null && heldInView) PutDownHeldInView(CarriedCreature);
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
@@ -439,6 +450,6 @@ private void FitCarryPoint(Creature creature)
         }
     }
 
-    private void OnDisable() => Release();
+    private void OnDisable() => ReleaseCarriedCreature();
     private void OnApplicationFocus(bool focused) { if (!focused) Release(); }
 }

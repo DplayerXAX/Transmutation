@@ -329,12 +329,38 @@ public class DensityShapeOverlay : MonoBehaviour
 		return t * t * (3f - 2f * t);
 	}
 
-	float GetNormalizedDistance(Vector3 worldSample)
+	// Pose cached by BeginBatch, so evaluating many samples in a row does not read the transform each time.
+	bool batching;
+	Vector3 batchPosition;
+	Quaternion batchInverseRotation;
+
+	/// <summary>
+	/// Call before evaluating many samples in one go (MarchingCubesVolume does, every tick) and EndBatch after:
+	/// the overlay's pose is read once instead of once per sample. Results are the same.
+	/// </summary>
+	public void BeginBatch()
 	{
 		MigrateSerializedDefaults();
+		batchPosition = transform.position;
+		batchInverseRotation = Quaternion.Inverse(transform.rotation);
+		batching = true;
+	}
 
-		// Oriented world frame (ignore scale so size stays in world units).
-		Vector3 local = Quaternion.Inverse(transform.rotation) * (worldSample - transform.position);
+	public void EndBatch() => batching = false;
+
+	float GetNormalizedDistance(Vector3 worldSample)
+	{
+		Vector3 local;
+		if (batching)
+		{
+			local = batchInverseRotation * (worldSample - batchPosition);
+		}
+		else
+		{
+			MigrateSerializedDefaults();
+			// Oriented world frame (ignore scale so size stays in world units).
+			local = Quaternion.Inverse(transform.rotation) * (worldSample - transform.position);
+		}
 
 		switch (shape)
 		{

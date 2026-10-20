@@ -238,7 +238,7 @@ public sealed class TrappingBubble : Creature
 
     public void Pop(bool launchPlayer = false)
     {
-        if (popped) return;
+        if (popped || IsDead) return;
         popped = true;
         if (solidCollider != null) solidCollider.enabled = false;
         if (captureTrigger != null) captureTrigger.enabled = false;
@@ -256,7 +256,13 @@ public sealed class TrappingBubble : Creature
     {
         if (Occupant != capture) return;
         Occupant = null;
-        Pop();
+        if (!IsDead) Pop();
+    }
+
+    protected override void OnDeath()
+    {
+        if (Occupant != null) Occupant.Release();
+        RestoreExpiredIgnores(true);
     }
     protected override void OnDisable() { Pop(); base.OnDisable(); }
     private void OnDestroy() => Pop();

@@ -19,6 +19,9 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
     [Min(0f)] [SerializeField] private float loseGrace = 0.3f;
     [SerializeField] private LayerMask petLayers = ~0;
 
+    [Tooltip("A tentacle creature held with the left hand is dragged along, kept this far in front of the eyes.")]
+    [Min(0.3f)] [SerializeField] private float dragDistance = 1.4f;
+
     private PlayerCreatureCarrier carrier;
     private float heldFor;
     private float lostFor;
@@ -37,8 +40,10 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
 
     private void Update()
     {
+        if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
-        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused;
+        // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
+        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)));
         heldFor = held ? heldFor + Time.deltaTime : 0f;
 
         RaycastHit hit = default;
@@ -59,6 +64,16 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         }
 
         if (Petted == null) return;
+        // A tentacle creature is not just stroked: it is held by the hand and dragged along until let go.
+        if (held && Petted is TentacleCreature dragged && Petted.isActiveAndEnabled)
+        {
+            lostFor = 0f;
+            TouchPoint = viewCamera.transform.position + viewCamera.transform.forward * dragDistance;
+            TouchNormal = -viewCamera.transform.forward;
+            dragged.Dragged = true;
+            Petted.ContinuePet(TouchPoint, TouchNormal, Time.deltaTime);
+            return;
+        }
         // Brief slips (the creature moving under the hand) do not end it; letting go does.
         lostFor += Time.deltaTime;
         if (!held || lostFor > loseGrace || !Petted.isActiveAndEnabled) Stop();
@@ -76,12 +91,13 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         if (!Physics.Raycast(ray, out hit, petRange, petLayers, QueryTriggerInteraction.Ignore)) return null;
         Creature creature = hit.collider.GetComponentInParent<Creature>();
         // The creature already held in the right hand is not petted.
-        if (creature == null || (carrier != null && carrier.CarriedCreature == creature)) return null;
+        if (creature == null || creature.IsDead || (carrier != null && carrier.CarriedCreature == creature)) return null;
         return creature;
     }
 
     private void Stop()
     {
+        if (Petted is TentacleCreature dragged) dragged.Dragged = false;
         if (Petted != null) Petted.EndPet();
         Petted = null;
     }

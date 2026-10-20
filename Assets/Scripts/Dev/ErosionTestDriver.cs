@@ -142,6 +142,9 @@ public sealed class ErosionTestDriver : MonoBehaviour
         Log($"CREATURES fuzz={fuzz.transform.position} tentacle={tentacle.transform.position} ground={Height(tentacle.transform.position):F3}");
         Check(fuzz.transform.position.y < fuzzY - 0.25f, "Fuzz creature follows erosion beneath its existing position");
         Check(tentacle.transform.position.y < tentacleY - 0.25f, "Tentacle creature reacquires eroded support beneath its existing position");
+        var testGoo = controller.GetComponent<PlayerGooCoating>();
+        if (testGoo == null) testGoo = controller.gameObject.AddComponent<PlayerGooCoating>();
+        testGoo.TryApplyGoo();
         var climber = new GameObject("Erosion climb contact witness").AddComponent<HandClimber>();
         RigidbodyInterpolation playerInterpolation = controller.Body.interpolation;
         controller.enabled = false; controller.Body.interpolation = RigidbodyInterpolation.None;

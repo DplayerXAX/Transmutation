@@ -36,6 +36,7 @@ public sealed class BubbleCapture : MonoBehaviour
         creature = GetComponent<Creature>();
         player = GetComponent<SmoothFirstPersonController>();
         if ((creature == null && player == null) || (creature != null && creature.IsCarried)) return false;
+        if (creature != null) CreatureThrower.ReleaseFlight(creature);
 
         // Release silk before recording simulation state, so release resumes the original behavior.
         foreach (WebCapture web in GetComponentsInChildren<WebCapture>())
@@ -67,6 +68,7 @@ public sealed class BubbleCapture : MonoBehaviour
             colliders.Add(new ColliderState { collider = collider, enabled = collider.enabled });
             collider.enabled = false;
         }
+        if (creature != null) creature.NotifyCaptureStarted();
         return true;
     }
 

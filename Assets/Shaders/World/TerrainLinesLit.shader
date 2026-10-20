@@ -263,12 +263,13 @@ Shader "Capstone/World/TerrainLinesLit"
                     _MainLightAmount, _FakeLightDir.xyz, _FakeLightAmount, _ShadeLevels, ao);
 
                 half3 baseColor = lerp(_ShadowColor.rgb, _Color.rgb, light) * lerp(0.6h, 1.0h, ao);
-                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength;
+                half detail = LineWorldDetail(input.positionWS);
+                half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength * detail;
                 half3 color = lerp(baseColor, _HatchColor.rgb, hatch);
 
                 half3 lineColor = LineWorldSheen(_LineColor.rgb, _LineColor2.rgb, normalWS, viewDirWS, input.positionWS, _SheenAmount);
                 lineColor *= lerp(_ShadowLineDim, 1.0h, light);
-                color = lerp(color, lineColor, TerrainLines(input.positionWS, normalWS));
+                color = lerp(color, lineColor, TerrainLines(input.positionWS, normalWS) * detail);
 
                 color = LineWorldHaze(color, input.positionWS, _HazeColor, _HazeStart, _HazeEnd);
                 color = MixFog(color, input.fogFactor);

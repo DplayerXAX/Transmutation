@@ -11,6 +11,7 @@ public sealed class BirdBones : Creature
     {
         SetCreatureName("Bird Bones");
         SetFoodAndDiet(FoodTag.Matter, FoodTag.None);
+        InitializeDeadRemains();
         SetMovementPhysics(false, true);
     }
 
@@ -23,7 +24,7 @@ public sealed class BirdBones : Creature
         if (prefab != null) bones = Instantiate(prefab, position, rotation);
         else
         {
-            // Independently created birds still leave useful remains without an authored prefab reference.
+            // Independently created birds can leave age-death remains without an authored prefab reference.
             GameObject root = new GameObject("Bird Bones (Automatic)");
             root.transform.SetPositionAndRotation(position, rotation);
             SceneManager.MoveGameObjectToScene(root, scene);

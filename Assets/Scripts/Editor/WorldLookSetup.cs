@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// One click setup for the lit line-world look: switches the ProceduralWorld in the open scene
 /// to the lit terrain materials, adds a WorldDecorator with its materials,
-/// adds pickable fruit and flowers to the inner world (CaveHarvest), switches the sky to a calmer copy of
-/// the white fractal sky, and adds a CameraWallGuard to the player so the camera stays out of walls.
+/// adds pickable fruit and flowers to the inner world (CaveHarvest), switches the sky to the liquid
+/// ink sky, adds aerial perspective (AerialPerspective), and adds a CameraWallGuard to the player so the
+/// camera stays out of walls.
 /// </summary>
 public static class WorldLookSetup
 {
@@ -54,12 +55,19 @@ public static class WorldLookSetup
         harvest.SetMaterials(fruit, flower, shell);
         EditorUtility.SetDirty(harvest);
 
-        var sky = AssetDatabase.LoadAssetAtPath<Material>(Folder + "MAT_Sky_FractalCalm.mat");
+        var sky = AssetDatabase.LoadAssetAtPath<Material>(Folder + "MAT_Sky_LiquidInk.mat");
         if (sky != null && RenderSettings.skybox != sky)
         {
-            Undo.RecordObject(Unsupported.GetRenderSettings(), "Calm fractal sky");
+            Undo.RecordObject(Unsupported.GetRenderSettings(), "Liquid ink sky");
             RenderSettings.skybox = sky;
         }
+
+        // Distance fog and fading line detail; also hides chunks that have not loaded yet.
+        AerialPerspective aerial = world.GetComponent<AerialPerspective>();
+        if (aerial == null) aerial = Undo.AddComponent<AerialPerspective>(world.gameObject);
+        Undo.RecordObject(aerial, "Aerial Distances");
+        aerial.UseRecommendedDistances();
+        EditorUtility.SetDirty(aerial);
 
         SmoothFirstPersonController player = Object.FindFirstObjectByType<SmoothFirstPersonController>();
         if (player != null && player.GetComponent<CameraWallGuard>() == null)

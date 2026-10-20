@@ -93,6 +93,7 @@ public sealed class FireBubble : Creature
     private bool descending;
     private Vector3 driftVelocity;
     private float visualFlowTime;
+    private BoneChild boneOwner;
     private MaterialPropertyBlock visualProperties;
     private static readonly int HeatShaderId = Shader.PropertyToID("_Heat");
     private static readonly int StillHeatShaderId = Shader.PropertyToID("_StillHeat");
@@ -100,7 +101,45 @@ public sealed class FireBubble : Creature
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
     /// <summary>Whether this Bubble has started falling and can be eaten.</summary>
-    public bool IsInanimate => currentState == BubbleState.Inanimate;
+    public bool IsInanimate => !IsBoundToBone && currentState == BubbleState.Inanimate;
+
+    public bool IsBoundToBone => boneOwner != null;
+    public override bool CanBeCarried => !IsBoundToBone;
+    public override bool CanBeConsumed => !IsBoundToBone;
+
+    /// <summary>The ribcage owns this bubble permanently; it keeps glowing without ageing or taking root.</summary>
+    public bool BindToBone(BoneChild owner)
+    {
+        if (owner == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
+        FindPhysicsReferences();
+        if (TryGetComponent<WebCapture>(out var web)) web.Release();
+        boneOwner = owner;
+        transform.SetParent(owner.transform, true);
+        inanimateTimer = 0f;
+        if (!bubbleBody.isKinematic)
+        {
+            bubbleBody.linearVelocity = Vector3.zero;
+            bubbleBody.angularVelocity = Vector3.zero;
+        }
+        bubbleBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+        bubbleBody.isKinematic = true;
+        bubbleBody.useGravity = false;
+        bubbleBody.interpolation = RigidbodyInterpolation.None;
+        // It belongs to the ribcage now, so other creatures and traps cannot take it away.
+        foreach (Collider collider in GetComponentsInChildren<Collider>()) collider.enabled = false;
+        SetSimulationEnabled(true);
+        return true;
+    }
+
+    protected override void Update()
+    {
+        if (IsBoundToBone)
+        {
+            UpdateHeatVisual(Time.deltaTime);
+            return;
+        }
+        base.Update();
+    }
 
     /// <summary>Chooses a fixed heading and keeps the floating Bubble outside gravity simulation.</summary>
     protected override void InitializeCreature()
@@ -149,7 +188,7 @@ public sealed class FireBubble : Creature
 
     private void FixedUpdate()
     {
-        if (IsDead || bubbleBody == null || transformationStarted)
+        if (IsBoundToBone || IsDead || bubbleBody == null || transformationStarted)
             return;
 
         if (SimulationEnabled && !descending)
@@ -189,7 +228,8 @@ public sealed class FireBubble : Creature
             return;
         }
 
-        Instantiate(fireFlowerPrefab, transform.position, Quaternion.identity);
+        FireFlower replacement = Instantiate(fireFlowerPrefab, transform.position, Quaternion.identity);
+        replacement.SetResolvedPolarity(Polarity);
         Destroy(gameObject);
     }
 

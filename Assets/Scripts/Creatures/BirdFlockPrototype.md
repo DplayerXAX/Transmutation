@@ -30,7 +30,8 @@ Rendering uses individual cube GameObjects with a shared instanced URP Lit mater
 ## Food, lifespan, and bones
 
 **Hunt Radius** (25 metres) finds the nearest compatible active creature in the same
-scene. **Hunt Desire** (2) weights food attraction in the same steering sum as separation,
+scene. **Hunt Desire** is the maximum food attraction weight (existing prefab tuning is
+preserved), in the same steering sum as separation,
 alignment, cohesion, wandering, and bounds return. It is not a separate movement mode:
 all weights remain active and the combined acceleration/speed limits still apply.
 Food outside the sky bounds remains eligible and competes with inward steering. The
@@ -40,29 +41,66 @@ physics step; no per-bird scene searches or allocating overlap queries are used.
 Set **Food Tags > Plant** on a food creature, including a harvested item if desired.
 These are the shared Creature enum flags, not Unity GameObject tags. The bird prefab's
 **Diet Tags** accept Plant. Multiple birds can share food. On physical or trigger contact,
-a freely flying bird with positive Hunt Desire consumes compatible food. Desire zero
+a freely flying bird with sufficient Hunger and positive Hunt Desire consumes compatible food. Desire zero
 disables seeking and eating. Carrying, either capture type, simulation pause, or death
 prevents autonomous eating. A food collider is needed for contact consumption.
 
 Every creature inherits **Age** (remaining lifetime, default 40) and **Age Rate**
 (spent per second, default 0). Simulation pause also pauses aging. Carrying alone
-does not pause Age. At zero `Die()` runs once. Base death disables simulation, preserving
-the object and physics; a release cannot revive a dead creature.
+does not pause Age. At zero `Die()` runs once. Base death disables simulation, retains
+the original body, and enables passive corpse physics; a release cannot revive it.
+After shared death and its notifications, lifespan expiry alone calls `OnAgeDeath()`.
+Birds use that hook to leave bones. Calling `Die()` directly does not invoke age-specific effects.
 
 `Consume(consumer)` handles optional nutrition/special effects and does nothing by
 default. It does not call death. The feeding caller uses `TryConsumeFood(food)` to claim
-the target, run Consume, separately run Die, and remove the remaining original. No
-nutrition or Age restoration exists yet. Deferred destruction cannot repeat feeding.
+the target, run Consume, separately run Die, and remove the remaining original.
+Deferred destruction cannot repeat feeding. Nutrition does not restore Age.
 
-Bird `Die()` creates the referenced **BirdBones** prefab once and removes the bird.
-Hand, web, and bubble attachments release immediately. Bones keep the death pose and
-velocity, use gravity and solid collisions, and have no autonomous movement. Their
-food tag is Matter, diet is None, and Age/Rate default to 40/0. They can be picked up,
-consumed by Matter eaters, or given future interaction/processing overrides. Consuming
-bones removes them without spawning further bones. Runtime birds missing a bones
-prefab reference use a shared-material cube fallback.
-Bones released from silk receive the same half-second recapture grace period as a
-normal web release, allowing them to fall away before another web contact can catch them.
+### Hunger and shared meals
+
+Each bird starts with **Hunger 50** on a 0–100 scale: 0 is full and 100 is very hungry.
+**Hunger Rate** defaults to 0.25 per second while simulation runs. Carrying still uses
+nutrition; web/bubble capture, simulation pause, disabling and death stop hunger growth.
+Maximum hunger does not cause death or alter Age.
+
+At Hunger below **Appetite Threshold** (20), birds ignore food and cannot eat it. At or
+above the threshold, **EffectiveHuntDesire = Hunt Desire × Hunger / 100**. Both food
+selection and the weighted flight steering use this effective value; manually tuned
+Hunt Desire remains the maximum. Full birds stay in the flock without competing for food.
+
+Every `Creature` exposes **Nutrition**, default 120, independently of food/diet tags.
+Edit this on each food prefab to tune its meal value. One successful bird meal shares
+this fixed budget among the eater and compatible hungry flying birds in the same scene
+within **Nutrition Sharing Radius** (10 metres) of the food. Recipients may have different
+targets or spawn areas and may be below the appetite threshold. Carried, captured, paused,
+disabled, dead, consumed, and full birds do not receive shares. The actual eater is included
+even when a large food's origin is outside the peer radius.
+
+Shares are equal, capped at each recipient's Hunger. Unused portions are redistributed
+until the remaining birds receive equal portions or all are full; leftover nutrition is
+discarded. A 120-point meal reduces Hunger by 20 each for 6 birds or 5 each for 24 birds
+when they need that much. At 0.25 Hunger/second, 24 birds need roughly three such meals
+per minute to maintain their collective hunger, ignoring wasted surplus.
+
+Meal nutrition, position, tags, type and scene are cached before food callbacks. Nutrition
+is awarded only after the shared feeding transaction succeeds; `Consume()` overrides
+need not call base. Only nutrition is shared: a Corrupt Seed infects the actual eater,
+while its nearby flock mates receive nutrition without infection. Recipient selection
+uses the manager's existing bird list and current Rigidbody positions, not scene searches
+or the previous flight octree snapshot. Allocation buffers are reused.
+
+Bird `Die()` removes flock membership, stops flight, and releases hand, web, and bubble
+attachments through the shared lifecycle. Direct death (including Inspector Kill) retains the
+original active, visible, collidable body with passive gravity, food tags, and Nutrition.
+Consumption runs shared death then removes that original, without leaving extra bones.
+Only Age expiry replaces the bird with one **BirdBones** after death notifications, preserving
+its current scene, pose, linear velocity, and angular velocity. Configure **Bones Prefab** on
+the bird; an empty reference creates automatic placeholder bones. Original colliders and food
+registration retire immediately. Repeated death calls do not create extra remains.
+Independently placed **BirdBones** initialize as dead Matter remains (Age 0, simulation off),
+without firing another death event. They remain portable and edible by Matter eaters.
+Web release gives the retained corpse the normal half-second recapture grace period.
 
 ## Setup and tuning
 
@@ -107,9 +145,15 @@ release, and resumed flight with both spring and firm grips. The runtime checks 
 verify spawn speed overrides, initial velocities, and inheritance from the prefab.
 
 `Validate Bird Life and Food (Play Mode)` checks countdown/pause/death, separate Consume
-effects, weighted food steering, actual contact feeding, simultaneous eaters, bone
-creation and settling, and free/held/web/bubble/consumed/fallback transformations.
+effects, weighted food steering, actual contact feeding, simultaneous eaters, retained
+bird corpse physics, age-only bones with prefab/fallback, notification order, dead bones,
+and free/held/web/bubble/consumed death paths.
 The trapping bubble's elapsed timer is separate from inherited remaining Age.
+
+`Validate Bird Hunger and Sharing (Play Mode)` checks hunger clocks and appetite,
+solo/6/24-bird meals, caps and redistribution, exact sharing boundaries, state/diet/scene
+exclusions, rejected or duplicate meals, callback mutation/removal, and seed infection.
+This check only runs when explicitly invoked and does not edit prefab or scene assets.
 
 Profiler markers: `BirdFlock.Simulation` and `BirdFlock.NeighborQueries`.
 `CandidateChecks` reports actual point distance tests versus an exhaustive N² search.
@@ -127,6 +171,6 @@ include both timings rather than assuming spatial partitioning is always faster.
 The project includes `com.unity.pipeline` for live Editor automation and verification.
 Bird behavior itself uses Unity physics and ordinary GameObjects.
 
-This prototype has no bird models, wing animation, dedicated audio, nutrition values,
+This prototype has no bird models, wing animation, dedicated audio, starvation death,
 or waypoint routes. Pausing creature simulation stops steering, while its dynamic
 body can still move under physics, consistent with the shared Creature lifecycle.

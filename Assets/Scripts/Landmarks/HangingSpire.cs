@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -70,6 +71,39 @@ public sealed class HangingSpire : MonoBehaviour
     [Min(1f)] [SerializeField] private float heatForLift = 25f;
     [Tooltip("Upward speed of the heated draft, m/s.")]
     [Min(0f)] [SerializeField] private float liftSpeed = 9f;
+
+    [Header("Climb In Three Stages")]
+    [Tooltip("Two shorter towers beside the spire, linked by ribbon bridges: climb the first, cross to the second, " +
+             "climb it, cross to a landing on the spire and climb the last stretch. The spire can still be climbed whole.")]
+    [SerializeField] private bool stages = true;
+    [Tooltip("Tops of the first and second towers, as shares of the spire's height.")]
+    [SerializeField] private Vector2 stageTops = new Vector2(0.32f, 0.62f);
+    [Tooltip("Each stage is at least this much climbing (metres), wherever the ground around the spire is high.")]
+    [Min(4f)] [SerializeField] private float minStageClimb = 18f;
+    [Tooltip("Climb on the second tower, from its landing to its top (metres).")]
+    [Min(4f)] [SerializeField] private float secondStageClimb = 24f;
+    [Tooltip("Climb on the spire from its landing to the crown (metres); the spire grows taller if it needs to.")]
+    [Min(8f)] [SerializeField] private float finalStageClimb = 22f;
+    [Tooltip("How far the floating towers hang on below their landings (metres).")]
+    [Min(0f)] [SerializeField] private float hangBelow = 9f;
+    [Tooltip("How much higher each bridge's far end is than its near end (metres).")]
+    [Min(0f)] [SerializeField] private float bridgeRise = 4f;
+    [Min(1f)] [SerializeField] private float bridgeWidth = 3f;
+    [Tooltip("Off: no ribbon bridges between the towers; the player has to find a way across (a tentacle arm shot " +
+             "at the next tower and reeled in, a cord, a slingshot). The landings stay where the bridges arrived.")]
+    [SerializeField] private bool bridges = false;
+    [Tooltip("On: bare hands can climb the towers (they only creep down). Off: bare hands slide straight off; only " +
+             "sticky hands (a carried tentacle creature) hold, and ledge tops still stop a slide.")]
+    [SerializeField] private bool climbAlone = false;
+    [Tooltip("Scene object whose mesh and material the bridges use (empty = the object named Plane).")]
+    [SerializeField] private GameObject bridgeTemplate;
+
+    [Header("Structure")]
+    [Tooltip("The spire is a stack of drums about this tall (metres): each its own polygon (square, hexagon...), " +
+             "turned and shifted against the one below, with a glowing seam between them. 0 = one smooth wall.")]
+    [Min(0f)] [SerializeField] private float drumLength = 12f;
+    [Tooltip("Drum height on the two stage towers (0 = smooth).")]
+    [Min(0f)] [SerializeField] private float stageDrumLength = 8f;
 
     [Header("Creatures")]
     [Tooltip("A tentacle creature in the scene to copy. Copies crawl over the tower and wander round its base.")]
@@ -159,6 +193,8 @@ public sealed class HangingSpire : MonoBehaviour
             doorHeight = 5.5f + (rimHigh - rimLow) * 0.3f,
             windows = windows,
             noiseSeed = 3.3f + seed * 1.71f,
+            roughness = drumLength > 0f ? 0.08f : 0.3f,
+            drumLength = drumLength,
             glazePatchDensity = glazePatches,
             // Balcony round to the side of the door, so players walking round the tower pass under it.
             balconyAngle = doorAngle + Mathf.PI * 0.6f, // the glaze tentacle in SpawnCreatures uses the same angle
@@ -166,16 +202,39 @@ public sealed class HangingSpire : MonoBehaviour
         upper.glazeBottom = upper.height * glazeRing.x;
         upper.glazeTop = upper.height * glazeRing.y;
         upper.SnapGlaze();
+        if (stages)
+        {
+            PlanStages(basePoint, upper, doorAngle);
+            float landing = stageTopsPlanned.y + bridgeRise;
+            // Tall enough for the last stretch, with the glaze ring above the landing.
+            upper.height = Mathf.Max(upper.height, landing + finalStageClimb);
+            float ringHeight = upper.height * (glazeRing.y - glazeRing.x);
+            upper.glazeBottom = Mathf.Max(upper.height * glazeRing.x, landing + 3f);
+            upper.glazeTop = Mathf.Min(upper.glazeBottom + ringHeight, upper.height - 6f);
+            upper.SnapGlaze();
+            // The spire floats, hanging on a little way below the landing its bridge arrives at.
+            upper.cutBelow = landing - 2.5f - hangBelow;
+        }
         upperShape = upper;
         ringBottom = upper.glazeBottom;
         ringTop = upper.glazeTop;
         Mesh upperMesh = LandmarkShapes.Spire(upper, random, ledgeCount, beam: true, flipY: false, out Vector3 beamCentre);
+        // A resting place on the crown rim, facing out over the world (RestSpotSystem).
+        {
+            float a = doorAngle + Mathf.PI;
+            Vector3 axisTop = upper.Axis(upper.height);
+            float rim = (upper.Inner(a, upper.height) + upper.Outer(a, upper.height)) * 0.5f;
+            Vector3 outward = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            crownSeat = basePoint + new Vector3(axisTop.x, upper.height, axisTop.z) + outward * rim;
+            crownFacing = outward;
+        }
         GameObject spireObject = Part("Spire", root, upperMesh, spireMaterial, collide: true, shadows: true);
         spireRenderer = spireObject.GetComponent<Renderer>();
+        SpireStructure.Build(spireObject.transform, upper, spireMaterial);
+        // The whole tower is smooth: bare hands creep down it unless they keep climbing or rest on a ledge.
+        Slippery(spireObject);
         if (upper.HasGlaze)
         {
-            GameObject glaze = Part("Glaze", root, LandmarkShapes.Glaze(upper), glazeMaterial != null ? glazeMaterial : spireMaterial, collide: true, shadows: true);
-            glaze.AddComponent<SlipperySurface>();
             if (bounceShroomPrefab != null)
             {
                 Vector3 spot = basePoint + LandmarkShapes.BalconyTop(upper) + Vector3.up * 0.6f;
@@ -243,6 +302,7 @@ public sealed class HangingSpire : MonoBehaviour
         Mesh doorGlyph = BuildGlyph(1.8f, 0.12f);
         GameObject sign = Part("Door Glyph", root, doorGlyph, glyphMaterial, collide: false, shadows: false);
         float signY = upper.doorHeight + 2.2f;
+        sign.SetActive(signY > upper.cutBelow + 1f);
         Vector3 doorDirection = new Vector3(Mathf.Cos(doorAngle), 0f, Mathf.Sin(doorAngle));
         Vector3 signAxis = upper.Axis(signY);
         float signRadius = upper.Outer(doorAngle, signY) + 0.25f;
@@ -304,6 +364,10 @@ public sealed class HangingSpire : MonoBehaviour
             mark.transform.localPosition = Vector3.down * 0.6f;
         }
 
+        if (stages) BuildStages(basePoint, upper, doorAngle);
+        LandmarkDecor.Spire(root, basePoint, upper, stageTowers, spireMaterial, glyphMaterial, seed);
+        // Crystal blades, a drifting shard field, ink guide lines, ground etchings and rising motes.
+        SpireEnvironment.Build(root, basePoint, upper, stageTowers, spireMaterial, glyphMaterial, seed);
         SpawnCreatures(spireObject.GetComponent<Collider>(), basePoint, upper.height, doorAngle, random);
         Debug.Log($"Hanging Spire built on sinkhole {sinkholeIndex} at {basePoint}.");
     }
@@ -375,7 +439,7 @@ public sealed class HangingSpire : MonoBehaviour
         for (int k = 0; k < upperShape.segments; k++)
         {
             float y = upperShape.RingY(j);
-            if (y < 14f || !upperShape.WindowCell(j, k) || upperShape.WindowCell(j - 1, k)) continue;
+            if (y < 14f || y < upperShape.cutBelow + 3f || !upperShape.WindowCell(j, k) || upperShape.WindowCell(j - 1, k)) continue;
             if (upperShape.HasGlaze && y > upperShape.glazeBottom - 3f) continue;
             float angle = (k + 0.5f) * Mathf.PI * 2f / upperShape.segments;
             radial = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
@@ -476,7 +540,9 @@ public sealed class HangingSpire : MonoBehaviour
                 crawler.axisBase = basePoint;
                 crawler.maxHeight = towerHeight - 6f;
                 // Unity angles: 0 = +z. The tower's door angle is measured from +x.
-                crawler.Place(90f - angle, Mathf.Lerp(6f, towerHeight * 0.7f, (float)random.NextDouble()));
+                float low = Mathf.Max(6f, CutHeight + 3f);
+                crawler.minHeight = Mathf.Max(crawler.minHeight, CutHeight + 2f);
+                crawler.Place(90f - angle, Mathf.Lerp(low, towerHeight * 0.7f, (float)random.NextDouble()));
             }
             else
             {
@@ -526,7 +592,224 @@ public sealed class HangingSpire : MonoBehaviour
         // Same settings, but each copy grows its own body shape.
         string settings = System.Text.RegularExpressions.Regex.Replace(JsonUtility.ToJson(template), @"""seed"":-?\d+", $"\"seed\":{name.GetHashCode() & 0xffff}");
         JsonUtility.FromJsonOverwrite(settings, copy);
+        copy.InitializeNewIndividual();
         return copy;
+    }
+
+    // ---------------- Three-stage climb ----------------
+
+    private readonly List<Transform> stageTowers = new List<Transform>();
+    private readonly List<SpireShape> stageShapes = new List<SpireShape>();
+    /// <summary>The two smaller towers of the staged climb (for tests).</summary>
+    public IReadOnlyList<Transform> StageTowers => stageTowers;
+
+    /// <summary>
+    /// Two shorter towers stand beside the spire. The first rises to stageTops.x of the spire's height, the second
+    /// to stageTops.y. A ribbon bridge runs from the first one's rim up to a landing on the second, and another from
+    /// the second's rim up to a landing on the spire itself, so the climb comes in three shorter stretches.
+    /// </summary>
+    // Planned before building: where the two stage towers stand, their ground and their tops (above the spire base).
+    private Vector3[] stageCentres;
+    private Vector2 stageGrounds, stageTopsPlanned;
+
+    /// <summary>Height above the spire's base below which the spire is cut away (floating); very low when not cut.</summary>
+    public float CutHeight => upperShape != null ? upperShape.cutBelow : float.MinValue;
+
+    private void PlanStages(Vector3 basePoint, SpireShape upper, float doorAngle)
+    {
+        float distance = upper.Outer(doorAngle, 0f) + 15f;
+        // Round from the door, so the first tower is met on the way in; the next a little further round.
+        float[] angles = { doorAngle + 0.6f, doorAngle + 1.45f };
+        stageCentres = new Vector3[2];
+        float previousTop = 0f;
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 dir = new Vector3(Mathf.Cos(angles[i]), 0f, Mathf.Sin(angles[i]));
+            stageCentres[i] = basePoint + dir * distance;
+            float ground = StageGround(stageCentres[i]) - basePoint.y;
+            // Tops: shares of the spire's height, but always a real climb, the second clearly above where
+            // the first bridge lands on it, and both below the spire's glaze ring.
+            float top = upper.height * (i == 0 ? stageTops.x : stageTops.y);
+            top = Mathf.Max(top, i == 0 ? ground + minStageClimb : previousTop + bridgeRise + secondStageClimb);
+            if (i == 0) { stageGrounds.x = ground; stageTopsPlanned.x = top; }
+            else { stageGrounds.y = ground; stageTopsPlanned.y = top; }
+            previousTop = top;
+        }
+    }
+
+    private void BuildStages(Vector3 basePoint, SpireShape upper, float doorAngle)
+    {
+        GameObject template = bridgeTemplate != null ? bridgeTemplate : GameObject.Find("Plane");
+        Mesh bridgeMesh = template != null && template.GetComponent<MeshFilter>() != null ? template.GetComponent<MeshFilter>().sharedMesh : null;
+        Material bridgeMaterial = template != null && template.GetComponent<Renderer>() != null ? template.GetComponent<Renderer>().sharedMaterial : spireMaterial;
+        if (bridgeMesh == null)
+        {
+            GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            bridgeMesh = plane.GetComponent<MeshFilter>().sharedMesh;
+            Destroy(plane);
+        }
+        var random = new System.Random(seed * 31 + 7);
+        signBaseY = basePoint.y;
+        signHeight = upper.height;
+        Vector3 previousTop = Vector3.zero, previousCentre = Vector3.zero;
+        float previousRim = 0f;
+        for (int i = 0; i < 2; i++)
+        {
+            Vector3 centre = stageCentres[i];
+            float ground = i == 0 ? stageGrounds.x : stageGrounds.y;
+            float top = i == 0 ? stageTopsPlanned.x : stageTopsPlanned.y;
+            var shape = new SpireShape
+            {
+                height = Mathf.Max(8f, top - ground),
+                bury = 6f,
+                innerRadius = 3f,
+                topScale = 0.85f,
+                wallBase = 2.4f,
+                wallTop = 2f, // a rim wide enough to stand on
+                flare = 2.5f,
+                lean = 1f,
+                crown = 2.5f,
+                doorHalfAngle = 0f,
+                windows = 0f,
+                noiseSeed = 21.7f + i * 9.3f + seed,
+                glazePatchDensity = 0.08f,
+            };
+            // The second tower floats: cut away below the landing the first bridge arrives at.
+            if (i == 1) shape.cutBelow = stageTopsPlanned.x + bridgeRise - ground - 2.5f - hangBelow;
+            // A slip band part of the way round, half way up the climbable stretch (the gap in it is the way past).
+            float from = Mathf.Max(0f, shape.cutBelow + (i == 1 ? hangBelow + 2.5f : 0f));
+            shape.roughness = stageDrumLength > 0f ? 0.08f : 0.3f;
+            shape.drumLength = stageDrumLength;
+            Mesh mesh = LandmarkShapes.Spire(shape, random, 3, beam: false, flipY: false, out _);
+            GameObject tower = Part($"Stage Tower {i + 1}", root, mesh, spireMaterial, collide: true, shadows: true);
+            tower.transform.position = new Vector3(centre.x, basePoint.y + ground, centre.z);
+            Slippery(tower);
+            SpireStructure.Build(tower.transform, shape, spireMaterial);
+            stageShapes.Add(shape);
+            if (i == 0)
+            {
+                // At the foot of the first tower, facing the way in: the crossbar sits low.
+                Vector3 inDir = new Vector3(Mathf.Cos(doorAngle), 0f, Mathf.Sin(doorAngle));
+                float facing = Mathf.Atan2(inDir.z, inDir.x);
+                Vector3 axis = shape.Axis(2.5f);
+                Vector3 wall = tower.transform.position + new Vector3(axis.x, 0f, axis.z) + inDir * shape.Outer(facing, 2.5f);
+                HeightSign(wall, inDir, tower.transform.position.y + 2.5f);
+            }
+            stageTowers.Add(tower.transform);
+            Debug.Log($"Hanging Spire stage tower {i + 1}: ground {ground:0.0} m, top {top:0.0} m above the spire base ({shape.height:0.0} m tall).");
+            Vector3 towerTop = tower.transform.position + shape.Axis(shape.height);
+            float rimRadius = (shape.Inner(0f, shape.height) + shape.Outer(0f, shape.height)) * 0.5f;
+
+            // The bridge from the previous tower's rim up to a landing on this one.
+            if (i > 0) Bridge(previousCentre, previousTop, previousRim, tower.transform.position, shape, bridgeMesh, bridgeMaterial);
+            previousTop = towerTop;
+            previousCentre = new Vector3(towerTop.x, 0f, towerTop.z);
+            previousRim = rimRadius;
+        }
+        // Last bridge: from the second tower to a landing on the spire.
+        if (stageTowers.Count == 2)
+        {
+            Vector3 from = previousTop;
+            Vector3 toward = new Vector3(basePoint.x - from.x, 0f, basePoint.z - from.z).normalized;
+            float landingY = from.y - basePoint.y + bridgeRise;
+            float angle = Mathf.Atan2(-toward.z, -toward.x);
+            Vector3 axis = upper.Axis(landingY);
+            float outer = upper.Outer(angle, landingY);
+            Vector3 wallPoint = basePoint + new Vector3(axis.x, landingY, axis.z) + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * outer;
+            Landing(wallPoint, -toward, landingY + basePoint.y);
+            Vector3 start = new Vector3(previousCentre.x, from.y, previousCentre.z) + toward * previousRim;
+            if (bridges) Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, bridgeMesh, bridgeMaterial);
+        }
+    }
+
+    /// <summary>Ribbon bridge from a tower's rim to a landing on the next tower's wall.</summary>
+    private void Bridge(Vector3 fromCentre, Vector3 fromTop, float fromRim, Vector3 toBase, SpireShape toShape, Mesh mesh, Material material)
+    {
+        Vector3 toward = new Vector3(toBase.x - fromCentre.x, 0f, toBase.z - fromCentre.z).normalized;
+        float landingY = fromTop.y + bridgeRise - toBase.y;
+        float angle = Mathf.Atan2(-toward.z, -toward.x);
+        Vector3 axis = toShape.Axis(landingY);
+        float outer = toShape.Outer(angle, landingY);
+        Vector3 wallPoint = toBase + new Vector3(axis.x, landingY, axis.z) + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * outer;
+        Landing(wallPoint, -toward, fromTop.y + bridgeRise);
+        Vector3 start = new Vector3(fromCentre.x, fromTop.y, fromCentre.z) + toward * fromRim;
+        if (bridges) Ribbon(start, wallPoint - toward * 2.2f + Vector3.up * 0.05f, mesh, material);
+    }
+
+    private readonly List<(Vector3 top, Vector3 inward)> landings = new List<(Vector3, Vector3)>();
+    /// <summary>Where the bridges arrive (top of each landing, next to the wall) and the direction into the wall (for tests).</summary>
+    public IReadOnlyList<(Vector3 top, Vector3 inward)> Landings => landings;
+
+    // For the height signs: the spire's base and full height.
+    private float signBaseY, signHeight = 1f;
+
+    /// <summary>
+    /// The spire's sign carved on a wall, with its crossbar set to how high up this spot is on the spire:
+    /// low on the first tower it sits near the foot of the sign, by the crown it has climbed to the point.
+    /// </summary>
+    private void HeightSign(Vector3 wallPoint, Vector3 outward, float worldY)
+    {
+        if (glyphMaterial == null) return;
+        float t = Mathf.Clamp01((worldY - signBaseY) / Mathf.Max(1f, signHeight));
+        const float size = 1.8f;
+        Mesh mesh = LandmarkShapes.Glyph(LandmarkGlyphs.SpireAtHeight(t), size, 0.12f);
+        GameObject sign = Part("Height Sign", root, mesh, glyphMaterial, collide: false, shadows: false);
+        sign.transform.position = new Vector3(wallPoint.x, worldY, wallPoint.z) + outward * 0.2f;
+        sign.transform.rotation = Quaternion.LookRotation(-outward, Vector3.up);
+    }
+
+    [Tooltip("How fast bare hands creep down the towers (share of the full slide speed); keep climbing or rest on a ledge.")]
+    [Range(0f, 1f)] [SerializeField] private float towerSlip = 0.3f;
+
+    private void Slippery(GameObject tower)
+    {
+        var slip = tower.AddComponent<SlipperySurface>();
+        slip.speedScale = climbAlone ? towerSlip : 1f;
+        slip.accelerate = !climbAlone;
+    }
+
+    /// <summary>A stone slab sticking out of a wall at a height, its top at topY: where a bridge arrives.</summary>
+    private void Landing(Vector3 wallPoint, Vector3 outward, float topY)
+    {
+        // A height sign on the wall just above the landing, where someone arriving over the bridge sees it.
+        HeightSign(wallPoint, outward, topY + 1.2f);
+        landings.Add((new Vector3(wallPoint.x, topY, wallPoint.z) + outward * 0.45f, -outward));
+        Vector3 from = new Vector3(wallPoint.x, topY - 0.7f, wallPoint.z) - outward * 1.2f;
+        Vector3 to = new Vector3(wallPoint.x, topY - 0.7f, wallPoint.z) + outward * 3f;
+        GameObject slab = Part("Landing", root, LandmarkShapes.Slab(root.InverseTransformPoint(from), root.InverseTransformPoint(to), bridgeWidth + 1f, 0.7f, 0.4f), spireMaterial, collide: true, shadows: true);
+        slab.transform.localPosition = Vector3.zero;
+    }
+
+    /// <summary>A walkable ribbon (the scene's plane) laid straight from a to b.</summary>
+    private void Ribbon(Vector3 a, Vector3 b, Mesh mesh, Material material)
+    {
+        Debug.Log($"Hanging Spire bridge from {a} to {b} ({Vector3.Distance(a, b):0.0} m, rising {b.y - a.y:0.0} m).");
+        Vector3 span = b - a;
+        var go = new GameObject("Bridge") { layer = 7 };
+        go.transform.SetParent(root, true);
+        go.transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.LookRotation(span.normalized, Vector3.up));
+        // The built-in plane is 10 x 10 m in its x/z plane.
+        Bounds bounds = mesh.bounds;
+        go.transform.localScale = new Vector3(bridgeWidth / Mathf.Max(0.01f, bounds.size.x), 1f, (span.magnitude + 1f) / Mathf.Max(0.01f, bounds.size.z));
+        go.AddComponent<MeshFilter>().sharedMesh = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial = material;
+        go.AddComponent<MeshCollider>().sharedMesh = mesh;
+    }
+
+    private float StageGround(Vector3 point)
+    {
+        world.ColumnHeights(point, out float surface, out _, out _);
+        return Physics.Raycast(new Vector3(point.x, surface + 100f, point.z), Vector3.down, out RaycastHit hit, 220f, 1 << 7, QueryTriggerInteraction.Ignore) ? hit.point.y : surface;
+    }
+
+    private Vector3 crownSeat, crownFacing;
+
+    /// <summary>A spot on the crown rim to rest at, and the way it faces (out over the world).</summary>
+    public bool CrownSeat(out Vector3 position, out Vector3 facing)
+    {
+        position = crownSeat;
+        facing = crownFacing;
+        return built && crownFacing != Vector3.zero;
     }
 
     /// <summary>True once the tower has been built (it waits for the world).</summary>

@@ -50,4 +50,18 @@ internal static class CreatureRegistry
             positions.Add(creature.TryGetComponent<Rigidbody>(out var body) ? body.position : creature.transform.position);
         }
     }
+
+    internal static void SnapshotCombat(Scene scene, List<Creature> targets, List<Vector3> positions)
+    {
+        targets.Clear(); positions.Clear();
+        for (int i = creatures.Count - 1; i >= 0; i--)
+        {
+            Creature creature = creatures[i];
+            if (creature == null) { creatures.RemoveAt(i); continue; }
+            if (!creature.isActiveAndEnabled || creature.IsDead || creature.IsConsumptionPending ||
+                creature.gameObject.scene != scene) continue;
+            targets.Add(creature);
+            positions.Add(creature.AimPosition);
+        }
+    }
 }

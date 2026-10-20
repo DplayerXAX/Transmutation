@@ -41,9 +41,9 @@ Material:
     - _TearLip: 0
     - _TearScale: 1
     m_Colors:
-    - _BaseColor: {r: 0.12, g: 0.12, b: 0.13, a: 1}
+    - _BaseColor: {r: 0.1, g: 0.2, b: 0.16, a: 1}
     - _Center: {r: 0, g: 0, b: 0, a: 0}
-    - _InnerColor: {r: 0.12, g: 0.12, b: 0.13, a: 1}
+    - _InnerColor: {r: 0.3, g: 0.55, b: 0.4, a: 1}
     - _LineColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

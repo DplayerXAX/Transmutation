@@ -1,5 +1,8 @@
 using UnityEngine;
 
+public enum CreaturePolarity { None, Light, Dark, Random }
+public enum CreatureDeathCause { None, Direct, Damage, Age, Consumed }
+
 /// <summary>
 /// Information passed to a creature when the player or another object interacts with it.
 /// This keeps individual creatures independent from specific keyboard or mouse buttons.
@@ -54,6 +57,68 @@ public enum FoodTag
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
 
+    [Header("Health and Polarity")]
+    [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private CreaturePolarity initialPolarity = CreaturePolarity.Random;
+    [SerializeField, HideInInspector] private float health;
+    [SerializeField, HideInInspector] private CreaturePolarity polarity;
+    [SerializeField, HideInInspector] private int identityOwner;
+    [SerializeField, HideInInspector] private CreatureDeathCause deathCause;
+    [Tooltip("Optional aim point; otherwise combat uses the physical body center.")]
+    [SerializeField] private Transform aimPoint;
+    public float MaxHealth => maxHealth;
+    public float Health => health;
+    public CreaturePolarity Polarity => polarity;
+    public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    public CreatureDeathCause DeathCause => deathCause;
+    public Vector3 AimPosition => aimPoint != null ? aimPoint.position :
+        (TryGetComponent<Rigidbody>(out var body) ? body.worldCenterOfMass : transform.position);
+    public event System.Action<Creature, float, Creature> Damaged;
+
+    /// <summary>Runtime template copies are new individuals, not copies of depleted runtime state.</summary>
+    internal void InitializeNewIndividual()
+    {
+        identityOwner = GetInstanceID();
+        isDead = false;
+        consumptionPending = false;
+        simulationEnabled = true;
+        deathCause = CreatureDeathCause.None;
+        health = Mathf.Max(0.01f, maxHealth);
+        polarity = initialPolarity == CreaturePolarity.Random ?
+            (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
+    }
+
+    internal void SetResolvedPolarity(CreaturePolarity value)
+    {
+        if (value == CreaturePolarity.Random) throw new System.ArgumentException("Resolved polarity cannot be Random.");
+        polarity = value;
+    }
+
+    public bool ApplyDamage(float amount, Creature source = null)
+    {
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending) return false;
+        float applied = Mathf.Min(health, amount);
+        health = Mathf.Max(0f, health - amount);
+        if (Damaged != null)
+            foreach (System.Action<Creature, float, Creature> listener in Damaged.GetInvocationList())
+                try { listener(this, applied, source); }
+                catch (System.Exception exception) { Debug.LogException(exception, this); }
+        if (health <= 0f && !isDead && !consumptionPending) DieWithCause(CreatureDeathCause.Damage);
+        return true;
+    }
+
+    private void DieWithCause(CreatureDeathCause cause)
+    {
+        if (isDead) return;
+        deathCause = cause;
+        Die(); // Keep virtual dispatch, including legacy squirrel cleanup.
+    }
+
+    protected virtual void OnCarryStarted() { }
+    protected virtual void OnCaptureStarted() { }
+    internal void NotifyCaptureStarted() => OnCaptureStarted();
+    protected virtual void OnSimulationChanged() { }
+
     [Header("Food and Diet")]
     [Tooltip("What this creature counts as when another creature checks its diet. Multiple tags can be selected.")]
     [SerializeField] private FoodTag foodTags = FoodTag.None;
@@ -63,6 +128,11 @@ public enum FoodTag
 
     [Tooltip("Allows eating another creature with the same concrete script class, provided its food tags also match the diet.")]
     [SerializeField] private bool canEatSameType = false;
+
+    [Tooltip("Total nutrition available from one meal. Shared by nearby eligible birds; does not change dietary compatibility.")]
+    [Min(0f)] [SerializeField] private float nutrition = 120f;
+
+    public float Nutrition => Mathf.Max(0f, nutrition);
 
     [Header("Runtime")]
     [Tooltip("When disabled, this creature remains in the scene but does not run its creature logic.")]
@@ -74,7 +144,7 @@ public enum FoodTag
     [Tooltip("Lifetime spent per second. Zero means this creature does not age automatically.")]
     [Min(0f)] [SerializeField] private float ageRate = 0f;
 
-    private bool isDead;
+    [SerializeField, HideInInspector] private bool isDead;
     private bool consumptionPending;
 
     public float Age => age;
@@ -83,7 +153,7 @@ public enum FoodTag
     public bool IsConsumptionPending => consumptionPending;
 
     /// <summary>
-    /// Raised once after death is recorded, while the host still exists and before subclass remains.
+    /// Raised once after death and ability cleanup, while the original body still exists.
     /// Listeners react independently; a failing listener cannot interrupt other death behavior.
     /// </summary>
     public event System.Action<Creature> Died;
@@ -116,7 +186,13 @@ public enum FoodTag
             return false;
         }
 
-        if (!canEatSameType && target.GetType() == GetType())
+        return AcceptsFood(target.foodTags, target.GetType());
+    }
+
+    /// <summary>Checks cached food metadata after a feeding callback has removed the original.</summary>
+    protected bool AcceptsFood(FoodTag tags, System.Type foodType)
+    {
+        if (foodType == null || (!canEatSameType && foodType == GetType()))
         {
             return false;
         }
@@ -126,7 +202,7 @@ public enum FoodTag
             return true;
         }
 
-        return (dietTags & target.foodTags) != FoodTag.None;
+        return (dietTags & tags) != FoodTag.None;
     }
 
     /// <summary>For things spawned at runtime, which have no inspector to set the name.</summary>
@@ -139,13 +215,19 @@ public enum FoodTag
         dietTags = diet;
     }
 
-    /// <summary>Stops creature logic. Overrides should call base and guard repeated death.</summary>
+    /// <summary>Records death once, releases active ownership, and retains the original body.</summary>
     public virtual void Die()
     {
         if (isDead) return;
-        isDead = true;
-        age = 0f;
-        SetSimulationEnabled(false);
+        if (deathCause == CreatureDeathCause.None) deathCause = CreatureDeathCause.Direct;
+        InitializeDeadRemains();
+        CreatureThrower.ReleaseFlight(this);
+        EndPet();
+        if (IsCarried) Carrier.Release();
+        if (TryGetComponent<WebCapture>(out var webCapture)) webCapture.Release();
+        if (TryGetComponent<BubbleCapture>(out var bubbleCapture) && bubbleCapture.IsCaptured) bubbleCapture.Release();
+        ApplyCorpsePhysics();
+        OnDeath();
         if (Died == null) return;
         foreach (System.Action<Creature> listener in Died.GetInvocationList())
         {
@@ -154,19 +236,62 @@ public enum FoodTag
         }
     }
 
+    /// <summary>Initializes existing remains without another death event or death effects.</summary>
+    protected void InitializeDeadRemains()
+    {
+        isDead = true;
+        health = 0f;
+        age = 0f;
+        simulationEnabled = false;
+    }
+
+    /// <summary>Structural creatures retain their stationary body after death.</summary>
+    protected virtual bool KeepCorpseStationary => false;
+
+    private void ApplyCorpsePhysics()
+    {
+        if (KeepCorpseStationary) return;
+        SetMovementPhysics(false, true);
+        if (movementBody == null) return;
+        movementBody.constraints &= ~RigidbodyConstraints.FreezePosition;
+        movementBody.WakeUp();
+    }
+
+    /// <summary>Stop abilities and release owned occupants here; never remove the body.</summary>
+    protected virtual void OnDeath() { }
+
+    /// <summary>
+    /// Runs once when the shared lifespan expires, after Die(), ability cleanup, and Died listeners.
+    /// Override for age-specific remains. Direct death and consumption never invoke this hook.
+    /// </summary>
+    protected virtual void OnAgeDeath() { }
+
     /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
     public virtual void Consume(Creature consumer) { }
+
+    /// <summary>Ownership states may protect a creature from being removed as food.</summary>
+    public virtual bool CanBeConsumed => true;
 
     /// <summary>Completes an eating event once, even when destruction is deferred by Unity.</summary>
     public virtual bool TryConsumeFood(Creature food)
     {
         if (!Application.isPlaying || !isActiveAndEnabled || !SimulationEnabled || IsDead || consumptionPending ||
-            food == null || !food.isActiveAndEnabled || food.consumptionPending || !CanEat(food)) return false;
-        food.consumptionPending = true;
-        CreatureRegistry.Unregister(food);
-        food.Consume(this);
-        if (food != null) food.Die();
-        if (food != null) Destroy(food.gameObject);
+            food == null || !food.isActiveAndEnabled || !food.CanBeConsumed || food.consumptionPending || !CanEat(food)) return false;
+        return food.CompleteConsumption(this);
+    }
+
+    /// <summary>Completes a species-approved physical meal without imposing ordinary diet rules.</summary>
+    internal bool CompleteConsumption(Creature consumer)
+    {
+        if (consumptionPending || !CanBeConsumed) return false;
+        consumptionPending = true;
+        CreatureRegistry.Unregister(this);
+        try { Consume(consumer); }
+        finally
+        {
+            if (this != null && !isDead) DieWithCause(CreatureDeathCause.Consumed);
+            if (this != null) Destroy(gameObject);
+        }
         return true;
     }
 
@@ -211,6 +336,7 @@ public enum FoodTag
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
         if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
+        CreatureThrower.ReleaseFlight(this);
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
         movementBody = GetComponent<Rigidbody>();
@@ -232,6 +358,7 @@ public enum FoodTag
         movementBody.constraints &= ~RigidbodyConstraints.FreezePosition;
         movementBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         movementBody.WakeUp();
+        OnCarryStarted();
         return true;
     }
 
@@ -329,7 +456,21 @@ public enum FoodTag
     /// </summary>
     protected virtual void Awake()
     {
+        // The owner id survives script reloads, while instantiated copies have a new id.
+        if (identityOwner != GetInstanceID())
+        {
+            identityOwner = GetInstanceID();
+            health = isDead ? 0f : Mathf.Max(0.01f, maxHealth);
+            polarity = initialPolarity == CreaturePolarity.Random ?
+                (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
+        }
         InitializeCreature();
+        // Serialized death survives a script reload; initialization must not restore living physics.
+        if (isDead)
+        {
+            InitializeDeadRemains();
+            ApplyCorpsePhysics();
+        }
     }
 
     protected virtual void OnEnable()
@@ -350,7 +491,8 @@ public enum FoodTag
         }
 
         AdvanceAge(Time.deltaTime);
-        if (simulationEnabled && !isDead) TickCreature(Time.deltaTime);
+        if (!SimulationEnabled) return;
+        TickCreature(Time.deltaTime);
 
         // Affection fades slowly once the petting stops.
         if (!IsPetted && Affection > 0f)
@@ -360,9 +502,22 @@ public enum FoodTag
     /// <summary>Shared lifespan advancement, separate from subclass movement/timers.</summary>
     protected void AdvanceAge(float deltaTime)
     {
-        if (!simulationEnabled || isDead || deltaTime <= 0f) return;
-        age = Mathf.Max(0f, age - Mathf.Max(0f, ageRate) * deltaTime);
-        if (age <= 0f) Die();
+        if (!simulationEnabled || isDead || consumptionPending || deltaTime <= 0f) return;
+        SetRemainingAge(age - Mathf.Max(0f, ageRate) * deltaTime);
+    }
+
+    /// <summary>
+    /// Controlled lifetime mutation, including while capture pauses simulation. This has no feeding
+    /// or transfer rules; callers own those. Zero follows the same death path as natural ageing.
+    /// </summary>
+    internal void SetRemainingAge(float value)
+    {
+        if (isDead || consumptionPending) return;
+        age = Mathf.Max(0f, value);
+        if (age > 0f) return;
+        DieWithCause(CreatureDeathCause.Age);
+        // A death listener may consume or remove the original. Eating owns its removal in that case.
+        if (this != null && isDead && !consumptionPending) OnAgeDeath();
     }
 
     /// <summary>
@@ -372,6 +527,7 @@ public enum FoodTag
     public void SetSimulationEnabled(bool value)
     {
         simulationEnabled = value && !isDead;
+        OnSimulationChanged();
     }
 
     /// <summary>
@@ -456,6 +612,7 @@ public enum FoodTag
     /// <summary>Called by the player's petting hand when it starts stroking this creature.</summary>
     public void BeginPet(Vector3 point, Vector3 normal)
     {
+        if (IsDead) return;
         IsPetted = true;
         PetPoint = point;
         PetNormal = normal;
@@ -465,7 +622,7 @@ public enum FoodTag
     /// <summary>Called every frame while the hand keeps stroking.</summary>
     public void ContinuePet(Vector3 point, Vector3 normal, float deltaTime)
     {
-        if (!IsPetted) return;
+        if (!IsPetted || IsDead) return;
         PetPoint = point;
         PetNormal = normal;
         Affection = Mathf.Min(1f, Affection + deltaTime * affectionGain);

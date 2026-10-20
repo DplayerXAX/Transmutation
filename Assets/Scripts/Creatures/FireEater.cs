@@ -135,7 +135,7 @@ public sealed class FireEater : Creature
         }
 
         // Food outranks fleeing: keep chasing even if the player is inside awareness range.
-        if (targetBubble != null && targetBubble.IsInanimate)
+        if (targetBubble != null && targetBubble.CanBeAITargeted && !targetBubble.IsConsumptionPending && targetBubble.IsInanimate)
         {
             currentState = FireEaterState.Chasing;
             MoveTowards(targetBubble.transform.position, moveSpeed, deltaTime);
@@ -271,7 +271,7 @@ public sealed class FireEater : Creature
             }
 
             FireBubble bubble = nearbyObject.GetComponentInParent<FireBubble>();
-            if (bubble == null || !bubble.IsInanimate)
+            if (bubble == null || !bubble.CanBeAITargeted || bubble.IsConsumptionPending || !bubble.IsInanimate)
             {
                 continue;
             }
@@ -543,7 +543,7 @@ public sealed class FireEater : Creature
 
     private void TryEat(Collider touchedObject)
     {
-        if (digestionTimer > 0f)
+        if (!SimulationEnabled || !isActiveAndEnabled || digestionTimer > 0f)
         {
             return;
         }
@@ -554,7 +554,7 @@ public sealed class FireEater : Creature
             return;
         }
 
-        Destroy(bubble.gameObject);
+        if (!bubble.CompleteConsumption(this)) return;
         targetBubble = null;
         digestionTimer = digestionDuration;
         currentState = FireEaterState.Digesting;
