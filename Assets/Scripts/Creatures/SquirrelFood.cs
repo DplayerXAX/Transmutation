@@ -1,21 +1,67 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>A food object is either available, reserved, carried, or stored in a nest.</summary>
 [DisallowMultipleComponent]
-public sealed class SquirrelFood : MonoBehaviour
+[RequireComponent(typeof(Rigidbody))]
+public sealed class SquirrelFood : Creature
 {
     public Squirrel Owner { get; private set; }
-    public bool IsStored { get; private set; }
-    public bool IsAvailable => !IsStored && Owner == null && isActiveAndEnabled;
+    public SquirrelNest StorageNest { get; private set; }
+    public bool IsStored => StorageNest != null;
+    public bool IsAvailable => !IsStored && Owner == null && !IsCarried && !IsDead && !IsConsumptionPending && isActiveAndEnabled;
+    public override bool CanBeCarried => !IsStored && !IsDead;
+    public override bool CanUseWhileCarried => !IsDead;
+    public override string CarriedPrompt => "[LMB at nest] Store food | [RMB] Drop";
 
-    // Stored objects are recycled; the nest's accumulated count remains intact.
+    protected override void InitializeCreature()
+    {
+        SetCreatureName("Squirrel Food");
+        SetResolvedPolarity(CreaturePolarity.None);
+        SetFoodAndDiet(FoodTag.None, FoodTag.None);
+        StopFoodPhysics();
+    }
+    protected override void TickCreature(float deltaTime) { }
+    protected override void OnCarryStarted()
+    {
+        var squirrel = Owner;
+        Owner = null;
+        squirrel?.ForgetFood(this);
+        // Release into ordinary gravity when the player lets go.
+        SetMovementPhysics(false, true);
+    }
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!IsCarried || Carrier == null || IsDead) return;
+        Camera camera = Carrier.CarryCamera;
+        if (camera == null) return;
+        Ray ray = camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        Creature found = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, 5f, ~0, Carrier, out _);
+        if (found is SquirrelNest nest) nest.TryPlayerDeposit(Carrier, this);
+    }
+
+    // Only new world food is initialized here; stored inventory must never be recycled.
     internal void Respawn(Transform parent)
     {
         StopFoodPhysics();
         Owner = null;
-        IsStored = false;
+        StorageNest = null;
         transform.SetParent(parent, true);
         gameObject.SetActive(true);
+    }
+
+    internal void LeaveStorage(Vector3 position)
+    {
+        StorageNest = null;
+        Owner = null;
+        transform.SetParent(null, true);
+        transform.position = position;
+        gameObject.SetActive(true);
+        var body = GetComponent<Rigidbody>();
+        body.position = position;
+        body.isKinematic = false;
+        body.useGravity = true;
+        body.linearVelocity = Vector3.zero;
     }
 
     public bool Reserve(Squirrel squirrel)
@@ -77,9 +123,15 @@ public sealed class SquirrelFood : MonoBehaviour
 
     public bool Store(Squirrel squirrel, SquirrelNest nest)
     {
-        if (Owner != squirrel || IsStored || nest == null || nest.Owner != squirrel) return false;
+        if (Owner != squirrel || nest == null || nest.Owner != squirrel) return false;
+        return EnterStorage(nest);
+    }
+
+    internal bool EnterStorage(SquirrelNest nest)
+    {
+        if (IsStored || IsCarried || IsDead || nest == null) return false;
         StopFoodPhysics();
-        IsStored = true;
+        StorageNest = nest;
         Owner = null;
         transform.SetParent(nest.transform, false);
         transform.localPosition = Vector3.zero;
