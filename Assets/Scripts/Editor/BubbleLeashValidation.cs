@@ -69,6 +69,7 @@ public static class BubbleLeashValidation
             {
                 var go = new GameObject("Fire balloon"); go.transform.position = position;
                 var bubble = go.AddComponent<FireBubble>();
+                bubble.LifetimeLimited = true;
                 Set(bubble, "driftVelocity", Vector3.zero); Set(bubble, "fallStartWorldY", float.MaxValue);
                 Set(bubble, "lifetimeSeconds", 0.01f); Set(bubble, "inanimateToFlowerDelay", 0.01f);
                 fireBubbles.Add(bubble); return bubble;
@@ -212,7 +213,7 @@ public static class BubbleLeashValidation
             Check(!balloon.IsLeashed && tentacle.PinnedCount == 0, "an obstructed leash releases instead of cutting through terrain");
             Object.DestroyImmediate(wall); ClearBubbles();
             balloon = Bubble(tether.BalloonOrigin + Vector3.forward * 3f); Attach(balloon); carrier.Release(); Call(tether, "Update");
-            Set(balloon, "lifetimeSeconds", 0.01f); Step(1);
+            balloon.LifetimeLimited = true; Set(balloon, "lifetimeSeconds", 0.01f); Step(1);
             Check(!balloon.IsPopped && balloon.IsLeashed && balloon.ElapsedTime == 0f,
                 "a dropped octopus's bubble stays alive with its lifetime paused");
             balloon.Die(); balloon.ReceivePickupAttempt(carrier);

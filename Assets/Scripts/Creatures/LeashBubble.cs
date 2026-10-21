@@ -5,6 +5,11 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
 public abstract class LeashBubble : Creature
 {
+    [Header("Bubble Lifetime")]
+    [Tooltip("Enable automatic ageing and bubble timeout rules. Disabled bubbles still support normal interaction, consumption and bone fuel use.")]
+    [SerializeField] private bool limitLifetime;
+    public bool LifetimeLimited { get => limitLifetime; set => limitLifetime = value; }
+
     private SphereCollider leashCollider;
     protected SphereCollider BalloonCollider => leashCollider != null ? leashCollider : leashCollider = GetComponent<SphereCollider>();
     protected virtual bool CanLeashBubble(TentacleTether owner) => true;
@@ -17,7 +22,7 @@ public abstract class LeashBubble : Creature
     public override void Die() { if (!IsLeashed) base.Die(); }
     protected override void Update()
     {
-        if (IsLeashed) { if (SimulationEnabled) TickCreature(Time.deltaTime); }
+        if (IsLeashed || !LifetimeLimited) { if (SimulationEnabled) TickCreature(Time.deltaTime); }
         else base.Update();
     }
     protected override void OnDeath() { ReleaseLeash(); RestoreExpiredIgnores(true); base.OnDeath(); }

@@ -27,6 +27,8 @@ Sinkholes and worm tunnels connect the two. Gravity is normal everywhere.
 - **Main settings:**
   - Size: `worldSize` (288 x 288 m), `cellSize`, `chunkCells`, `seed`.
   - Surface: `surfaceAmplitude`, `surfaceFrequency`, `ridges`, `overhangAmplitude`, `rimHeight` (edge cliffs).
+  - Basin: `basin` turns the square edge cliffs into an irregular ring of mountains `rimHeight` tall;
+    `basinFloor` / `basinSlope` (shares of the half size) set where the slopes start and how wide they are.
   - Inner World: `crustThickness`, `innerGap`, `ceilingMirror`, `innerInvert`.
   - Caves: `caveWidth` (0 = no worm caves), `caveDepth`, `sinkholeCount`, `sinkholeRadius`,
     `firstSinkholeDistance` (a guaranteed sinkhole ahead of spawn).

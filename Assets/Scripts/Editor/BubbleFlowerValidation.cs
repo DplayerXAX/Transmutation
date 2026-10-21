@@ -169,7 +169,7 @@ public static class BubbleFlowerValidation
             TrappingBubble expiring = Bubble(Origin);
             Check(expiring.TryCapture(occupant.gameObject), "cleanup scenario captures occupant");
             if (disable) expiring.enabled = false;
-            else { Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
+            else { expiring.LifetimeLimited = true; Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
             Check(expiring.IsPopped && !occupant.IsBubbleCaptured && occupant.SimulationEnabled,
                 disable ? "disable releases occupant" : "occupied timeout releases occupant");
             Destroy(expiring.gameObject); Destroy(occupant.gameObject);
@@ -253,6 +253,7 @@ public static class BubbleFlowerValidation
         }
 
         TrappingBubble drifting = Bubble(Origin);
+        drifting.LifetimeLimited = true;
         drifting.Launch(null, null, Vector3.forward * 8f);
         Set(drifting, "riseSeconds", 1f); Set(drifting, "lifetimeSeconds", 2f);
         Step(drifting, 20);

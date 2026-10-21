@@ -392,6 +392,11 @@ public enum FoodTag
         Carrier = null;
         if (this is TentacleCreature tentacle && carrier.TryGetComponent<TentacleTether>(out var tether)) tether.ParkBalloons(tentacle);
         if (movementBody == null) return;
+        if (this is TentacleCreature && !movementBody.isKinematic)
+        {
+            movementBody.linearVelocity = Vector3.zero;
+            movementBody.angularVelocity = Vector3.zero;
+        }
         // Change collision mode before returning a body to kinematic operation.
         movementBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
         movementBody.isKinematic = releaseKinematic;

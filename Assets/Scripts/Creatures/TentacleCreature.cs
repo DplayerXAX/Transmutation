@@ -412,6 +412,15 @@ public sealed class TentacleCreature : Creature
         }
     }
 
+    public void PrepareForDrop()
+    {
+        ClearGroundHolds();
+        Dragged = false; EndPet();
+        home = wanderTarget = transform.position;
+        wasCarried = false;
+        pauseTimer = Mathf.Max(pauseTimer, 0.8f);
+    }
+
     public void UnpinAll()
     {
         if (tentacles == null) return;

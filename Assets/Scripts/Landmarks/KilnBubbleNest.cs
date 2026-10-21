@@ -5,8 +5,8 @@ using UnityEngine.Rendering;
 /// <summary>
 /// A charred bone nest on real ground near the Bone Kiln that releases fire bubbles.
 /// The colossus's children go after these bubbles, which shows the player that fire and the bone children belong
-/// together. Bubbles from a nest pop before they could sink and root as fire flowers, unless someone holds them
-/// (carried by the player, or cradled in a child's ribs). Built by BoneKiln.
+/// together. Optional timed cleanup follows each bubble's lifetime setting; claimed bubbles belong to the
+/// player or creature instead of the nest. Built by BoneKiln.
 /// </summary>
 public sealed class KilnBubbleNest : MonoBehaviour
 {
@@ -14,7 +14,7 @@ public sealed class KilnBubbleNest : MonoBehaviour
     public FireBubble bubblePrefab;
     [Min(2f)] public float interval = 9f;
     [Range(1, 6)] public int maxAlive = 3;
-    [Tooltip("Seconds a bubble from the nest lasts before it pops (if nobody holds it).")]
+    [Tooltip("Seconds before an unclaimed bubble pops, only when its Limit Lifetime setting is enabled.")]
     [Min(2f)] public float popAfter = 24f;
     [Tooltip("Bubbles drift over towards this point (the mother's skull end) and hang about it...")]
     public Vector3 drawTo;
@@ -109,10 +109,10 @@ public sealed class KilnBubbleNest : MonoBehaviour
         {
             FireBubble b = alive[i].bubble;
             if (b == null) { alive.RemoveAt(i); continue; }
-            bool held = b.IsCarried || b.IsBoundToBone || BoneChild.IsCradled(b);
+            bool held = b.IsCarried || b.IsLeashed || b.IsBoundToBone || BoneChild.IsCradled(b);
             // Held ones are the player's (or a child's) now: no longer the nest's to pop.
             if (held) { alive.RemoveAt(i); continue; }
-            if (Time.time - alive[i].born > popAfter) { Destroy(b.gameObject); alive.RemoveAt(i); }
+            if (b.LifetimeLimited && Time.time - alive[i].born > popAfter) { Destroy(b.gameObject); alive.RemoveAt(i); }
         }
         timer -= Time.deltaTime;
         if (timer > 0f || alive.Count >= maxAlive) return;
