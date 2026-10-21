@@ -221,8 +221,9 @@ prompts and carry work.
 
 `Scene_Ariia` also contains the shared `PlayerObjects` prefab with Daniel's right-click toggle pickup
 and firm grip settings. The original overview camera is disabled. Walk with WASD, look with the mouse,
-right-click a squirrel to pick it up, and click left to squeeze it. Each completed squeeze compresses
-and releases the body and spits out one collected food item; repeat clicks to empty its mouth.
+right-click a squirrel to pick it up, and hold left to squeeze it repeatedly. Each squeeze compresses
+and releases the body and spits out one collected food item; keep holding to empty its mouth.
+Release left to stop immediately and restore its normal size.
 An empty squirrel remains held and shows "Mouth empty". Right-click again to put it down.
 Squeezing takes priority over throwing, only works while held and alive, and never removes food already
 deposited in the nest. Spat items are the original food objects, fall with gravity, and can be foraged again.

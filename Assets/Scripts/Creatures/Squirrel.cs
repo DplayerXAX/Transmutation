@@ -18,6 +18,7 @@ public sealed class Squirrel : Creature
     [SerializeField, Min(0.1f)] private float squeezeDuration = 0.25f;
     [SerializeField, Min(0f)] private float spitSpeed = 3f;
     private Coroutine squeeze;
+    private bool squeezeHeld;
     private Vector3 unsqueezedScale;
     [SerializeField] private Activity activity;
     [Header("Territory")]
@@ -50,33 +51,46 @@ public sealed class Squirrel : Creature
     public int CarriedCount => carried.Count;
     public override bool CanUseWhileCarried => !IsDead;
     public override string CarriedPrompt => carried.Count > 0
-        ? "[LMB] Squeeze: spit one food (" + carried.Count + ")"
+        ? "[Hold LMB] Squeeze: keep spitting food (" + carried.Count + ")"
         : "Mouth empty";
 
     public override void ReceiveInteraction(CreatureInteraction interaction)
     {
-        if (!IsCarried || !SimulationEnabled || IsConsumptionPending || squeeze != null) return;
+        if (!squeezeHeld || !IsCarried || !SimulationEnabled || IsConsumptionPending || squeeze != null) return;
         carried.RemoveAll(food => food == null);
+        if (carried.Count == 0) return;
         unsqueezedScale = transform.localScale;
         squeeze = StartCoroutine(Squeeze(interaction.Direction));
+    }
+
+    public void SetSqueezeHeld(bool held, CreatureInteraction interaction)
+    {
+        squeezeHeld = held;
+        if (held) ReceiveInteraction(interaction);
+        else StopSqueeze();
     }
 
     private IEnumerator Squeeze(Vector3 direction)
     {
         direction = direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward;
-        bool released = false;
-        for (float elapsed = 0f; elapsed < squeezeDuration; elapsed += Time.deltaTime)
+        while (squeezeHeld && IsCarried && SimulationEnabled && !IsConsumptionPending && carried.Count > 0)
         {
-            if (!IsCarried || !SimulationEnabled || IsConsumptionPending) break;
-            float pulse = Mathf.Sin(elapsed / squeezeDuration * Mathf.PI);
-            transform.localScale = Vector3.Scale(unsqueezedScale,
-                new Vector3(1f + pulse * 0.12f, 1f - pulse * 0.22f, 1f + pulse * 0.12f));
-            if (!released && elapsed >= squeezeDuration * 0.4f)
+            bool released = false;
+            float duration = Mathf.Max(0.1f, squeezeDuration);
+            for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
             {
-                released = true;
-                SpitOneFood(direction);
+                if (!squeezeHeld || !IsCarried || !SimulationEnabled || IsConsumptionPending) break;
+                float pulse = Mathf.Sin(elapsed / duration * Mathf.PI);
+                transform.localScale = Vector3.Scale(unsqueezedScale,
+                    new Vector3(1f + pulse * 0.12f, 1f - pulse * 0.22f, 1f + pulse * 0.12f));
+                if (!released && elapsed >= duration * 0.4f)
+                {
+                    released = true;
+                    SpitOneFood(direction);
+                }
+                yield return null;
             }
-            yield return null;
+            transform.localScale = unsqueezedScale;
         }
         transform.localScale = unsqueezedScale;
         squeeze = null;
@@ -106,6 +120,7 @@ public sealed class Squirrel : Creature
 
     private void StopSqueeze()
     {
+        squeezeHeld = false;
         if (squeeze == null) return;
         StopCoroutine(squeeze);
         transform.localScale = unsqueezedScale;

@@ -116,22 +116,29 @@ public static class SquirrelSqueezeValidation
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { squirrel });
             Check(carrier.CarriedCreature == squirrel && squirrel.IsCarried, "the existing carry mechanism picks up a squirrel");
             Check(!CreatureThrower.Instance.HoldingThrowable, "left click uses the squirrel instead of throwing it");
-            for (int remaining = 2; remaining >= 0; remaining--)
+            // Drive the same held-input entry point without physical mouse input in batch mode.
+            interactor.enabled = false;
+            interactor.UpdateHeldSqueeze(true);
+            until = Time.time + 0.18f;
+            bool compressed = false;
+            while (Time.time < until)
             {
-                interactor.TryInteract();
-                interactor.TryInteract(); // Repeated input during one squeeze cannot release a second item.
-                until = Time.time + 0.4f;
-                bool compressed = false;
-                while (Time.time < until)
-                {
-                    compressed |= squirrel.transform.localScale.y < scale.y * 0.95f;
-                    yield return null;
-                }
-                Check(compressed, "squeezing visibly compresses the squirrel");
-                Check(squirrel.CarriedCount == remaining, "each completed press releases exactly one food");
-                Check(Vector3.Distance(squirrel.transform.localScale, scale) < 0.001f, "squeeze restores the original randomized size");
-                Check(carrier.CarriedCreature == squirrel, "squirrel remains held after use");
+                compressed |= squirrel.transform.localScale.y < scale.y * 0.95f;
+                yield return null;
             }
+            interactor.UpdateHeldSqueeze(false);
+            Check(compressed && squirrel.CarriedCount == 2, "holding squeezes and releases the first food");
+            until = Time.time + 0.4f;
+            while (Time.time < until) yield return null;
+            Check(squirrel.CarriedCount == 2, "releasing left mouse stops further spitting");
+            Check(Vector3.Distance(squirrel.transform.localScale, scale) < 0.001f, "release restores size immediately");
+            interactor.UpdateHeldSqueeze(true);
+            until = Time.time + 0.7f;
+            while (Time.time < until) yield return null;
+            Check(squirrel.CarriedCount == 0, "one uninterrupted hold empties the remaining food");
+            Check(Vector3.Distance(squirrel.transform.localScale, scale) < 0.001f, "empty squirrel stops squeezing and restores size");
+            Check(carrier.CarriedCreature == squirrel, "squirrel remains held after emptying");
+            interactor.UpdateHeldSqueeze(false);
             Check(squirrel.Nest.StoredFoodCount == stored, "spitting does not withdraw stored nest food");
             foreach (var food in foods)
             {
@@ -142,17 +149,19 @@ public static class SquirrelSqueezeValidation
                 inventory.Add(food);
                 Check(body.isKinematic && !body.useGravity, "recollection clears temporary food physics");
             }
-            interactor.TryInteract();
+            interactor.UpdateHeldSqueeze(true);
             carrier.Release();
             squirrel.SetSimulationEnabled(false);
             until = Time.time + 0.1f;
             while (Time.time < until) yield return null;
             Check(Vector3.Distance(squirrel.transform.localScale, scale) < 0.001f, "dropping during a squeeze restores size");
             Check(squirrel.CarriedCount == 3, "dropping before compression does not lose food");
-            Debug.Log("Squirrel squeeze validation PASSED: Ariia player, camera, ground, carry, held input, one-at-a-time food, compression, ownership, recollection and interrupted use.");
+            Debug.Log("Squirrel squeeze validation PASSED: Ariia player, camera, ground, carry, hold-to-repeat, release-to-stop, one-at-a-time food, compression, ownership, recollection and interrupted use.");
         }
         finally
         {
+            interactor.UpdateHeldSqueeze(false);
+            interactor.enabled = true;
             carrier.Release();
             squirrel.SetSimulationEnabled(true);
             inventory.RemoveAll(food => food == null || foods.Contains(food));

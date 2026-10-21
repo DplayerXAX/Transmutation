@@ -20,6 +20,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     [Tooltip("Physics layers that can be hit by the interaction ray.")]
     [SerializeField] private LayerMask interactionLayers = ~0;
     [SerializeField] private PlayerCreatureCarrier carrier;
+    private Squirrel squeezedSquirrel;
 
     /// <summary>Finds the main Camera when no Camera has been assigned manually.</summary>
     private void Awake()
@@ -36,11 +37,32 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Checks for one left-click press and attempts a centre-screen interaction.</summary>
     private void Update()
     {
+        if (UpdateHeldSqueeze(Mouse.current != null && Mouse.current.leftButton.isPressed && Application.isFocused)) return;
         // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))))
         {
             TryInteract();
         }
+    }
+
+    /// <summary>Held squirrel use repeats until release; other creatures retain click interactions.</summary>
+    public bool UpdateHeldSqueeze(bool pressed)
+    {
+        Squirrel held = carrier != null ? carrier.CarriedCreature as Squirrel : null;
+        if (held != null && held.IsDead) held = null;
+        if (squeezedSquirrel != null && squeezedSquirrel != held)
+            squeezedSquirrel.SetSqueezeHeld(false, default);
+        squeezedSquirrel = held;
+        if (held == null) return false;
+        Vector3 direction = interactionCamera != null ? interactionCamera.transform.forward : transform.forward;
+        held.SetSqueezeHeld(pressed, new CreatureInteraction(gameObject, held.transform.position, direction));
+        return true;
+    }
+
+    private void OnDisable()
+    {
+        if (squeezedSquirrel != null) squeezedSquirrel.SetSqueezeHeld(false, default);
+        squeezedSquirrel = null;
     }
 
     /// <summary>Raycasts through screen centre and notifies the first Creature hit.</summary>
