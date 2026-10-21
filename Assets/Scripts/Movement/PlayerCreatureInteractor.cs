@@ -36,8 +36,9 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Checks for one left-click press and attempts a centre-screen interaction.</summary>
     private void Update()
     {
-        // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))))
+        if (BoneAwakeningCutscene.Playing) return;
+        if (Application.isFocused && BoneRide.Mount == null && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame
+            && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))
         {
             TryInteract();
         }
@@ -89,16 +90,57 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
 
-        if (!gameObject.scene.GetPhysicsScene().Raycast(
-                ray.origin, ray.direction,
-                out hit,
-                interactionRange,
-                interactionLayers,
-                QueryTriggerInteraction.Collide))
-        {
-            return null;
-        }
-
-        return hit.collider.GetComponentInParent<Creature>();
+        return CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, interactionRange, interactionLayers, carrier, out hit);
     }
+}
+
+/// <summary>Shared picking for clicks and holds: ignore sensor volumes, retain solid occlusion, forgive small aim errors.</summary>
+internal static class CreatureAim
+{
+    public static Creature Find(PhysicsScene scene, Ray ray, float range, int layers, PlayerCreatureCarrier carrier, out RaycastHit hit)
+    {
+        hit = default;
+        RaycastHit[] results = selectionHits;
+        int count = scene.Raycast(ray.origin, ray.direction, results, range, layers, QueryTriggerInteraction.Ignore);
+        float wall = range;
+        Creature direct = null;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = results[i];
+            if (Ignore(candidate.collider, carrier)) continue;
+            if (candidate.distance >= wall) continue;
+            wall = candidate.distance;
+            hit = candidate;
+            direct = candidate.collider.GetComponentInParent<Creature>();
+        }
+        if (direct != null) return direct;
+        count = scene.SphereCast(ray.origin, 0.18f, ray.direction, results, wall, layers, QueryTriggerInteraction.Ignore);
+        float best = float.PositiveInfinity;
+        Creature picked = null;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = results[i];
+            if (Ignore(candidate.collider, carrier) || candidate.distance >= best) continue;
+            Creature creature = candidate.collider.GetComponentInParent<Creature>();
+            if (creature == null) continue;
+            // The wider selection must not reach around a wall.
+            Vector3 delta = candidate.point - ray.origin;
+            int blockers = scene.Raycast(ray.origin, delta.normalized, resultsForVisibility, delta.magnitude, layers, QueryTriggerInteraction.Ignore);
+            bool blocked = false;
+            for (int b = 0; b < blockers; b++)
+                if (!Ignore(resultsForVisibility[b].collider, carrier)
+                    && resultsForVisibility[b].collider.GetComponentInParent<Creature>() != creature) { blocked = true; break; }
+            if (blocked) continue;
+            picked = creature;
+            best = candidate.distance;
+            hit = candidate;
+        }
+        return picked;
+    }
+
+    private static readonly RaycastHit[] selectionHits = new RaycastHit[128];
+    private static readonly RaycastHit[] resultsForVisibility = new RaycastHit[128];
+    private static bool Ignore(Collider collider, PlayerCreatureCarrier carrier) =>
+        collider.GetComponentInParent<SmoothFirstPersonController>() != null
+        || (carrier != null && carrier.CarriedCreature != null && collider.transform.IsChildOf(carrier.CarriedCreature.transform));
 }

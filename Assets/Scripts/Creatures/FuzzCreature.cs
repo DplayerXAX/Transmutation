@@ -416,6 +416,7 @@ public sealed class FuzzCreature : Creature
         {
             float targetY = ground.y + radius * squash + groundClearance + hop;
             float y = Mathf.Lerp(transform.position.y, targetY, 1f - Mathf.Exp(-(petHop >= 0f ? 30f : 18f) * deltaTime));
+            y = Mathf.Max(y, ground.y + radius * squash + groundClearance);
             MoveCreature(Vector3.up * (y - transform.position.y));
         }
         else

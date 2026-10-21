@@ -121,6 +121,8 @@ public sealed class HandClimber : MonoBehaviour
         public bool moving;
         public Vector3 from, to, toNormal;
         public float t;
+        public TentacleGripSurface surface;
+        public float surfaceParameter;
     }
 
     private struct Foot
@@ -182,6 +184,7 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>World grip point for a hand (0 = left, 1 = right). False when the hand is free.</summary>
     public bool GetHand(int index, out Vector3 hold, out Vector3 normal, out bool gripping)
     {
+        RefreshGrip(index);
         hold = default;
         normal = Vector3.up;
         gripping = false;
@@ -324,6 +327,8 @@ public sealed class HandClimber : MonoBehaviour
             return;
         }
 
+        RefreshGrip(0);
+        RefreshGrip(1);
         AdvanceHands(deltaTime);
         SlideOnSlippery(deltaTime);
         if (vertical > 0f)
@@ -434,10 +439,12 @@ public sealed class HandClimber : MonoBehaviour
             Vector3 guess = controller.transform.position + WallUp() * handHeight + WallRight() * (handSpread * side);
             // On bumpy terrain one hand can miss; let it grab where the wall was found instead.
             Vector3 point = wall.point + WallRight() * (handSpread * side * 0.5f), normal = wall.normal;
+            Collider surface = wall.collider;
             if (ProbeWall(guess, out RaycastHit grip))
             {
                 point = grip.point;
                 normal = grip.normal;
+                surface = grip.collider;
             }
             // Getting onto the wall: both hands come up from the chest and take hold one after the other,
             // while the body lines up with the wall.
@@ -447,6 +454,7 @@ public sealed class HandClimber : MonoBehaviour
                 hold = point, normal = normal, moving = true, from = chest, to = point, toNormal = normal,
                 t = i == 0 ? 0f : -enterStagger,
             };
+            AttachGrip(i, surface, point);
         }
         leadHand = 1;
 
@@ -471,6 +479,23 @@ public sealed class HandClimber : MonoBehaviour
     }
 
     // ---------------- Reaching ----------------
+
+    private void AttachGrip(int index, Collider collider, Vector3 point)
+    {
+        hands[index].surface = collider != null ? collider.GetComponent<TentacleGripSurface>() : null;
+        if (hands[index].surface != null) hands[index].surfaceParameter = hands[index].surface.Capture(point);
+    }
+
+    private void RefreshGrip(int index)
+    {
+        Hand hand = hands[index];
+        if (hand.surface == null) return;
+        Vector3 normal = hand.moving ? hand.toNormal : hand.normal;
+        if (!hand.surface.Resolve(hand.surfaceParameter, normal, out Vector3 point))
+        { hands[index].surface = null; return; }
+        if (hand.moving) hands[index].to = point;
+        else hands[index].hold = point;
+    }
 
     private void AdvanceHands(float deltaTime)
     {
@@ -623,6 +648,7 @@ public sealed class HandClimber : MonoBehaviour
         hands[index].from = hands[index].hold;
         hands[index].to = best.point;
         hands[index].toNormal = best.normal;
+        AttachGrip(index, best.collider, best.point);
         stuckTimer = 0f;
         return true;
     }

@@ -213,6 +213,13 @@ public enum FoodTag
         if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
+        if (this is TentacleCreature tentacle)
+        {
+            // Release the suspended rig before carry records the creature's normal physics.
+            if (TentacleTether.Instance != null) TentacleTether.Instance.DetachForPickup(tentacle);
+            else { if (tentacle.Suspended) tentacle.Suspend(false); tentacle.UnpinAll(); }
+            tentacle.ClearGroundHolds();
+        }
         movementBody = GetComponent<Rigidbody>();
         if (movementBody == null)
         {

@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// Once the spire is unlocked (its crown seed taken), a strong pillar of light runs from high in the sky,
 /// down through the spire's crown and its sinkhole, into the inner world below.
 /// Three glowing rings mark the stops: the crown, the lowest ledge at ground level, and the inner-world floor.
-/// Stand in a ring and press Space to ride the light up to the next stop, or Ctrl to go down.
+/// Once unlocked, stay in the light or a ring briefly to travel: crown to inner world, other stops to crown.
+/// Leaving cancels the wait. After arrival, step outside before entering again to return.
 /// The ride is quick: across into the beam, along it, and out onto the next ring.
 /// Spire code is not touched; this only reads its public data and LandmarkProgress.
 /// </summary>
@@ -21,8 +21,8 @@ public sealed class SpireBeam : MonoBehaviour
     [Min(0.5f)] [SerializeField] private float ringRadius = 1.4f;
     [Tooltip("Seconds for one ride between two stops.")]
     [Min(0.2f)] [SerializeField] private float rideTime = 1.6f;
-    [SerializeField] private Key upKey = Key.Space;
-    [SerializeField] private Key downKey = Key.LeftCtrl;
+    [Tooltip("Seconds to stay in the unlocked light before travel begins. Leaving resets the wait.")]
+    [Min(0.2f)] [SerializeField] private float activationDelay = 2f;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private bool built;
@@ -41,6 +41,10 @@ public sealed class SpireBeam : MonoBehaviour
     private SmoothFirstPersonController controller;
     private bool riding;
     private string shownPrompt;
+    private float activationTime;
+    private int chargingStop = -1;
+    private bool mustLeaveLight;
+    private bool rideOwnsPlayer, wasKinematic;
 
     public void Setup(Material beam, Material ring)
     {
@@ -67,7 +71,6 @@ public sealed class SpireBeam : MonoBehaviour
         if (beamInstance != null) beamInstance.SetFloat(FadeId, fade);
         if (ringInstance != null) ringInstance.SetFloat(FadeId, Mathf.Max(fade, 0.15f));
 
-        if (!unlocked || riding) return;
         if (player == null)
         {
             controller = FindFirstObjectByType<SmoothFirstPersonController>();
@@ -75,20 +78,60 @@ public sealed class SpireBeam : MonoBehaviour
             if (player == null) return;
         }
 
-        nearStop = -1;
+        int destination = UpdateActivation(Time.deltaTime);
+        if (destination >= 0) StartCoroutine(Ride(destination));
+    }
+
+    private int FindStop(Vector3 position)
+    {
+        int closest = -1;
+        float nearestHeight = 2.5f;
+        bool inBeam = RealmSites.Flat(position - axis).sqrMagnitude <= beamRadius * beamRadius;
         for (int i = 0; i < stops.Count; i++)
-            if (RealmSites.Flat(player.position - stops[i]).magnitude < ringRadius + 0.4f && Mathf.Abs(player.position.y - stops[i].y) < 2.5f)
-                nearStop = i;
-        string prompt = nearStop < 0 ? null :
-            (nearStop < stops.Count - 1 ? "[Space] Ride the light up" : "") + (nearStop > 0 && nearStop < stops.Count - 1 ? "     " : "") + (nearStop > 0 ? "[Ctrl] Ride it down" : "");
-        if (prompt != shownPrompt)
         {
-            shownPrompt = prompt;
-            if (!string.IsNullOrEmpty(prompt)) LandmarkToast.Show(prompt);
+            float height = Mathf.Abs(position.y - stops[i].y);
+            float radius = ringRadius + 0.4f;
+            bool inRing = RealmSites.Flat(position - stops[i]).sqrMagnitude <= radius * radius;
+            if (height < nearestHeight && (inBeam || inRing)) { closest = i; nearestHeight = height; }
         }
-        if (nearStop < 0 || Keyboard.current == null) return;
-        if (Keyboard.current[upKey].wasPressedThisFrame && nearStop < stops.Count - 1) StartCoroutine(Ride(nearStop + 1));
-        else if (Keyboard.current[downKey].wasPressedThisFrame && nearStop > 0) StartCoroutine(Ride(nearStop - 1));
+        return closest;
+    }
+
+    /// <summary>Returns a destination only after one uninterrupted stay; no keyboard input is needed.</summary>
+    private int UpdateActivation(float deltaTime)
+    {
+        if (riding) return -1;
+        nearStop = player != null ? FindStop(player.position) : -1;
+        if (nearStop < 0) mustLeaveLight = false;
+        bool available = unlocked && stops.Count >= 2 && player != null && controller != null &&
+            !controller.BubbleMovementBlocked && !controller.Restricted && BoneRide.Mount == null &&
+            (Application.isFocused || Application.isBatchMode);
+        if (!available || nearStop < 0 || mustLeaveLight)
+        {
+            if (activationTime > 0f) LandmarkToast.Show("Light travel cancelled");
+            ResetActivation();
+            return -1;
+        }
+        if (chargingStop != nearStop) { ResetActivation(); chargingStop = nearStop; }
+        activationTime += Mathf.Max(0f, deltaTime);
+        int destination = nearStop == stops.Count - 1 ? 0 : stops.Count - 1;
+        if (activationTime >= activationDelay)
+        {
+            mustLeaveLight = true;
+            ResetActivation();
+            return destination;
+        }
+        string place = destination == 0 ? "inner world" : "tower summit";
+        string prompt = $"Stay in the light: {place} in {Mathf.CeilToInt(activationDelay - activationTime)}s";
+        if (prompt != shownPrompt) { shownPrompt = prompt; LandmarkToast.Show(prompt); }
+        return -1;
+    }
+
+    private void ResetActivation()
+    {
+        activationTime = 0f;
+        chargingStop = -1;
+        shownPrompt = null;
     }
 
     private System.Collections.IEnumerator Ride(int to)
@@ -97,32 +140,57 @@ public sealed class SpireBeam : MonoBehaviour
         // The same lock a bubble capture uses: no walking, jumping or climbing during the ride.
         controller.SuppressJumpForCurrentFrame();
         controller.BeginBubbleMovementLock();
-        bool wasKinematic = player.isKinematic;
+        wasKinematic = player.isKinematic;
+        rideOwnsPlayer = true;
         if (!wasKinematic) player.linearVelocity = Vector3.zero;
         player.isKinematic = true;
         Vector3 start = player.position;
         Vector3 target = stops[to] + Vector3.up * 1.1f;
         Vector3 inStart = new Vector3(axis.x, start.y, axis.z);
         Vector3 inEnd = new Vector3(axis.x, target.y, axis.z);
-        float time = 0f;
-        while (time < rideTime)
+        try
         {
-            time += Time.deltaTime;
-            float t = Mathf.SmoothStep(0f, 1f, time / rideTime);
-            // Step into the beam, travel along it, step out onto the ring.
-            Vector3 p = t < 0.15f ? Vector3.Lerp(start, inStart, t / 0.15f)
-                : t < 0.85f ? Vector3.Lerp(inStart, inEnd, Mathf.SmoothStep(0f, 1f, (t - 0.15f) / 0.7f))
-                : Vector3.Lerp(inEnd, target, (t - 0.85f) / 0.15f);
-            player.position = p;
-            player.transform.position = p;
-            yield return null;
+            float time = 0f;
+            while (time < rideTime)
+            {
+                time += Time.deltaTime;
+                float t = Mathf.SmoothStep(0f, 1f, time / rideTime);
+                // Step into the beam, travel along it, step out onto the ring.
+                Vector3 p = t < 0.15f ? Vector3.Lerp(start, inStart, t / 0.15f)
+                    : t < 0.85f ? Vector3.Lerp(inStart, inEnd, Mathf.SmoothStep(0f, 1f, (t - 0.15f) / 0.7f))
+                    : Vector3.Lerp(inEnd, target, (t - 0.85f) / 0.15f);
+                player.position = p;
+                player.transform.position = p;
+                yield return null;
+            }
+            player.position = target;
+            player.transform.position = target;
+            LandmarkToast.Show(to == 0 ? "Arrived in the inner world. Step out of the light before returning." :
+                "Arrived at the tower summit. Step out of the light before returning.");
         }
-        player.position = target;
-        player.transform.position = target;
-        player.isKinematic = wasKinematic;
-        if (!wasKinematic) player.linearVelocity = Vector3.zero;
-        controller.EndBubbleMovementLock();
+        finally { EndRide(); }
+    }
+
+    private void EndRide()
+    {
+        if (rideOwnsPlayer)
+        {
+            if (player != null)
+            {
+                player.isKinematic = wasKinematic;
+                if (!wasKinematic) player.linearVelocity = Vector3.zero;
+            }
+            if (controller != null) controller.EndBubbleMovementLock();
+            rideOwnsPlayer = false;
+        }
         riding = false;
+    }
+
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+        EndRide();
+        ResetActivation();
     }
 
     private void Build(HangingSpire spire)

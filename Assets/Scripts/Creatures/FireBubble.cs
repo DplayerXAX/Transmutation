@@ -93,7 +93,11 @@ public sealed class FireBubble : Creature
     private bool descending;
     private Vector3 driftVelocity;
     private float visualFlowTime;
-    private BoneChild boneOwner;
+    [Header("Bone Fuel")]
+    [Tooltip("Minimum usable heat when a bone creature binds this bubble, including zero-Heat spawned bubbles.")]
+    [Min(1f)] [SerializeField] private float boneFuelHeat = 30f;
+    private Component boneOwner;
+    private float initialBoneHeat;
     private MaterialPropertyBlock visualProperties;
     private static readonly int HeatShaderId = Shader.PropertyToID("_Heat");
     private static readonly int StillHeatShaderId = Shader.PropertyToID("_StillHeat");
@@ -104,17 +108,23 @@ public sealed class FireBubble : Creature
     public bool IsInanimate => !IsBoundToBone && currentState == BubbleState.Inanimate;
 
     public bool IsBoundToBone => boneOwner != null;
+    public float BoneFuelFraction => initialBoneHeat > 0f ? Mathf.Clamp01(Heat / initialBoneHeat) : 0f;
     public override bool CanBeCarried => !IsBoundToBone;
     public override bool CanBeConsumed => !IsBoundToBone;
 
-    /// <summary>The ribcage owns this bubble permanently; it keeps glowing without ageing or taking root.</summary>
-    public bool BindToBone(BoneChild owner)
+    public bool BindToBone(BoneChild owner) => BindToBone(owner, owner != null ? owner.transform : null);
+    public bool BindToBone(BoneKiln owner, Transform bone) => BindToBone((Component)owner, bone);
+
+    /// <summary>Binding replaces normal ageing with a finite heat reserve, spent by the owner's flight.</summary>
+    private bool BindToBone(Component owner, Transform anchor)
     {
-        if (owner == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
+        if (owner == null || anchor == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
         FindPhysicsReferences();
         if (TryGetComponent<WebCapture>(out var web)) web.Release();
         boneOwner = owner;
-        transform.SetParent(owner.transform, true);
+        transform.SetParent(anchor, true);
+        initialBoneHeat = Mathf.Max(Heat, boneFuelHeat);
+        SetHeat(initialBoneHeat);
         inanimateTimer = 0f;
         if (!bubbleBody.isKinematic)
         {
@@ -129,6 +139,19 @@ public sealed class FireBubble : Creature
         foreach (Collider collider in GetComponentsInChildren<Collider>()) collider.enabled = false;
         SetSimulationEnabled(true);
         return true;
+    }
+
+    public float BurnBoneHeat(float amount)
+    {
+        if (!IsBoundToBone || IsDead || amount <= 0f) return 0f;
+        float spent = SpendHeat(amount);
+        if (Heat <= 0f)
+        {
+            Die();
+            gameObject.SetActive(false);
+            if (Application.isPlaying) Destroy(gameObject);
+        }
+        return spent;
     }
 
     protected override void Update()

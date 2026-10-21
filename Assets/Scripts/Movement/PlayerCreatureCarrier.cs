@@ -98,6 +98,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) return;
         if (!Application.isFocused && !Application.isBatchMode)
         {
             Release();

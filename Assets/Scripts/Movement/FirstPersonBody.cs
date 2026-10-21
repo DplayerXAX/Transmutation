@@ -160,7 +160,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)))) interactTimer = 0.3f;
+        if (BoneRide.Mount == null && mouse != null && mouse.leftButton.wasPressedThisFrame
+            && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;
         // Landing after a real jump or fall: knees bend, arms dip, harder the faster the fall.
@@ -280,7 +281,9 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
         else if (climbing && climber.GetHand(side > 0f ? 1 : 0, out Vector3 hold, out Vector3 wallNormal, out bool gripping))
         {
-            target = hold + wallNormal * 0.04f;
+            Vector3 alongPalm = Vector3.ProjectOnPlane(hold - shoulder, wallNormal).normalized;
+            // The IK endpoint is the wrist; the palm centre is 4.75 cm further along the hand.
+            target = hold + wallNormal * 0.014f - alongPalm * 0.0475f;
             palmNormal = wallNormal;
             if (gripping)
             {
@@ -305,10 +308,15 @@ public sealed class FirstPersonBody : MonoBehaviour
             along.Normalize();
             Vector3 across = Vector3.Cross(normal, along);
             float stroke = Mathf.Sin(Time.time * 4.2f);
-            target = petter.TouchPoint + normal * 0.05f + along * (stroke * 0.08f) + across * (Mathf.Sin(Time.time * 2.1f) * 0.03f);
+            if (petter.DraggingBody)
+            {
+                Vector3 alongPalm = Vector3.ProjectOnPlane(petter.TouchPoint - shoulder, normal).normalized;
+                target = petter.TouchPoint + normal * 0.014f - alongPalm * 0.0475f;
+            }
+            else target = petter.TouchPoint + normal * 0.05f + along * (stroke * 0.08f) + across * (Mathf.Sin(Time.time * 2.1f) * 0.03f);
             palmNormal = normal;
-            grip = 0.25f + 0.1f * Mathf.Max(0f, stroke);
-            flutter = 0.08f;
+            grip = petter.DraggingBody ? 0.95f : 0.25f + 0.1f * Mathf.Max(0f, stroke);
+            flutter = petter.DraggingBody ? 0f : 0.08f;
         }
         else if (side > 0f && TentacleTether.Instance != null && TentacleTether.Instance.Aiming)
         {
@@ -399,7 +407,9 @@ public sealed class FirstPersonBody : MonoBehaviour
 
         // Smooth in camera space, so the hands never trail behind when the view moves fast.
         Vector3 localTarget = view.InverseTransformPoint(target);
-        arm.current = arm.started ? Vector3.Lerp(arm.current, localTarget, 1f - Mathf.Exp(-handFollow * deltaTime)) : localTarget;
+        // The climber already animates each reach. Another camera-space filter makes planted hands slide.
+        arm.current = arm.started && !climbing && !(petting && petter.DraggingBody)
+            ? Vector3.Lerp(arm.current, localTarget, 1f - Mathf.Exp(-handFollow * deltaTime)) : localTarget;
         arm.started = true;
         arm.grip = Mathf.MoveTowards(arm.grip, grip, deltaTime * 6f);
         for (int f = 0; f < 4; f++)
