@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 /// click shoots its arms instead, nor a creature that is used with left click while carried): hold the left mouse button to aim, a dotted arc shows where it will fly and
 /// a ring where it lands; let go to throw it.
 /// The creature flies the arc by itself (its own movement is paused), and stops at the first thing it touches.
-/// A fire bubble that hits a bone child is caught by it (BoneChild.Catch).
+/// A fire bubble that hits a bone child is caught by it (BoneChild.Catch). A water droplet bursts on an ErosionTarget.
 /// Added to the player by itself.
 /// </summary>
 public sealed class CreatureThrower : MonoBehaviour
@@ -150,6 +150,9 @@ public sealed class CreatureThrower : MonoBehaviour
                 // A fire bubble thrown at a bone child is caught in its ribs.
                 BoneChild child = hit.collider.GetComponentInParent<BoneChild>();
                 if (child != null && child.Catch(f.creature)) { Land(f, next, caught: true); flights.RemoveAt(i); continue; }
+                // Water thrown at something it wears away (ErosionTarget) bursts on it instead of landing beside it.
+                if (f.creature is ErosiveFluidDroplet droplet && droplet.TrySplash(hit, f.velocity))
+                { LastHit = "Splashed on " + LastHit; Land(f, next, caught: false); flights.RemoveAt(i); continue; }
             }
             f.position = next;
             f.creature.transform.position = next;

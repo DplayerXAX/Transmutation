@@ -58,8 +58,21 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         (erodibleLayers.value & (1 << collider.gameObject.layer)) != 0 && world.OwnsCollider(collider);
     private static readonly ProfilerMarker SimulationMarker = new ProfilerMarker("Erosion.Droplets");
     public void SetWorld(ProceduralWorld value) => world = value;
-    private void OnEnable() => Creature.Activated += ActorActivated;
+    private void OnEnable() { Creature.Activated += ActorActivated; ErosionTarget.SurfacesChanged += TargetChanged; }
     private void ActorActivated(Creature actor) => RegisterActor(actor, true);
+    // Erosion targets stay solid to water even under a Creature: undo exclusions made before they registered.
+    private void TargetChanged(ErosionTarget target, bool added)
+    {
+        if (!added || target == null || target.gameObject.scene != gameObject.scene) return;
+        foreach (Collider surface in target.Surfaces)
+        {
+            if (surface == null) continue;
+            actors.Remove(surface);
+            if (!surface.enabled || !surface.gameObject.activeInHierarchy) continue;
+            foreach (ErosiveFluidDroplet droplet in active)
+                if (droplet != null && droplet.isActiveAndEnabled) Physics.IgnoreCollision(droplet.Collider, surface, false);
+        }
+    }
     private void Start()
     {
         if (world == null) { enabled = false; return; }
@@ -161,6 +174,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         {
             // Creature triggers (heat, capture) must still sense water; only solid bodies are ignored.
             if (collider.isTrigger && actor is Creature) continue;
+            if (ErosionTarget.IsSurface(collider)) continue;
             bool known = actors.Contains(collider);
             if (known && !refreshExisting) continue;
             if (!known) actors.Add(collider);
@@ -169,7 +183,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     }
     internal void IgnoreActors(SphereCollider sphere)
     {
-        foreach (Collider collider in actors) if (collider != null && collider.enabled && collider.gameObject.activeInHierarchy)
+        foreach (Collider collider in actors) if (collider != null && collider.enabled && collider.gameObject.activeInHierarchy && !ErosionTarget.IsSurface(collider))
             Physics.IgnoreCollision(sphere, collider);
     }
     internal void Accumulate(Vector3 point, float radius, float amount)
@@ -186,6 +200,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     // creature refresh the same entry, so contact speeds ageing up once rather than per droplet.
     internal void Soak(Creature creature, Vector3 point)
     {
+        if (creature == null || creature.Invulnerable) return;
         soaked.TryGetValue(creature, out Soaking state);
         state.until = Time.fixedTime + sampleInterval * 1.5f; state.point = point;
         soaked[creature] = state;
@@ -286,7 +301,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     public void SetEmitting(bool value) { if (sources != null) foreach (ErosiveFluidSource source in sources) if (source != null) source.SetEmitting(value); }
     public void ClearDroplets()
     { foreach (ErosiveFluidDroplet droplet in active) Return(droplet); active.Clear(); requests.Clear(); soaked.Clear(); sampleTimer = 0f; }
-    private void OnDisable() { Creature.Activated -= ActorActivated; ClearDroplets(); }
+    private void OnDisable() { Creature.Activated -= ActorActivated; ErosionTarget.SurfacesChanged -= TargetChanged; ClearDroplets(); }
     private void OnDestroy()
     { if (world != null) { world.TerrainChanged -= Invalidate; world.ErosionApplied -= EmitDebris; } if (friction != null) Destroy(friction); }
 }

@@ -7,7 +7,8 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
 public sealed class ErosiveFluidDroplet : Creature
 {
-    private struct Touch { public Collider collider; public Vector3 point, normal; public float step; }
+    // isTarget is explicit: a destroyed ErosionTarget compares equal to null.
+    private struct Touch { public Collider collider; public ErosionTarget target; public bool isTarget; public Vector3 point, normal; public float step; }
     private readonly Touch[] touches = new Touch[4];
     private static readonly Collider[] overlaps = new Collider[8];
     private static readonly Collider[] creatureOverlaps = new Collider[16];
@@ -22,14 +23,16 @@ public sealed class ErosiveFluidDroplet : Creature
     private float elapsed, probeTimer;
     private float drain, drainTouched = float.NegativeInfinity;
     private Vector3 drainPoint;
-    private bool evaporated, wasCarried;
+    private bool evaporated, wasCarried, splashed;
     private Touch effectContact;
     public Rigidbody Body => body;
     public SphereCollider Collider => sphere;
     public Vector3 Position => body.position;
     /// <summary>Seconds since launch, not counting time spent carried or paused.</summary>
     public float Elapsed => elapsed;
-    public int TerrainContactCount => touchCount;
+    public int TerrainContactCount { get { int count = 0; for (int i = 0; i < touchCount; i++) if (!touches[i].isTarget) count++; return count; } }
+    /// <summary>Contacts with non-terrain erosion targets (see ErosionTarget).</summary>
+    public int TargetContactCount => touchCount - TerrainContactCount;
     public bool Evaporated => evaporated;
     private static readonly int VelocityId = Shader.PropertyToID("_FlowVelocity");
     private static readonly int ContactId = Shader.PropertyToID("_ContactPoint");
@@ -60,7 +63,7 @@ public sealed class ErosiveFluidDroplet : Creature
     {
         source = emitter; elapsed = probeTimer = drain = 0f; touchCount = 0; effectContact = default;
         drainTouched = float.NegativeInfinity;
-        evaporated = wasCarried = false;
+        evaporated = wasCarried = splashed = false;
         transform.localScale = Vector3.one * emitter.Radius * 2f;
         body.position = position; transform.position = position; lastPosition = position;
         body.linearVelocity = velocity; body.angularVelocity = Vector3.zero;
@@ -71,7 +74,7 @@ public sealed class ErosiveFluidDroplet : Creature
     }
     internal bool Simulate(float dt)
     {
-        if (IsDead || evaporated || source == null || !fluid.InBounds(body.position)) return false;
+        if (IsDead || evaporated || splashed || source == null || !fluid.InBounds(body.position)) return false;
         // The carrier restores player collision on release; water must not push the player.
         if (wasCarried && !IsCarried) fluid.IgnoreActors(sphere);
         wasCarried = IsCarried;
@@ -96,13 +99,14 @@ public sealed class ErosiveFluidDroplet : Creature
         else for (int i = touchCount - 1; i >= 0; i--)
         {
             Touch touch = touches[i];
-            bool valid = touch.collider != null && touch.collider.enabled && fluid.CanErode(touch.collider);
+            bool valid = touch.collider != null && touch.collider.enabled &&
+                (touch.isTarget ? ErosionTarget.TryGet(touch.collider, out _) : fluid.CanErode(touch.collider));
             if (valid && validate)
             {
                 // Raycast from the centre avoids sphere-cast overlap ambiguity, including sleeping bodies.
                 valid = touch.collider.Raycast(new Ray(body.position, -touch.normal), out RaycastHit hit, source.Radius + 0.06f);
                 if (valid) { touch.point = hit.point; touch.normal = hit.normal; touches[i] = touch;
-                    effectContact = touch; effectContact.step = Time.fixedTime; }
+                    if (!touch.isTarget) { effectContact = touch; effectContact.step = Time.fixedTime; } }
             }
             if (!valid || (!body.IsSleeping() && Time.fixedTime - touch.step > dt * 2.1f))
             { touches[i] = touches[--touchCount]; }
@@ -113,7 +117,9 @@ public sealed class ErosiveFluidDroplet : Creature
             float speed = Vector3.ProjectOnPlane(velocity, touches[i].normal).magnitude;
             float strength = source.Rate * fluid.World.Erodibility * source.MotionMultiplier(speed);
             activity += strength;
-            fluid.Accumulate(touches[i].point, source.ErosionRadius, strength * dt / touchCount);
+            float amount = strength * dt / touchCount;
+            if (touches[i].isTarget) touches[i].target.Erode(touches[i].point, amount);
+            else fluid.Accumulate(touches[i].point, source.ErosionRadius, amount);
         }
         properties.SetVector(VelocityId, velocity);
         properties.SetFloat(StrengthId, activity);
@@ -140,6 +146,23 @@ public sealed class ErosiveFluidDroplet : Creature
             touches[touchCount] = new Touch { collider = terrain, point = position - normal * Mathf.Max(0f, source.Radius - depth), normal = normal, step = Time.fixedTime };
             effectContact = touches[touchCount++];
         }
+        if (ErosionTarget.Count == 0) return;
+        // Erosion targets can be on any layer under a moving Creature; this scene's physics keeps tests local.
+        count = gameObject.scene.GetPhysicsScene().OverlapSphere(position, source.Radius, overlaps, ErosionTarget.SurfaceLayers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count && touchCount < touches.Length; i++)
+        {
+            Collider surface = overlaps[i];
+            if (!ErosionTarget.TryGet(surface, out ErosionTarget target) || HasTouch(surface) ||
+                !Physics.ComputePenetration(sphere, position, transform.rotation, surface, surface.transform.position,
+                    surface.transform.rotation, out Vector3 normal, out float depth)) continue;
+            touches[touchCount++] = new Touch { collider = surface, target = target, isTarget = true,
+                point = position - normal * Mathf.Max(0f, source.Radius - depth), normal = normal, step = Time.fixedTime };
+        }
+    }
+    private bool HasTouch(Collider collider)
+    {
+        for (int i = 0; i < touchCount; i++) if (touches[i].collider == collider) return true;
+        return false;
     }
     // Creature bodies ignore droplet collisions, so touching is an overlap with a thin margin.
     private void ProbeCreatures(Vector3 position)
@@ -149,7 +172,7 @@ public sealed class ErosiveFluidDroplet : Creature
         for (int i = 0; i < count; i++)
         {
             Creature creature = CreatureSpatialQuery.Owner(creatureOverlaps[i]);
-            if (creature == null || creature == this || creature is ErosiveFluidDroplet || creature.IsDead) continue;
+            if (creature == null || creature == this || creature is ErosiveFluidDroplet || creature.IsDead || creature.Invulnerable) continue;
             Collider other = creatureOverlaps[i];
             // ClosestPoint only supports primitives and convex meshes.
             drainPoint = other is MeshCollider mesh && !mesh.convex ? other.bounds.ClosestPoint(position) : other.ClosestPoint(position);
@@ -162,6 +185,15 @@ public sealed class ErosiveFluidDroplet : Creature
         if (evaporated || source == null || IsDead || Heat < source.EvaporationHeat) return;
         evaporated = true;
         fluid.Evaporate(body.position);
+    }
+    /// <summary>A thrown droplet bursts on an erosion target instead of landing beside it; the pool then recycles it.</summary>
+    internal bool TrySplash(RaycastHit hit, Vector3 velocity)
+    {
+        if (fluid == null || source == null || IsDead || evaporated || splashed || !ErosionTarget.TryGet(hit.collider, out ErosionTarget target)) return false;
+        target.Splash(hit.point, velocity.magnitude);
+        splashed = true;
+        fluid.Evaporate(hit.point);
+        return true;
     }
     internal void Invalidate(Bounds bounds)
     { if (bounds.SqrDistance(body.position) < 1f) { touchCount = 0; probeTimer = 0f; body.WakeUp(); } }
@@ -183,12 +215,16 @@ public sealed class ErosiveFluidDroplet : Creature
     { for (int i = touchCount - 1; i >= 0; i--) if (touches[i].collider == collision.collider) touches[i] = touches[--touchCount]; }
     private void ReadContact(Collision collision)
     {
-        if (fluid == null || !fluid.CanErode(collision.collider) || collision.contactCount == 0) return;
+        if (fluid == null || collision.contactCount == 0) return;
+        bool terrain = fluid.CanErode(collision.collider);
+        ErosionTarget target = null;
+        if (!terrain && !ErosionTarget.TryGet(collision.collider, out target)) return;
         ContactPoint contact = collision.GetContact(0);
         int index = -1;
         for (int i = 0; i < touchCount; i++) if (touches[i].collider == collision.collider) { index = i; break; }
         if (index < 0) { if (touchCount == touches.Length) return; index = touchCount++; }
-        touches[index] = new Touch { collider = collision.collider, point = contact.point, normal = contact.normal, step = Time.fixedTime };
-        effectContact = touches[index];
+        touches[index] = new Touch { collider = collision.collider, target = target, isTarget = !terrain,
+            point = contact.point, normal = contact.normal, step = Time.fixedTime };
+        if (terrain) effectContact = touches[index];
     }
 }

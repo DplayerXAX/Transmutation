@@ -70,6 +70,9 @@ public enum FoodTag
     public float Health => health;
     public CreaturePolarity Polarity => polarity;
     public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    /// <summary>Structural or unique creatures ignore incidental harm: projectile, melee and blast damage,
+    /// and water-contact ageing. Direct lifecycle calls (Die, SetRemainingAge, consumption) are unaffected.</summary>
+    public virtual bool Invulnerable => false;
     public CreatureDeathCause DeathCause => deathCause;
     public Vector3 AimPosition => aimPoint != null ? aimPoint.position :
         (TryGetComponent<Rigidbody>(out var body) ? body.worldCenterOfMass : transform.position);
@@ -96,7 +99,7 @@ public enum FoodTag
 
     public bool ApplyDamage(float amount, Creature source = null)
     {
-        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending) return false;
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
         if (Damaged != null)
