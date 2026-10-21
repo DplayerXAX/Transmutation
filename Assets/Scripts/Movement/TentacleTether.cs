@@ -5,8 +5,8 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// With a tentacle creature on the back, the player can shoot its own arms out and stick them to things:
-///   - Hold F to aim, release to shoot one of the creature's arms at what the crosshair is on; it stays stretched from the creature to
-///     that point. F again shoots a second arm to a second point (a third shot lets the oldest go).
+///   - Hold left mouse to aim, release to shoot one of the creature's arms at what the crosshair is on; it stays stretched from the creature to
+///     that point. Aim again to shoot a second arm to a second point (a third shot lets the oldest go).
 ///   - Setting the creature down (right click) with two arms stuck: it hangs between the two points, held by
 ///     its own two stretched arms. That line is a bridge (walk on it, grip it while climbing) and a slingshot:
 ///     hold the left mouse button on the creature and walk back to draw the cord, let go and it shoots you
@@ -19,8 +19,6 @@ using UnityEngine.Rendering;
 [DisallowMultipleComponent]
 public sealed class TentacleTether : MonoBehaviour
 {
-    [Tooltip("Hold to aim, release to shoot. Mouse buttons remain available for creatures and reins.")]
-    [SerializeField] private Key fireKey = Key.F;
     [Tooltip("Tap: every shot arm lets go. Hold: the newest stuck arm shortens and hauls the player to where it stuck " +
              "(across a gap to another tower); hold W on arrival to grab the wall, and the arm lets go once the hands hold.")]
     [SerializeField] private Key reelKey = Key.R;
@@ -89,6 +87,66 @@ public sealed class TentacleTether : MonoBehaviour
     private float shotTimer;
     private Material material;
     private readonly Collider[] hits = new Collider[16];
+    private RaycastHit[] aimHits = new RaycastHit[32];
+    private readonly Dictionary<int, LeashBubble> balloons = new Dictionary<int, LeashBubble>();
+    public int BalloonCount => balloons.Count;
+    public bool NewestIsBalloon => pinnedArms.Count > 0 && balloons.ContainsKey(pinnedArms[pinnedArms.Count - 1]);
+    public bool AimingAtBalloon => aiming && aimValid && aimBubble != null;
+    public PlayerCreatureCarrier BalloonCarrier => carrier;
+    public GameObject BalloonPlayer => carrier != null && carrier.PlayerController != null ? carrier.PlayerController.gameObject
+        : carrier != null ? carrier.gameObject : null;
+    public Vector3 BalloonOrigin => carrier != null && carrier.HandAnchor != null ? carrier.HandAnchor.position
+        : playerBody != null ? playerBody.position + Vector3.up * 0.8f : transform.position;
+    public Vector3 BalloonVelocity => playerBody != null && !playerBody.isKinematic ? playerBody.linearVelocity : Vector3.zero;
+
+    public void ForgetBalloon(LeashBubble bubble, int arm, bool keepPinned = false)
+    {
+        if (!balloons.TryGetValue(arm, out LeashBubble attached) || attached != bubble) return;
+        balloons.Remove(arm); pinnedArms.Remove(arm); restLengths.Remove(arm);
+        if (!keepPinned && lastCarried != null) lastCarried.UnpinArm(arm);
+    }
+
+    /// <summary>Release the player's control, while each balloon stays attached to the dropped octopus.</summary>
+    public void ParkBalloons(TentacleCreature creature)
+    {
+        if (creature == null) return;
+        foreach (var leash in creature.BalloonLeashes()) leash.bubble.UnbindHandler();
+    }
+
+    public void AdoptBalloons(TentacleCreature creature)
+    {
+        if (creature == null || creature.Carrier != carrier) return;
+        if (lastCarried != creature)
+        {
+            ParkBalloons(lastCarried);
+            ResetPull(); lastCarried = creature;
+        }
+        foreach (var leash in creature.BalloonLeashes())
+        {
+            if (balloons.ContainsKey(leash.arm)) continue;
+            if (!leash.bubble.BindHandler(this)) continue;
+            balloons[leash.arm] = leash.bubble;
+            pinnedArms.Add(leash.arm); restLengths[leash.arm] = leash.bubble.LeashLength;
+        }
+    }
+
+    private void ReleaseBalloons()
+    {
+        if (balloons.Count == 0) return;
+        foreach (var entry in new List<KeyValuePair<int, LeashBubble>>(balloons))
+        {
+            if (entry.Value != null) entry.Value.ReleaseLeash();
+            else { if (lastCarried != null) lastCarried.UnpinArm(entry.Key); pinnedArms.Remove(entry.Key); restLengths.Remove(entry.Key); }
+        }
+        balloons.Clear();
+    }
+
+    private void ReleaseArm(TentacleCreature creature, int arm)
+    {
+        if (balloons.TryGetValue(arm, out LeashBubble bubble) && bubble != null) bubble.ReleaseLeash();
+        balloons.Remove(arm); pinnedArms.Remove(arm); restLengths.Remove(arm);
+        creature.UnpinArm(arm);
+    }
 
     public int CordCount => cords.Count;
 
@@ -98,6 +156,7 @@ public sealed class TentacleTether : MonoBehaviour
             if (cords[i].creature == creature) RemoveCord(i);
         if (lastCarried == creature)
         {
+            ReleaseBalloons();
             lastCarried = null;
             pinnedArms.Clear();
             restLengths.Clear();
@@ -108,6 +167,8 @@ public sealed class TentacleTether : MonoBehaviour
     /// <summary>The player's tether (for the arm pose while aiming).</summary>
     public static TentacleTether Instance { get; private set; }
     public bool Aiming => aiming;
+    /// <summary>While aiming: true when the crosshair is on something an arm can stick to.</summary>
+    public bool AimValid => aiming && aimValid;
     public Vector3 AimPoint => aimPoint;
     public void PauseInput()
     {
@@ -148,9 +209,14 @@ public sealed class TentacleTether : MonoBehaviour
             // Just set down: with two arms stuck it hangs between them as a cord; otherwise its arms come back.
             if (lastCarried != null && !lastCarried.IsDead)
             {
-                List<Vector3> pins = lastCarried.PinnedPoints();
-                if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], lastCarried);
-                else lastCarried.UnpinAll();
+                ParkBalloons(lastCarried);
+                if (lastCarried.BalloonLeashes().Count > 0) lastCarried.UnpinTerrainArms();
+                else
+                {
+                    List<Vector3> pins = lastCarried.PinnedPoints();
+                    if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], lastCarried);
+                    else lastCarried.UnpinAll();
+                }
             }
             lastCarried = null;
             ResetPull();
@@ -158,8 +224,7 @@ public sealed class TentacleTether : MonoBehaviour
             ShowAim(false);
             return;
         }
-        if (lastCarried != carried) ResetPull();
-        lastCarried = carried;
+        if (lastCarried != carried) AdoptBalloons(carried);
         // While riding, both mouse buttons belong to the reins. Do not fire on release or reel them in.
         if (BoneRide.Mount != null)
         {
@@ -172,13 +237,13 @@ public sealed class TentacleTether : MonoBehaviour
         }
         if (view == null) view = Camera.main;
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null && ScriptedReel == null) return;
-
-        // F owns the tether; left mouse remains available for interaction and dragging.
-        bool pressed = Application.isFocused && keyboard != null && keyboard[fireKey].isPressed;
+        Mouse mouse = Mouse.current;
+        // Off the mount, a carried tentacle owns left mouse; on the mount the reins own it.
+        bool pressed = Application.isFocused && mouse != null && mouse.leftButton.isPressed;
         bool aimNow = pressed && Aim(out aimPoint, out aimValid);
         ShowAim(aimNow);
-        if (!pressed && aiming && aimValid) FireAt(aimPoint, aimAnchor);
+        if (!pressed && aiming && aimValid && Application.isFocused && mouse != null && mouse.leftButton.wasReleasedThisFrame)
+            FireAt(aimPoint, aimAnchor);
         aiming = pressed;
         // Tap R: let go. Hold R: reel in on the newest stuck arm.
         bool reelHeld = ScriptedReel ?? (keyboard != null && keyboard[reelKey].isPressed);
@@ -213,12 +278,12 @@ public sealed class TentacleTether : MonoBehaviour
     {
         TentacleCreature creature = carrier != null ? carrier.CarriedCreature as TentacleCreature : null;
         if (creature == null || !creature.SimulationEnabled) return;
-        if (lastCarried != creature) { ResetPull(); lastCarried = creature; }
+        if (lastCarried != creature) AdoptBalloons(creature);
+        LeashBubble bubble = anchor != null ? anchor.GetComponentInParent<LeashBubble>() : null;
+        if (bubble != null && (!bubble.CanLeash(this) || balloons.ContainsValue(bubble))) return;
         if (pinnedArms.Count >= 2)
         {
-            creature.UnpinArm(pinnedArms[0]);
-            restLengths.Remove(pinnedArms[0]);
-            pinnedArms.RemoveAt(0);
+            ReleaseArm(creature, pinnedArms[0]);
         }
         int arm = creature.PinArm(point, anchor);
         if (arm >= 0)
@@ -226,6 +291,12 @@ public sealed class TentacleTether : MonoBehaviour
             pinnedArms.Add(arm);
             // It is shot at its full length: walking further than this stretches it.
             restLengths[arm] = playerBody != null ? Vector3.Distance(playerBody.position, point) : 0f;
+            if (bubble != null)
+            {
+                float length = Mathf.Clamp(Vector3.Distance(BalloonOrigin, bubble.transform.position) - bubble.Radius, 1.4f, range);
+                if (bubble.AttachLeash(this, creature, arm, length)) balloons[arm] = bubble;
+                else ReleaseArm(creature, arm);
+            }
         }
         shotTimer = 0f;
     }
@@ -248,6 +319,7 @@ public sealed class TentacleTether : MonoBehaviour
     private bool aiming, aimValid;
     private Vector3 aimPoint;
     private Transform aimAnchor;
+    private LeashBubble aimBubble;
     private LineRenderer aimLine;
     private Transform aimMarker;
 
@@ -256,16 +328,26 @@ public sealed class TentacleTether : MonoBehaviour
     {
         point = default;
         valid = false;
+        aimAnchor = null; aimBubble = null;
         if (view == null) return false;
         Ray ray = new Ray(view.transform.position, view.transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, range, ~(1 << 2), QueryTriggerInteraction.Ignore)
-            && (playerBody == null || hit.rigidbody != playerBody))
+        int count;
+        var physics = gameObject.scene.GetPhysicsScene();
+        while ((count = physics.Raycast(ray.origin, ray.direction, aimHits, range, ~(1 << 2), QueryTriggerInteraction.Ignore)) == aimHits.Length)
+            aimHits = new RaycastHit[aimHits.Length * 2];
+        float closest = range + 1f;
+        for (int i = 0; i < count; i++)
         {
+            RaycastHit hit = aimHits[i];
+            if (hit.distance >= closest || (playerBody != null && hit.rigidbody == playerBody)
+                || (carrier != null && carrier.CarriedCreature != null && hit.collider.GetComponentInParent<Creature>() == carrier.CarriedCreature)) continue;
+            closest = hit.distance;
             point = hit.point + hit.normal * 0.05f;
             aimAnchor = hit.collider.transform;
-            valid = true;
+            aimBubble = hit.collider.GetComponentInParent<LeashBubble>();
+            valid = aimBubble == null || aimBubble.CanLeash(this);
         }
-        else point = ray.origin + ray.direction * range;
+        if (aimAnchor == null) point = ray.origin + ray.direction * range;
         return true;
     }
 
@@ -291,7 +373,7 @@ public sealed class TentacleTether : MonoBehaviour
         aimLine.gameObject.SetActive(on);
         aimMarker.gameObject.SetActive(on && aimValid);
         if (!on) return;
-        Color colour = aimValid ? new Color(0.85f, 1f, 0.95f) : new Color(0.6f, 0.15f, 0.2f);
+        Color colour = aimValid ? (aimBubble != null ? new Color(0.45f, 0.85f, 1f) : new Color(0.85f, 1f, 0.95f)) : new Color(0.6f, 0.15f, 0.2f);
         aimLine.sharedMaterial.SetColor("_BaseColor", colour);
         Vector3 from = carrier.HandAnchor != null ? carrier.HandAnchor.position : view.transform.position + view.transform.forward * 0.5f;
         for (int i = 0; i < 16; i++)
@@ -308,7 +390,7 @@ public sealed class TentacleTether : MonoBehaviour
         }
     }
 
-    /// <summary>Hold F: the carried creature pulls every arm back in.</summary>
+    /// <summary>Tap R: the carried creature pulls every arm back in.</summary>
     /// <summary>Every shot arm lets go (getting off a bone child or the colossus drops the reins).</summary>
     public void LetGoAll() => ReelAll();
 
@@ -320,6 +402,7 @@ public sealed class TentacleTether : MonoBehaviour
 
     private void ResetPull()
     {
+        ReleaseBalloons();
         pinnedArms.Clear();
         restLengths.Clear();
         reeling = false;
@@ -334,9 +417,11 @@ public sealed class TentacleTether : MonoBehaviour
         for (int i = cords.Count - 1; i >= 0; i--)
             if (cords[i].creature == creature) RemoveCord(i);
         if (creature.Suspended) creature.Suspend(false);
-        creature.UnpinAll();
+        ParkBalloons(creature);
+        creature.UnpinTerrainArms();
         creature.Dragged = false;
         creature.EndPet();
+        ParkBalloons(lastCarried);
         ResetPull();
         lastCarried = null;
     }
@@ -524,9 +609,16 @@ public sealed class TentacleTether : MonoBehaviour
     /// </summary>
     private void ReelIn(float deltaTime)
     {
-        if (playerBody == null || playerBody.isKinematic || carrier == null) return;
+        if (carrier == null) return;
         if (!(carrier.CarriedCreature is TentacleCreature creature) || creature != lastCarried || pinnedArms.Count == 0) return;
         int arm = pinnedArms[pinnedArms.Count - 1];
+        if (balloons.TryGetValue(arm, out LeashBubble bubble))
+        {
+            if (bubble != null) bubble.ShortenLeash(reelSpeed * 0.45f * deltaTime);
+            reeledArm = -1;
+            return; // A balloon moves towards the player; it never reels the player into the air.
+        }
+        if (playerBody == null || playerBody.isKinematic) return;
         if (!creature.ArmPin(arm, out Vector3 pin)) return;
         if (reeledArm != arm)
         {
@@ -559,6 +651,7 @@ public sealed class TentacleTether : MonoBehaviour
         Vector3 pull = Vector3.zero;
         foreach (int arm in pinnedArms)
         {
+            if (balloons.ContainsKey(arm)) continue;
             if (!creature.ArmPin(arm, out Vector3 pin) || !restLengths.TryGetValue(arm, out float rest)) continue;
             Vector3 toPin = pin - playerBody.position;
             float stretch = toPin.magnitude - rest;

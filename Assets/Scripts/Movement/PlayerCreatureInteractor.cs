@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 /// Attach this component to the Player or its Camera holder.
 /// </summary>
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(1100)] // Resolve use after the carrier's pickup/drop update (1000).
 public sealed class PlayerCreatureInteractor : MonoBehaviour
 {
     [Header("Interaction")]
@@ -20,6 +21,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     [Tooltip("Physics layers that can be hit by the interaction ray.")]
     [SerializeField] private LayerMask interactionLayers = ~0;
     [SerializeField] private PlayerCreatureCarrier carrier;
+    private Creature pendingHeldUse;
+    private float pendingHeldUseUntil;
 
     /// <summary>Finds the main Camera when no Camera has been assigned manually.</summary>
     private void Awake()
@@ -36,11 +39,25 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Checks for one left-click press and attempts a centre-screen interaction.</summary>
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) return;
-        if (Application.isFocused && BoneRide.Mount == null && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame
+        if (BoneAwakeningCutscene.Playing || BoneRide.Mount != null || !Application.isFocused)
+        { pendingHeldUse = null; return; }
+        ResolvePendingHeldUse();
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame
             && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))
         {
             TryInteract();
+        }
+    }
+
+    private void ResolvePendingHeldUse()
+    {
+        if (pendingHeldUse != null)
+        {
+            Creature pending = pendingHeldUse;
+            if (Time.time > pendingHeldUseUntil || carrier == null
+                || (carrier.CarriedCreature != pending && carrier.PendingCreature != pending)) pendingHeldUse = null;
+            else if (carrier.CarriedCreature == pending)
+            { pendingHeldUse = null; TryInteract(); }
         }
     }
 
@@ -48,6 +65,14 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     public void TryInteract()
     {
         if (interactionCamera == null) return;
+        if (carrier != null && carrier.CarriesTentacle) return;
+        if (carrier != null && carrier.CarriedCreature == null && carrier.PendingCreature != null && carrier.PendingCreature.CanUseWhileCarried)
+        {
+            // Keep the click while the reaching hand finishes picking up the flower.
+            pendingHeldUse = carrier.PendingCreature;
+            pendingHeldUseUntil = Time.time + 0.3f;
+            return;
+        }
         Creature held = carrier != null ? carrier.CarriedCreature : null;
         if (held != null && !held.IsDead && held.CanUseWhileCarried)
         {

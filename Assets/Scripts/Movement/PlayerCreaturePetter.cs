@@ -60,6 +60,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         Mouse mouse = Mouse.current;
         bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && BoneRide.Mount == null
             && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)
+            && !(carrier != null && carrier.CarriesTentacle)
             && !(carrier != null && carrier.CarriedCreature != null && carrier.CarriedCreature.CanUseWhileCarried);
         StepHold(held, Time.deltaTime, mouse != null ? mouse.scroll.ReadValue().y : 0f);
     }

@@ -42,7 +42,7 @@ public sealed class TentacleCreature : Creature
     [Range(0f, 1f)] [SerializeField] private float exposedBoneChance = 0.6f;
 
     [Header("Tentacles")]
-    [Range(3, 12)] [SerializeField] private int tentacleCount = 6;
+    [Range(3, 12)] [SerializeField] private int tentacleCount = 7;
     [Range(3, 16)] [SerializeField] private int jointsPerTentacle = 7;
     [Tooltip("Furthest a tentacle tip can be from the body centre.")]
     [Min(0.5f)] [SerializeField] private float reach = 2.4f;
@@ -50,8 +50,8 @@ public sealed class TentacleCreature : Creature
     [Min(0.1f)] [SerializeField] private float stepDistance = 1.1f;
     [Min(0.02f)] [SerializeField] private float stepDuration = 0.22f;
     [Min(0f)] [SerializeField] private float stepHeight = 0.45f;
-    [Min(0.005f)] [SerializeField] private float jointRadius = 0.09f;
-    [Min(0.005f)] [SerializeField] private float tipRadius = 0.045f;
+    [Min(0.005f)] [SerializeField] private float jointRadius = 0.0765f;
+    [Min(0.005f)] [SerializeField] private float tipRadius = 0.03825f;
     [Tooltip("Surfaces the tentacles can stick to.")]
     [SerializeField] private LayerMask surfaceLayers = (1 << 0) | (1 << 7) | (1 << 8);
 
@@ -174,7 +174,11 @@ public sealed class TentacleCreature : Creature
         {
             if (Carrier != null && Carrier.TentacleLockedForRide)
                 return "[LMB] Turn left    [RMB] Turn right    [W/S] Up/Down    [C] Dismount";
-            const string tether = "[Hold F] Aim / release to shoot    [R] Release / hold to reel";
+            TentacleTether control = TentacleTether.Instance;
+            string tether = control != null && control.NewestIsBalloon
+                ? "[Hold LMB] Aim / release to shoot    [Hold R] Pull balloon closer    [Tap R] Let go"
+                : "[Hold LMB] Aim / release to shoot    [R] Release / hold to reel";
+            if (control != null && control.AimingAtBalloon) tether = "[Release LMB] Leash bubble\n" + tether;
             if (!gripping) return tether;
             bool grounded = Carrier != null && Carrier.PlayerController != null && Carrier.PlayerController.Grounded;
             string up = canClimbUp ? climbUpPrompt : null;
@@ -197,7 +201,9 @@ public sealed class TentacleCreature : Creature
         // Stuck to something that moves (a bone child, the colossus): the point rides along with it.
         public Transform pinAnchor;
         public Vector3 pinLocal;
-        public Vector3 Pin => pinAnchor != null ? pinAnchor.TransformPoint(pinLocal) : pinPoint;
+        public LeashBubble pinBubble;
+        public Vector3 Pin => pinBubble != null && pinBubble.IsLeashed ? pinBubble.LeashPoint
+            : pinAnchor != null ? pinAnchor.TransformPoint(pinLocal) : pinPoint;
         public float pinTime;
         public Vector3 hold;
         public Vector3 holdNormal = Vector3.up;
@@ -301,6 +307,7 @@ public sealed class TentacleCreature : Creature
         arm.planted = arm.stepping = false;
         arm.pinPoint = point;
         arm.pinAnchor = anchor;
+        arm.pinBubble = anchor != null ? anchor.GetComponentInParent<LeashBubble>() : null;
         arm.pinLocal = anchor != null ? anchor.InverseTransformPoint(point) : Vector3.zero;
         arm.pinTime = Time.time;
         return best;
@@ -319,6 +326,28 @@ public sealed class TentacleCreature : Creature
     {
         if (tentacles == null || index < 0 || index >= tentacles.Length) return;
         tentacles[index].pinned = false;
+        LeashBubble bubble = tentacles[index].pinBubble;
+        if (bubble != null && bubble.LeashCreature == this) bubble.ReleaseLeash();
+    }
+
+    public List<(int arm, LeashBubble bubble)> BalloonLeashes()
+    {
+        var result = new List<(int arm, LeashBubble bubble)>();
+        if (tentacles != null)
+            for (int i = 0; i < tentacles.Length; i++)
+            {
+                Tentacle arm = tentacles[i];
+                if (arm.pinned && arm.pinBubble != null && arm.pinBubble.LeashCreature == this) result.Add((i, arm.pinBubble));
+            }
+        result.Sort((a, b) => a.bubble.LeashOrder.CompareTo(b.bubble.LeashOrder));
+        return result;
+    }
+
+    public void UnpinTerrainArms()
+    {
+        if (tentacles == null) return;
+        for (int i = 0; i < tentacles.Length; i++)
+            if (tentacles[i].pinBubble == null || tentacles[i].pinBubble.LeashCreature != this) UnpinArm(i);
     }
 
     /// <summary>How many arms are stuck into something under root (reins in a bone child or the colossus).</summary>
@@ -386,7 +415,7 @@ public sealed class TentacleCreature : Creature
     public void UnpinAll()
     {
         if (tentacles == null) return;
-        foreach (Tentacle t in tentacles) t.pinned = false;
+        for (int i = 0; i < tentacles.Length; i++) UnpinArm(i);
     }
 
     /// <summary>The creature's own looks, for things made of its arms (the tether cords).</summary>
@@ -1425,6 +1454,7 @@ public sealed class TentacleCreature : Creature
 
     protected override void OnDisable()
     {
+        UnpinAll();
         base.OnDisable();
         OnDisableHook();
         gripping = false;

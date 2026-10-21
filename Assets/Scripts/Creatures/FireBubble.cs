@@ -6,7 +6,7 @@ using UnityEngine;
 /// a Fire Flower after remaining still for the configured delay.
 /// </summary>
 [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
-public sealed class FireBubble : Creature
+public sealed class FireBubble : LeashBubble
 {
     private enum BubbleState
     {
@@ -91,6 +91,7 @@ public sealed class FireBubble : Creature
     private Vector3 restingPosition;
     private bool transformationStarted;
     private bool descending;
+    private bool gravityBeforeLeash;
     private Vector3 driftVelocity;
     private float visualFlowTime;
     [Header("Bone Fuel")]
@@ -105,12 +106,26 @@ public sealed class FireBubble : Creature
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
     /// <summary>Whether this Bubble has started falling and can be eaten.</summary>
-    public bool IsInanimate => !IsBoundToBone && currentState == BubbleState.Inanimate;
+    public bool IsInanimate => !IsBoundToBone && !IsLeashed && currentState == BubbleState.Inanimate;
 
     public bool IsBoundToBone => boneOwner != null;
     public float BoneFuelFraction => initialBoneHeat > 0f ? Mathf.Clamp01(Heat / initialBoneHeat) : 0f;
     public override bool CanBeCarried => !IsBoundToBone;
-    public override bool CanBeConsumed => !IsBoundToBone;
+    public override bool CanBeConsumed => !IsBoundToBone && base.CanBeConsumed;
+    public override float Radius => BalloonCollider.radius * Mathf.Abs(transform.lossyScale.x);
+    protected override bool CanLeashBubble(TentacleTether owner) => !IsBoundToBone && !transformationStarted;
+    protected override void OnLeashAttached()
+    {
+        FindPhysicsReferences();
+        gravityBeforeLeash = bubbleBody.useGravity;
+        SetMovementPhysics(false, false);
+        bubbleBody.linearVelocity *= 0.25f;
+    }
+    protected override void OnLeashReleased()
+    {
+        if (!IsDead && !IsBoundToBone) SetMovementPhysics(false, gravityBeforeLeash);
+        if (bubbleBody != null) restingPosition = bubbleBody.position;
+    }
 
     public bool BindToBone(BoneChild owner) => BindToBone(owner, owner != null ? owner.transform : null);
     public bool BindToBone(BoneKiln owner, Transform bone) => BindToBone((Component)owner, bone);
@@ -119,6 +134,7 @@ public sealed class FireBubble : Creature
     private bool BindToBone(Component owner, Transform anchor)
     {
         if (owner == null || anchor == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
+        ReleaseLeash();
         FindPhysicsReferences();
         if (TryGetComponent<WebCapture>(out var web)) web.Release();
         boneOwner = owner;
@@ -214,6 +230,14 @@ public sealed class FireBubble : Creature
         if (IsBoundToBone || IsDead || bubbleBody == null || transformationStarted)
             return;
 
+        if (IsLeashed && SimulationEnabled)
+        {
+            RestoreExpiredIgnores();
+            Vector3 floatVelocity = driftVelocity * 0.15f + Vector3.up * upwardSpeed;
+            bubbleBody.linearVelocity = LeashVelocity(floatVelocity, Time.fixedDeltaTime);
+            return; // Keep flight age and resting-to-flower time frozen while held by an arm.
+        }
+
         if (SimulationEnabled && !descending)
         {
             elapsedTime += Time.fixedDeltaTime;
@@ -244,6 +268,7 @@ public sealed class FireBubble : Creature
 
     private void TransformIntoFlower()
     {
+        if (IsLeashed) return;
         transformationStarted = true;
         if (fireFlowerPrefab == null)
         {

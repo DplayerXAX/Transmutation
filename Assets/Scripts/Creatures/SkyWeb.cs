@@ -204,7 +204,8 @@ public sealed class SkyWeb : Creature
             body.GetComponentInParent<AdvancedFirstPersonTraversal>() != null ||
             body.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
         Creature creature = body.GetComponentInParent<Creature>();
-        if (creature != null && (creature.IsCarried || creature.IsBubbleCaptured || creature is TrappingBubble)) return false;
+        if (creature != null && (creature.IsCarried || creature.IsBubbleCaptured || creature is TrappingBubble
+            || (creature is LeashBubble balloon && balloon.IsLeashed))) return false;
         if (body.TryGetComponent<BubbleCapture>(out var bubbleCapture) && !bubbleCapture.CanCapture) return false;
         WebCapture capture = body.GetComponent<WebCapture>();
         return capture == null || capture.CanCapture;

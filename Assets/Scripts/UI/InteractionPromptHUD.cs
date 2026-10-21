@@ -126,7 +126,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
-            if (!carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
+            if (!carrier.CarriesTentacle && !carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
             {
                 Creature target = interactor.FindCreature();
                 if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))

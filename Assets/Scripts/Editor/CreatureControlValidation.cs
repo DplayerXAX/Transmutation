@@ -269,7 +269,8 @@ public static class CreatureControlValidation
             {
                 Mesh mesh = piece.GetComponent<MeshFilter>().sharedMesh;
                 meshes.Add(mesh);
-                foreach (Vector3 vertex in mesh.vertices) aboveGround &= vertex.y >= origin.y + 0.19f;
+                foreach (Vector3 vertex in mesh.vertices)
+                    aboveGround &= Mathf.Abs(vertex.y - origin.y - RealmStreamSurface.Clearance) < 0.002f;
             }
             Check(aboveGround, "all generated river vertices clear the real terrain");
             Object.DestroyImmediate(terrain);

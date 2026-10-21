@@ -103,6 +103,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 float under = Physics.Raycast(f.transform.position + Vector3.up * 5f, Vector3.down, out RaycastHit g, 30f, ~0, QueryTriggerInteraction.Ignore) ? f.transform.position.y - g.point.y : float.NaN;
                 Log($"Flower '{f.name}' at {f.transform.position}, {under:0.00} m above what is under it, awake {f.SimulationEnabled}");
             }
+            Log($"Crosshair with empty hands: {FindFirstObjectByType<CrosshairHUD>()?.CurrentMode}");
             BubbleFlower flower = FindFirstObjectByType<BubbleFlower>();
             var flowerCarrier = FindFirstObjectByType<PlayerCreatureCarrier>();
             var interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
@@ -119,7 +120,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 yield return new WaitForSeconds(0.5f);
                 typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(flowerCarrier, new object[] { flower });
                 yield return new WaitForSeconds(0.5f);
-                Log($"    carried {flowerCarrier.CarriedCreature == flower}, throwable {CreatureThrower.Instance?.HoldingThrowable}");
+                Log($"    carried {flowerCarrier.CarriedCreature == flower}, throwable {CreatureThrower.Instance?.HoldingThrowable}, crosshair {FindFirstObjectByType<CrosshairHUD>()?.CurrentMode}");
                 for (int shot = 0; shot < 3; shot++)
                 {
                     TrappingBubble before = flower.LastShot;
@@ -135,7 +136,8 @@ public sealed class ClimbTestDriver : MonoBehaviour
                     }
                     yield return new WaitForSeconds(0.6f);
                     TrappingBubble made = flower.LastShot;
-                    Log($"    shot {shot + 1}: new bubble {(made != null && made != before)}, {(made != null ? Vector3.Distance(made.transform.position, body.position).ToString("0.0") + " m out" : "-")}");
+                    Vector3 lookFlat = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+                    Log($"    shot {shot + 1}: new bubble {(made != null && made != before)}, {(made != null ? Vector3.Distance(made.transform.position, body.position).ToString("0.0") + " m out, " + Vector3.Dot(made.transform.position - body.position, lookFlat).ToString("0.0") + " m ahead" : "-")}");
                 }
             }
             Quit();

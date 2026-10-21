@@ -46,6 +46,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+    public Creature PendingCreature => pendingCreature;
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
     public Transform HandAnchor { get; set; }
@@ -270,6 +271,7 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
+        if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
         carryPoint.position = creature.transform.position;

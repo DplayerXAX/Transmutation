@@ -170,6 +170,7 @@ public sealed class FirstPersonBody : MonoBehaviour
 
         Mouse mouse = Mouse.current;
         if (BoneRide.Mount == null && mouse != null && mouse.leftButton.wasPressedThisFrame
+            && !(carrier != null && carrier.CarriesTentacle)
             && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;

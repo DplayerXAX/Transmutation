@@ -549,7 +549,7 @@ public sealed class FireEater : Creature
         }
 
         FireBubble bubble = touchedObject.GetComponentInParent<FireBubble>();
-        if (bubble == null || !bubble.IsInanimate)
+        if (bubble == null || !bubble.IsInanimate || !bubble.CanBeConsumed)
         {
             return;
         }
