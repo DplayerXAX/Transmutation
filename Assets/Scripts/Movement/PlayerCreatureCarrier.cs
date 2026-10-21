@@ -47,6 +47,16 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+    public Camera CarryCamera => carryCamera;
+    private bool interactionPickup;
+    public bool TryCarryFromInteraction(Creature creature)
+    {
+        if (CarriedCreature != null || pendingCreature != null || creature == null ||
+            creature.gameObject.scene != gameObject.scene) return false;
+        BeginCarry(creature);
+        interactionPickup = CarriedCreature == creature;
+        return interactionPickup;
+    }
     public Creature PendingCreature => pendingCreature;
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
@@ -109,7 +119,12 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             return;
         }
 
-        if (carryInput == CarryInput.HoldRightMouse)
+        if (interactionPickup && CarriedCreature != null)
+        {
+            if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            { interactionPickup = false; Release(); }
+        }
+        else if (carryInput == CarryInput.HoldRightMouse)
             UpdateHoldRightMouse();
         else
             UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
@@ -368,6 +383,7 @@ private void FitCarryPoint(Creature creature)
 
     public void Release()
     {
+        interactionPickup = false;
         if (TentacleLockedForRide) return;
         ReleaseCarriedCreature();
     }

@@ -113,9 +113,10 @@ public sealed class BirdCreature : Creature
     protected override void OnAgeDeath()
     {
         // Shared death has already released attachments, stopped flight, and notified listeners.
-        BirdBones.Spawn(bonesPrefab, gameObject.scene, transform.position, transform.rotation,
+        BirdBones remains = BirdBones.Spawn(bonesPrefab, gameObject.scene, transform.position, transform.rotation,
             body != null ? body.linearVelocity : Vector3.zero,
             body != null ? body.angularVelocity : Vector3.zero);
+        remains.SetResolvedPolarity(Polarity);
         // Retire the original immediately so its collider/food cannot compete with the remains.
         gameObject.SetActive(false);
         Destroy(gameObject);
@@ -165,7 +166,7 @@ public sealed class BirdCreature : Creature
         for (int i = 0; i < foods.Count; i++)
         {
             Creature food = foods[i];
-            if (food == null || food.IsConsumptionPending || !CanEat(food)) continue;
+            if (food == null || !food.CanBeAITargeted || food.IsConsumptionPending || !CanEat(food)) continue;
             Vector3 offset = foodPositions[i] - position;
             float distanceSquared = offset.sqrMagnitude;
             if (distanceSquared > nearestSquared) continue;
