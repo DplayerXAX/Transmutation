@@ -92,6 +92,19 @@ public sealed class TentacleTether : MonoBehaviour
 
     public int CordCount => cords.Count;
 
+    public void ReleaseCreature(TentacleCreature creature)
+    {
+        for (int i = cords.Count - 1; i >= 0; i--)
+            if (cords[i].creature == creature) RemoveCord(i);
+        if (lastCarried == creature)
+        {
+            lastCarried = null;
+            pinnedArms.Clear();
+            restLengths.Clear();
+            aiming = aimValid = false;
+        }
+    }
+
     /// <summary>The player's tether (for the arm pose while aiming).</summary>
     public static TentacleTether Instance { get; private set; }
     public bool Aiming => aiming;
@@ -126,13 +139,14 @@ public sealed class TentacleTether : MonoBehaviour
         if (carrier == null) return;
         // A hung creature picked up again: the cord is gone and its arms come back.
         for (int i = cords.Count - 1; i >= 0; i--)
-            if (cords[i].creature == null || cords[i].creature.IsCarried) RemoveCord(i);
+            if (cords[i].creature == null || cords[i].creature.IsDead || cords[i].creature.IsCarried) RemoveCord(i);
 
         TentacleCreature carried = carrier.CarriedCreature as TentacleCreature;
+        if (carried != null && carried.IsDead) carried = null;
         if (carried == null)
         {
             // Just set down: with two arms stuck it hangs between them as a cord; otherwise its arms come back.
-            if (lastCarried != null)
+            if (lastCarried != null && !lastCarried.IsDead)
             {
                 List<Vector3> pins = lastCarried.PinnedPoints();
                 if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], lastCarried);
@@ -198,7 +212,7 @@ public sealed class TentacleTether : MonoBehaviour
     public void FireAt(Vector3 point, Transform anchor)
     {
         TentacleCreature creature = carrier != null ? carrier.CarriedCreature as TentacleCreature : null;
-        if (creature == null) return;
+        if (creature == null || !creature.SimulationEnabled) return;
         if (lastCarried != creature) { ResetPull(); lastCarried = creature; }
         if (pinnedArms.Count >= 2)
         {
@@ -495,12 +509,12 @@ public sealed class TentacleTether : MonoBehaviour
         if (BoneAwakeningCutscene.Playing) return;
         for (int i = cords.Count - 1; i >= 0; i--)
         {
-            if (cords[i].creature == null || cords[i].creature.IsCarried) { RemoveCord(i); continue; }
-            Spring(cords[i], Time.fixedDeltaTime);
+            if (cords[i].creature == null || cords[i].creature.IsDead || cords[i].creature.IsCarried) { RemoveCord(i); continue; }
+            if (cords[i].creature.SimulationEnabled) Spring(cords[i], Time.fixedDeltaTime);
             if (!PocketClear(cords[i], cords[i].pocket)) RemoveCord(i);
         }
         if (BoneRide.Mount != null) return;
-        if (reeling) ReelIn(Time.fixedDeltaTime);
+        if (reeling && pinnedArms.Count > 0) ReelIn(Time.fixedDeltaTime);
         else PullBack();
     }
 
@@ -541,6 +555,7 @@ public sealed class TentacleTether : MonoBehaviour
     {
         if (playerBody == null || playerBody.isKinematic || carrier == null) return;
         if (!(carrier.CarriedCreature is TentacleCreature creature) || creature != lastCarried) return;
+        if (!creature.SimulationEnabled) return;
         Vector3 pull = Vector3.zero;
         foreach (int arm in pinnedArms)
         {

@@ -22,6 +22,7 @@ public sealed class BirdFlockManager : MonoBehaviour
     private readonly BirdOctree octree = new BirdOctree();
     private readonly List<Creature> foods = new List<Creature>(256);
     private readonly List<Vector3> foodPositionsWS = new List<Vector3>(256);
+    private readonly List<BirdCreature> mealRecipients = new List<BirdCreature>(256);
     private BirdCreature[] activeBirds = new BirdCreature[256];
     private Vector3[] positionsWS = new Vector3[256];
     private Vector3[] velocitiesWS = new Vector3[256];
@@ -71,6 +72,7 @@ public sealed class BirdFlockManager : MonoBehaviour
         birds.Clear();
         foods.Clear();
         foodPositionsWS.Clear();
+        mealRecipients.Clear();
         foreach (GameObject root in gameObject.scene.GetRootGameObjects())
             foreach (BirdCreature bird in root.GetComponentsInChildren<BirdCreature>())
                 if (bird.isActiveAndEnabled) Register(bird);
@@ -83,6 +85,7 @@ public sealed class BirdFlockManager : MonoBehaviour
         birds.Clear();
         foods.Clear();
         foodPositionsWS.Clear();
+        mealRecipients.Clear();
     }
 
     public void Register(BirdCreature bird)
@@ -96,9 +99,28 @@ public sealed class BirdFlockManager : MonoBehaviour
         Array.Resize(ref velocitiesWS, capacity);
         Array.Resize(ref nextVelocitiesWS, capacity);
         neighbors.Capacity = capacity;
+        mealRecipients.Capacity = capacity;
     }
 
     public void Unregister(BirdCreature bird) => birds.Remove(bird);
+
+    /// <summary>One fixed meal budget, equally shared using current physics positions.</summary>
+    internal void ShareNutrition(BirdCreature eater, BirdMeal meal)
+    {
+        mealRecipients.Clear();
+        if (meal.Nutrition <= 0f || meal.Scene != gameObject.scene) return;
+        if (eater != null && eater.CanReceiveNutrition(meal)) mealRecipients.Add(eater);
+        float radiusSquared = meal.SharingRadius * meal.SharingRadius;
+        for (int i = 0; i < birds.Count; i++)
+        {
+            BirdCreature bird = birds[i];
+            if (bird == null || bird == eater || !bird.CanReceiveNutrition(meal)) continue;
+            if ((bird.FlightBody.position - meal.Position).sqrMagnitude <= radiusSquared) mealRecipients.Add(bird);
+        }
+
+        BirdNutritionSharing.Distribute(mealRecipients, meal.Nutrition);
+        mealRecipients.Clear();
+    }
 
     private void FixedUpdate() => SimulateStep(Time.fixedDeltaTime, Time.fixedTime);
 
@@ -120,7 +142,7 @@ public sealed class BirdFlockManager : MonoBehaviour
                     continue;
                 }
                 if (!bird.CaptureFlightState(out Vector3 position, out Vector3 velocity)) continue;
-                includeUntaggedFood |= bird.DietTags == Creature.FoodTag.Everything && bird.HuntDesire > 0f;
+                includeUntaggedFood |= bird.DietTags == Creature.FoodTag.Everything && bird.EffectiveHuntDesire > 0f;
                 int index = FlyingBirdCount++;
                 activeBirds[index] = bird;
                 positionsWS[index] = position;

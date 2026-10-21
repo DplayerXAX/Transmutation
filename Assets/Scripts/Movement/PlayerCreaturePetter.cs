@@ -56,6 +56,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
     private void Update()
     {
         if (BoneAwakeningCutscene.Playing) { Stop(); return; }
+        if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
         bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && BoneRide.Mount == null
             && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)
@@ -128,7 +129,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, petRange, petLayers, carrier, out hit);
         // The creature already held in the right hand is not petted.
-        if (creature == null || (carrier != null && carrier.CarriedCreature == creature)) return null;
+        if (creature == null || creature.IsDead || (carrier != null && carrier.CarriedCreature == creature)) return null;
         return creature;
     }
 

@@ -71,7 +71,8 @@ that behavior or make other creatures start eating.
 `Consume(Creature consumer)` is a virtual hook on the food for nutrition or special
 effects. Its base does nothing: calling it alone neither kills nor removes the food.
 `Die()` is a separate virtual lifecycle method; its base records death, sets remaining
-Age to zero, and disables simulation without changing physics or destroying the object.
+Age to zero, disables simulation, releases attachments, and retains the original body.
+Mobile corpses use passive gravity physics; structural creatures keep their stationary body.
 
 An eating behavior calls `TryConsumeFood(food)` after checking its own contact or
 readiness conditions. This shared handoff checks dietary compatibility and active state,
@@ -80,12 +81,29 @@ destroys any remaining original GameObject. `IsConsumptionPending` prevents comp
 eaters from repeating effects while Unity defers destruction. Food may still be eaten
 when its own simulation is paused or dead; eater simulation must be active.
 
-Birds use this handoff on collider contact only while freely flying with positive Hunt
-Desire. Their prefab diet accepts Plant. Bird death overrides create one Bird Bones
-object, whose food tag is Matter. Eating bones removes them without further remains.
+Birds use this handoff on collider contact only while freely flying with sufficient
+Hunger and positive effective Hunt Desire. Their prefab diet accepts Plant. Direct bird death
+retains the original falling corpse; only shared Age expiry calls `OnAgeDeath()` after death
+notifications to replace the bird with bones. Consumption never invokes this age-only hook
+and leaves no extra bones. Bird Bones initialize as dead Matter remains. Eating either kind
+of corpse removes it without repeating death effects.
 
-No nutrition amounts or Age gains are assigned yet. Future subclasses implement those
-effects in `Consume`, leaving death transformations in `Die`.
+Every creature has a nonnegative **Nutrition** field (default 120) for its value as food.
+This is independent of dietary compatibility. A successful bird meal shares that fixed
+budget among compatible hungry flying birds within its sharing radius, capping Hunger
+reductions and redistributing unused portions. The bird caller snapshots nutrition and
+food identity/position before callbacks; overrides of `Consume` do not need to call base
+to award nutrition. Special effects still apply to the actual eater only, including
+Corrupt Seed infection. Other creature types keep their existing feeding behavior.
+Ordinary meals do not restore Age. Keep special effects in `Consume`, shared cleanup in
+`OnDeath`, and age-only remains in `OnAgeDeath`.
+
+`SkySpider` (TimeSpider) has runtime Food Tag Meat and Diet Everything. Its unique attack
+does not use ordinary consumption: it approaches a living captive in its current web,
+steals all remaining Age, and triggers the victim's age death even while capture pauses
+simulation or Age Rate is zero. It leaves normal corpses or age-specific remains rather
+than removing food. No Nutrition, Hunger sharing, or `Consume` effects apply; Corrupt Seed
+infection is not acquired by draining a seed. Existing victim death effects still run.
 
 ## Adding a category
 

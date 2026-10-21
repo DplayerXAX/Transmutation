@@ -198,6 +198,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private float xRotation;
     private float yRotation;
     private Coroutine speedLerpCoroutine;
+    private CompostRideSurface rideSurface;
+    private RaycastHit rideGround;
+    private Vector3 rideVelocity;
 
     private void Reset()
     {
@@ -260,6 +263,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private void FixedUpdate()
     {
         if (BubbleMovementBlocked) return;
+        UpdateRideSupport();
         MovePlayer();
         ExtraGravity();
 
@@ -270,6 +274,30 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private void GroundCheck()
     {
         grounded = CastGround(out _);
+        UpdateRideSupport();
+    }
+
+    private void UpdateRideSupport()
+    {
+        rideSurface = null;
+        rideVelocity = Vector3.zero;
+        if (rb == null || rb.isKinematic || climbing || restricted || wallRunning || BubbleMovementBlocked ||
+            (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
+        // The original thin cast can start inside the deck and hit the shell underneath instead.
+        // Use a raised support cast; only compost backs accept it, preserving ordinary ground rules.
+        // Lift the whole footprint clear of a walkable ramp before casting. A thin cast
+        // starting inside the uphill edge cannot report its supporting surface.
+        float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
+            Mathf.Tan(maxSlopeAngle * Mathf.Deg2Rad);
+        if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
+            Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
+            whatIsGround, QueryTriggerInteraction.Ignore)) return;
+        var surface = ground.collider.GetComponentInParent<CompostRideSurface>();
+        if (surface == null || !surface.Supports(ground.collider) || Vector3.Angle(ground.normal, Vector3.up) > maxSlopeAngle) return;
+        rideSurface = surface;
+        rideGround = ground;
+        grounded = true;
+        rideVelocity = surface.VelocityAt(rb.position);
     }
 
     private Vector3 GetGroundCheckOrigin()
@@ -534,12 +562,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         float dt = Time.fixedDeltaTime;
         bool input = moveDirection.sqrMagnitude > 0.01f;
-        Vector3 velocity = rb.linearVelocity;
+        Vector3 velocity = rb.linearVelocity - rideVelocity;
         if (OnSlope() && !exitingSlope)
         {
             // Along the slope, so walking up and down hills keeps an even pace and does not bounce off.
             Vector3 wish = input ? GetSlopeMoveDirection(moveDirection) * moveSpeed : Vector3.zero;
-            rb.linearVelocity = Vector3.MoveTowards(velocity, wish, (input ? groundAcceleration : groundDeceleration) * dt);
+            rb.linearVelocity = rideVelocity + Vector3.MoveTowards(velocity, wish, (input ? groundAcceleration : groundDeceleration) * dt);
             return;
         }
         Vector3 flat = new Vector3(velocity.x, 0f, velocity.z);
@@ -554,7 +582,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         }
         else if (flat.magnitude <= moveSpeed + 0.1f)
             flat = Vector3.MoveTowards(flat, Vector3.zero, airBrake * dt);
-        rb.linearVelocity = new Vector3(flat.x, velocity.y, flat.z);
+        rb.linearVelocity = rideVelocity + new Vector3(flat.x, velocity.y, flat.z);
     }
 
     /// <summary>Heavier falls, and short hops when the jump key is let go early.</summary>
@@ -588,6 +616,15 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (rb.isKinematic)
             return;
         if (Flung) return;
+        // The walking limit applies relative to a moving back, including its turn at this contact point.
+        if (rideSurface != null)
+        {
+            Vector3 relative = rb.linearVelocity - rideVelocity;
+            Vector3 flat = new Vector3(relative.x, 0f, relative.z);
+            flat = Vector3.ClampMagnitude(flat, moveSpeed);
+            rb.linearVelocity = rideVelocity + new Vector3(flat.x, relative.y, flat.z);
+            return;
+        }
         if (OnSlope() && !exitingSlope)
         {
             if (rb.linearVelocity.magnitude > moveSpeed)
@@ -672,7 +709,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public bool OnSlope()
     {
-        if (CastGround(out slopeHit) && grounded)
+        bool hasGround;
+        if (rideSurface != null) { slopeHit = rideGround; hasGround = true; }
+        else hasGround = CastGround(out slopeHit);
+        if (hasGround && grounded)
         {
             float angle = Vector3.Angle(Vector3.up, slopeHit.normal);
             if (angle < maxSlopeAngle && angle != 0f)

@@ -49,7 +49,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     {
         if (interactionCamera == null) return;
         Creature held = carrier != null ? carrier.CarriedCreature : null;
-        if (held != null && held.CanUseWhileCarried)
+        if (held != null && !held.IsDead && held.CanUseWhileCarried)
         {
             Ray aim = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             held.ReceiveInteraction(new CreatureInteraction(gameObject,
@@ -90,7 +90,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
 
-        return CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, interactionRange, interactionLayers, carrier, out hit);
+        Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, interactionRange, interactionLayers, carrier, out hit);
+        return creature != null && !creature.IsDead ? creature : null;
     }
 }
 

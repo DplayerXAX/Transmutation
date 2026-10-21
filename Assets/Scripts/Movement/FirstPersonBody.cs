@@ -19,6 +19,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Header("Look")]
     [SerializeField] private Material limbMaterial;
     [SerializeField] private Material jointMaterial;
+    [SerializeField] private Material gooMaterial;
     [Min(0.01f)] [SerializeField] private float armThickness = 0.075f;
     [Min(0.01f)] [SerializeField] private float legThickness = 0.11f;
     [SerializeField] private bool showLegs = true;
@@ -96,6 +97,8 @@ public sealed class FirstPersonBody : MonoBehaviour
     private const float LandTime = 0.4f;
     private MaterialPropertyBlock block;
     private Renderer[] renderers;
+    private PlayerGooCoating gooCoating;
+    private readonly System.Collections.Generic.List<Renderer> gooRenderers = new System.Collections.Generic.List<Renderer>();
 
     private void Awake()
     {
@@ -131,6 +134,12 @@ public sealed class FirstPersonBody : MonoBehaviour
         // The left hand pets creatures.
         petter = FindFirstObjectByType<PlayerCreaturePetter>();
         if (petter == null) petter = gameObject.AddComponent<PlayerCreaturePetter>();
+        gooCoating = controller != null ? controller.GetComponent<PlayerGooCoating>() : null;
+        if (gooMaterial != null)
+        {
+            BuildGooArm(leftArm);
+            BuildGooArm(rightArm);
+        }
     }
 
     private void OnDestroy()
@@ -196,6 +205,7 @@ public sealed class FirstPersonBody : MonoBehaviour
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
             part.SetPropertyBlock(block);
         }
+        UpdateGooCoating();
         if (torso != null) PoseTorso();
         LimbsPosed?.Invoke();
     }
@@ -233,6 +243,57 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     /// <summary>Raised after the arms and legs are posed each frame, for things that must stick to them exactly.</summary>
     public static event System.Action LimbsPosed;
+
+    private void BuildGooArm(Limb arm)
+    {
+        // Anatomical progress increases from shoulder (0) to fingertip (1), independently of pose.
+        AddGooPart(arm.upper, 0f, 0.38f, Vector3.up);
+        AddGooPart(arm.elbow, 0.35f, 0.41f, Vector3.up);
+        AddGooPart(arm.lower, 0.38f, 0.78f, Vector3.up);
+        foreach (MeshFilter mesh in arm.end.GetComponentsInChildren<MeshFilter>())
+        {
+            bool palm = mesh.name == "Palm";
+            bool thumb = mesh.transform.parent.name == "Thumb";
+            bool tip = mesh.transform.parent.name == "Knuckle";
+            AddGooPart(mesh.transform, palm ? 0.78f : thumb ? 0.84f : tip ? 0.95f : 0.9f,
+                palm ? 0.9f : thumb ? 0.98f : tip ? 1f : 0.95f, Vector3.forward);
+        }
+    }
+
+    private void AddGooPart(Transform part, float pathStart, float pathEnd, Vector3 axisOS)
+    {
+        Mesh mesh = part.GetComponent<MeshFilter>().sharedMesh;
+        var shell = new GameObject("Goo Coating", typeof(MeshFilter), typeof(MeshRenderer));
+        shell.transform.SetParent(part, false);
+        shell.GetComponent<MeshFilter>().sharedMesh = mesh;
+        var renderer = shell.GetComponent<MeshRenderer>();
+        renderer.sharedMaterial = gooMaterial;
+        renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        renderer.enabled = false;
+        Bounds boundsOS = mesh.bounds;
+        float minimumOS = Vector3.Dot(boundsOS.min, axisOS);
+        float lengthOS = Vector3.Dot(boundsOS.size, axisOS);
+        var properties = new MaterialPropertyBlock();
+        properties.SetVector("_PathRange", new Vector4(pathStart, pathEnd, minimumOS, 1f / Mathf.Max(lengthOS, 0.001f)));
+        properties.SetVector("_AxisOS", axisOS);
+        renderer.SetPropertyBlock(properties);
+        gooRenderers.Add(renderer);
+    }
+
+    private void UpdateGooCoating()
+    {
+        float coverage = gooCoating != null && gooCoating.CanClimb ? gooCoating.Coverage : 0f;
+        float extra = gooCoating != null ? gooCoating.ExtraThickness : 0f;
+        foreach (Renderer renderer in gooRenderers)
+        {
+            renderer.enabled = coverage > 0f;
+            if (!renderer.enabled) continue;
+            renderer.GetPropertyBlock(block);
+            block.SetFloat("_Coverage", coverage);
+            block.SetFloat("_Thickness", Mathf.Lerp(0.002f, 0.006f, extra));
+            renderer.SetPropertyBlock(block);
+        }
+    }
 
     // ---------------- Arms ----------------
 

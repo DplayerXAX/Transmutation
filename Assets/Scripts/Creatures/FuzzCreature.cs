@@ -103,12 +103,13 @@ public sealed class FuzzCreature : Creature
     /// </summary>
     public void Anchor()
     {
+        if (IsDead) return;
         DissolveRope();
         LeaveChain();
         Rope.Add(this);
         foreach (FuzzCreature f in new List<FuzzCreature>(Chain))
         {
-            if (f == null || f == this) continue;
+            if (f == null || f == this || f.IsDead) continue;
             f.LeaveChain();
             Rope.Add(f);
         }
@@ -214,12 +215,23 @@ public sealed class FuzzCreature : Creature
     /// <summary>A tentacle creature grabs it: it stops, is held under the hunter's body, and struggles.</summary>
     public void Catch(Transform by)
     {
+        if (IsDead || by == null) return;
         captor = by;
         holdOffset = Vector3.ProjectOnPlane(transform.position - by.position, Vector3.up).normalized * 0.9f;
     }
 
     /// <summary>Let go (the hunter gives up, or the player pets or picks it up).</summary>
     public void Free() => captor = null;
+
+    protected override void OnDeath()
+    {
+        LeaveChain();
+        if (InRope) DissolveRope();
+        Free();
+        velocity = Vector3.zero;
+        wasCarried = false;
+        if (gooRenderer != null) gooRenderer.enabled = false;
+    }
 
     protected override void TickCreature(float deltaTime)
     {
