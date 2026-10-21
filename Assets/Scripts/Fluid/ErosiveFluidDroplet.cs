@@ -10,6 +10,7 @@ public sealed class ErosiveFluidDroplet : Creature
     private struct Touch { public Collider collider; public Vector3 point, normal; public float step; }
     private readonly Touch[] touches = new Touch[4];
     private static readonly Collider[] overlaps = new Collider[8];
+    private static readonly Collider[] creatureOverlaps = new Collider[16];
     private int touchCount;
     private Vector3 lastPosition;
     private ErosiveFluidSystem fluid;
@@ -19,6 +20,8 @@ public sealed class ErosiveFluidDroplet : Creature
     private Renderer visual;
     private MaterialPropertyBlock properties;
     private float elapsed, probeTimer;
+    private float drain, drainTouched = float.NegativeInfinity;
+    private Vector3 drainPoint;
     private bool evaporated, wasCarried;
     private Touch effectContact;
     public Rigidbody Body => body;
@@ -32,6 +35,10 @@ public sealed class ErosiveFluidDroplet : Creature
     private static readonly int ContactId = Shader.PropertyToID("_ContactPoint");
     private static readonly int NormalId = Shader.PropertyToID("_ContactNormal");
     private static readonly int StrengthId = Shader.PropertyToID("_ErosionStrength");
+    private static readonly int DrainId = Shader.PropertyToID("_LifeDrain");
+    private static readonly int DrainPointId = Shader.PropertyToID("_DrainPoint");
+    /// <summary>0..1 glow of the creature-contact feedback; rises on touch and fades after.</summary>
+    public float LifeDrain => drain;
     public override bool HeldInView => true;
     protected override void InitializeCreature() => SetCreatureName("Water Droplet");
     protected override void TickCreature(float deltaTime) { }
@@ -51,7 +58,8 @@ public sealed class ErosiveFluidDroplet : Creature
     }
     internal void Launch(ErosiveFluidSource emitter, Vector3 position, Vector3 velocity)
     {
-        source = emitter; elapsed = probeTimer = 0f; touchCount = 0; effectContact = default;
+        source = emitter; elapsed = probeTimer = drain = 0f; touchCount = 0; effectContact = default;
+        drainTouched = float.NegativeInfinity;
         evaporated = wasCarried = false;
         transform.localScale = Vector3.one * emitter.Radius * 2f;
         body.position = position; transform.position = position; lastPosition = position;
@@ -83,6 +91,7 @@ public sealed class ErosiveFluidDroplet : Creature
         probeTimer -= dt;
         bool validate = probeTimer <= 0f;
         if (validate) probeTimer = fluid.SampleInterval;
+        if (validate && fluid.AgesCreatures) ProbeCreatures(position);
         if (placed) ProbeHeldContacts(position);
         else for (int i = touchCount - 1; i >= 0; i--)
         {
@@ -110,6 +119,11 @@ public sealed class ErosiveFluidDroplet : Creature
         properties.SetFloat(StrengthId, activity);
         properties.SetVector(ContactId, touchCount > 0 ? touches[0].point : position);
         properties.SetVector(NormalId, touchCount > 0 ? touches[0].normal : Vector3.zero);
+        // Quick rise on touch, slower fade so a brief brush still reads.
+        bool touching = Time.fixedTime - drainTouched <= fluid.SampleInterval * 1.5f;
+        drain = Mathf.MoveTowards(drain, touching ? 1f : 0f, dt * (touching ? 8f : 2.5f));
+        properties.SetFloat(DrainId, drain);
+        properties.SetVector(DrainPointId, drain > 0f ? drainPoint : position);
         visual.SetPropertyBlock(properties);
         return true;
     }
@@ -125,6 +139,22 @@ public sealed class ErosiveFluidDroplet : Creature
                 terrain, terrain.transform.position, terrain.transform.rotation, out Vector3 normal, out float depth)) continue;
             touches[touchCount] = new Touch { collider = terrain, point = position - normal * Mathf.Max(0f, source.Radius - depth), normal = normal, step = Time.fixedTime };
             effectContact = touches[touchCount++];
+        }
+    }
+    // Creature bodies ignore droplet collisions, so touching is an overlap with a thin margin.
+    private void ProbeCreatures(Vector3 position)
+    {
+        int mask = Physics.AllLayers & ~(1 << gameObject.layer) & ~(1 << fluid.World.TerrainLayer);
+        int count = Physics.OverlapSphereNonAlloc(position, source.Radius + 0.05f, creatureOverlaps, mask, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            Creature creature = CreatureSpatialQuery.Owner(creatureOverlaps[i]);
+            if (creature == null || creature == this || creature is ErosiveFluidDroplet || creature.IsDead) continue;
+            Collider other = creatureOverlaps[i];
+            // ClosestPoint only supports primitives and convex meshes.
+            drainPoint = other is MeshCollider mesh && !mesh.convex ? other.bounds.ClosestPoint(position) : other.ClosestPoint(position);
+            drainTouched = Time.fixedTime;
+            fluid.Soak(creature, drainPoint);
         }
     }
     protected override void OnHeatChanged()

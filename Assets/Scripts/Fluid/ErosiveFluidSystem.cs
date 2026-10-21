@@ -16,6 +16,14 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     [Min(1f)] [SerializeField] private float visualDistance = 60f;
     [SerializeField] private LayerMask erodibleLayers = 1 << 7;
     [SerializeField] private LayerMask collisionLayers = (1 << 0) | (1 << 4) | (1 << 7) | (1 << 8) | (1 << 9);
+    [Tooltip("Lifespan flow multiplier for creatures touched by water. 1 disables the effect; creatures that do not age are unaffected.")]
+    [Min(1f)] [SerializeField] private float contactAgeMultiplier = 4f;
+    [Tooltip("Minimum lifetime spent per second while touched, so creatures that never age naturally (AgeRate 0) still age in water.")]
+    [Min(0f)] [SerializeField] private float contactAgeFloor = 4f;
+    private struct Soaking { public float until, dust; public Vector3 point; }
+    private readonly Dictionary<Creature, Soaking> soaked = new Dictionary<Creature, Soaking>();
+    private float drainTokens;
+    private readonly List<Creature> soakedScratch = new List<Creature>();
     private readonly Stack<ErosiveFluidDroplet> pool = new Stack<ErosiveFluidDroplet>();
     private readonly List<ErosiveFluidDroplet> active = new List<ErosiveFluidDroplet>();
     private readonly Dictionary<Vector3Int, Request> requests = new Dictionary<Vector3Int, Request>();
@@ -39,6 +47,10 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     public int Capacity => maximumDroplets;
     public IReadOnlyList<ErosiveFluidDroplet> Droplets => active;
     public int SkippedSpawns { get; private set; }
+    public float ContactAgeMultiplier => contactAgeMultiplier;
+    public bool AgesCreatures => contactAgeMultiplier > 1f || contactAgeFloor > 0f;
+    /// <summary>Whether water touched this creature within the last sampling window.</summary>
+    public bool IsSoaked(Creature creature) => creature != null && soaked.TryGetValue(creature, out Soaking state) && Time.fixedTime <= state.until;
     public bool CanErode(Collider collider) => world != null && collider != null &&
         (erodibleLayers.value & (1 << collider.gameObject.layer)) != 0 && world.OwnsCollider(collider);
     private static readonly ProfilerMarker SimulationMarker = new ProfilerMarker("Erosion.Droplets");
@@ -115,6 +127,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
                 if (droplet != null && droplet.Simulate(dt)) continue;
                 active.RemoveAt(i); Return(droplet);
             }
+            AgeSoaked(dt);
             for (int i = 0; i < sources.Length; i++) if (sources[(i + firstSource) % sources.Length] != null) sources[(i + firstSource) % sources.Length].Emit(dt);
             if (sources.Length > 0) firstSource = (firstSource + 1) % sources.Length;
             sampleTimer += dt;
@@ -159,6 +172,43 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         if (requests.TryGetValue(key, out Request old))
         { float sum = old.amount + amount; old.point = (old.point * old.amount + point * amount) / sum; old.amount = sum; old.radius = Mathf.Max(old.radius, radius); requests[key] = old; }
         else requests[key] = new Request { point = point, radius = radius, amount = amount };
+    }
+    // Touch is sampled at the contact rate; the linger bridges samples. Several droplets on one
+    // creature refresh the same entry, so contact speeds ageing up once rather than per droplet.
+    internal void Soak(Creature creature, Vector3 point)
+    {
+        soaked.TryGetValue(creature, out Soaking state);
+        state.until = Time.fixedTime + sampleInterval * 1.5f; state.point = point;
+        soaked[creature] = state;
+    }
+    private void AgeSoaked(float dt)
+    {
+        drainTokens = Mathf.Min(10f, drainTokens + dt * 10f);
+        if (soaked.Count == 0) return;
+        soakedScratch.Clear(); soakedScratch.AddRange(soaked.Keys);
+        foreach (Creature creature in soakedScratch)
+        {
+            Soaking state = soaked[creature];
+            if (creature == null || creature.IsDead || Time.fixedTime > state.until) { soaked.Remove(creature); continue; }
+            // Natural ageing already spends AgeRate; water adds the remainder of the multiplied rate,
+            // at least the floor. Paused creatures (captured, disabled) keep their lifespan frozen.
+            float extra = Mathf.Max(creature.AgeRate * contactAgeMultiplier, contactAgeFloor) - creature.AgeRate;
+            if (!creature.SimulationEnabled || creature.IsConsumptionPending || extra <= 0f) continue;
+            creature.SetRemainingAge(creature.Age - extra * dt);
+            // Amber dust rises from the contact only while lifespan is actually being drained.
+            state.dust += dt * 6f;
+            if (state.dust >= 1f) { state.dust -= 1f; EmitDrainDust(state.point); }
+            if (creature != null) soaked[creature] = state;
+        }
+    }
+    private void EmitDrainDust(Vector3 point)
+    {
+        if (debris == null || drainTokens < 1f || (view != null && (view.transform.position - point).sqrMagnitude > visualDistance * visualDistance)) return;
+        drainTokens -= 1f;
+        var emit = new ParticleSystem.EmitParams { position = point + Random.insideUnitSphere * 0.08f,
+            velocity = Vector3.up * Random.Range(0.4f, 0.9f) + Random.insideUnitSphere * 0.15f,
+            startColor = new Color(1f, 0.75f, 0.32f, 0.9f), startSize = 0.06f, startLifetime = 0.9f };
+        debris.Emit(emit, 1);
     }
     internal bool InBounds(Vector3 point)
     {
@@ -226,7 +276,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     }
     public void SetEmitting(bool value) { if (sources != null) foreach (ErosiveFluidSource source in sources) if (source != null) source.SetEmitting(value); }
     public void ClearDroplets()
-    { foreach (ErosiveFluidDroplet droplet in active) Return(droplet); active.Clear(); requests.Clear(); sampleTimer = 0f; }
+    { foreach (ErosiveFluidDroplet droplet in active) Return(droplet); active.Clear(); requests.Clear(); soaked.Clear(); sampleTimer = 0f; }
     private void OnDisable() { Creature.Activated -= ActorActivated; ClearDroplets(); }
     private void OnDestroy()
     { if (world != null) { world.TerrainChanged -= Invalidate; world.ErosionApplied -= EmitDebris; } if (friction != null) Destroy(friction); }
