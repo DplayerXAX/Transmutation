@@ -592,6 +592,7 @@ public sealed class HangingSpire : MonoBehaviour
         // Same settings, but each copy grows its own body shape.
         string settings = System.Text.RegularExpressions.Regex.Replace(JsonUtility.ToJson(template), @"""seed"":-?\d+", $"\"seed\":{name.GetHashCode() & 0xffff}");
         JsonUtility.FromJsonOverwrite(settings, copy);
+        copy.InitializeNewIndividual();
         return copy;
     }
 
