@@ -63,6 +63,7 @@ public static class BoneChildCatchValidation
             Check(child.Catch(Bubble(origin)) && child.Catch(Bubble(origin)), "other rib pairs accept two reserve bubbles");
             Check(!child.Catch(Bubble(origin)) && child.Cradled == fire, "full ribs refuse a fourth bubble without replacing existing fuel");
 
+            fire.LifetimeLimited = true;
             typeof(FireBubble).GetField("lifetimeSeconds", Private).SetValue(fire, 0f);
             typeof(FireBubble).GetField("inanimateToFlowerDelay", Private).SetValue(fire, 0f);
             for (int i = 0; i < 1000; i++) Call(fire, "FixedUpdate");

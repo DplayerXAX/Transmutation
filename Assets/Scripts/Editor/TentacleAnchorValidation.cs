@@ -188,6 +188,75 @@ public static class TentacleAnchorValidation
             Check(TentaclePracticeSite.TryBuild(world, groundOrigin, Vector3.forward, 10f, 1, template, 80),
                 "opposite side generates the second separated practice site");
             Check(tether.CordCount == 3, "automatic sites register both visible teaching creatures with the player's tether");
+
+            // An off-centre wall drop must not home towards the anchors' midpoint, nor arm a slingshot by itself.
+            player.AddComponent<SmoothFirstPersonController>();
+            Set(carrier, "playerColliders", player.GetComponentsInChildren<Collider>(true));
+            Vector3 towerOrigin = origin + Vector3.right * 150f;
+            var tower = GameObject.CreatePrimitive(PrimitiveType.Cube); tower.transform.position = towerOrigin + Vector3.up * 10f;
+            tower.transform.localScale = new Vector3(4f, 20f, 4f);
+            Vector3 dropPoint = towerOrigin + Vector3.back * 6f + Vector3.up * 3f;
+            playerBody.position = dropPoint; playerBody.linearVelocity = Vector3.zero;
+            camera.transform.position = dropPoint + Vector3.up;
+            var wallOctopus = new GameObject("Wall drop octopus"); wallOctopus.transform.position = dropPoint;
+            var wallBody = wallOctopus.AddComponent<Rigidbody>();
+            var wallCollider = wallOctopus.AddComponent<SphereCollider>(); wallCollider.radius = 0.45f;
+            var wallCreature = wallOctopus.AddComponent<TentacleCreature>();
+            Set(wallCreature, "wanderTarget", origin + Vector3.left * 30f);
+            Call(carrier, "BeginCarry", wallCreature);
+            tether.FireAt(towerOrigin + new Vector3(-1f, 8f, -2.06f), tower.transform);
+            tether.FireAt(towerOrigin + new Vector3(1f, 9f, -2.06f), tower.transform);
+            Physics.SyncTransforms();
+            int rigCount = tether.CordCount, launches = tether.Flung;
+            Call(carrier, "ReleaseCarriedCreature");
+            Check(wallCreature.Suspended && tether.CordCount == rigCount + 1,
+                "RMB release creates the wall rig in the same call, before autonomous movement resumes");
+            object wallCord = cords[cords.Count - 1]; Type wallCordType = wallCord.GetType();
+            object WallField(string name) => wallCordType.GetField(name).GetValue(wallCord);
+            Check(Vector3.Distance((Vector3)WallField("rest"), dropPoint) < 0.01f,
+                "an off-centre tower attachment rests where it was put down");
+            Check(Vector3.Distance((Vector3)Get(wallCreature, "wanderTarget"), dropPoint) < 0.01f,
+                "drop forgets the old distant wandering target");
+            Check(Physics.GetIgnoreCollision(wallCollider, playerCollider)
+                && Physics.GetIgnoreCollision(playerCollider, (Collider)WallField("solid")),
+                "drop preserves clearance from both the growing body and newly created bridge strips");
+            for (int i = 0; i < 50; i++) { Call(tether, "FixedUpdate"); Call(tether, "LateUpdate"); Physics.Simulate(0.02f); }
+            Check(Vector3.Distance(wallCreature.transform.position, dropPoint) < 0.05f && tether.Flung == launches,
+                "wall drop stays put over many physics steps without recentering or launching");
+            Check(playerBody.linearVelocity.sqrMagnitude < 0.001f, "an overlapping drop cannot kick the player away from the tower");
+            wallCordType.GetField("passUntil").SetValue(wallCord, Time.time - 1f);
+            Call(tether, "Spring", wallCord, 0.02f);
+            Check(Physics.GetIgnoreCollision(playerCollider, (Collider)WallField("solid")),
+                "collision grace cannot expire while the player's body still intersects an arm strip");
+            playerBody.position = dropPoint + Vector3.back * 5f; Physics.SyncTransforms(); Call(tether, "Spring", wallCord, 0.02f);
+            Check(!Physics.GetIgnoreCollision(playerCollider, (Collider)WallField("solid")),
+                "bridge collision returns after the player moves clear");
+            wallCreature.Dragged = true; wallCreature.BeginPet(dropPoint, Vector3.up);
+            wallCreature.ContinuePet(dropPoint + Vector3.back * 0.15f, Vector3.up, 0.1f);
+            Call(tether, "Spring", wallCord, 0.3f); wallCreature.Dragged = false; wallCreature.EndPet(); Call(tether, "Spring", wallCord, 0.02f);
+            Check(tether.Flung == launches, "a tiny touch does not convert the large anchor-to-body offset into an accidental shot");
+            wallCreature.Dragged = true; wallCreature.BeginPet(wallCreature.transform.position, Vector3.up);
+            wallCreature.ContinuePet(dropPoint + Vector3.back * 3f, Vector3.up, 0.1f);
+            Call(tether, "Spring", wallCord, 0.4f); wallCreature.Dragged = false; wallCreature.EndPet(); Call(tether, "Spring", wallCord, 0.02f);
+            Check(tether.Flung == launches + 1, "a deliberate draw still launches the wall slingshot");
+
+            // Dropping without a rig also keeps collision ignored until the grown body has separated.
+            playerBody.linearVelocity = Vector3.zero; playerBody.position = dropPoint;
+            wallBody.position = dropPoint; wallCreature.transform.position = dropPoint;
+            Call(carrier, "BeginCarry", wallCreature);
+            wallBody.linearVelocity = new Vector3(30f, 20f, -40f); wallBody.angularVelocity = Vector3.one * 10f;
+            Call(carrier, "ReleaseCarriedCreature");
+            Check(wallBody.isKinematic && wallBody.linearVelocity.sqrMagnitude < 0.001f && wallBody.angularVelocity.sqrMagnitude < 0.001f,
+                "drop clears carry spring velocity before returning to kinematic crawling");
+            var deferred = (IList)Get(carrier, "droppedCollisions");
+            for (int i = 0; i < deferred.Count; i++)
+            {
+                object pair = deferred[i]; pair.GetType().GetField("restoreAt").SetValue(pair, Time.time - 1f); deferred[i] = pair;
+            }
+            Physics.SyncTransforms(); Call(carrier, "RestoreDroppedCollisions");
+            Check(Physics.GetIgnoreCollision(wallCollider, playerCollider), "free drop waits for body clearance even after the initial grace time");
+            playerBody.position += Vector3.back * 6f; Physics.SyncTransforms(); Call(carrier, "RestoreDroppedCollisions");
+            Check(!Physics.GetIgnoreCollision(wallCollider, playerCollider), "free drop restores collision once the body no longer overlaps the player");
             Debug.Log($"Tentacle anchor Play Mode validation passed: {checks} assertions.");
             Physics.simulationMode = oldMode;
             EditorApplication.Exit(0);

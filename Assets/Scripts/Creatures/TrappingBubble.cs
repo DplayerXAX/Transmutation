@@ -25,7 +25,7 @@ public sealed class TrappingBubble : LeashBubble
 
     [Header("Breaking")]
     [Tooltip("For un-leashed bubbles: scenery stops bubbles and other creatures do not pop occupied bubbles. " +
-             "Interaction, pickup attempts, escape and timeout still pop them.")]
+             "Interaction, pickup attempts and escape still pop them; timeout requires Limit Lifetime.")]
     [SerializeField] private bool requireExplicitInteractionToPop;
     [SerializeField] private Transform shell;
 
@@ -108,7 +108,7 @@ public sealed class TrappingBubble : LeashBubble
         motionTime += deltaTime;
         if (!IsLeashed) elapsedTime += deltaTime;
         RestoreExpiredIgnores();
-        if (!IsLeashed && elapsedTime >= lifetimeSeconds) { Pop(); return; }
+        if (LifetimeLimited && !IsLeashed && elapsedTime >= lifetimeSeconds) { Pop(); return; }
         if (IsOccupied) Occupant.Follow(body.position);
         Vector3 velocity = Vector3.zero;
         if (elapsedTime < riseSeconds)

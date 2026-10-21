@@ -42,7 +42,7 @@ public sealed class FireBubble : LeashBubble
     [SerializeField] private float flightAcceleration = 4f;
 
     [Header("Lifetime")]
-    [Tooltip("Maximum flight time before falling. Reaching Fall Start World Y can end flight sooner. Independent of Heat.")]
+    [Tooltip("Maximum flight time before falling, used only with Limit Lifetime enabled. Reaching Fall Start World Y can end flight sooner. Independent of Heat.")]
     [Min(0f)]
     [SerializeField] private float lifetimeSeconds = 20f;
 
@@ -241,7 +241,7 @@ public sealed class FireBubble : LeashBubble
         if (SimulationEnabled && !descending)
         {
             elapsedTime += Time.fixedDeltaTime;
-            if (elapsedTime >= lifetimeSeconds || bubbleBody.position.y >= fallStartWorldY || upwardSpeed <= 0f)
+            if ((LifetimeLimited && elapsedTime >= lifetimeSeconds) || bubbleBody.position.y >= fallStartWorldY || upwardSpeed <= 0f)
                 StartFalling();
             else
                 ApplyFlight(Time.fixedDeltaTime);

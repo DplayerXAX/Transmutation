@@ -64,13 +64,15 @@ public static class BubbleUseValidation
             TrappingBubble shot = flower.LastShot;
             Check(shot != null && !shot.IsPopped, "carried click produces a live shot");
             Vector3 expected = camera.transform.forward * 13f;
+            expected.x *= 0.75f; expected.z *= 0.75f;
             expected.y = expected.y * 0.5f + 0.25f;
             Check(Vector3.Distance(shot.GetComponent<Rigidbody>().linearVelocity, expected) < 0.01f,
-                "upward launch Y is halved while horizontal speed is preserved");
+                "upward launch Y stays halved while horizontal speed is reduced by 25 percent");
             Object.DestroyImmediate(shot.gameObject);
             camera.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
             Set(flower, "nextManualShot", Time.time); interactor.TryInteract(); shot = flower.LastShot;
             expected = camera.transform.forward * 13f; expected.y = expected.y * 0.5f + 0.25f;
+            expected.x *= 0.75f; expected.z *= 0.75f;
             Check(Vector3.Distance(shot.GetComponent<Rigidbody>().linearVelocity, expected) < 0.01f, "downward launch Y is halved too");
             Object.DestroyImmediate(shot.gameObject);
 
@@ -122,6 +124,33 @@ public static class BubbleUseValidation
                 "a fully blocked shot does not spend cooldown or create a bubble inside geometry");
             Object.DestroyImmediate(wall); Call(flower, "TickCreature", 0.02f);
             Check(flower.LastShot != null, "moving clear within the input buffer recovers the blocked shot");
+
+            var persistent = new GameObject("Persistent bubble").AddComponent<TrappingBubble>();
+            persistent.transform.position = origin + Vector3.right * 200f;
+            Set(persistent, "lifetimeSeconds", 0.01f);
+            Check(!persistent.LifetimeLimited, "ordinary bubbles default to no lifetime limit");
+            persistent.SimulateStep(120f);
+            Check(!persistent.IsPopped, "an ordinary bubble survives beyond its former timeout");
+            typeof(Creature).GetField("ageRate", Private).SetValue(persistent, 100f);
+            typeof(LeashBubble).GetMethod("Update", Private).Invoke(persistent, null);
+            Check(persistent.Age == 40f && !persistent.IsDead, "disabled bubble lifetime also skips shared creature ageing");
+            persistent.Pop();
+            Check(persistent.IsPopped, "persistent ordinary bubbles still pop on explicit interaction");
+
+            var fire = new GameObject("Persistent fire bubble").AddComponent<FireBubble>();
+            fire.transform.position = origin + Vector3.right * 250f;
+            Set(fire, "fallStartWorldY", float.MaxValue); Set(fire, "lifetimeSeconds", 0.01f);
+            for (int i = 0; i < 10; i++) Call(fire, "FixedUpdate");
+            Check(!fire.LifetimeLimited && !fire.IsInanimate && !fire.GetComponent<Rigidbody>().useGravity,
+                "fire bubbles do not fall due to an expired flight timer by default");
+            var nest = new GameObject("Persistent bubble nest").AddComponent<KilnBubbleNest>();
+            Set(nest, "placed", true); Set(nest, "timer", 100f);
+            var nestBubbles = (System.Collections.IList)Get(nest, "alive");
+            nestBubbles.Add((fire, Time.time - 1000f)); Call(nest, "Update");
+            Check(nestBubbles.Count == 1 && !fire.IsDead, "the nest does not time out a persistent fire bubble");
+            Set(fire, "fallStartWorldY", fire.GetComponent<Rigidbody>().position.y - 1f); Call(fire, "FixedUpdate");
+            Check(fire.IsInanimate && fire.GetComponent<Rigidbody>().useGravity, "height-based fire bubble falling still works");
+            Object.DestroyImmediate(nest.gameObject); Object.DestroyImmediate(fire.gameObject);
             Debug.Log($"Bubble use Play Mode validation passed: {checks} assertions.");
             EditorApplication.Exit(0);
         }

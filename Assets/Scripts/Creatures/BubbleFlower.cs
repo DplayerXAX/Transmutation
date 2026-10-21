@@ -14,6 +14,7 @@ public sealed class BubbleFlower : Creature
              "(about speed x time metres) before slowing to a float.")]
     [Min(0f)] [SerializeField] private float carriedLaunchSpeed = 13f;
     [Min(0.05f)] [SerializeField] private float carriedLaunchHold = 0.85f;
+    [Range(0f, 1f)] [SerializeField] private float horizontalLaunchMultiplier = 0.75f;
     [Range(0f, 1f)] [SerializeField] private float verticalLaunchMultiplier = 0.5f;
     [Min(0.1f)] [SerializeField] private float aimDistance = 30f;
     private float groundTimer, nextManualShot;
@@ -110,6 +111,8 @@ public sealed class BubbleFlower : Creature
         LastShot = Instantiate(bubblePrefab, origin, Quaternion.identity);
         SceneManager.MoveGameObjectToScene(LastShot.gameObject, gameObject.scene);
         Vector3 velocity = direction * speed;
+        velocity.x *= horizontalLaunchMultiplier;
+        velocity.z *= horizontalLaunchMultiplier;
         velocity.y *= verticalLaunchMultiplier;
         LastShot.Launch(this, shooter, velocity, hold);
         return true;
