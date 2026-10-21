@@ -21,11 +21,11 @@ public sealed class TowerGroves : MonoBehaviour
     [Header("Layout")]
     [SerializeField] private int seed = 29;
     [Tooltip("How far from a tower's wall things grow (metres).")]
-    [SerializeField] private Vector2 ring = new Vector2(2f, 16f);
-    [Range(0, 16)] [SerializeField] private int kelpClumps = 9;
-    [Range(0, 12)] [SerializeField] private int jellyfish = 7;
-    [Range(0, 12)] [SerializeField] private int geodes = 6;
-    [Range(0, 6)] [SerializeField] private int basaltClusters = 3;
+    [SerializeField] private Vector2 ring = new Vector2(4f, 18f);
+    [Range(0, 16)] [SerializeField] private int kelpClumps = 5;
+    [Range(0, 12)] [SerializeField] private int jellyfish = 3;
+    [Range(0, 12)] [SerializeField] private int geodes = 4;
+    [Range(0, 6)] [SerializeField] private int basaltClusters = 2;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private bool built;
@@ -34,6 +34,7 @@ public sealed class TowerGroves : MonoBehaviour
     private ProceduralWorld world;
     private Transform root;
     private float waited;
+    private RealmDecorLayout.Snapshot layout;
     private readonly List<(Transform body, Vector3 home, float phase)> drifting = new List<(Transform, Vector3, float)>();
 
     public void Setup(Material kelp, Material jelly, Material geode, Material amethyst, Material basalt)
@@ -66,6 +67,7 @@ public sealed class TowerGroves : MonoBehaviour
         foreach (Transform tower in spire.StageTowers)
             if (waited < 35f && !world.IsRegionReady(tower.position, ring.y + 8f)) return;
         built = true;
+        layout = RealmDecorLayout.Capture(world);
         root = new GameObject("Tower Groves").transform;
         var random = new System.Random(seed);
         KelpForest(spire.StageTowers[0], random);
@@ -91,6 +93,8 @@ public sealed class TowerGroves : MonoBehaviour
             float a = (float)random.NextDouble() * Mathf.PI * 2f;
             float d = radius + Mathf.Lerp(ring.x, ring.y, Mathf.Sqrt((float)random.NextDouble()));
             Vector3 p = tower.position + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * d;
+            int district = RealmDecorLayout.FlatDistance(tower.position, layout.kelp) < RealmDecorLayout.FlatDistance(tower.position, layout.crystal) ? 0 : 1;
+            if (layout.active && (layout.OnApproach(p) || layout.District(p) != district)) continue;
             if (RealmSites.InSinkhole(world, p, 1.5f)) continue;
             if (!RealmSites.GroundAt(world, p, out at, out normal) || normal.y < slope) continue;
             placed++;
@@ -107,6 +111,7 @@ public sealed class TowerGroves : MonoBehaviour
         {
             float a = (float)random.NextDouble() * Mathf.PI * 2f;
             Vector3 p = centre + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius * Mathf.Sqrt((float)random.NextDouble());
+            if (layout.active && layout.OnApproach(p)) continue;
             if (RealmSites.InSinkhole(world, p, 1f)) continue;
             if (RealmSites.GroundAt(world, p, out at, out normal) && normal.y > 0.6f) return true;
         }

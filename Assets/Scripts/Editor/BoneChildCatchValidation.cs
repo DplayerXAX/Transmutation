@@ -60,7 +60,8 @@ public static class BoneChildCatchValidation
             Call(child, "UpdateHeat");
             Check((float)typeof(BoneChild).GetField("heat", Private).GetValue(child) >= child.heatForLift,
                 "zero Heat FireBubble still supplies enough warmth to fly");
-            Check(!child.Catch(Bubble(origin)), "occupied ribs cannot replace their bound bubble");
+            Check(child.Catch(Bubble(origin)) && child.Catch(Bubble(origin)), "other rib pairs accept two reserve bubbles");
+            Check(!child.Catch(Bubble(origin)) && child.Cradled == fire, "full ribs refuse a fourth bubble without replacing existing fuel");
 
             typeof(FireBubble).GetField("lifetimeSeconds", Private).SetValue(fire, 0f);
             typeof(FireBubble).GetField("inanimateToFlowerDelay", Private).SetValue(fire, 0f);

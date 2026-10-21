@@ -121,6 +121,7 @@ MonoBehaviour:
   groundFiringInterval: {x: 3, y: 6}
   manualCooldown: 0.5
   launchSpeed: 8
+  verticalLaunchMultiplier: 0.5
   aimDistance: 30
 --- !u!1 &124443950014899456
 GameObject:
