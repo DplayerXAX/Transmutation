@@ -3,14 +3,14 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>Tracks food and assigns exclusive reservations to foraging squirrels.</summary>
-[DisallowMultipleComponent]
-public sealed class FoodManager : MonoBehaviour
+public sealed partial class SquirrelSystemManager
 {
+    [Header("Food spawning")]
     [SerializeField] private GameObject foodPrefab;
     [SerializeField] private List<SquirrelFood> foods = new List<SquirrelFood>();
     [Tooltip("Initial food population spawned from foodPrefab.")]
     [SerializeField, Min(0)] private int initialFoodCount = 15;
-    [SerializeField, Min(0.1f)] private float spawnRadius = 6f;
+    [SerializeField, Min(0.1f)] private float foodSpawnRadius = 6f;
     [SerializeField, Min(0.1f)] private float minimumTreeDistance = 1.5f;
     [Header("Periodic food growth")]
     [SerializeField] private bool replenishFood = true;
@@ -66,7 +66,7 @@ public sealed class FoodManager : MonoBehaviour
         {
             var tree = spawnTrees[nextTree++ % spawnTrees.Count];
             if (tree == null || !tree.TrySampleGround(minimumTreeDistance,
-                    Mathf.Max(minimumTreeDistance, spawnRadius), out Vector3 point)) continue;
+                    Mathf.Max(minimumTreeDistance, foodSpawnRadius), out Vector3 point)) continue;
             int hits = gameObject.scene.GetPhysicsScene().OverlapSphere(point + Vector3.up * 0.75f,
                 0.6f, spawnHits, ~0, QueryTriggerInteraction.Ignore);
             if (hits > 0) continue;

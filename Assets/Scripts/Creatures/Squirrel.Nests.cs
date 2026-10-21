@@ -19,7 +19,7 @@ public sealed partial class Squirrel
     }
     private readonly List<NestMemory> homes = new List<NestMemory>();
     private GameObject nestPrefab;
-    private SquirrelManager nestManager;
+    private SquirrelSystemManager nestManager;
     private bool rebuildingMissingNest;
     private Vector3 buildAnchor, buildGround;
     private float buildProgress, discoveryTimer;
@@ -27,7 +27,7 @@ public sealed partial class Squirrel
     public int KnownNestCount => homes.Count;
     public bool ActiveNestKnownMissing => MemoryFor(nest)?.Missing ?? false;
 
-    public void ConfigureNestBuilding(GameObject prefab, SquirrelManager manager = null)
+    public void ConfigureNestBuilding(GameObject prefab, SquirrelSystemManager manager = null)
     { nestPrefab = prefab; nestManager = manager; }
 
     private NestMemory MemoryFor(SquirrelNest home) => homes.Find(memory => memory.Nest == home);

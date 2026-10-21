@@ -36,7 +36,7 @@ public sealed partial class Squirrel : Creature
     private SquirrelFood migrationFood;
     private readonly Collider[] nestPlacementHits = new Collider[32];
     private readonly List<SquirrelFood> carried = new List<SquirrelFood>();
-    private FoodManager foodManager;
+    private SquirrelSystemManager foodManager;
     private SquirrelNest nest;
     private SquirrelFood target;
     private float nextSearch;
@@ -206,7 +206,7 @@ public sealed partial class Squirrel : Creature
         nextSearch = 0f;
     }
 
-    public void Initialize(FoodManager foods, SquirrelNest home, float size, int baseCapacity, float homeRadius = 12f)
+    public void Initialize(SquirrelSystemManager foods, SquirrelNest home, float size, int baseCapacity, float homeRadius = 12f)
     {
         CancelMigration();
         ReleaseFood();

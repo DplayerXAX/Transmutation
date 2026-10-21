@@ -216,8 +216,14 @@ prompts and carry work.
 
 ## Squirrels: food, real nest inventory and construction
 
-`Scene_Ariia` uses `AriiaSquirrelSetup` to register tree anchors and connect the managers.
-`SquirrelManager` instantiates the Squirrel/Nest prefabs and provides the nest template for construction.
+Drag `Assets/Prefabs/Systems/SquirrelSystemManager.prefab` into a scene to add the complete system.
+`Scene_Ariia` already contains an instance. Its single `SquirrelSystemManager` component owns population,
+nests, food spawning/refresh and food fights, with all three creature prefab references assigned.
+At startup it discovers scene-local `SquirrelTree` anchors and authored squirrel/food/nest components.
+Trees named `Tree`, `Tree (...)` or `Environment Trunk ...` are also recognized automatically.
+Disable Auto Discover Scene and assign the Trees list to use explicit anchors instead.
+The source is split into main, Food and Discovery partial files, all belonging to the same component.
+The previous `FoodManager`, `SquirrelManager` and Ariia-only bootstrap have been removed.
 Food and Nest prefabs now include Creature-derived components and rigidbodies for the player's existing
 carry system. Their combat polarity and diet tags are None; nests cannot be consumed.
 
@@ -260,7 +266,9 @@ nest there at **70% speed**, retaining owner and inventory. Migration has a **90
 Construction and migration do not start food fights and pause with creature control. Death/disable releases
 carried items and detaches a squirrel-carried nest.
 
-Play Mode checks under **Tools > Creatures**: **Validate Squirrel Physics**, **Validate Squirrel Ecology**,
+**Tools > Creatures > Validate Squirrel System Prefab (Play Mode)** checks the prefab in an isolated
+scene and runs ecology, inventory/building and physics regressions.
+Other Play Mode checks under **Tools > Creatures**: **Validate Squirrel Physics**, **Validate Squirrel Ecology**,
 **Validate Squirrel Squeeze**, and **Validate Squirrel Nest Inventory And Building**. The latter verifies real
 player transfer, empty/full behavior, no remote knowledge, paid rebuilding, nearby overflow storage and old-home recovery.
 **Configure Squirrel Food And Nest Prefabs** is an edit-mode utility for upgrading model-only prefab assets.
