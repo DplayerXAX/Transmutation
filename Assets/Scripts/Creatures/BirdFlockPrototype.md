@@ -141,7 +141,7 @@ scene transfers, and 72/200-bird populations. Reports are written under
 
 `Validate Bird Web Capture (Play Mode)` verifies actual silk-contact capture, excludes
 trapped birds even if their simulation is manually reenabled, and exercises pickup,
-release, and resumed flight with both spring and firm grips. The runtime checks also
+release, and resumed flight with firm carrying. The runtime checks also
 verify spawn speed overrides, initial velocities, and inheritance from the prefab.
 
 `Validate Bird Life and Food (Play Mode)` checks countdown/pause/death, separate Consume

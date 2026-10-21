@@ -1,27 +1,30 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Throwing what the player carries (a fuzzy creature, a fire bubble...; not a tentacle creature, whose left
-/// click shoots its arms instead, nor a creature that is used with left click while carried): hold the left mouse button to aim, a dotted arc shows where it will fly and
-/// a ring where it lands; let go to throw it.
+/// Charged flight for any carried creature. PlayerCreatureCarrier owns the RMB gesture.
+/// The optional trajectory preview is debug-only and disabled by default.
 /// The creature flies the arc by itself (its own movement is paused), and stops at the first thing it touches.
 /// A fire bubble that hits a bone child is caught by it (BoneChild.Catch).
 /// Added to the player by itself.
 /// </summary>
+[DisallowMultipleComponent]
 public sealed class CreatureThrower : MonoBehaviour
 {
-    [Tooltip("Launch speed (m/s); the arc steepens or flattens with where the view points.")]
+    [Tooltip("Maximum launch speed (m/s); reached at full charge.")]
     [Min(1f)] [SerializeField] private float throwSpeed = 13f;
+    [Tooltip("Launch speed (m/s) just after the hold becomes a throw.")]
+    [Min(0f)] [SerializeField] private float minimumThrowSpeed = 4f;
     [Tooltip("Gravity on a thrown creature (m/s²), gentler than the world's so throws carry.")]
     [Min(1f)] [SerializeField] private float throwGravity = 14f;
     [Tooltip("Longest a throw is followed before the creature is let go wherever it is.")]
     [Min(0.5f)] [SerializeField] private float maxFlightTime = 4f;
+    [Header("Debug")]
+    [SerializeField] private bool debugShowThrowTrajectory;
 
     public static CreatureThrower Instance { get; private set; }
-    public bool Aiming => aiming;
+    public bool Aiming => carrier != null && carrier.IsChargingThrow;
     /// <summary>What the last thrown creature hit (for tests).</summary>
     public string LastHit { get; private set; }
 
@@ -31,23 +34,16 @@ public sealed class CreatureThrower : MonoBehaviour
         public Vector3 position, velocity;
         public float time;
         public bool previousSimulation, previousKinematic;
+        public CollisionDetectionMode previousCollisionMode;
     }
 
     private PlayerCreatureCarrier carrier;
     private Camera view;
-    private bool aiming;
     private LineRenderer arc;
     private Transform marker;
     private readonly List<Flight> flights = new List<Flight>();
     private readonly List<Vector3> points = new List<Vector3>();
     private const int Solid = ~(1 << 2);
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AddToPlayer()
-    {
-        PlayerCreatureCarrier carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
-        if (carrier != null && carrier.GetComponent<CreatureThrower>() == null) carrier.gameObject.AddComponent<CreatureThrower>();
-    }
 
     private void Awake()
     {
@@ -55,18 +51,21 @@ public sealed class CreatureThrower : MonoBehaviour
         carrier = GetComponent<PlayerCreatureCarrier>();
     }
 
-    /// <summary>True when the player holds something that left click throws.</summary>
-    public bool HoldingThrowable => carrier != null && carrier.CarriedCreature != null && !carrier.CarriesTentacle && !carrier.CarriedCreature.CanUseWhileCarried;
+    /// <summary>Any active carried creature can fly; riding reserves RMB for the reins.</summary>
+    public bool HoldingThrowable => carrier != null && carrier.CarriedCreature != null && carrier.CarriedCreature.isActiveAndEnabled && !carrier.TentacleLockedForRide;
 
-    private void Update()
+    private void OnValidate()
+    {
+        throwSpeed = Mathf.Max(1f, throwSpeed);
+        minimumThrowSpeed = Mathf.Clamp(minimumThrowSpeed, 0f, throwSpeed);
+    }
+
+    private void LateUpdate()
     {
         if (view == null) view = Camera.main;
-        Mouse mouse = Mouse.current;
-        bool pressed = HoldingThrowable && mouse != null && mouse.leftButton.isPressed && Application.isFocused;
-        if (pressed) PlanArc(StartPoint(), LaunchVelocity());
-        ShowArc(pressed);
-        if (aiming && !pressed && HoldingThrowable && mouse != null && !mouse.leftButton.isPressed) Throw();
-        aiming = pressed;
+        bool preview = debugShowThrowTrajectory && HoldingThrowable && Aiming && view != null;
+        if (preview) PlanArc(StartPoint(), LaunchVelocity(carrier.ThrowCharge01));
+        ShowArc(preview);
     }
 
     private Vector3 StartPoint()
@@ -74,32 +73,48 @@ public sealed class CreatureThrower : MonoBehaviour
         Creature held = carrier.CarriedCreature;
         Vector3 inFront = view.transform.position + view.transform.forward * 0.8f;
         // From the hand; if the held creature has not caught up with the hand yet, from just in front of the eyes.
-        return held != null && Vector3.Distance(held.transform.position, view.transform.position) < 2.5f ? held.transform.position : inFront;
+        return held != null && !(held is TentacleCreature) && Vector3.Distance(held.transform.position, view.transform.position) < 2.5f ? held.transform.position : inFront;
     }
 
-    private Vector3 LaunchVelocity()
+    private Vector3 LaunchVelocity(float charge01)
     {
         // A little above where the view points, so a level look still lobs it.
         Vector3 dir = (view.transform.forward + Vector3.up * 0.18f).normalized;
-        return dir * throwSpeed;
+        return dir * Mathf.Lerp(minimumThrowSpeed, throwSpeed, Mathf.Clamp01(charge01));
     }
 
-    /// <summary>Throws what is carried along the arc (also used by tests).</summary>
-    public void Throw()
+    /// <summary>Existing callers launch at maximum strength.</summary>
+    public void Throw() => Throw(1f);
+
+    /// <summary>Launches the carried creature with normalized, capped charge.</summary>
+    public void Throw(float charge01)
     {
+        if (!isActiveAndEnabled) return;
+        if (view == null) view = Camera.main;
         if (!HoldingThrowable || view == null) return;
         Creature creature = carrier.CarriedCreature;
         Vector3 start = StartPoint();
-        Vector3 velocity = LaunchVelocity();
+        Vector3 velocity = LaunchVelocity(charge01);
+        creature.PrepareForThrow(carrier);
+        if (creature == null || carrier.CarriedCreature != creature || !creature.isActiveAndEnabled) return;
         carrier.Release();
+        if (creature.IsCarried) return;
+        creature.transform.position = start;
         bool previousSimulation = creature.SimulationEnabled;
         // It flies by itself: its own walking, floating and physics pause until it lands.
         creature.SetSimulationEnabled(false);
         var body = creature.GetComponent<Rigidbody>();
         bool previousKinematic = body != null && body.isKinematic;
-        if (body != null) body.isKinematic = true;
+        CollisionDetectionMode previousCollisionMode = body != null ? body.collisionDetectionMode : CollisionDetectionMode.Discrete;
+        if (body != null)
+        {
+            body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            body.isKinematic = true;
+            body.position = start;
+        }
+        LastHit = null;
         flights.Add(new Flight { creature = creature, position = start, velocity = velocity,
-            previousSimulation = previousSimulation, previousKinematic = previousKinematic });
+            previousSimulation = previousSimulation, previousKinematic = previousKinematic, previousCollisionMode = previousCollisionMode });
     }
 
     /// <summary>Return temporary throw ownership before carry, capture, or death takes over.</summary>
@@ -112,7 +127,11 @@ public sealed class CreatureThrower : MonoBehaviour
             if (flight.creature != creature) continue;
             Instance.flights.RemoveAt(i);
             var body = creature.GetComponent<Rigidbody>();
-            if (body != null) body.isKinematic = flight.previousKinematic;
+            if (body != null)
+            {
+                body.isKinematic = flight.previousKinematic;
+                body.collisionDetectionMode = flight.previousCollisionMode;
+            }
             if (!creature.IsConsumptionPending) creature.SetSimulationEnabled(flight.previousSimulation);
         }
     }
@@ -170,6 +189,7 @@ public sealed class CreatureThrower : MonoBehaviour
             if (!caught)
             {
                 body.isKinematic = false;
+                body.collisionDetectionMode = f.previousCollisionMode;
                 body.linearVelocity = Vector3.zero;
             }
         }
@@ -237,6 +257,7 @@ public sealed class CreatureThrower : MonoBehaviour
 
     private void ShowArc(bool on)
     {
+        if (!on && arc == null) return;
         if (arc == null)
         {
             var go = new GameObject("Throw Arc");
@@ -263,5 +284,28 @@ public sealed class CreatureThrower : MonoBehaviour
             marker.rotation = Quaternion.FromToRotation(Vector3.up, landingNormal);
             marker.localScale = new Vector3(0.45f, 0.01f, 0.45f) * (1f + 0.12f * Mathf.Sin(Time.time * 8f));
         }
+    }
+
+    private void OnDisable()
+    {
+        ShowArc(false);
+        // A disabled thrower must not leave creatures frozen under flight ownership.
+        while (flights.Count > 0)
+        {
+            Flight flight = flights[flights.Count - 1];
+            flights.RemoveAt(flights.Count - 1);
+            if (flight.creature != null) Land(flight, flight.position, caught: false);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (arc != null)
+        {
+            Destroy(arc.sharedMaterial);
+            Destroy(arc.gameObject);
+        }
+        if (marker != null) Destroy(marker.gameObject);
+        if (Instance == this) Instance = null;
     }
 }

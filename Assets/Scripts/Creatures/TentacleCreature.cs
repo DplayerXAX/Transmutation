@@ -158,6 +158,56 @@ public sealed class TentacleCreature : Creature
     private Vector3 restScale = Vector3.one;
     // Skin and bones are laid out in world space, so the carried size is applied to them by hand (1 = normal).
     private float limbSize = 1f;
+    private bool throwPoseAttached;
+
+    public override bool TryHandleCarriedRightMouse(PlayerCreatureCarrier carrier, bool pressed, bool held, bool released)
+        => carrier.TentacleLockedForRide;
+
+    public override void PrepareForThrow(PlayerCreatureCarrier carrier)
+    {
+        if (IsDead) return;
+        if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
+        UnpinAll();
+        Suspend(false);
+        EndPet();
+        LetGo(false);
+        Dragged = gripping = canClimbUp = canHang = false;
+        plantedTentacles = 0;
+        transform.localScale = restScale;
+        limbSize = 1f;
+        LayoutThrowPose();
+        // The procedural skin uses world-space vertices. Attach the finished pose during flight,
+        // when simulation is paused, so it travels with the body without rebuilding it.
+        if (tentacleRoot != null)
+        {
+            tentacleRoot.SetParent(transform, true);
+            throwPoseAttached = true;
+        }
+    }
+
+    private void LayoutThrowPose()
+    {
+        if (tentacles == null) return;
+        foreach (Tentacle tentacle in tentacles)
+        {
+            tentacle.planted = tentacle.stepping = tentacle.touchingHand = false;
+            tentacle.foot = DriftPoint(tentacle, Time.time * 2.2f + tentacle.phase, 100f);
+            LayoutTentacle(tentacle);
+        }
+        UpdateMembrane();
+    }
+
+    protected override void OnSimulationChanged()
+    {
+        if (!throwPoseAttached || (!SimulationEnabled && !IsDead)) return;
+        throwPoseAttached = false;
+        if (tentacleRoot == null) return;
+        // Resume normal world-space authoring after landing, recapture, or death.
+        tentacleRoot.SetParent(null, false);
+        tentacleRoot.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+        tentacleRoot.localScale = Vector3.one;
+        LayoutThrowPose();
+    }
 
     public override string CarriedPrompt
     {

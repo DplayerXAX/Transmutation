@@ -43,7 +43,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
         // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
-        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)));
+        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && (carrier == null || !carrier.CarriesTentacle);
         heldFor = held ? heldFor + Time.deltaTime : 0f;
 
         RaycastHit hit = default;

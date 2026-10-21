@@ -258,8 +258,8 @@ public static class AsuraCombatValidation
             Set(player, "rb", playerBody);
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { core });
             Check(core.IsCarried && carrier.CarriedCreature == core && core.CanUseWhileCarried, "living core opts into held-use input priority");
-            var thrower = playerRoot.AddComponent<CreatureThrower>();
-            Check(!thrower.HoldingThrowable, "held use excludes throwing");
+            var thrower = playerRoot.GetComponent<CreatureThrower>();
+            Check(thrower.HoldingThrowable, "held abilities coexist with RMB throwing");
             core.ReceiveInteraction(new CreatureInteraction(playerRoot, core.AimPosition + Vector3.forward * 10f, Vector3.forward));
             core.ReceiveInteraction(new CreatureInteraction(playerRoot, core.AimPosition + Vector3.forward * 10f, Vector3.forward));
             Check(core.ShotsFired == 1, "held core shoots the shared projectile with one-second cooldown");
@@ -295,7 +295,7 @@ public static class AsuraCombatValidation
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { reclaimed });
             thrower.Throw();
             typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { reclaimed });
-            Check(reclaimed.IsCarried && reclaimed.SimulationEnabled && !reclaimed.GetComponent<Rigidbody>().isKinematic,
+            Check(reclaimed.IsCarried && reclaimed.SimulationEnabled && reclaimed.GetComponent<Rigidbody>().isKinematic,
                 "picking up a thrown spent projectile retires throw ownership");
             thrower.Throw();
             var handoffAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TrappingBubble.prefab");

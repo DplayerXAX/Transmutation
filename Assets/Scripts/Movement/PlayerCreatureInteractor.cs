@@ -37,7 +37,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     private void Update()
     {
         // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
-        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable))))
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && (carrier == null || !carrier.CarriesTentacle))
         {
             TryInteract();
         }

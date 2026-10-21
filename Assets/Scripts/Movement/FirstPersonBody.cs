@@ -169,7 +169,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || (!carrier.CarriesTentacle && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)))) interactTimer = 0.3f;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && (carrier == null || !carrier.CarriesTentacle)) interactTimer = 0.3f;
         interactTimer = Mathf.Max(0f, interactTimer - deltaTime);
         bool inAir = !grounded && !climbing;
         // Landing after a real jump or fall: knees bend, arms dip, harder the faster the fall.
