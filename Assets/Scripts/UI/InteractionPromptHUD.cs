@@ -34,6 +34,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private string petHint = "[Hold LMB]  Pet";
     [SerializeField] private string pettingHint = "Petting...";
     private PlayerCreaturePetter petter;
+    private BoneKiln rideMother;
     [SerializeField] private string climbHint = "[Hold W]  Climb";
     [SerializeField] private string climbJumpHint = "[Space]  Jump off wall";
     [SerializeField] private string wallRunHint = "[Hold W]  Wall run";
@@ -57,6 +58,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) { group.alpha = 0f; return; }
         string title = null;
         string hint = null;
         ChoosePrompt(ref title, ref hint);
@@ -89,13 +91,40 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             }
             return;
         }
+        if (BoneRide.Mount != null)
+        {
+            title = BoneRide.Mount is BoneKiln ? "BONE MOTHER" : "BONE CHILD";
+            hint = "[C] Dismount";
+            if (carrier != null && carrier.CarriesTentacle) hint += "    [LMB / RMB] Turn    [W/S] Up / Down";
+            else hint += "    Carry a tentacle to steer";
+            if (BoneRide.Mount is BoneChild mountedChild) hint += $"\nFire reserve: {mountedChild.StoredBubbleCount}/{mountedChild.bubbleCapacity}";
+            if (BoneRide.Mount is BoneKiln mountedMother && !mountedMother.Awake)
+                hint += $"\nFire bubbles: {mountedMother.AttachedFireCount}/{mountedMother.RequiredFireBubbles}";
+            return;
+        }
+        string rideHint = null;
+        if (rideMother == null) rideMother = FindFirstObjectByType<BoneKiln>();
+        if (rideMother != null && rideMother.TryGetRideSeat(out _)) rideHint = "[C] Ride bone mother";
+        if (rideHint == null)
+            foreach (BoneChild child in BoneChild.All)
+                if (child != null && child.isActiveAndEnabled && BoneRide.Near(child.RidePoint, 2f + child.size, child.transform))
+                { rideHint = "[C] Ride bone child"; break; }
+        if (rideHint != null)
+        {
+            title = rideHint.Contains("mother") ? "BONE MOTHER" : "BONE CHILD";
+            hint = rideHint;
+            if (rideMother != null && !rideMother.Awake && title == "BONE MOTHER")
+                hint += $"\nFire bubbles: {rideMother.AttachedFireCount}/{rideMother.RequiredFireBubbles}";
+            if (carrier == null || !carrier.CarriesTentacle) hint += "    Carry a tentacle to steer";
+            return;
+        }
         if (carrier != null && carrier.CarriedCreature != null)
         {
             title = NameOf(carrier.CarriedCreature);
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
-            if (!carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
+            if (!carrier.CarriesTentacle && !carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
             {
                 Creature target = interactor.FindCreature();
                 if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))
@@ -108,7 +137,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (petter != null && petter.IsPetting)
         {
             title = NameOf(petter.Petted);
-            hint = pettingHint;
+            hint = petter.Petted is TentacleCreature spring && spring.Suspended
+                ? "[Hold LMB + walk back] Draw slingshot    [Release LMB] Launch    [Scroll] Distance"
+                : petter.Petted is TentacleCreature ? "[Hold LMB] Drag    [Scroll] Distance    [Release LMB] Let go" : pettingHint;
             return;
         }
 
@@ -135,7 +166,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         {
             Creature shown = carryTarget != null ? carryTarget : interactTarget != null ? interactTarget : petTarget;
             title = NameOf(shown);
-            string petLine = petTarget == shown ? petHint : null;
+            string petLine = petTarget == shown ? (petTarget is TentacleCreature spring && spring.Suspended
+                ? "[Hold LMB] Pull body back / release to launch"
+                : petTarget is TentacleCreature ? "[Hold LMB] Drag    [Scroll] Distance" : petHint) : null;
             if (carryTarget == null && interactTarget == null)
             {
                 hint = petLine;

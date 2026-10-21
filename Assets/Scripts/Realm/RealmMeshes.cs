@@ -16,24 +16,40 @@ public sealed class RealmMeshes
     private readonly List<int> triangles = new List<int>();
 
     public int VertexCount => vertices.Count;
+    private static bool Finite(Vector3 p) => !float.IsNaN(p.x) && !float.IsInfinity(p.x)
+        && !float.IsNaN(p.y) && !float.IsInfinity(p.y) && !float.IsNaN(p.z) && !float.IsInfinity(p.z);
 
     /// <summary>A round tube along a path. t0..t1 is the uv0.x range it covers; tipLength 0 = open end.</summary>
     public void Tube(IList<Vector3> path, System.Func<float, float> radius, int sides, float t0, float t1, float piece, float tipLength = 0f)
     {
         int rings = path.Count;
         if (rings < 2) return;
+        foreach (Vector3 point in path) if (!Finite(point)) return;
+        var radii = new float[rings];
+        for (int i = 0; i < rings; i++)
+        {
+            float value = radius(i / (float)(rings - 1));
+            // Reject this piece before it can poison a whole merged mesh and its collider.
+            if (float.IsNaN(value) || float.IsInfinity(value)) return;
+            radii[i] = Mathf.Max(0.0001f, value);
+        }
         int start = vertices.Count;
         Vector3 tangent = (path[1] - path[0]).normalized;
+        if (tangent.sqrMagnitude < 0.0001f) tangent = Vector3.up;
         Vector3 normal = Vector3.Cross(tangent, Mathf.Abs(tangent.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
         float length = 0f;
         for (int i = 0; i < rings; i++)
         {
             if (i > 0) length += Vector3.Distance(path[i - 1], path[i]);
-            tangent = (path[Mathf.Min(i + 1, rings - 1)] - path[Mathf.Max(i - 1, 0)]).normalized;
-            normal = (normal - tangent * Vector3.Dot(normal, tangent)).normalized;
+            Vector3 nextTangent = path[Mathf.Min(i + 1, rings - 1)] - path[Mathf.Max(i - 1, 0)];
+            if (nextTangent.sqrMagnitude > 0.000001f) tangent = nextTangent.normalized;
+            normal -= tangent * Vector3.Dot(normal, tangent);
+            if (normal.sqrMagnitude < 0.000001f)
+                normal = Vector3.Cross(tangent, Mathf.Abs(tangent.y) < 0.9f ? Vector3.up : Vector3.right);
+            normal.Normalize();
             Vector3 binormal = Vector3.Cross(tangent, normal);
             float t = i / (float)(rings - 1);
-            float r = radius(t);
+            float r = radii[i];
             // One extra vertex closes the ring, so uv1.x runs cleanly from 0 to 1.
             for (int j = 0; j <= sides; j++)
             {

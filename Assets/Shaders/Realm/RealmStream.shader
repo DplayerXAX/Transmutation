@@ -2,7 +2,7 @@ Shader "Capstone/Realm/RealmStream"
 {
     // A marbled stream, like poured fluid art: crisp bands of teal, cream, copper and black stretched along the flow and swirled by a slow warp, thin gold veins between the bands, a glossy wet highlight and the lamps reflected in it.
     // Mesh data: uv0.x = 0 at the base .. 1 at the tip, uv0.y = random per piece,
-    // uv1.x = around (0..1) or across (-1..1), uv1.y = metres along the piece.
+    // uv1.x = across (-1..1), uv1.y = continuous metres along the entire river, including render-section seams.
     Properties
     {
         _ColorA("Teal", Color) = (0.04, 0.42, 0.44, 1)
@@ -28,6 +28,7 @@ Shader "Capstone/Realm/RealmStream"
     {
         Tags { "Queue" = "Geometry" "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
         Cull [_Cull]
+        Offset -1, -1
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -51,12 +52,9 @@ Shader "Capstone/Realm/RealmStream"
             float _Cull;
         CBUFFER_END
 
-        // Gentle sway that grows towards the tip (uv.x).
+        // Flow animates in the fragment shader. Keep the ground-fitted mesh fixed over the terrain.
         float3 RealmAnimate(float3 positionWS, float2 uv)
         {
-            float t = uv.x;
-            float phase = uv.y * 6.2831853 + dot(positionWS.xz, float2(0.13, 0.07));
-            positionWS.xz += float2(sin(_Time.y * _SwaySpeed + phase), cos(_Time.y * _SwaySpeed * 0.8 + phase * 1.3)) * _Sway * t * t;
             return positionWS;
         }
 

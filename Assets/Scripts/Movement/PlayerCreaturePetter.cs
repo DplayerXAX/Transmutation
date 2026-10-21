@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Left-hand petting. Hold the left mouse button on a creature within arm's reach: the left hand
@@ -25,12 +26,26 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
     private PlayerCreatureCarrier carrier;
     private float heldFor;
     private float lostFor;
+    private Creature pressedTarget;
+    private RaycastHit pressedHit;
 
     public Creature Petted { get; private set; }
     public bool IsPetting => Petted != null;
     /// <summary>Where the hand touches the creature, and the surface direction there.</summary>
-    public Vector3 TouchPoint { get; private set; }
-    public Vector3 TouchNormal { get; private set; } = Vector3.up;
+    private Vector3 touchPoint;
+    private Vector3 touchNormal = Vector3.up;
+    public bool DraggingBody => Petted is TentacleCreature tentacle && tentacle.Dragged;
+    public Vector3 DragTarget { get; private set; }
+    public Vector3 TouchPoint
+    {
+        get => DraggingBody && viewCamera != null ? ((TentacleCreature)Petted).BodyGrip(viewCamera.transform.position) : touchPoint;
+        private set => touchPoint = value;
+    }
+    public Vector3 TouchNormal
+    {
+        get => DraggingBody && viewCamera != null ? (viewCamera.transform.position - Petted.transform.position).normalized : touchNormal;
+        private set => touchNormal = value;
+    }
 
     private void Awake()
     {
@@ -40,14 +55,41 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) { Stop(); return; }
         if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
-        // With a tentacle creature on the back the left button aims its arms instead (TentacleTether).
-        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && (carrier == null || !carrier.CarriesTentacle);
-        heldFor = held ? heldFor + Time.deltaTime : 0f;
+        bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && BoneRide.Mount == null
+            && !(CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)
+            && !(carrier != null && carrier.CarriesTentacle)
+            && !(carrier != null && carrier.CarriedCreature != null && carrier.CarriedCreature.CanUseWhileCarried);
+        StepHold(held, Time.deltaTime, mouse != null ? mouse.scroll.ReadValue().y : 0f);
+    }
+
+    private void StepHold(bool held, float deltaTime, float scroll)
+    {
+        if (held && heldFor == 0f) pressedTarget = FindPettable(out pressedHit);
+        heldFor = held ? heldFor + deltaTime : 0f;
+        if (!held) { pressedTarget = null; Stop(); return; }
+
+        // Lock a tentacle from the initial press. Looking away or crossing another creature never transfers the hold.
+        if (Petted is TentacleCreature dragged)
+        {
+            if (!dragged.isActiveAndEnabled || dragged.IsCarried) { Stop(); return; }
+            dragDistance = Mathf.Clamp(dragDistance + scroll * 0.0025f, 0.7f, 3f);
+            DragTarget = viewCamera.transform.position + viewCamera.transform.forward * dragDistance;
+            dragged.Dragged = true;
+            dragged.ContinuePet(DragTarget, TouchNormal, deltaTime);
+            return;
+        }
 
         RaycastHit hit = default;
-        Creature target = held && heldFor >= holdDelay ? FindPettable(out hit) : null;
+        Creature target = null;
+        if (heldFor >= holdDelay)
+        {
+            if (pressedTarget is TentacleCreature && pressedTarget.isActiveAndEnabled && !pressedTarget.IsCarried)
+            { target = pressedTarget; hit = pressedHit; }
+            else target = FindPettable(out hit);
+        }
         if (target != null)
         {
             lostFor = 0f;
@@ -57,27 +99,25 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
             {
                 Stop();
                 Petted = target;
-                Petted.BeginPet(TouchPoint, TouchNormal);
+                if (Petted is TentacleCreature tentacle)
+                {
+                    // Set this before BeginPet so its petting reaction cannot grab an arm instead of the body.
+                    tentacle.Dragged = true;
+                    DragTarget = tentacle.transform.position;
+                    dragDistance = Mathf.Clamp(Vector3.Distance(viewCamera.transform.position, tentacle.transform.position), 0.7f, 3f);
+                    Petted.BeginPet(DragTarget, TouchNormal);
+                }
+                else Petted.BeginPet(TouchPoint, TouchNormal);
             }
-            else Petted.ContinuePet(TouchPoint, TouchNormal, Time.deltaTime);
+            else Petted.ContinuePet(TouchPoint, TouchNormal, deltaTime);
             return;
         }
 
         if (Petted == null) return;
-        // A tentacle creature is not just stroked: it is held by the hand and dragged along until let go.
-        if (held && Petted is TentacleCreature dragged && Petted.isActiveAndEnabled)
-        {
-            lostFor = 0f;
-            TouchPoint = viewCamera.transform.position + viewCamera.transform.forward * dragDistance;
-            TouchNormal = -viewCamera.transform.forward;
-            dragged.Dragged = true;
-            Petted.ContinuePet(TouchPoint, TouchNormal, Time.deltaTime);
-            return;
-        }
         // Brief slips (the creature moving under the hand) do not end it; letting go does.
-        lostFor += Time.deltaTime;
+        lostFor += deltaTime;
         if (!held || lostFor > loseGrace || !Petted.isActiveAndEnabled) Stop();
-        else Petted.ContinuePet(TouchPoint, TouchNormal, Time.deltaTime);
+        else Petted.ContinuePet(TouchPoint, TouchNormal, deltaTime);
     }
 
     /// <summary>The creature in the middle of the view that the left hand could pet now, or null.</summary>
@@ -88,8 +128,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         hit = default;
         if (viewCamera == null) return null;
         Ray ray = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        if (!Physics.Raycast(ray, out hit, petRange, petLayers, QueryTriggerInteraction.Ignore)) return null;
-        Creature creature = hit.collider.GetComponentInParent<Creature>();
+        Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, petRange, petLayers, carrier, out hit);
         // The creature already held in the right hand is not petted.
         if (creature == null || creature.IsDead || (carrier != null && carrier.CarriedCreature == creature)) return null;
         return creature;

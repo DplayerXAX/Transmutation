@@ -40,6 +40,12 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Min(0f)] [SerializeField] private float spawnBlend = 30f;
     [Tooltip("Cliffs that wall in the edge of the world.")]
     [Min(0f)] [SerializeField] private float rimHeight = 30f;
+    [Tooltip("Round basin: an irregular ring of mountains (rimHeight tall) instead of the square edge cliffs.")]
+    [SerializeField] private bool basin;
+    [Tooltip("Basin: share of the half size where the mountain slopes start (the foot line wobbles round it).")]
+    [Range(0.2f, 0.9f)] [SerializeField] private float basinFloor = 0.62f;
+    [Tooltip("Basin: share of the half size over which the slopes rise to full height.")]
+    [Range(0.05f, 0.6f)] [SerializeField] private float basinSlope = 0.3f;
 
     [Header("Inner World")]
     [Min(1f)] [SerializeField] private float crustThickness = 9f;
@@ -103,7 +109,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         var random = new System.Random(seed);
         noiseOffset = new Vector2((float)random.NextDouble() * 1000f, (float)random.NextDouble() * 1000f);
 
-        float maxHill = surfaceAmplitude * (1f + ridges) + rimHeight + overhangAmplitude + 4f;
+        float maxHill = surfaceAmplitude * (1f + ridges) + rimHeight * (basin ? 1.3f : 1f) + overhangAmplitude + 4f;
         yMax = maxHill;
         yMin = -crustThickness - innerGap - surfaceAmplitude * (1f + ridges) * Mathf.Max(innerInvert, ceilingMirror) - innerDetail - caveDepth - 4f;
 
@@ -153,6 +159,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public float spawnFlatRadius;
         public float spawnBlend;
         public float rimHeight;
+        public bool basin;
+        public float basinFloor;
+        public float basinSlope;
         public float crustThickness;
         public float innerGap;
         public float ceilingMirror;
@@ -179,6 +188,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             spawnFlatRadius = world.spawnFlatRadius;
             spawnBlend = world.spawnBlend;
             rimHeight = world.rimHeight;
+            basin = world.basin;
+            basinFloor = world.basinFloor;
+            basinSlope = world.basinSlope;
             crustThickness = world.crustThickness;
             innerGap = world.innerGap;
             ceilingMirror = world.ceilingMirror;
@@ -218,6 +230,18 @@ public sealed partial class ProceduralWorld : MonoBehaviour
 
         float flat = Mathf.SmoothStep(0f, 1f, (new Vector2(x, z).magnitude - spawnFlatRadius) / Mathf.Max(spawnBlend, 0.01f));
         height *= flat;
+
+        if (basin)
+        {
+            // A ring of mountains: the foot line wobbles in and out, the peaks rise and dip along the ring.
+            Vector2 column = new Vector2(x, z);
+            float r = column.magnitude / (Mathf.Min(worldSize.x, worldSize.y) * 0.5f);
+            Vector2 q = column * 0.025f + noiseOffset * 0.31f;
+            float foot = basinFloor + Fbm2(q, 3) * 0.25f;
+            float rise = Mathf.SmoothStep(0f, 1f, (r - foot) / basinSlope);
+            float peaks = 0.55f + (1f - Mathf.Abs(Fbm2(q * 2.3f + new Vector2(5.1f, -3.7f), 4) * 2f)) * 0.7f;
+            return height + rise * rimHeight * peaks;
+        }
 
         // Cliffs around the edge of the world.
         float edge = Mathf.Max(Mathf.Abs(x) / (worldSize.x * 0.5f), Mathf.Abs(z) / (worldSize.y * 0.5f));

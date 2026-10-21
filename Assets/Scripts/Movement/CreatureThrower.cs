@@ -62,6 +62,7 @@ public sealed class CreatureThrower : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (BoneAwakeningCutscene.Playing) { aiming = false; ShowArc(false); return; }
         if (view == null) view = Camera.main;
         bool preview = debugShowThrowTrajectory && HoldingThrowable && Aiming && view != null;
         if (preview) PlanArc(StartPoint(), LaunchVelocity(carrier.ThrowCharge01));
@@ -169,6 +170,16 @@ public sealed class CreatureThrower : MonoBehaviour
                 // A fire bubble thrown at a bone child is caught in its ribs.
                 BoneChild child = hit.collider.GetComponentInParent<BoneChild>();
                 if (child != null && child.Catch(f.creature)) { Land(f, next, caught: true); flights.RemoveAt(i); continue; }
+                if (child == null && f.creature is FireBubble fire)
+                {
+                    BoneFireContact contact = hit.collider.GetComponent<BoneFireContact>();
+                    if (contact != null && contact.Owner != null && contact.Owner.Catch(fire, hit.collider, hit.point, hit.normal))
+                    {
+                        // Catch set the attachment point already. Do not overwrite it with a free-flight landing.
+                        flights.RemoveAt(i);
+                        continue;
+                    }
+                }
             }
             f.position = next;
             f.creature.transform.position = next;
@@ -208,17 +219,18 @@ public sealed class CreatureThrower : MonoBehaviour
         nearest = default;
         Vector3 step = to - from;
         if (step.sqrMagnitude < 1e-8f) return false;
-        int count = Physics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Ignore);
+        int count = Physics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Collide);
         RaycastHit[] results = flightHits;
         if (count == flightHits.Length)
         {
-            results = Physics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Ignore);
+            results = Physics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Collide);
             count = results.Length;
         }
         float distance = float.PositiveInfinity;
         for (int i = 0; i < count; i++)
         {
             RaycastHit candidate = results[i];
+            if (candidate.collider.isTrigger && candidate.collider.GetComponent<BoneFireContact>() == null) continue;
             if (candidate.distance >= distance || IsPlayer(candidate.collider) ||
                 (thrown != null && candidate.collider.transform.IsChildOf(thrown.transform))) continue;
             nearest = candidate;

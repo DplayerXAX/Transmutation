@@ -333,6 +333,14 @@ public enum FoodTag
         CreatureThrower.ReleaseFlight(this);
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
+        if (this is LeashBubble balloon) balloon.ReleaseLeash();
+        if (this is TentacleCreature tentacle)
+        {
+            // Release the suspended rig before carry records the creature's normal physics.
+            if (TentacleTether.Instance != null) TentacleTether.Instance.DetachForPickup(tentacle);
+            else { if (tentacle.Suspended) tentacle.Suspend(false); tentacle.UnpinTerrainArms(); }
+            tentacle.ClearGroundHolds();
+        }
         movementBody = GetComponent<Rigidbody>();
         if (movementBody == null)
         {
@@ -358,7 +366,13 @@ public enum FoodTag
     {
         if (Carrier != carrier) return;
         Carrier = null;
+        if (this is TentacleCreature tentacle && carrier.TryGetComponent<TentacleTether>(out var tether)) tether.ParkBalloons(tentacle);
         if (movementBody == null) return;
+        if (this is TentacleCreature && !movementBody.isKinematic)
+        {
+            movementBody.linearVelocity = Vector3.zero;
+            movementBody.angularVelocity = Vector3.zero;
+        }
         // Change collision mode before returning a body to kinematic operation.
         movementBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
         movementBody.isKinematic = releaseKinematic;

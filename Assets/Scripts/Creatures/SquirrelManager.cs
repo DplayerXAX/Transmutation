@@ -167,6 +167,7 @@ public sealed class SquirrelManager : MonoBehaviour
             SquirrelTree.PlaceOnGround(home.transform, ground);
             home.name = squirrel.name + " Nest";
             home.AssignOwner(squirrel);
+            squirrel.ConfigureNestBuilding(nestPrefab, this);
             squirrel.Initialize(foodManager, home, Random.Range(minimum, maximum), baseCapacity, territoryRadius);
             // Body height is adjusted after random scaling so all sizes stand on the same floor.
             SquirrelTree.PlaceOnGround(squirrel.transform, ground + Vector3.forward * Mathf.Min(spawnRadius, territoryRadius * 0.5f));

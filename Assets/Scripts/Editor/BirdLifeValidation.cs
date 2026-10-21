@@ -393,6 +393,7 @@ public static class BirdLifeValidation
             timerBubble.SimulateStep(1f);
             Check(timerBubble.ElapsedTime == 1f, "bubble pause preserves elapsed timer");
             timerBubble.SetSimulationEnabled(true);
+            timerBubble.LifetimeLimited = true;
             typeof(TrappingBubble).GetField("lifetimeSeconds", Private).SetValue(timerBubble, 2f);
             timerBubble.SimulateStep(1f);
             Check(timerBubble.IsPopped, "existing bubble timeout still pops");

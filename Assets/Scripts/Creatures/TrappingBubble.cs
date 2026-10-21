@@ -4,10 +4,10 @@ using UnityEngine.SceneManagement;
 
 /// <summary>A physics bubble with one occupant. Separate from the FireFlower's FireBubble.</summary>
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
-public sealed class TrappingBubble : Creature
+public sealed class TrappingBubble : LeashBubble
 {
     [Header("Motion")]
-    [Min(0f)] [SerializeField] private float upwardSpeed = 0.5f;
+    [Min(0f)] [SerializeField] private float upwardSpeed = 0.25f;
     [Min(0.01f)] [SerializeField] private float launchDecaySeconds = 0.35f;
     [SerializeField] private Vector2 riseDuration = new Vector2(12f, 20f);
     [SerializeField] private Vector2 lifetime = new Vector2(45f, 60f);
@@ -24,19 +24,11 @@ public sealed class TrappingBubble : Creature
     [Min(0f)] [SerializeField] private float escapeHeight = 4f;
 
     [Header("Breaking")]
-    [Tooltip("When enabled, scenery stops bubbles and other creatures do not pop occupied bubbles. " +
-             "Interaction, pickup attempts, escape and timeout still pop them.")]
+    [Tooltip("For un-leashed bubbles: scenery stops bubbles and other creatures do not pop occupied bubbles. " +
+             "Interaction, pickup attempts and escape still pop them; timeout requires Limit Lifetime.")]
     [SerializeField] private bool requireExplicitInteractionToPop;
     [SerializeField] private Transform shell;
 
-    private struct IgnoredCollision
-    {
-        public Collider collider;
-        public bool wasIgnored;
-        public float until;
-        public Creature heldCreature;
-    }
-    private readonly List<IgnoredCollision> ignoredCollisions = new List<IgnoredCollision>();
     private readonly HashSet<Collider> expansionContacts = new HashSet<Collider>();
     private Rigidbody body;
     private SphereCollider solidCollider;
@@ -44,20 +36,23 @@ public sealed class TrappingBubble : Creature
     private BubbleFlower flower;
     private GameObject shooter;
     private Vector3 launchVelocity;
-    private float elapsedTime, riseSeconds, lifetimeSeconds, phase;
+    private float launchDecayOverride = -1f;
+    private float elapsedTime, motionTime, riseSeconds, lifetimeSeconds, phase;
     private bool popped;
-
     public BubbleCapture Occupant { get; private set; }
     public bool IsOccupied => Occupant != null;
     public bool IsPopped => popped;
     public float ReleaseImmunity => releaseImmunity;
     public float EscapeHeight => escapeHeight;
-    public float Radius => solidCollider != null ? solidCollider.radius * Mathf.Abs(transform.lossyScale.x) : initialDiameter * 0.5f;
+    public override float Radius => solidCollider != null ? solidCollider.radius * Mathf.Abs(transform.lossyScale.x) : initialDiameter * 0.5f;
+    public float InitialRadius => initialDiameter * 0.5f;
     public float ElapsedTime => elapsedTime;
     public bool RequiresExplicitInteraction { get => requireExplicitInteractionToPop; set => requireExplicitInteractionToPop = value; }
+    protected override bool CanLeashBubble(TentacleTether owner) => !popped && (Occupant == null || Occupant.gameObject != owner.BalloonPlayer);
+    protected override void OnLeashAttached() => launchVelocity *= 0.25f;
     public override bool CanBeCarried => false;
-    public override string PickupActionPrompt => popped ? null : "Pop bubble";
-    public override string InteractionPrompt => !popped && IsOccupied ? "Pop bubble" : null;
+    public override string PickupActionPrompt => popped || IsLeashed ? null : "Pop bubble";
+    public override string InteractionPrompt => !popped && !IsLeashed && IsOccupied ? "Pop bubble" : null;
 
     protected override void InitializeCreature()
     {
@@ -87,8 +82,12 @@ public sealed class TrappingBubble : Creature
         phase = Random.Range(0f, Mathf.PI * 2f);
     }
 
-    public void Launch(BubbleFlower source, GameObject firingPlayer, Vector3 velocity)
+    public void Launch(BubbleFlower source, GameObject firingPlayer, Vector3 velocity) => Launch(source, firingPlayer, velocity, -1f);
+
+    /// <summary>Launches with its own launch slow-down time (seconds; below 0 = launchDecaySeconds).</summary>
+    public void Launch(BubbleFlower source, GameObject firingPlayer, Vector3 velocity, float decaySeconds)
     {
+        launchDecayOverride = decaySeconds;
         if (body == null) InitializeCreature();
         flower = source;
         shooter = firingPlayer;
@@ -106,19 +105,21 @@ public sealed class TrappingBubble : Creature
     {
         if (popped || !SimulationEnabled || deltaTime <= 0f) return;
         if (body == null) InitializeCreature();
-        elapsedTime += deltaTime;
+        motionTime += deltaTime;
+        if (!IsLeashed) elapsedTime += deltaTime;
         RestoreExpiredIgnores();
-        if (elapsedTime >= lifetimeSeconds) { Pop(); return; }
+        if (LifetimeLimited && !IsLeashed && elapsedTime >= lifetimeSeconds) { Pop(); return; }
         if (IsOccupied) Occupant.Follow(body.position);
         Vector3 velocity = Vector3.zero;
         if (elapsedTime < riseSeconds)
         {
             float angularSpeed = swayFrequency * Mathf.PI * 2f;
-            velocity = launchVelocity * Mathf.Exp(-elapsedTime / Mathf.Max(0.01f, launchDecaySeconds)) + Vector3.up * upwardSpeed;
-            velocity += new Vector3(Mathf.Cos(elapsedTime * angularSpeed + phase), 0f,
-                Mathf.Sin(elapsedTime * angularSpeed + phase)) * (swayDistance * angularSpeed);
+            velocity = launchVelocity * Mathf.Exp(-motionTime / Mathf.Max(0.01f, launchDecayOverride > 0f ? launchDecayOverride : launchDecaySeconds)) + Vector3.up * upwardSpeed;
+            velocity += new Vector3(Mathf.Cos(motionTime * angularSpeed + phase), 0f,
+                Mathf.Sin(motionTime * angularSpeed + phase)) * (swayDistance * angularSpeed);
         }
         // Unity's contact solver stops this velocity against walls and ceilings.
+        velocity = LeashVelocity(velocity, deltaTime);
         body.linearVelocity = velocity;
     }
 
@@ -133,10 +134,12 @@ public sealed class TrappingBubble : Creature
     private bool IgnoreTarget(GameObject target)
     {
         if (target == null || target == gameObject || !target.activeInHierarchy) return true;
+        if (IgnoreLeashTarget(target)) return true;
         if (flower != null && target == flower.gameObject) return true;
         if (target == shooter && elapsedTime < shooterProtection) return true;
         Creature creature = target.GetComponent<Creature>();
         return creature != null && (creature is TrappingBubble || creature is SkyWeb || creature.IsCarried ||
+            (creature is LeashBubble balloon && balloon.IsLeashed) ||
             creature.IsBubbleCaptured || !creature.isActiveAndEnabled);
     }
 
@@ -198,35 +201,10 @@ public sealed class TrappingBubble : Creature
             if (!IsOccupied) TryCapture(target);
             else if (target != Occupant.gameObject && !requireExplicitInteractionToPop) Pop();
         }
-        else if (solidContact && !requireExplicitInteractionToPop) Pop();
+        else if (solidContact && !requireExplicitInteractionToPop && !IsLeashed) Pop();
     }
 
     private void OnTriggerExit(Collider other) => expansionContacts.Remove(other);
-
-    private void IgnoreColliders(GameObject root, float until, Creature heldCreature = null)
-    {
-        foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
-        {
-            if (collider == solidCollider || ignoredCollisions.Exists(entry => entry.collider == collider)) continue;
-            bool wasIgnored = Physics.GetIgnoreCollision(solidCollider, collider);
-            ignoredCollisions.Add(new IgnoredCollision { collider = collider, wasIgnored = wasIgnored,
-                until = until, heldCreature = heldCreature });
-            Physics.IgnoreCollision(solidCollider, collider, true);
-        }
-    }
-
-    private void RestoreExpiredIgnores(bool all = false)
-    {
-        for (int i = ignoredCollisions.Count - 1; i >= 0; i--)
-        {
-            IgnoredCollision entry = ignoredCollisions[i];
-            if (!all && entry.collider != null && Time.time < entry.until &&
-                (entry.heldCreature == null || entry.heldCreature.IsCarried)) continue;
-            if (entry.collider != null && solidCollider != null)
-                Physics.IgnoreCollision(solidCollider, entry.collider, entry.wasIgnored);
-            ignoredCollisions.RemoveAt(i);
-        }
-    }
 
     public override void ReceivePickupAttempt(PlayerCreatureCarrier carrier) => Pop();
     public override void ReceiveInteraction(CreatureInteraction interaction) { if (IsOccupied) Pop(); }
@@ -239,7 +217,14 @@ public sealed class TrappingBubble : Creature
     public void Pop(bool launchPlayer = false)
     {
         if (popped || IsDead) return;
+        if (IsLeashed)
+        {
+            // Space still frees an occupant, but leaves the protected shell on the octopus's arm.
+            if (launchPlayer && Occupant != null) Occupant.Release(true);
+            return;
+        }
         popped = true;
+        ReleaseLeash();
         if (solidCollider != null) solidCollider.enabled = false;
         if (captureTrigger != null) captureTrigger.enabled = false;
         if (Occupant != null)
@@ -261,10 +246,11 @@ public sealed class TrappingBubble : Creature
 
     protected override void OnDeath()
     {
+        base.OnDeath();
         if (Occupant != null) Occupant.Release();
         RestoreExpiredIgnores(true);
     }
-    protected override void OnDisable() { Pop(); base.OnDisable(); }
+    protected override void OnDisable() { base.OnDisable(); Pop(); }
     private void OnDestroy() => Pop();
 
     private void OnValidate()

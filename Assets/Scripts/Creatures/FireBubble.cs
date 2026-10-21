@@ -6,7 +6,7 @@ using UnityEngine;
 /// a Fire Flower after remaining still for the configured delay.
 /// </summary>
 [RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
-public sealed class FireBubble : Creature
+public sealed class FireBubble : LeashBubble
 {
     private enum BubbleState
     {
@@ -42,7 +42,7 @@ public sealed class FireBubble : Creature
     [SerializeField] private float flightAcceleration = 4f;
 
     [Header("Lifetime")]
-    [Tooltip("Maximum flight time before falling. Reaching Fall Start World Y can end flight sooner. Independent of Heat.")]
+    [Tooltip("Maximum flight time before falling, used only with Limit Lifetime enabled. Reaching Fall Start World Y can end flight sooner. Independent of Heat.")]
     [Min(0f)]
     [SerializeField] private float lifetimeSeconds = 20f;
 
@@ -91,9 +91,14 @@ public sealed class FireBubble : Creature
     private Vector3 restingPosition;
     private bool transformationStarted;
     private bool descending;
+    private bool gravityBeforeLeash;
     private Vector3 driftVelocity;
     private float visualFlowTime;
-    private BoneChild boneOwner;
+    [Header("Bone Fuel")]
+    [Tooltip("Minimum usable heat when a bone creature binds this bubble, including zero-Heat spawned bubbles.")]
+    [Min(1f)] [SerializeField] private float boneFuelHeat = 30f;
+    private Component boneOwner;
+    private float initialBoneHeat;
     private MaterialPropertyBlock visualProperties;
     private static readonly int HeatShaderId = Shader.PropertyToID("_Heat");
     private static readonly int StillHeatShaderId = Shader.PropertyToID("_StillHeat");
@@ -101,20 +106,41 @@ public sealed class FireBubble : Creature
     private static readonly int FlowTimeShaderId = Shader.PropertyToID("_FlowTime");
 
     /// <summary>Whether this Bubble has started falling and can be eaten.</summary>
-    public bool IsInanimate => !IsBoundToBone && currentState == BubbleState.Inanimate;
+    public bool IsInanimate => !IsBoundToBone && !IsLeashed && currentState == BubbleState.Inanimate;
 
     public bool IsBoundToBone => boneOwner != null;
+    public float BoneFuelFraction => initialBoneHeat > 0f ? Mathf.Clamp01(Heat / initialBoneHeat) : 0f;
     public override bool CanBeCarried => !IsBoundToBone;
-    public override bool CanBeConsumed => !IsBoundToBone;
-
-    /// <summary>The ribcage owns this bubble permanently; it keeps glowing without ageing or taking root.</summary>
-    public bool BindToBone(BoneChild owner)
+    public override bool CanBeConsumed => !IsBoundToBone && base.CanBeConsumed;
+    public override float Radius => BalloonCollider.radius * Mathf.Abs(transform.lossyScale.x);
+    protected override bool CanLeashBubble(TentacleTether owner) => !IsBoundToBone && !transformationStarted;
+    protected override void OnLeashAttached()
     {
-        if (owner == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
+        FindPhysicsReferences();
+        gravityBeforeLeash = bubbleBody.useGravity;
+        SetMovementPhysics(false, false);
+        bubbleBody.linearVelocity *= 0.25f;
+    }
+    protected override void OnLeashReleased()
+    {
+        if (!IsDead && !IsBoundToBone) SetMovementPhysics(false, gravityBeforeLeash);
+        if (bubbleBody != null) restingPosition = bubbleBody.position;
+    }
+
+    public bool BindToBone(BoneChild owner) => BindToBone(owner, owner != null ? owner.transform : null);
+    public bool BindToBone(BoneKiln owner, Transform bone) => BindToBone((Component)owner, bone);
+
+    /// <summary>Binding replaces normal ageing with a finite heat reserve, spent by the owner's flight.</summary>
+    private bool BindToBone(Component owner, Transform anchor)
+    {
+        if (owner == null || anchor == null || IsBoundToBone || IsDead || IsCarried || IsBubbleCaptured || transformationStarted) return false;
+        ReleaseLeash();
         FindPhysicsReferences();
         if (TryGetComponent<WebCapture>(out var web)) web.Release();
         boneOwner = owner;
-        transform.SetParent(owner.transform, true);
+        transform.SetParent(anchor, true);
+        initialBoneHeat = Mathf.Max(Heat, boneFuelHeat);
+        SetHeat(initialBoneHeat);
         inanimateTimer = 0f;
         if (!bubbleBody.isKinematic)
         {
@@ -129,6 +155,19 @@ public sealed class FireBubble : Creature
         foreach (Collider collider in GetComponentsInChildren<Collider>()) collider.enabled = false;
         SetSimulationEnabled(true);
         return true;
+    }
+
+    public float BurnBoneHeat(float amount)
+    {
+        if (!IsBoundToBone || IsDead || amount <= 0f) return 0f;
+        float spent = SpendHeat(amount);
+        if (Heat <= 0f)
+        {
+            Die();
+            gameObject.SetActive(false);
+            if (Application.isPlaying) Destroy(gameObject);
+        }
+        return spent;
     }
 
     protected override void Update()
@@ -191,10 +230,18 @@ public sealed class FireBubble : Creature
         if (IsBoundToBone || IsDead || bubbleBody == null || transformationStarted)
             return;
 
+        if (IsLeashed && SimulationEnabled)
+        {
+            RestoreExpiredIgnores();
+            Vector3 floatVelocity = driftVelocity * 0.15f + Vector3.up * upwardSpeed;
+            bubbleBody.linearVelocity = LeashVelocity(floatVelocity, Time.fixedDeltaTime);
+            return; // Keep flight age and resting-to-flower time frozen while held by an arm.
+        }
+
         if (SimulationEnabled && !descending)
         {
             elapsedTime += Time.fixedDeltaTime;
-            if (elapsedTime >= lifetimeSeconds || bubbleBody.position.y >= fallStartWorldY || upwardSpeed <= 0f)
+            if ((LifetimeLimited && elapsedTime >= lifetimeSeconds) || bubbleBody.position.y >= fallStartWorldY || upwardSpeed <= 0f)
                 StartFalling();
             else
                 ApplyFlight(Time.fixedDeltaTime);
@@ -221,6 +268,7 @@ public sealed class FireBubble : Creature
 
     private void TransformIntoFlower()
     {
+        if (IsLeashed) return;
         transformationStarted = true;
         if (fireFlowerPrefab == null)
         {

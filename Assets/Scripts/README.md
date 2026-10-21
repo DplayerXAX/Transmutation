@@ -10,6 +10,7 @@ One README per game system. Start here.
 | World look and sky | [World/README.md](World/README.md) | `WorldDecorator`, `CaveHarvest`, `TerrainLinesLit` and decor shaders, skyboxes |
 | Meditation | [Meditation/README.md](Meditation/README.md) | M key meditation, reflection space, drawing on steles, creature journal and casts |
 | Landmarks | [Landmarks/README.md](Landmarks/README.md) | Hanging Spire, seeds, inscriptions, glyphs on steles |
+| Basin test level | [BasinLevel/README.md](BasinLevel/README.md) | Small basin, two towers, three creature routes, creature regrowth |
 | Audio | [Audio/README.md](Audio/README.md) | `AudioManager`, adaptive music layers, Wwise and Unity backends, footsteps |
 | Grass | [../Grass/README.md](../Grass/README.md) | GPU compute grass on Unity Terrain |
 
@@ -24,6 +25,7 @@ One README per game system. Start here.
 | Meditation > Open Saved Drawings Folder / Clear Saved Drawings And Journal | Saved reflection data |
 | Landmarks > Add Hanging Spire To Open Scene | Spire, its materials, glyphs on steles |
 | Landmarks > Reset Landmark Progress (Seeds And Glyphs) | Clears collected seeds and glyphs |
+| Basin Level > Create Basin Test Scene / Set Up Open Scene As Basin Level | Scene_Basin: basin world, two towers, creatures (Scene_Daniel unchanged) |
 | Audio > Set Up Adaptive Music In Open Scene | Event bank, AudioManager, landmark / cave channels, footsteps |
 | Audio > Add Music Zone At Scene View | Box zone with a `MusicChannel` |
 | Audio > Relink Clips By File Name | Fills Unity clips in the bank from `Assets/Audio` |

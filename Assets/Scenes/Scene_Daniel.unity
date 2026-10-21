@@ -1516,12 +1516,12 @@ MonoBehaviour:
   slimeMaterial: {fileID: 2100000, guid: 722e8fabb4664d7299ddb1edf4df44b9, type: 2}
   mudMaterial: {fileID: 2100000, guid: 8f2dbe12463c47fa9c7cc9eab5d39e49, type: 2}
   seed: 5
-  lampsPerSide: 7
-  shelters: 2
-  floatingCrystals: 16
-  fossils: 4
-  anemoneClusters: 7
-  slimePatches: 10
+  lampsPerSide: 4
+  shelters: 1
+  floatingCrystals: 4
+  fossils: 2
+  anemoneClusters: 2
+  slimePatches: 3
   meander: 7
   lampLights: 1
   built: 0
@@ -1589,9 +1589,9 @@ MonoBehaviour:
   beadMaterial: {fileID: 2100000, guid: 5c14ec323cfa4e9b8aeda1dfc5540ecd, type: 2}
   mushroomMaterial: {fileID: 2100000, guid: 4f056d296434491eb33d713c55584cf8, type: 2}
   seed: 13
-  veinRoots: 22
-  webHubs: 20
-  membraneShare: 0.45
+  veinRoots: 8
+  webHubs: 6
+  membraneShare: 0.12
   maxStrand: 15
   built: 0
   strands: 0
@@ -1614,8 +1614,7 @@ MonoBehaviour:
   beamRadius: 1.3
   ringRadius: 1.4
   rideTime: 1.6
-  upKey: 1
-  downKey: 55
+  activationDelay: 2
   built: 0
   unlocked: 0
   nearStop: -1
@@ -1638,10 +1637,10 @@ MonoBehaviour:
   basaltMaterial: {fileID: 2100000, guid: d3fac740f7d647cd960afab501cb0b69, type: 2}
   seed: 29
   ring: {x: 2, y: 16}
-  kelpClumps: 9
-  jellyfish: 7
-  geodes: 6
-  basaltClusters: 3
+  kelpClumps: 5
+  jellyfish: 3
+  geodes: 4
+  basaltClusters: 2
   built: 0
   placed: 0
 --- !u!1 &748032329
@@ -3235,6 +3234,9 @@ MonoBehaviour:
   waveLength: 9
   waveOpenShare: 0.25
   heatToWarm: 25
+  bubblesToWarm: 15
+  flightHeatPerSecond: 3.6
+  climbHeatPerMetre: 1.05
   wakeAfter: 2.5
   helixTwist: 9
   helixRoll: 30
@@ -3571,14 +3573,14 @@ MonoBehaviour:
   membraneRings: 22
   membraneSides: 10
   exposedBoneChance: 0.6
-  tentacleCount: 6
+  tentacleCount: 7
   jointsPerTentacle: 7
   reach: 2.4
   stepDistance: 1.1
   stepDuration: 0.22
   stepHeight: 0.45
-  jointRadius: 0.09
-  tipRadius: 0.045
+  jointRadius: 0.0765
+  tipRadius: 0.03825
   surfaceLayers:
     serializedVersion: 2
     m_Bits: 385
@@ -3908,7 +3910,7 @@ MonoBehaviour:
   innerGlowMaterial: {fileID: 2100000, guid: 7c1e0b5a4d2f4e6c9a83b1d5e7f20419, type: 2}
   seed: 7
   variantsPerShape: 6
-  spawnClearRadius: 6
+  spawnClearRadius: 10
   kinds:
   - name: Shards
     shape: 0
@@ -4219,7 +4221,7 @@ MonoBehaviour:
     patchCoverage: 0.6
     uniformClusters: 1
   stoneColliders: 1
-  innerColliders: 0
+  innerColliders: 1
   decorLayer: 7
   chunksPerFrame: 2
   piecesPlaced: 0

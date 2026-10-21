@@ -48,12 +48,29 @@ public sealed class BoneRib : MonoBehaviour
     private float baseOffset;
     private bool placed;
     private bool wasClear = true;
+    private float unfolding;
+    private readonly Quaternion[] transportRotations = new Quaternion[3];
+    public void FoldForEmergence(float deltaTime)
+    {
+        if (segments == null) return;
+        Release();
+        unfolding = 2f;
+        open = Mathf.MoveTowards(open, 1f, deltaTime);
+        for (int k = 0; k < segments.Length; k++)
+        {
+            // One deliberate transport pose, without wingbeats or alternating terrain correction.
+            Quaternion target = Quaternion.AngleAxis(side * (k == 0 ? 100f : 24f), Vector3.forward);
+            segments[k].localRotation = Quaternion.Slerp(segments[k].localRotation, target, 1f - Mathf.Exp(-2f * deltaTime));
+        }
+    }
     private readonly Quaternion[] lastRotations = new Quaternion[3];
     private readonly float[] lastLift = new float[3], lastWrithe = new float[3], lastSway = new float[3];
 
     /// <summary>Eases the lift towards target. A rib does not come down while its gap is occupied.</summary>
     public void Drive(float target, float deltaTime)
     {
+        if (unfolding > 0f && segments != null)
+            for (int k = 0; k < segments.Length && k < 3; k++) transportRotations[k] = segments[k].localRotation;
         // A pinned fuzzy creature holds the rib up until the player pets it or picks it up.
         if (wedged != null)
         {
@@ -66,6 +83,12 @@ public sealed class BoneRib : MonoBehaviour
         else
             open = Mathf.Lerp(open, target, 1f - Mathf.Exp(-followRates.x * deltaTime));
         Pose(Time.time, deltaTime);
+        if (unfolding > 0f && segments != null)
+        {
+            for (int k = 0; k < segments.Length && k < 3; k++)
+                segments[k].localRotation = Quaternion.Slerp(transportRotations[k], segments[k].localRotation, 1f - Mathf.Exp(-2.5f * deltaTime));
+            unfolding = Mathf.Max(0f, unfolding - deltaTime);
+        }
     }
 
     private void Pose(float time, float deltaTime)
@@ -143,10 +166,23 @@ public sealed class BoneRib : MonoBehaviour
         {
             Vector3 a = segments[k].position;
             Vector3 b = k + 1 < segments.Length ? segments[k + 1].position : segments[k].TransformPoint(tipLocal);
-            if (Physics.Linecast(a, b, out RaycastHit hit, avoidLayers, QueryTriggerInteraction.Ignore) && (owner == null || !hit.transform.IsChildOf(owner)))
-                return false;
+            if (!BoneFlightCollision.ClearSegment(a, b, 0.25f, owner)) return false;
         }
         return true;
+    }
+
+    public void AvoidTerrainAfterMove()
+    {
+        if (!free || segments == null || segments.Length == 0 || ClearOfGround()) return;
+        Quaternion original = segments[0].localRotation;
+        // Body motion happens after the wingbeat. Fold the rib again against its new surroundings this frame.
+        for (int turn = 1; turn <= 12; turn++)
+        {
+            float angle = ((turn + 1) / 2) * 25f * (turn % 2 == 1 ? 1f : -1f);
+            segments[0].localRotation = original * Quaternion.AngleAxis(side * angle, Vector3.forward);
+            if (ClearOfGround()) return;
+        }
+        segments[0].localRotation = original;
     }
 
     private void Release()

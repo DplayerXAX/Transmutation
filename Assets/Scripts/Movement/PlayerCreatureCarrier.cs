@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
@@ -35,6 +36,15 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+    public Camera CarryCamera => carryCamera;
+    public bool TryCarryFromInteraction(Creature creature)
+    {
+        if (CarriedCreature != null || pendingCreature != null || creature == null ||
+            creature.gameObject.scene != gameObject.scene) return false;
+        BeginCarry(creature);
+        return CarriedCreature == creature;
+    }
+    public Creature PendingCreature => pendingCreature;
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
     public Transform HandAnchor { get; set; }
@@ -66,6 +76,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private Rigidbody heldBody;
     private RigidbodyInterpolation heldInterpolation;
     private Quaternion heldYawOffset;
+    private struct DroppedCollision { public Collider creature, player; public float restoreAt; }
+    private readonly List<DroppedCollision> droppedCollisions = new List<DroppedCollision>();
 
     /// <summary>The player's Rigidbody, so carried creatures can help it move.</summary>
     public Rigidbody PlayerBody { get; private set; }
@@ -92,6 +104,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) return;
         if (!Application.isFocused && !Application.isBatchMode)
         {
             CancelRightMouse();
@@ -278,6 +291,7 @@ private void FitCarryPoint(Creature creature)
         }
         CarriedCreature = creature;
         CancelRightMouse();
+        if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
         carryPoint.position = creature.transform.position;
@@ -296,6 +310,11 @@ private void FitCarryPoint(Creature creature)
         }
         heldYawOffset = Quaternion.Inverse(CarryYaw()) * creature.transform.rotation;
         SnapHeld();
+    }
+
+    private void FixedUpdate()
+    {
+        RestoreDroppedCollisions();
     }
 
     // After the camera has moved this frame, so the held creature never trails behind the view.
@@ -370,14 +389,25 @@ private void FitCarryPoint(Creature creature)
     {
         CancelRightMouse();
         pendingCreature = null;
+        Creature dropped = CarriedCreature;
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
         bringingIn = false;
         if (heldBody != null) heldBody.interpolation = heldInterpolation;
         heldBody = null;
-        SetPlayerCollision(carriedColliders, ignore: false);
+        if (dropped is TentacleCreature && carriedColliders != null && playerColliders != null)
+        {
+            // A back-carried octopus grows to full size after release. Do not enable overlapping collision pairs.
+            QueueDroppedCollisions(carriedColliders);
+        }
+        else SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
         if (carryPoint != null) carryPoint.localPosition = carryPointHome;
+        if (dropped is TentacleCreature tentacle)
+        {
+            tentacle.PrepareForDrop();
+            if (TryGetComponent<TentacleTether>(out var tether)) tether.PlaceDroppedCreature(tentacle);
+        }
     }
 
     private void SetPlayerCollision(Collider[] colliders, bool ignore)
@@ -389,6 +419,56 @@ private void FitCarryPoint(Creature creature)
             foreach (Collider player in playerColliders)
                 if (player != null) Physics.IgnoreCollision(carried, player, ignore);
         }
+    }
+
+    private void RestoreDroppedCollisions()
+    {
+        for (int i = droppedCollisions.Count - 1; i >= 0; i--)
+        {
+            DroppedCollision pair = droppedCollisions[i];
+            if (pair.creature == null || pair.player == null) { droppedCollisions.RemoveAt(i); continue; }
+            TentacleCreature creature = pair.creature.GetComponentInParent<TentacleCreature>();
+            // Carry and the hanging rig now own these pairs; their release paths will restore them later.
+            if (creature != null && (creature.IsCarried || creature.Suspended)) { droppedCollisions.RemoveAt(i); continue; }
+            if (Time.time < pair.restoreAt) continue;
+            if (CollidersPenetrate(pair.creature, pair.player)) continue;
+            Physics.IgnoreCollision(pair.creature, pair.player, false);
+            droppedCollisions.RemoveAt(i);
+        }
+    }
+
+    public void DeferTentacleCollisionRestore(TentacleCreature creature)
+    {
+        Collider[] colliders = creature.GetComponentsInChildren<Collider>();
+        SetPlayerCollision(colliders, true);
+        QueueDroppedCollisions(colliders);
+    }
+
+    private void QueueDroppedCollisions(Collider[] colliders)
+    {
+        if (playerColliders == null) return;
+        foreach (Collider creatureCollider in colliders)
+            foreach (Collider playerCollider in playerColliders)
+                if (creatureCollider != null && playerCollider != null)
+                    droppedCollisions.Add(new DroppedCollision { creature = creatureCollider, player = playerCollider, restoreAt = Time.time + 0.5f });
+    }
+
+    public static bool CollidersPenetrate(Collider a, Collider b)
+    {
+        CollisionPose(a, out Vector3 pa, out Quaternion qa);
+        CollisionPose(b, out Vector3 pb, out Quaternion qb);
+        return Physics.ComputePenetration(a, pa, qa, b, pb, qb, out _, out float depth) && depth > 0.005f;
+    }
+
+    private static void CollisionPose(Collider collider, out Vector3 position, out Quaternion rotation)
+    {
+        position = collider.transform.position; rotation = collider.transform.rotation;
+        Rigidbody body = collider.attachedRigidbody;
+        if (body == null) return;
+        // During FixedUpdate the rendered/interpolated transform can still show the previous physics pose.
+        Quaternion delta = body.rotation * Quaternion.Inverse(body.transform.rotation);
+        position = body.position + delta * (position - body.transform.position);
+        rotation = delta * rotation;
     }
 
     private void OnDisable() => ReleaseCarriedCreature();

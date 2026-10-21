@@ -193,7 +193,7 @@ MonoBehaviour:
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
-  upwardSpeed: 0.5
+  upwardSpeed: 0.25
   launchDecaySeconds: 0.35
   riseDuration: {x: 12, y: 20}
   lifetime: {x: 45, y: 60}

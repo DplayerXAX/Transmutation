@@ -169,7 +169,7 @@ public static class BubbleFlowerValidation
             TrappingBubble expiring = Bubble(Origin);
             Check(expiring.TryCapture(occupant.gameObject), "cleanup scenario captures occupant");
             if (disable) expiring.enabled = false;
-            else { Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
+            else { expiring.LifetimeLimited = true; Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
             Check(expiring.IsPopped && !occupant.IsBubbleCaptured && occupant.SimulationEnabled,
                 disable ? "disable releases occupant" : "occupied timeout releases occupant");
             Destroy(expiring.gameObject); Destroy(occupant.gameObject);
@@ -253,6 +253,7 @@ public static class BubbleFlowerValidation
         }
 
         TrappingBubble drifting = Bubble(Origin);
+        drifting.LifetimeLimited = true;
         drifting.Launch(null, null, Vector3.forward * 8f);
         Set(drifting, "riseSeconds", 1f); Set(drifting, "lifetimeSeconds", 2f);
         Step(drifting, 20);
@@ -287,7 +288,7 @@ public static class BubbleFlowerValidation
         var flower = Spawn(AssetDatabase.LoadAssetAtPath<GameObject>(BubbleFlowerSetup.FlowerPath), Origin + Vector3.right).GetComponent<BubbleFlower>();
         Call(flower, "TickCreature", 6.1f);
         TrappingBubble groundShot = flower.LastShot;
-        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.5f, "ground flower emits a rising bubble on schedule");
+        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.25f, "ground flower emits a rising bubble on schedule");
         Call(carrier, "BeginCarry", flower);
         Check(carrier.CarriedCreature == flower, "flower uses existing carry system");
         Call(flower, "TickCreature", 10f);
