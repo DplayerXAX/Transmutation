@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(SquirrelMotor))]
 public sealed partial class Squirrel : Creature
 {
-    public enum Activity { Searching, Collecting, Returning, Fighting, Retreating, PackingNest, Migrating, GatheringNestMaterials, BuildingNest }
+    public enum Activity { Searching, Collecting, Returning, Fighting, Retreating, PackingNest, Migrating, GatheringNestMaterials, BuildingNest, Celebrating, ReclaimingFood, FollowingNest, ReturningStolenNest, WarningPlayer, EscapingWithNest }
     [SerializeField, Min(0.01f)] private float moveSpeed = 2f;
     [SerializeField, Min(0.01f)] private float reachDistance = 0.65f;
     [SerializeField, Min(0.1f)] private float searchRadius = 100f;
@@ -131,7 +131,7 @@ public sealed partial class Squirrel : Creature
     public Vector3 TerritoryCenter => territoryCenter;
     public float TerritoryRadius => territoryRadius;
     public bool IsMigrating => activity == Activity.Migrating;
-    public bool AllowsMovementAt(Vector3 point) => IsMigrating || IsNestWork || ContainsInTerritory(point);
+    public bool AllowsMovementAt(Vector3 point) => IsMigrating || IsNestWork || IsSocialReaction || ContainsInTerritory(point);
 
     public bool ContainsInTerritory(Vector3 point)
     {
@@ -150,7 +150,7 @@ public sealed partial class Squirrel : Creature
     }
     public bool CanFight => CanMoveAutonomously && foodManager != null && nest != null &&
         Time.time >= fightCooldownUntil && activity != Activity.Fighting && activity != Activity.Retreating &&
-        activity != Activity.PackingNest && !IsMigrating && !IsNestWork;
+        activity != Activity.PackingNest && !IsMigrating && !IsNestWork && !IsSocialReaction;
 
     public bool WantsToChallenge(Squirrel other) => other != null && other.CanBeAITargeted && ContainsInTerritory(other.transform.position) && carried.Count < capacity &&
         ((other.carried.Count > 0) || (target != null && (target == other.target || target.Owner == other)));
@@ -229,6 +229,7 @@ public sealed partial class Squirrel : Creature
         SetCreatureName("Squirrel");
         SetFoodAndDiet(FoodTag.Meat, FoodTag.Plant);
         SetMovementPhysics(false, true);
+        CreateFacingMarkers();
     }
 
     protected override void TickCreature(float deltaTime)
@@ -238,6 +239,7 @@ public sealed partial class Squirrel : Creature
         if (foodManager == null) return;
         carried.RemoveAll(food => food == null);
         if (activity == Activity.Fighting) return;
+        if (TickSocialReaction(deltaTime)) return;
         if (TickNestTasks(deltaTime)) return;
         if (nest == null) return;
         if (activity == Activity.PackingNest || IsMigrating)
@@ -420,6 +422,7 @@ public sealed partial class Squirrel : Creature
     {
         if (IsDead) return;
         StopSqueeze();
+        CancelSocialReaction();
         CancelMigration();
         ReleaseFood();
         motor.Stop();
@@ -429,6 +432,7 @@ public sealed partial class Squirrel : Creature
     protected override void OnDisable()
     {
         StopSqueeze();
+        CancelSocialReaction();
         base.OnDisable();
         CancelMigration();
         ReleaseFood();

@@ -252,8 +252,8 @@ at least **3.5 m** from another owned nest, within **6 m** of a registered tree,
 from other squirrels' nests. The site must have clear, supported Ground-layer terrain.
 No materials or valid site means waiting and retrying, rather than creating a free nest.
 
-The owner navigates to remembered home coordinates. Player pickup never sends it the nest's new position.
-Only after reaching the former site does it discover the loss and prioritize gathering materials for a replacement.
+The owner navigates to remembered home coordinates. An unseen player pickup does not send it the nest's new position.
+Only after reaching the former site does it discover an unseen loss and prioritize gathering materials for a replacement.
 Replacement sites can be searched within **45 m**. On later journeys, a missing old nest can be rediscovered
 within **6 m** with line of sight. An owner still rebuilding can reuse a non-full recovered home;
 a stocked old home found later is worth carrying back beside the present home when a valid site exists.
@@ -272,3 +272,32 @@ Other Play Mode checks under **Tools > Creatures**: **Validate Squirrel Physics*
 **Validate Squirrel Squeeze**, and **Validate Squirrel Nest Inventory And Building**. The latter verifies real
 player transfer, empty/full behavior, no remote knowledge, paid rebuilding, nearby overflow storage and old-home recovery.
 **Configure Squirrel Food And Nest Prefabs** is an edit-mode utility for upgrading model-only prefab assets.
+
+### Witnessed player actions
+
+`Squirrel.prefab` now contains the squirrel and motor components. Its **green +Z face is the front**;
+the **blue -Z face is the back**. The nest owner reacts only when it sees the player at the moment
+of a successful action: within **18 m**, inside its **120 degree forward cone**, and with unobstructed
+line of sight. Back-facing or occluded actions retain the normal remembered-home behavior.
+
+- A real deposit starts one physical orbit around the player (radius **2.5 m**). Dropped/thrown food
+  colliding with a nest can also enter storage within **5 seconds** of being held; full nests reject it.
+- A witnessed withdrawal starts a jumping pursuit of that exact held item. The player must still hold
+  the item and the squirrel must reach it while rising; success releases the hand and returns the item home.
+- A witnessed nest pickup starts following. Behind cover, it searches the last seen player position.
+  After the nest is dropped, it retrieves the same nest and carries it back to its remembered position.
+- At placement, a player within **6 m** who maintains mutual facing triggers a warning. **Warning Clip**
+  on the squirrel prefab is an optional spatial `AudioClip` slot, currently empty. The red marker above
+  the squirrel flashes and Console logs **Squirrel warning triggered**, so the branch works without audio.
+- Looking away or leaving allows placement. Continuing to face each other for the **2 second warning**
+  plus **2 further seconds** triggers escape. Default escape speed is **80 m/s**, raised above measured
+  player speed when needed. The same nest and contents move to clear Ground near a registered tree,
+  at least **12 m** from the player, with spacing from other nests. If no valid site exists, it retains
+  the nest and continues searching instead of placing it at an invalid point.
+
+Reaction settings and the empty audio slot are on **Squirrel.prefab > Squirrel**. Social reactions take
+priority over foraging and food fights; creature carrying/capture still pauses autonomous movement.
+**Tools > Creatures > Validate Squirrel Player Reactions (Play Mode)** exercises facing, occlusion,
+real inventory, full orbit, jumping retrieval, following, return, silent warning, broken eye contact,
+escalation and physics-based escape placement in isolated scenes.
+**Configure Squirrel Reaction Prefab** can reapply the prefab components and visual markers in edit mode.

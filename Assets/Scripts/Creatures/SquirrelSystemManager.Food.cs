@@ -133,7 +133,7 @@ public sealed partial class SquirrelSystemManager
             var food = foods[i];
             if (food == null) { foods.RemoveAt(i); continue; }
             // Reserved ground food remains a valid goal: rivals can contest it on arrival.
-            if (food.IsStored || !food.isActiveAndEnabled || !squirrel.ContainsInTerritory(food.transform.position)) continue;
+            if (food.IsStored || food.IsCarried || !food.isActiveAndEnabled || !squirrel.ContainsInTerritory(food.transform.position)) continue;
             float distance = (food.transform.position - squirrel.transform.position).sqrMagnitude;
             if (distance > best) continue;
             best = distance;

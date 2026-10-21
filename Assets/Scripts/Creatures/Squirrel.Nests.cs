@@ -137,6 +137,8 @@ public sealed partial class Squirrel
                 carried.RemoveAt(carried.Count - 1);
                 material.Release(this);
                 material.Die();
+                // Spent materials leave physics immediately; Destroy is deferred until frame end.
+                material.gameObject.SetActive(false);
                 Destroy(material.gameObject);
             }
             nest = home;
