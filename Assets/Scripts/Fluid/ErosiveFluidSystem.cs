@@ -20,6 +20,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     [Min(1f)] [SerializeField] private float contactAgeMultiplier = 4f;
     [Tooltip("Minimum lifetime spent per second while touched, so creatures that never age naturally (AgeRate 0) still age in water.")]
     [Min(0f)] [SerializeField] private float contactAgeFloor = 4f;
+    [Tooltip("Adds a default ErosiveRain child at start when none exists. Add one by hand to tune it in the Inspector.")]
+    [SerializeField] private bool erosiveRain = true;
     private struct Soaking { public float until, dust; public Vector3 point; }
     private readonly Dictionary<Creature, Soaking> soaked = new Dictionary<Creature, Soaking>();
     private float drainTokens;
@@ -40,6 +42,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     private readonly float[] rippleAges = new float[32];
     private int nextRipple;
     public ProceduralWorld World => world;
+    public ErosiveRain Rain => GetComponentInChildren<ErosiveRain>();
     public float MaximumSpeed => maximumSpeed;
     public float SampleInterval => sampleInterval;
     public int CollisionLayers => collisionLayers.value | (1 << world.TerrainLayer) | (1 << 4);
@@ -61,6 +64,12 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     {
         if (world == null) { enabled = false; return; }
         view = Camera.main;
+        if (erosiveRain && GetComponentInChildren<ErosiveRain>(true) == null)
+        {
+            // Last child, so code that takes the first source still gets the ground source.
+            var rain = new GameObject("Erosive Rain"); rain.transform.SetParent(transform, false);
+            rain.AddComponent<ErosiveFluidSource>().ConfigureForRain(); rain.AddComponent<ErosiveRain>();
+        }
         sources = GetComponentsInChildren<ErosiveFluidSource>();
         foreach (ErosiveFluidSource source in sources) source.SetFluid(this);
         RefreshActors();
