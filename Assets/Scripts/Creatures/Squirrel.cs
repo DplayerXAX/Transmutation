@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -13,6 +14,11 @@ public sealed class Squirrel : Creature
     [SerializeField, Min(0.1f)] private float searchRadius = 100f;
     [SerializeField, Min(0.1f)] private float searchInterval = 0.5f;
     [SerializeField, Min(1)] private int capacity = 3;
+    [Header("Held squeeze")]
+    [SerializeField, Min(0.1f)] private float squeezeDuration = 0.25f;
+    [SerializeField, Min(0f)] private float spitSpeed = 3f;
+    private Coroutine squeeze;
+    private Vector3 unsqueezedScale;
     [SerializeField] private Activity activity;
     [Header("Territory")]
     [SerializeField] private Vector3 territoryCenter;
@@ -42,6 +48,69 @@ public sealed class Squirrel : Creature
         !IsBubbleCaptured && !(TryGetComponent<WebCapture>(out var web) && web.IsCaptured);
     public int Capacity => capacity;
     public int CarriedCount => carried.Count;
+    public override bool CanUseWhileCarried => !IsDead;
+    public override string CarriedPrompt => carried.Count > 0
+        ? "[LMB] Squeeze: spit one food (" + carried.Count + ")"
+        : "Mouth empty";
+
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!IsCarried || !SimulationEnabled || IsConsumptionPending || squeeze != null) return;
+        carried.RemoveAll(food => food == null);
+        unsqueezedScale = transform.localScale;
+        squeeze = StartCoroutine(Squeeze(interaction.Direction));
+    }
+
+    private IEnumerator Squeeze(Vector3 direction)
+    {
+        direction = direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward;
+        bool released = false;
+        for (float elapsed = 0f; elapsed < squeezeDuration; elapsed += Time.deltaTime)
+        {
+            if (!IsCarried || !SimulationEnabled || IsConsumptionPending) break;
+            float pulse = Mathf.Sin(elapsed / squeezeDuration * Mathf.PI);
+            transform.localScale = Vector3.Scale(unsqueezedScale,
+                new Vector3(1f + pulse * 0.12f, 1f - pulse * 0.22f, 1f + pulse * 0.12f));
+            if (!released && elapsed >= squeezeDuration * 0.4f)
+            {
+                released = true;
+                SpitOneFood(direction);
+            }
+            yield return null;
+        }
+        transform.localScale = unsqueezedScale;
+        squeeze = null;
+    }
+
+    private void SpitOneFood(Vector3 direction)
+    {
+        if (carried.Count == 0) return;
+        int index = carried.Count - 1;
+        SquirrelFood food = carried[index];
+        carried.RemoveAt(index);
+        if (food == null) return;
+        Collider shape = GetComponent<Collider>();
+        Vector3 mouth = shape != null ? shape.bounds.center : transform.position;
+        float clearance = shape != null ? shape.bounds.extents.magnitude : 0.5f;
+        Collider foodShape = food.GetComponent<Collider>();
+        // Hidden food retains its world scale. Place its entire collider beyond the held body.
+        float foodRadius = foodShape is CapsuleCollider capsule
+            ? Mathf.Max(capsule.radius, capsule.height * 0.5f) * food.transform.lossyScale.magnitude
+            : food.transform.lossyScale.magnitude * 0.5f;
+        Vector3 position = mouth + direction * (clearance + foodRadius + 0.1f);
+        food.SpitOut(this, position, direction * spitSpeed + Vector3.up * 2f);
+        // Keep migration/fight ownership intact; ordinary foraging resumes after release.
+        if (activity == Activity.Returning && carried.Count == 0) activity = Activity.Searching;
+        nextSearch = Time.time + searchInterval;
+    }
+
+    private void StopSqueeze()
+    {
+        if (squeeze == null) return;
+        StopCoroutine(squeeze);
+        transform.localScale = unsqueezedScale;
+        squeeze = null;
+    }
     public Activity CurrentActivity => activity;
     public SquirrelNest Nest => nest;
     public Vector3 TerritoryCenter => territoryCenter;
@@ -332,6 +401,7 @@ public sealed class Squirrel : Creature
     public override void Die()
     {
         if (IsDead) return;
+        StopSqueeze();
         CancelMigration();
         ReleaseFood();
         motor.Stop();
@@ -340,6 +410,7 @@ public sealed class Squirrel : Creature
 
     protected override void OnDisable()
     {
+        StopSqueeze();
         base.OnDisable();
         CancelMigration();
         ReleaseFood();

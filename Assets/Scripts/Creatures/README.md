@@ -219,6 +219,17 @@ prompts and carry work.
 `Scene_Ariia` uses `AriiaSquirrelSetup` to register its tree trunks and connect the authored managers.
 `SquirrelManager` instantiates the Squirrel and Nest prefabs; `FoodManager` instantiates the Food prefab.
 
+`Scene_Ariia` also contains the shared `PlayerObjects` prefab with Daniel's right-click toggle pickup
+and firm grip settings. The original overview camera is disabled. Walk with WASD, look with the mouse,
+right-click a squirrel to pick it up, and click left to squeeze it. Each completed squeeze compresses
+and releases the body and spits out one collected food item; repeat clicks to empty its mouth.
+An empty squirrel remains held and shows "Mouth empty". Right-click again to put it down.
+Squeezing takes priority over throwing, only works while held and alive, and never removes food already
+deposited in the nest. Spat items are the original food objects, fall with gravity, and can be foraged again.
+For an integration check, open Ariia in Play Mode and run
+**Tools > Creatures > Validate Squirrel Squeeze (Play Mode)**. This temporarily uses one squirrel and
+three test foods; stop and restart Play Mode to restore the normal simulation after checking.
+
 - Food grows around tree anchors every **15 seconds**, **3 per cycle**, up to **24 unstored items**
   (including items being carried). These settings are on Food Manager. Stored objects are recycled;
   the nest keeps its cumulative `StoredFoodCount`. Growth uses scaled time and pauses with the game.
