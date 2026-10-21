@@ -214,6 +214,8 @@ public sealed class WebGorge : MonoBehaviour
             beside.y = RealmSites.Surface(world, beside) + 0.4f;
             flower = Instantiate(flowerPrefab, beside, Quaternion.identity);
             flower.name = "Gorge Bubble Flower";
+            // Placed before the ground there may be built: held still until it exists (it fell out of the world).
+            flower.gameObject.AddComponent<SettleWhenGroundReady>();
         }
 
         BuildRampSegments();

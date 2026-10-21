@@ -95,6 +95,54 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestFlower") >= 0)
+        {
+            // A carried bubble flower still shoots: left click (the interactor) fires along the view; the thrower leaves it alone.
+            foreach (BubbleFlower f in FindObjectsByType<BubbleFlower>(FindObjectsSortMode.None))
+            {
+                float under = Physics.Raycast(f.transform.position + Vector3.up * 5f, Vector3.down, out RaycastHit g, 30f, ~0, QueryTriggerInteraction.Ignore) ? f.transform.position.y - g.point.y : float.NaN;
+                Log($"Flower '{f.name}' at {f.transform.position}, {under:0.00} m above what is under it, awake {f.SimulationEnabled}");
+            }
+            Log($"Crosshair with empty hands: {FindFirstObjectByType<CrosshairHUD>()?.CurrentMode}");
+            BubbleFlower flower = FindFirstObjectByType<BubbleFlower>();
+            var flowerCarrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+            var interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
+            Log($"Flower: {flower != null}, interactor {interactor != null}");
+            if (flower != null && interactor != null)
+            {
+                Log($"    flower found at {flower.transform.position} ({flower.name}, parent {(flower.transform.parent != null ? flower.transform.parent.name : "-")}), player at {body.position}");
+                // Bring it to the player's feet, as if walked up to.
+                Vector3 feet = body.position + controller.Orientation.forward * 1.2f + Vector3.down * 0.9f;
+                flower.transform.position = feet;
+                var flowerBody = flower.GetComponent<Rigidbody>();
+                if (flowerBody != null) { flowerBody.position = feet; flowerBody.linearVelocity = Vector3.zero; }
+                Physics.SyncTransforms();
+                yield return new WaitForSeconds(0.5f);
+                typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(flowerCarrier, new object[] { flower });
+                yield return new WaitForSeconds(0.5f);
+                Log($"    carried {flowerCarrier.CarriedCreature == flower}, throwable {CreatureThrower.Instance?.HoldingThrowable}, crosshair {FindFirstObjectByType<CrosshairHUD>()?.CurrentMode}");
+                for (int shot = 0; shot < 3; shot++)
+                {
+                    TrappingBubble before = flower.LastShot;
+                    interactor.TryInteract();
+                    if (flower.LastShot != null && flower.LastShot != before)
+                    {
+                        var rb = flower.LastShot.GetComponent<Rigidbody>();
+                        for (int f = 0; f < 6; f++)
+                        {
+                            Log($"      frame {f}: bubble at {flower.LastShot.transform.position}, speed {(rb != null ? rb.linearVelocity.magnitude : -1f):0.0}, kinematic {rb?.isKinematic}, player at {body.position}");
+                            yield return new WaitForFixedUpdate();
+                        }
+                    }
+                    yield return new WaitForSeconds(0.6f);
+                    TrappingBubble made = flower.LastShot;
+                    Vector3 lookFlat = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+                    Log($"    shot {shot + 1}: new bubble {(made != null && made != before)}, {(made != null ? Vector3.Distance(made.transform.position, body.position).ToString("0.0") + " m out, " + Vector3.Dot(made.transform.position - body.position, lookFlat).ToString("0.0") + " m ahead" : "-")}");
+                }
+            }
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestClip") >= 0)
         {
             yield return CheckTowerClipping();

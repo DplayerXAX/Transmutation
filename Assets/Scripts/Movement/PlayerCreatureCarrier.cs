@@ -46,6 +46,17 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
     public Creature CarriedCreature { get; private set; }
+    public Camera CarryCamera => carryCamera;
+    private bool interactionPickup;
+    public bool TryCarryFromInteraction(Creature creature)
+    {
+        if (CarriedCreature != null || pendingCreature != null || creature == null ||
+            creature.gameObject.scene != gameObject.scene) return false;
+        BeginCarry(creature);
+        interactionPickup = CarriedCreature == creature;
+        return interactionPickup;
+    }
+    public Creature PendingCreature => pendingCreature;
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
     public Transform HandAnchor { get; set; }
@@ -98,13 +109,19 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) return;
         if (!Application.isFocused && !Application.isBatchMode)
         {
             Release();
             return;
         }
 
-        if (carryInput == CarryInput.HoldRightMouse)
+        if (interactionPickup && CarriedCreature != null)
+        {
+            if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+            { interactionPickup = false; Release(); }
+        }
+        else if (carryInput == CarryInput.HoldRightMouse)
             UpdateHoldRightMouse();
         else
             UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
@@ -269,6 +286,7 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
+        if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
         carryPoint.position = creature.transform.position;
@@ -361,6 +379,7 @@ private void FitCarryPoint(Creature creature)
 
     public void Release()
     {
+        interactionPickup = false;
         if (TentacleLockedForRide) return;
         ReleaseCarriedCreature();
     }

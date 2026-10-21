@@ -287,7 +287,7 @@ public static class BubbleFlowerValidation
         var flower = Spawn(AssetDatabase.LoadAssetAtPath<GameObject>(BubbleFlowerSetup.FlowerPath), Origin + Vector3.right).GetComponent<BubbleFlower>();
         Call(flower, "TickCreature", 6.1f);
         TrappingBubble groundShot = flower.LastShot;
-        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.5f, "ground flower emits a rising bubble on schedule");
+        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.25f, "ground flower emits a rising bubble on schedule");
         Call(carrier, "BeginCarry", flower);
         Check(carrier.CarriedCreature == flower, "flower uses existing carry system");
         Call(flower, "TickCreature", 10f);

@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 /// bone wrapped in a glassy skin. It crawls in slow loops round its mother, now and then curling up to rest.
 ///   - Habits that hint at what fire does to it: it notices fire bubbles drifting nearby and goes after them,
 ///     its ribs fluttering faster the closer one is, rearing its head up to reach one floating just above it.
-///   - Heat: two middle ribs embrace a caught fire bubble, which stays bound and keeps its fire alive.
+    ///   - Heat: up to three rib pairs embrace fire bubbles in reserve; flying spends them oldest first.
 ///     The body warms to amber; the other ribs beat like wings and it rises and drifts in slow loops.
 ///   - Riding: [C] climbs on its back (and off again).
 ///   - Reins: with a tentacle creature on the back, climbing on sends two of its arms into the child's spine
@@ -32,12 +32,25 @@ public sealed class BoneChild : MonoBehaviour
     [Min(0.5f)] public float climbSpeed = 3.5f;
     [Tooltip("Height it hovers at when warm and not steered (above the ground).")]
     [Min(0.5f)] public float hoverHeight = 2.5f;
+    [Tooltip("Heat spent each second while airborne.")]
+    [Min(0f)] public float flightHeatPerSecond = 1.125f;
+    [Tooltip("Extra heat spent per metre of actual upward travel.")]
+    [Min(0f)] public float climbHeatPerMetre = 0.45f;
+    [Range(1, 3)] public int bubbleCapacity = 3;
 
     public float Warmth { get; private set; }
+    public float FlightStrength => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.1f, 0.8f, Warmth));
+    public bool Flying { get; private set; }
+    public float FuelHeat
+    {
+        get { float total = 0f; foreach (StoredFuel fuel in storedFuel) if (fuel.creature is FireBubble fire && !fire.IsDead) total += fire.Heat; return total; }
+    }
+    public int StoredBubbleCount => storedFuel.Count;
     public bool Ridden => BoneRide.Mount == (object)this;
     public bool Reined => BoneRide.Reins(transform) >= 2;
     public Transform Head => beads.Count > 0 ? beads[0] : transform;
     public Vector3 Chest => beads.Count > 3 ? beads[3].position : transform.position;
+    public Vector3 RidePoint => beads.Count > 2 ? beads[2].position : Head.position;
 
     private readonly List<Transform> beads = new List<Transform>();      // one per vertebra (bone + skin), head first
     private readonly List<Transform[]> ribs = new List<Transform[]>();   // [left, right] on vertebrae 2..4
@@ -45,11 +58,18 @@ public sealed class BoneChild : MonoBehaviour
     private readonly List<Vector3> trail = new List<Vector3>();
     private Vector3 head, headDir, rest;
     private float restYaw, loopAngle;
-    private Creature cradled;
-    private readonly MeshFilter[,] cradleFilters = new MeshFilter[2, 2]; // side, bone/skin
-    private readonly Mesh[,] openRibMeshes = new Mesh[2, 2];
-    private readonly List<Mesh> cradleMeshes = new List<Mesh>();
-    private Vector3 cradleLocal;
+    private sealed class StoredFuel
+    {
+        public Creature creature;
+        public int rib;
+        public Vector3 local, from;
+        public float start;
+        public readonly List<Mesh> meshes = new List<Mesh>();
+    }
+    private readonly List<StoredFuel> storedFuel = new List<StoredFuel>();
+    private Creature cradled => storedFuel.Count > 0 ? storedFuel[0].creature : null;
+    private readonly MeshFilter[,,] cradleFilters = new MeshFilter[3, 2, 2]; // rib pair, side, bone/skin
+    private readonly Mesh[,,] openRibMeshes = new Mesh[3, 2, 2];
     private Renderer[] bodyRenderers;
     private MaterialPropertyBlock warmBlock;
     private static readonly string[] WarmProperties = { "_ColorA", "_ColorB", "_ColorMid", "_Body", "_Rim", "_Core", "_GlowColor", "_FringeB", "_FringeC" };
@@ -82,7 +102,7 @@ public sealed class BoneChild : MonoBehaviour
     public static bool IsCradled(Creature creature)
     {
         if (creature is FireBubble bubble && bubble.IsBoundToBone) return true;
-        foreach (BoneChild c in All) if (c != null && c.cradled == creature) return true;
+        foreach (BoneChild c in All) if (c != null) foreach (StoredFuel fuel in c.storedFuel) if (fuel.creature == creature) return true;
         return false;
     }
     private const int Ground = 1 << 7;
@@ -149,13 +169,10 @@ public sealed class BoneChild : MonoBehaviour
                     MeshFilter ribBone = AddMesh(hinge, BoneShapes.Ribbon(points, 0.11f, 0.05f, 0.05f, Vector3.forward, (float)random.NextDouble()), bone, Vector3.zero, Vector3.one);
                     // A wing of skin stretched along the rib.
                     MeshFilter ribSkin = AddMesh(hinge, BoneShapes.Ribbon(points, 0.42f, 0.16f, 0.025f, Vector3.forward, 0.5f), skin, new Vector3(0f, 0f, -0.08f), Vector3.one);
-                    if (i == 3)
-                    {
-                        cradleFilters[s, 0] = ribBone;
-                        cradleFilters[s, 1] = ribSkin;
-                        openRibMeshes[s, 0] = ribBone.sharedMesh;
-                        openRibMeshes[s, 1] = ribSkin.sharedMesh;
-                    }
+                    cradleFilters[i - 2, s, 0] = ribBone;
+                    cradleFilters[i - 2, s, 1] = ribSkin;
+                    openRibMeshes[i - 2, s, 0] = ribBone.sharedMesh;
+                    openRibMeshes[i - 2, s, 1] = ribSkin.sharedMesh;
                     pair[s] = hinge;
                 }
                 ribs.Add(pair);
@@ -199,7 +216,7 @@ public sealed class BoneChild : MonoBehaviour
     private void OnDestroy()
     {
         All.Remove(this);
-        foreach (Mesh mesh in cradleMeshes) if (mesh != null) Destroy(mesh);
+        foreach (StoredFuel fuel in storedFuel) foreach (Mesh mesh in fuel.meshes) if (mesh != null) Destroy(mesh);
     }
 
     // ---------------- Update ----------------
@@ -209,11 +226,13 @@ public sealed class BoneChild : MonoBehaviour
         float dt = Time.deltaTime;
         if (dt <= 0f || beads.Count == 0) return;
         UpdateHeat();
-        bool flying = Warmth > 0.35f;
+        // Keep the flight movement until it has settled, even after the last heat is spent.
+        bool flying = Warmth > 0.35f || (Flying && head.y > GroundBelow(head) + 1.3f);
+        Flying = flying;
         if (flying) { resting = false; crawlTimer = Mathf.Max(crawlTimer, 8f); rearUp = 0f; }
         else if (resting && chasing == null) Lively = Mathf.MoveTowards(Lively, 0f, dt);
         if (Ridden) { if (BoneRide.CanToggle && BoneRide.PressedC()) BoneRide.GetOff(); }
-        else if (BoneRide.Mount == null && BoneRide.CanToggle && BoneRide.Near(beads[2].position, 2f + size, transform) && BoneRide.PressedC())
+        else if (BoneRide.Mount == null && BoneRide.CanToggle && BoneRide.Near(RidePoint, 2f + size, transform) && BoneRide.PressedC())
             BoneRide.GetOn(this, transform, beads[2], ReinPoints());
 
         if (flying)
@@ -221,7 +240,7 @@ public sealed class BoneChild : MonoBehaviour
             Fly(dt);
             PlaceAlongTrail(dt);
         }
-        else if (!resting || LookForFire())
+        else if (!resting)
         {
             Crawl(dt);
             PlaceAlongTrail(dt);
@@ -234,15 +253,12 @@ public sealed class BoneChild : MonoBehaviour
             if (Time.time >= nextGroundCheck)
             {
                 nextGroundCheck = Time.time + 0.5f;
-                if (Physics.Raycast(rest + Vector3.up * 30f, Vector3.down, out RaycastHit floor, 80f, Ground, QueryTriggerInteraction.Ignore)
-                    && !floor.collider.transform.IsChildOf(transform))
-                    rest.y = floor.point.y;
+                rest.y = GroundBelow(rest);
                 // Each vertebra lies on the ground under it, on a slope too.
                 for (int i = 0; i < beads.Count; i++)
                 {
                     CurledPose(i, 0f, out Vector3 p, out _);
-                    lift[i] = Physics.Raycast(new Vector3(p.x, rest.y + 30f, p.z), Vector3.down, out RaycastHit under, 80f, Ground, QueryTriggerInteraction.Ignore)
-                        && !under.collider.transform.IsChildOf(transform) ? Mathf.Max(0f, under.point.y - rest.y) : 0f;
+                    lift[i] = Mathf.Max(0f, GroundBelow(p) - rest.y);
                 }
             }
             // Cold: it sinks back to where it lay and curls up.
@@ -259,6 +275,7 @@ public sealed class BoneChild : MonoBehaviour
     /// <summary>Finds the nearest free fire bubble in range (checked twice a second). True if one is being chased.</summary>
     private bool LookForFire()
     {
+        if (resting && restTimer > 0f) { chasing = null; return false; }
         if (Time.time >= nextLook)
         {
             nextLook = Time.time + 0.5f;
@@ -281,6 +298,13 @@ public sealed class BoneChild : MonoBehaviour
     /// </summary>
     private void Crawl(float dt)
     {
+        // A nearby bubble no longer keeps it chasing forever. Rest is committed until the nap finishes.
+        crawlTimer -= dt;
+        if (crawlTimer <= 0f)
+        {
+            BeginRest(Random.Range(6f, 12f));
+            return;
+        }
         if (trail.Count == 0) trail.Add(head);
         bool fire = LookForFire();
         float distance = fire ? Vector3.Distance(chasing.transform.position, beads[0].position) : float.MaxValue;
@@ -290,7 +314,6 @@ public sealed class BoneChild : MonoBehaviour
         {
             target = chasing.transform.position;
             resting = false;
-            crawlTimer = Mathf.Max(crawlTimer, 6f);
         }
         else
         {
@@ -299,16 +322,6 @@ public sealed class BoneChild : MonoBehaviour
             from.y = 0f;
             float angle = Mathf.Atan2(from.x, from.z) * Mathf.Rad2Deg + 25f * orbitSense;
             target = mother + Quaternion.Euler(0f, angle, 0f) * Vector3.forward * orbitRadius;
-            crawlTimer -= dt;
-            if (crawlTimer <= 0f)
-            {
-                // Settles down to rest where it is.
-                resting = true;
-                restTimer = Random.Range(6f, 12f);
-                rest = new Vector3(beads[3].position.x, rest.y, beads[3].position.z);
-                restYaw = Mathf.Atan2(headDir.x, headDir.z) * Mathf.Rad2Deg;
-                nextGroundCheck = 0f;
-            }
         }
         Vector3 flat = Vector3.ProjectOnPlane(target - head, Vector3.up);
         if (flat.sqrMagnitude > 0.04f)
@@ -321,8 +334,8 @@ public sealed class BoneChild : MonoBehaviour
             && !block.collider.transform.IsChildOf(transform) && block.normal.y < 0.5f)
             step = Vector3.ProjectOnPlane(step, block.normal);
         head += step;
-        if (Physics.Raycast(head + Vector3.up * 3f, Vector3.down, out RaycastHit ground, 20f, Ground, QueryTriggerInteraction.Ignore) && !ground.collider.transform.IsChildOf(transform))
-            head.y = Mathf.Lerp(head.y, ground.point.y + 0.3f * size, 1f - Mathf.Exp(-8f * dt));
+        float groundY = GroundBelow(head);
+        head.y = Mathf.Max(groundY + 0.3f * size, Mathf.Lerp(head.y, groundY + 0.3f * size, 1f - Mathf.Exp(-8f * dt)));
         // Rears up towards a bubble floating above its head.
         float reach = fire ? Mathf.Clamp(chasing.transform.position.y - head.y - 0.3f, 0f, 3.4f) * Mathf.Clamp01(2.5f - flat.magnitude / 2f) : 0f;
         rearUp = Mathf.Lerp(rearUp, reach, 1f - Mathf.Exp(-2.5f * dt));
@@ -331,6 +344,18 @@ public sealed class BoneChild : MonoBehaviour
     }
 
     private IEnumerable<Transform> ReinPoints() { yield return beads[1]; yield return beads[3]; }
+
+    private void BeginRest(float seconds)
+    {
+        resting = true;
+        restTimer = seconds;
+        chasing = null;
+        rearUp = 0f;
+        rest = new Vector3(beads[3].position.x, rest.y, beads[3].position.z);
+        restYaw = Mathf.Atan2(headDir.x, headDir.z) * Mathf.Rad2Deg;
+        nextGroundCheck = 0f;
+        nextLook = 0f;
+    }
 
     private void Fly(float dt)
     {
@@ -351,18 +376,23 @@ public sealed class BoneChild : MonoBehaviour
             desired = (aim - head).normalized;
             speed = 2.2f;
         }
-        // Lift fades with the heat; too little heat and it sinks.
-        if (Warmth < 0.6f) desired += Vector3.down * (0.6f - Warmth) * 2f;
+        float strength = FlightStrength;
+        desired.y = Mathf.Min(desired.y, 0f) + Mathf.Max(desired.y, 0f) * strength;
+        desired += Vector3.down * ((1f - strength) * 1.5f);
+        speed *= Mathf.Lerp(0.35f, 1f, strength);
         if (desired.sqrMagnitude < 1e-4f) desired = headDir * 0.01f;
         headDir = Vector3.RotateTowards(headDir, desired.normalized, 1.6f * dt, 0f).normalized;
         Vector3 step = headDir * (speed * Mathf.Clamp01(desired.magnitude) * dt);
+        step.y -= (1f - strength) * 2.5f * dt;
         // Never into rock: stop at it and slide along.
         if (Physics.SphereCast(head, 0.45f, step.normalized, out RaycastHit block, step.magnitude + 0.3f, Ground, QueryTriggerInteraction.Ignore)
             && !block.collider.transform.IsChildOf(transform))
             step = Vector3.ProjectOnPlane(step, block.normal);
+        float previousY = head.y;
         head += step;
         float floor = GroundBelow(head) + 1.2f;
         if (head.y < floor) head.y = Mathf.Lerp(head.y, floor, 1f - Mathf.Exp(-6f * dt));
+        SpendFlightHeat(dt, Mathf.Max(0f, head.y - previousY));
         if (trail.Count == 0 || (head - trail[trail.Count - 1]).sqrMagnitude > 0.01f) trail.Add(head);
         if (trail.Count > 200) trail.RemoveRange(0, trail.Count - 200);
     }
@@ -390,6 +420,7 @@ public sealed class BoneChild : MonoBehaviour
             // The front end rears up (only while crawling), easing off towards the middle of the body.
             Vector3 lifted = p + Vector3.up * (rearUp * Mathf.Clamp01(1f - i / 3.5f));
             Vector3 at = Vector3.Lerp(beads[i].position, lifted, follow);
+            at.y = Mathf.Max(at.y, GroundBelow(at) + 0.3f * size);
             Vector3 along = i == 0 ? headDir : (beads[i - 1].position - at);
             if (along.sqrMagnitude > 1e-5f)
                 beads[i].SetPositionAndRotation(at, Quaternion.Slerp(beads[i].rotation, Quaternion.LookRotation(along.normalized, Vector3.up), follow));
@@ -424,11 +455,12 @@ public sealed class BoneChild : MonoBehaviour
         for (int r = 0; r < ribs.Count; r++)
         {
             // Warm: full wingbeats. Stirred up by fire nearby: a quick flutter that grows the closer it is.
-            float target = flying ? 15f + 40f * Mathf.Sin(Time.time * 4.2f - r * 0.7f)
+            float target = flying ? Mathf.Lerp(-55f, 15f + 40f * Mathf.Sin(Time.time * 4.2f - r * 0.7f), FlightStrength)
                 : -55f + Lively * (35f + 18f * Mathf.Sin(Time.time * (6f + 4f * Lively) - r * 0.9f));
-            // The middle pair cups the bubble permanently; the other pairs remain free to flap.
-            float progress = CatchProgress;
-            bool catching = cradled != null && r == 1;
+            // Each occupied pair cups its own bubble; empty pairs remain free to flap.
+            StoredFuel held = storedFuel.Find(fuel => fuel.rib == r);
+            float progress = held != null ? Time.time - held.start : -1f;
+            bool catching = held != null;
             if (catching) target = progress >= 0f && progress < 0.35f ? 65f : 0f;
             ribBeat[r] = Mathf.Lerp(ribBeat[r], target, 1f - Mathf.Exp(-(catching ? 10f : flying || Lively > 0.05f ? 6f : 1.5f) * dt));
             for (int s = 0; s < 2; s++)
@@ -441,23 +473,33 @@ public sealed class BoneChild : MonoBehaviour
 
     // ---------------- Heat ----------------
 
+    private void SpendFlightHeat(float deltaTime, float climbedMetres)
+    {
+        float remaining = Mathf.Max(0f, deltaTime) * flightHeatPerSecond + Mathf.Max(0f, climbedMetres) * climbHeatPerMetre;
+        foreach (StoredFuel fuel in storedFuel)
+        {
+            if (fuel.creature is FireBubble fire && !fire.IsDead) remaining -= fire.BurnBoneHeat(remaining);
+            if (remaining <= 0f) break;
+        }
+        PruneFuel();
+    }
+
     /// <summary>A warm creature set down in the ribcage is cradled there; its heat is the child's lift.</summary>
     private void UpdateHeat()
     {
-        if (cradled != null && (cradled.IsCarried || !cradled.isActiveAndEnabled)) cradled = null;
-        if (cradled == null && cradleMeshes.Count > 0) RestoreRibs();
-        if (cradled == null && Time.time >= nextHeatCheck)
+        PruneFuel();
+        if (storedFuel.Count < bubbleCapacity && Time.time >= nextHeatCheck)
         {
             // Checked every frame: a fire bubble let go nearby drifts off quickly, and the ribs snatch it as it passes.
             // The head snatches too, when it rears up after a bubble floating overhead.
-            for (int part = 0; part < 2 && cradled == null; part++)
+            for (int part = 0; part < 2 && storedFuel.Count < bubbleCapacity; part++)
             {
-                int count = Physics.OverlapSphereNonAlloc(part == 0 ? Chest : beads[0].position, 1.3f * size, hits, ~0, QueryTriggerInteraction.Collide);
+                int count = Physics.OverlapSphereNonAlloc(part == 0 ? Chest : Head.position, 1.3f * size, hits, ~0, QueryTriggerInteraction.Collide);
                 Collider[] nearby = hits;
                 // Bone, flora and terrain colliders can fill the small buffer before the bubble is returned.
                 if (count == hits.Length)
                 {
-                    nearby = Physics.OverlapSphere(part == 0 ? Chest : beads[0].position, 1.3f * size, ~0, QueryTriggerInteraction.Collide);
+                    nearby = Physics.OverlapSphere(part == 0 ? Chest : Head.position, 1.3f * size, ~0, QueryTriggerInteraction.Collide);
                     count = nearby.Length;
                 }
                 for (int i = 0; i < count; i++)
@@ -469,11 +511,14 @@ public sealed class BoneChild : MonoBehaviour
             // Held still in the ribs it must not count as resting on the ground (a fire bubble would take root).
             if (cradled != null && cradled.GetComponent<Rigidbody>() is Rigidbody held) held.isKinematic = true;
         }
-        heat = cradled != null ? Mathf.Max(0f, cradled.Heat) : 0f;
-        // Fire bubbles are fire even when their shared Heat value is zero (as on the authored prefab).
-        // A bound bubble is a lasting source of lift, rather than a one-off Heat transfer.
-        if (cradled is FireBubble) heat = Mathf.Max(heat, heatForLift);
-        Warmth = Mathf.MoveTowards(Warmth, Mathf.Clamp01(heat / heatForLift), Time.deltaTime * (heat > 0f ? 0.5f : 0.12f));
+        heat = 0f;
+        foreach (StoredFuel fuel in storedFuel) if (fuel.creature != null) heat += Mathf.Max(0f, fuel.creature.Heat);
+        UpdateWarmth(Time.deltaTime);
+    }
+
+    private void UpdateWarmth(float deltaTime)
+    {
+        Warmth = Mathf.MoveTowards(Warmth, Mathf.Clamp01(heat / heatForLift), Mathf.Max(0f, deltaTime) * (heat > 0f ? 0.5f : 0.12f));
         UpdateWarmColors();
     }
 
@@ -482,29 +527,31 @@ public sealed class BoneChild : MonoBehaviour
         if (bodyRenderers == null) return;
         warmBlock ??= new MaterialPropertyBlock();
         foreach (Renderer renderer in bodyRenderers)
+            ApplyWarmColors(renderer, Warmth, warmBlock);
+    }
+
+    internal static void ApplyWarmColors(Renderer renderer, float warmth, MaterialPropertyBlock block)
+    {
+        if (renderer == null || renderer.sharedMaterial == null) return;
+        Material material = renderer.sharedMaterial;
+        renderer.GetPropertyBlock(block);
+        for (int i = 0; i < WarmProperties.Length; i++)
         {
-            if (renderer == null || renderer.sharedMaterial == null) continue;
-            Material material = renderer.sharedMaterial;
-            renderer.GetPropertyBlock(warmBlock);
-            for (int i = 0; i < WarmProperties.Length; i++)
-            {
-                string property = WarmProperties[i];
-                if (!material.HasProperty(property)) continue;
-                Color cool = material.GetColor(property), warm = WarmColors[i];
-                warm.a = cool.a; // Keep the skin transparent.
-                warmBlock.SetColor(property, Color.Lerp(cool, warm, Warmth));
-            }
-            if (material.HasProperty("_GlowStrength"))
-                warmBlock.SetFloat("_GlowStrength", material.GetFloat("_GlowStrength") + Warmth * 1.5f);
-            renderer.SetPropertyBlock(warmBlock);
+            string property = WarmProperties[i];
+            if (!material.HasProperty(property)) continue;
+            Color cool = material.GetColor(property), warm = WarmColors[i];
+            warm.a = cool.a; // Keep the skin transparent.
+            block.SetColor(property, Color.Lerp(cool, warm, warmth));
         }
+        if (material.HasProperty("_GlowStrength"))
+            block.SetFloat("_GlowStrength", material.GetFloat("_GlowStrength") + warmth * 1.5f);
+        renderer.SetPropertyBlock(block);
     }
 
     // ---------------- Catching ----------------
 
     private const float CatchTime = 1.1f;
     private float catchStart = -10f;
-    private Vector3 catchFrom;
 
     /// <summary>Seconds into the catch (0 .. CatchTime), or -1 when not catching.</summary>
     private float CatchProgress => Time.time - catchStart < CatchTime + 0.6f ? Time.time - catchStart : -1f;
@@ -520,7 +567,7 @@ public sealed class BoneChild : MonoBehaviour
     }
 
     private bool CanCatch(Creature creature) =>
-        creature != null && cradled == null && isActiveAndEnabled && creature.isActiveAndEnabled && !creature.IsDead &&
+        creature != null && storedFuel.Count < Mathf.Clamp(bubbleCapacity, 1, 3) && isActiveAndEnabled && creature.isActiveAndEnabled && !creature.IsDead &&
         !creature.IsCarried && !creature.IsBubbleCaptured && !(creature is TentacleCreature) &&
         (creature is FireBubble || creature.Heat > 0.5f) && !IsCradled(creature);
 
@@ -564,13 +611,16 @@ public sealed class BoneChild : MonoBehaviour
 
     private bool StartCatch(Creature creature)
     {
-        if (creature is FireBubble alreadyBound && alreadyBound.IsBoundToBone) return false;
+        if (!CanCatch(creature)) return false;
+        int slot = 1;
+        if (storedFuel.Exists(fuel => fuel.rib == slot)) slot = 0;
+        if (storedFuel.Exists(fuel => fuel.rib == slot)) slot = 2;
+        var heldFuel = new StoredFuel { creature = creature, rib = slot, from = creature.transform.position, start = Time.time };
         // Measure while its colliders are still enabled, before the binding takes physics ownership.
-        PrepareCradle(creature);
-        if (creature is FireBubble bubble && !bubble.BindToBone(this)) { RestoreRibs(); return false; }
-        cradled = creature;
+        PrepareCradle(heldFuel);
+        if (creature is FireBubble bubble && !bubble.BindToBone(this)) { RestoreCradle(heldFuel); return false; }
+        storedFuel.Add(heldFuel);
         catchStart = Time.time;
-        catchFrom = creature.transform.position;
         chasing = null;
         // Held still in the ribs it must not count as resting on the ground (a fire bubble would take root).
         if (creature.GetComponent<Rigidbody>() is Rigidbody held) held.isKinematic = true;
@@ -578,25 +628,24 @@ public sealed class BoneChild : MonoBehaviour
     }
 
     /// <summary>Shape two ribs around the bubble's actual size, leaving it visible between the bones.</summary>
-    private void PrepareCradle(Creature creature)
+    private void PrepareCradle(StoredFuel heldFuel)
     {
-        if (ribs.Count < 2) return;
-        RestoreRibs();
         float radius = 0.35f;
-        if (CreatureBounds.TryMeasure(creature.transform, out Bounds bounds))
+        if (CreatureBounds.TryMeasure(heldFuel.creature.transform, out Bounds bounds))
             radius = Mathf.Max(bounds.extents.x, Mathf.Max(bounds.extents.y, bounds.extents.z));
         radius = Mathf.Max(0.1f, radius / size) + 0.06f;
-        cradleLocal = new Vector3(0f, -radius - 0.16f, 0f);
+        heldFuel.local = new Vector3(0f, -radius - 0.16f, 0f);
+        if (ribs.Count <= heldFuel.rib) return;
         for (int s = 0; s < 2; s++)
         {
             float side = s == 0 ? -1f : 1f;
-            Transform hinge = ribs[1][s];
+            Transform hinge = ribs[heldFuel.rib][s];
             var points = new List<Vector3> { Vector3.zero };
             for (int k = 0; k <= 14; k++)
             {
                 float t = k / 14f;
                 float angle = Mathf.Lerp(50f, -100f, t) * Mathf.Deg2Rad;
-                Vector3 point = cradleLocal + new Vector3(side * Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f);
+                Vector3 point = heldFuel.local + new Vector3(side * Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f);
                 points.Add(point - hinge.localPosition);
             }
             for (int layer = 0; layer < 2; layer++)
@@ -607,23 +656,34 @@ public sealed class BoneChild : MonoBehaviour
                 if (layer == 1)
                 {
                     Vector3[] vertices = mesh.vertices;
-                    for (int v = 0; v < vertices.Length; v++) vertices[v] -= cradleFilters[s, layer].transform.localPosition;
+                    for (int v = 0; v < vertices.Length; v++) vertices[v] -= cradleFilters[heldFuel.rib, s, layer].transform.localPosition;
                     mesh.vertices = vertices;
                     mesh.RecalculateBounds();
                 }
-                cradleMeshes.Add(mesh);
-                cradleFilters[s, layer].sharedMesh = mesh;
+                heldFuel.meshes.Add(mesh);
+                cradleFilters[heldFuel.rib, s, layer].sharedMesh = mesh;
             }
         }
     }
 
-    private void RestoreRibs()
+    private void RestoreCradle(StoredFuel fuel)
     {
         for (int s = 0; s < 2; s++)
             for (int layer = 0; layer < 2; layer++)
-                if (cradleFilters[s, layer] != null) cradleFilters[s, layer].sharedMesh = openRibMeshes[s, layer];
-        foreach (Mesh mesh in cradleMeshes) if (mesh != null) Destroy(mesh);
-        cradleMeshes.Clear();
+                if (cradleFilters[fuel.rib, s, layer] != null) cradleFilters[fuel.rib, s, layer].sharedMesh = openRibMeshes[fuel.rib, s, layer];
+        foreach (Mesh mesh in fuel.meshes) if (mesh != null) Destroy(mesh);
+        fuel.meshes.Clear();
+    }
+
+    private void PruneFuel()
+    {
+        for (int i = storedFuel.Count - 1; i >= 0; i--)
+        {
+            Creature creature = storedFuel[i].creature;
+            if (creature != null && !creature.IsDead && !creature.IsCarried && creature.isActiveAndEnabled) continue;
+            RestoreCradle(storedFuel[i]);
+            storedFuel.RemoveAt(i);
+        }
     }
 
     private void LateUpdate()
@@ -633,26 +693,38 @@ public sealed class BoneChild : MonoBehaviour
         float swell = progress >= 0f ? Mathf.Sin(Mathf.Clamp01((progress - 0.45f) / 0.9f) * Mathf.PI) * 0.14f : 0f;
         for (int i = 1; i < beads.Count && i < 6; i++) beads[i].localScale = Vector3.one * (size * (1f + swell * (1f - Mathf.Abs(i - 3) * 0.25f)));
         // The cradled creature rides in the ribcage (drawn in from where it touched, at the start of a catch).
-        if (cradled == null) return;
-        Vector3 at = beads[3].TransformPoint(cradleLocal);
-        if (progress >= 0f && progress < CatchTime)
+        foreach (StoredFuel fuel in storedFuel)
         {
-            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.15f) / (CatchTime - 0.25f)));
-            at = Vector3.Lerp(catchFrom, at, t) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 0.4f);
+            if (fuel.creature == null) continue;
+            progress = Time.time - fuel.start;
+            Transform anchor = beads.Count > fuel.rib + 2 ? beads[fuel.rib + 2] : transform;
+            Vector3 at = anchor.TransformPoint(fuel.local);
+            if (progress >= 0f && progress < CatchTime)
+            {
+                float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((progress - 0.15f) / (CatchTime - 0.25f)));
+                at = Vector3.Lerp(fuel.from, at, t) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 0.4f);
+            }
+            fuel.creature.transform.position = at;
+            var rb = fuel.creature.GetComponent<Rigidbody>();
+            if (rb != null) { rb.position = at; if (!rb.isKinematic) rb.linearVelocity = Vector3.zero; }
         }
-        cradled.transform.position = at;
-        var rb = cradled.GetComponent<Rigidbody>();
-        if (rb != null) { rb.position = at; if (!rb.isKinematic) rb.linearVelocity = Vector3.zero; }
     }
 
     private float GroundBelow(Vector3 point)
     {
-        return Physics.Raycast(point + Vector3.up * 2f, Vector3.down, out RaycastHit hit, 200f, Ground, QueryTriggerInteraction.Ignore) && !hit.collider.transform.IsChildOf(transform)
-            ? hit.point.y : point.y - 50f;
+        float best = float.PositiveInfinity, height = rest.y;
+        foreach (RaycastHit hit in Physics.RaycastAll(point + Vector3.up * 3f, Vector3.down, 200f, Ground, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.collider.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<BoneChild>() != null
+                || hit.collider.GetComponentInParent<Creature>() != null || hit.distance >= best) continue;
+            best = hit.distance;
+            height = hit.point.y;
+        }
+        return height;
     }
 
     /// <summary>For tests: put a creature straight into the ribcage.</summary>
-    public void Cradle(Creature creature) => StartCatch(creature);
+    public void Cradle(Creature creature) => Catch(creature);
 
     /// <summary>For tests: the creature held in its ribs, if any.</summary>
     public Creature Cradled => cradled;
@@ -693,7 +765,7 @@ public static class BoneRide
     }
 
     /// <summary>One getting on or off per frame (so the same key press does not do both).</summary>
-    public static bool CanToggle => toggledFrame != Time.frameCount;
+    public static bool CanToggle => !BoneAwakeningCutscene.Playing && toggledFrame != Time.frameCount;
 
     public static bool PressedC()
     {
@@ -707,11 +779,16 @@ public static class BoneRide
         if (!FindPlayer()) return false;
         float d = Vector3.Distance(body.position, point);
         if (d > radius) return false;
+        foreach (RaycastHit hit in Physics.RaycastAll(body.position, (point - body.position).normalized, d, ~0, QueryTriggerInteraction.Ignore))
+            if (!hit.collider.transform.IsChildOf(self) && hit.collider.GetComponentInParent<SmoothFirstPersonController>() == null
+                && hit.collider.GetComponentInParent<Creature>() == null) return false;
         if (RestSpotSystem.Instance != null)
             foreach (RestSpot spot in RestSpotSystem.Instance.Spots)
                 if (spot != null && Vector3.Distance(spot.Seat, body.position) < Mathf.Min(d, 2.6f)) return false;
         return true;
     }
+
+    public static float PlayerDistance(Vector3 point) => FindPlayer() ? Vector3.Distance(body.position, point) : float.PositiveInfinity;
 
     /// <summary>How many arms of the carried tentacle creature are stuck into root.</summary>
     public static int Reins(Transform root)
@@ -730,7 +807,7 @@ public static class BoneRide
         toggledFrame = Time.frameCount;
         Mount = mount;
         MountRoot = root;
-        heading = Vector3.ProjectOnPlane(seat.forward, Vector3.up).normalized;
+        heading = Vector3.ProjectOnPlane(mount is BoneKiln mother ? mother.RideForward : seat.forward, Vector3.up).normalized;
         if (heading.sqrMagnitude < 1e-4f) heading = Vector3.forward;
         wasKinematic = body.isKinematic;
         body.linearVelocity = Vector3.zero;

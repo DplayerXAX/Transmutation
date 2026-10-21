@@ -23,6 +23,7 @@ public sealed class FoodManager : MonoBehaviour
     private int nextTree;
     private int spawnSerial;
     public IReadOnlyList<SquirrelFood> Foods => foods;
+    public IReadOnlyList<SquirrelTree> Trees => spawnTrees;
     public int UnstoredFoodCount
     {
         get
@@ -69,8 +70,8 @@ public sealed class FoodManager : MonoBehaviour
             int hits = gameObject.scene.GetPhysicsScene().OverlapSphere(point + Vector3.up * 0.75f,
                 0.6f, spawnHits, ~0, QueryTriggerInteraction.Ignore);
             if (hits > 0) continue;
-            SquirrelFood food = foods.Find(candidate => candidate != null && candidate.IsStored);
-            if (food == null)
+            // Stored food remains owned by the nest. Refresh only creates new world food.
+            SquirrelFood food;
             {
                 var instance = Instantiate(foodPrefab, transform);
                 food = instance.GetComponent<SquirrelFood>() ?? instance.AddComponent<SquirrelFood>();
@@ -85,6 +86,21 @@ public sealed class FoodManager : MonoBehaviour
             return true;
         }
         return false;
+    }
+
+    public SquirrelFood ReserveBuildingFood(Squirrel squirrel, float radius)
+    {
+        SquirrelFood best = null;
+        float distance = radius * radius;
+        foreach (var food in foods)
+        {
+            if (food == null || !food.IsAvailable || food.gameObject.scene != squirrel.gameObject.scene) continue;
+            float d = (food.transform.position - squirrel.transform.position).sqrMagnitude;
+            if (d >= distance) continue;
+            distance = d;
+            best = food;
+        }
+        return best != null && best.Reserve(squirrel) ? best : null;
     }
 
     public SquirrelFood FindMigrationFood(Squirrel squirrel, float radius)

@@ -24,9 +24,9 @@ public sealed class SpireOvergrowth : MonoBehaviour
 
     [Header("Amounts")]
     [SerializeField] private int seed = 13;
-    [Range(0, 60)] [SerializeField] private int veinRoots = 14;
-    [Range(0, 40)] [SerializeField] private int webHubs = 12;
-    [Range(0f, 1f)] [SerializeField] private float membraneShare = 0.3f;
+    [Range(0, 60)] [SerializeField] private int veinRoots = 8;
+    [Range(0, 40)] [SerializeField] private int webHubs = 6;
+    [Range(0f, 1f)] [SerializeField] private float membraneShare = 0.12f;
     [Tooltip("Longest strand in the web (metres).")]
     [Min(2f)] [SerializeField] private float maxStrand = 15f;
 
@@ -77,6 +77,7 @@ public sealed class SpireOvergrowth : MonoBehaviour
         root = new GameObject("Spire Overgrowth").transform;
 
         var anchors = SurfaceAnchors(random, 70);
+        anchors.RemoveAll(anchor => anchor.position.y < spireBounds.min.y + 15f && !WebSide(anchor.position));
         Veins(anchors, random);
         Mushrooms(random);
         Web(anchors, dressing, random);
@@ -188,8 +189,8 @@ public sealed class SpireOvergrowth : MonoBehaviour
         var mesh = new RealmMeshes();
         foreach (var landing in spire.Landings)
         {
-            if (random.NextDouble() < 0.4) continue;
-            int count = random.Next(3, 8);
+            if (random.NextDouble() < 0.65) continue;
+            int count = random.Next(2, 5);
             for (int i = 0; i < count; i++)
             {
                 Vector3 at = landing.top + Random3(random).normalized * Mathf.Lerp(0.2f, 1.2f, (float)random.NextDouble());
@@ -206,22 +207,24 @@ public sealed class SpireOvergrowth : MonoBehaviour
     {
         var nodes = new List<Node>();
         // Some points on the walls.
-        for (int i = 0; i < surface.Count; i += 2) nodes.Add(surface[i]);
+        for (int i = 0; i < surface.Count; i += 4) if (WebSide(surface[i].position)) nodes.Add(surface[i]);
         // Lamps near the tower.
         Vector3 axis = spireBounds.center;
         var lamps = new List<Vector3>();
         if (dressing != null)
             foreach (Vector3 lamp in dressing.LampTops)
             {
+                if (!WebSide(lamp) || RealmDecorLayout.FlatDistance(lamp, axis) > 22f) continue;
                 lamps.Add(lamp);
                 nodes.Add(new Node { position = lamp + Vector3.down * 0.3f, normal = Vector3.down, kind = 2 });
             }
         // Ground round the tower's foot.
         float radius = Mathf.Max(spireBounds.extents.x, spireBounds.extents.z);
-        for (int i = 0; i < 14; i++)
+        for (int i = 0; i < 8; i++)
         {
-            float a = i / 14f * Mathf.PI * 2f + (float)random.NextDouble() * 0.3f;
+            float a = i / 8f * Mathf.PI * 2f + (float)random.NextDouble() * 0.3f;
             Vector3 p = axis + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius + Mathf.Lerp(4f, 14f, (float)random.NextDouble()));
+            if (!WebSide(p)) continue;
             if (RealmSites.InSinkhole(world, p, 1f)) continue;
             if (RealmSites.GroundAt(world, p, out Vector3 g, out Vector3 gn)) nodes.Add(new Node { position = g, normal = gn, kind = 3 });
         }
@@ -245,6 +248,7 @@ public sealed class SpireOvergrowth : MonoBehaviour
             float a = (float)random.NextDouble() * Mathf.PI * 2f;
             float h = Mathf.Lerp(spireBounds.min.y + 3f, spireBounds.max.y * 0.95f + spireBounds.min.y * 0.05f, Mathf.Pow((float)random.NextDouble(), 0.8f));
             Vector3 p = new Vector3(axis.x, h, axis.z) + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (radius + Mathf.Lerp(2f, 12f, (float)random.NextDouble()));
+            if (!WebSide(p)) continue;
             nodes.Add(new Node { position = p, normal = Vector3.up, kind = 0 });
         }
 
@@ -262,7 +266,7 @@ public sealed class SpireOvergrowth : MonoBehaviour
             for (int j = 0; j < nodes.Count; j++) if (j != i && (i >= firstHub || j >= firstHub)) order.Add(j);
             Vector3 from = nodes[i].position;
             order.Sort((x, y) => (nodes[x].position - from).sqrMagnitude.CompareTo((nodes[y].position - from).sqrMagnitude));
-            int links = i >= firstHub ? random.Next(2, 5) : 1;
+            int links = i >= firstHub ? random.Next(2, 4) : 1;
             for (int k = 0; k < Mathf.Min(links, order.Count); k++) Link(i, order[k]);
         }
 
@@ -300,6 +304,14 @@ public sealed class SpireOvergrowth : MonoBehaviour
         Part("Web Strands", strandMesh, strandMaterial, false);
         Part("Web Dew", beadMesh, beadMaterial, false);
         Part("Web Film", membraneMesh, membraneMaterial, false);
+    }
+
+    private bool WebSide(Vector3 at)
+    {
+        Vector3 arrival = Vector3.ProjectOnPlane(world.transform.position - spireBounds.center, Vector3.up).normalized;
+        if (arrival.sqrMagnitude < 0.1f) arrival = Vector3.back;
+        Vector3 radial = Vector3.ProjectOnPlane(at - spireBounds.center, Vector3.up).normalized;
+        return Vector3.Dot(radial, arrival) < -0.05f;
     }
 
     /// <summary>One strand: a sagging, slightly wavy thread that splits into a fan of feet where it grips a surface.</summary>

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,12 +29,12 @@ public sealed class RealmDressing : MonoBehaviour
 
     [Header("Layout")]
     [SerializeField] private int seed = 5;
-    [Min(2)] [SerializeField] private int lampsPerSide = 7;
-    [Range(0, 6)] [SerializeField] private int shelters = 2;
-    [Range(0, 40)] [SerializeField] private int floatingCrystals = 9;
+    [Min(2)] [SerializeField] private int lampsPerSide = 4;
+    [Range(0, 6)] [SerializeField] private int shelters = 1;
+    [Range(0, 40)] [SerializeField] private int floatingCrystals = 4;
     [Range(0, 10)] [SerializeField] private int fossils = 2;
-    [Range(0, 16)] [SerializeField] private int anemoneClusters = 3;
-    [Range(0, 30)] [SerializeField] private int slimePatches = 6;
+    [Range(0, 16)] [SerializeField] private int anemoneClusters = 2;
+    [Range(0, 30)] [SerializeField] private int slimePatches = 3;
     [Tooltip("How far the stream wanders to either side of the straight line (metres).")]
     [Min(0f)] [SerializeField] private float meander = 7f;
     [Tooltip("Lamps light the ground round them (no shadows).")]
@@ -45,7 +46,24 @@ public sealed class RealmDressing : MonoBehaviour
 
     private ProceduralWorld world;
     private Transform root;
+    private readonly List<GameObject> streamPieces = new List<GameObject>();
+    private bool streamDirty;
+    private float streamRefreshAt;
+    private float nextStreamRefresh;
+    private Coroutine streamBuild;
+    private readonly List<GameObject> stagedStreamPieces = new List<GameObject>();
+    public bool StreamBuilding => streamBuild != null;
+    private readonly List<Bounds> boneFootprints = new List<Bounds>();
+    private readonly RaycastHit[] groundHits = new RaycastHit[128];
+    private ProceduralWorld subscribedWorld;
     private Vector3 start, end;
+    private RealmDecorLayout.Snapshot layout;
+
+    private Vector3 ThemePoint(Vector3 centre, System.Random random, float min = 15f, float max = 25f)
+    {
+        float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+        return centre + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Mathf.Lerp(min, max, (float)random.NextDouble());
+    }
     private float waited;
     private readonly List<Vector3> lampBases = new List<Vector3>();
     private readonly List<Vector3> fossilSpots = new List<Vector3>();
@@ -58,6 +76,50 @@ public sealed class RealmDressing : MonoBehaviour
     /// <summary>Centres of the lamp orbs (for the web round the spire).</summary>
     public IReadOnlyList<Vector3> LampTops => lampTops;
     private readonly List<Vector3> lampTops = new List<Vector3>();
+
+    private void OnEnable() => ProceduralWorld.AnyTerrainChanged += TerrainChanged;
+    private void OnDisable()
+    {
+        if (streamBuild != null) StopCoroutine(streamBuild);
+        streamBuild = null;
+        foreach (GameObject piece in stagedStreamPieces) DestroyStreamPiece(piece);
+        pieces -= stagedStreamPieces.Count;
+        stagedStreamPieces.Clear();
+        ProceduralWorld.AnyTerrainChanged -= TerrainChanged;
+        if (subscribedWorld != null) subscribedWorld.ChunkCreated -= ChunkReady;
+        subscribedWorld = null;
+    }
+    private void ChunkReady(GameObject chunk, Mesh mesh)
+    {
+        if (mesh != null && chunk.TryGetComponent<Renderer>(out var renderer)) TerrainChanged(world, renderer.bounds);
+    }
+    private void TerrainChanged(ProceduralWorld changed, Bounds bounds)
+    {
+        if (changed != world || !built) return;
+        Bounds path = new Bounds((start + end) * 0.5f, Vector3.zero);
+        path.Encapsulate(start);
+        path.Encapsulate(end);
+        path.Expand(new Vector3(meander * 2f + 16f, 200f, meander * 2f + 16f));
+        if (!path.Intersects(bounds)) return;
+        bool touches = streamPieces.Count == 0;
+        foreach (GameObject piece in streamPieces)
+            if (piece != null && piece.GetComponent<Renderer>().bounds.Intersects(bounds))
+            {
+                touches = true;
+            }
+        if (!touches)
+            for (int i = 0; i <= 20; i++)
+            {
+                Vector3 point = PathPoint(i / 20f);
+                if (point.x < bounds.min.x - 3f || point.x > bounds.max.x + 3f
+                    || point.z < bounds.min.z - 3f || point.z > bounds.max.z + 3f) continue;
+                float surface = RealmSites.Surface(world, point);
+                if (surface >= bounds.min.y - 0.5f && surface <= bounds.max.y + 0.5f) { touches = true; break; }
+            }
+        if (!touches) return; // Cave edits and unrelated chunks must not rebuild the surface river.
+        if (!streamDirty) streamRefreshAt = Time.time + 0.4f;
+        streamDirty = true;
+    }
 
     public void Setup(Material lamp, Material rootWood, Material anemone, Material crystal, Material film, Material thread, Material fossil, Material stream,
         Material slime, Material mud)
@@ -83,9 +145,18 @@ public sealed class RealmDressing : MonoBehaviour
             if (!RealmSites.ReadyToPlace(world, waited)) return;
             if (!PlanPath()) { built = true; return; }
             // Wait for the chunks along the path so everything sits on the real ground.
-            if (waited < 30f && !PathLoaded()) return;
+            if (!PathLoaded()) return;
             Build();
             return;
+        }
+        if (world != null && subscribedWorld != world)
+        {
+            subscribedWorld = world;
+            subscribedWorld.ChunkCreated += ChunkReady;
+        }
+        if (streamDirty && streamBuild == null && Time.time >= Mathf.Max(streamRefreshAt, nextStreamRefresh))
+        {
+            Stream(new System.Random(seed));
         }
         // Floating crystals bob and turn slowly.
         float time = Time.time;
@@ -148,8 +219,9 @@ public sealed class RealmDressing : MonoBehaviour
         for (float t = 0f; t <= 1f; t += 0.1f)
         {
             Vector3 p = PathPoint(t);
+            if (InSinkhole(p, 3f)) continue;
             p.y = RealmSites.Surface(world, p);
-            if (!world.IsRegionReady(p, 16f)) return false;
+            if (!Ground(p, out _, out _)) return false;
         }
         return true;
     }
@@ -159,13 +231,14 @@ public sealed class RealmDressing : MonoBehaviour
     {
         float surface = RealmSites.Surface(world, point);
         Vector3 from = new Vector3(point.x, surface + 40f, point.z);
-        RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, 90f, 1 << world.TerrainLayer, QueryTriggerInteraction.Ignore);
+        int count = Physics.RaycastNonAlloc(from, Vector3.down, groundHits, 90f, 1 << world.TerrainLayer, QueryTriggerInteraction.Ignore);
         float best = float.MinValue;
         hit = new Vector3(point.x, surface, point.z);
         normal = Vector3.up;
         bool found = false;
-        foreach (RaycastHit h in hits)
+        for (int i = 0; i < count; i++)
         {
+            RaycastHit h = groundHits[i];
             if (!world.OwnsCollider(h.collider) || h.point.y <= best) continue;
             // Prefer the top surface near the expected height, not a cave floor far below.
             if (h.point.y < surface - 15f) continue;
@@ -179,6 +252,9 @@ public sealed class RealmDressing : MonoBehaviour
 
     private bool InSinkhole(Vector3 point, float margin)
     {
+        foreach (Bounds bone in boneFootprints)
+            if (point.x >= bone.min.x - margin && point.x <= bone.max.x + margin
+                && point.z >= bone.min.z - margin && point.z <= bone.max.z + margin) return true;
         for (int i = 0; i < world.SinkholeCount; i++)
         {
             Vector3 hole = world.SinkholeCentre(i, point.y, out float radius);
@@ -192,9 +268,15 @@ public sealed class RealmDressing : MonoBehaviour
     private void Build()
     {
         built = true;
+        layout = RealmDecorLayout.Capture(world);
         var random = new System.Random(seed);
         root = new GameObject("Realm Dressing").transform;
         root.position = start;
+        BoneKiln kiln = FindFirstObjectByType<BoneKiln>();
+        if (kiln != null && kiln.Root != null)
+            foreach (Renderer renderer in kiln.Root.GetComponentsInChildren<Renderer>())
+                if (renderer.GetComponentInParent<BoneChild>() == null && renderer.GetComponentInParent<Creature>() == null)
+                    boneFootprints.Add(renderer.bounds);
 
         Stream(random);
         lampTops.AddRange(Lamps(random));
@@ -217,50 +299,116 @@ public sealed class RealmDressing : MonoBehaviour
     /// <summary>The stream: a dark ribbon laid on the ground, broken where it would cross a sinkhole.</summary>
     private void Stream(System.Random random)
     {
-        float length = RealmSites.Flat(end - start).magnitude * 1.15f;
-        int steps = Mathf.CeilToInt(length / 0.5f);
-        const int across = 12;
-        var rows = new List<Vector3[]>();
-        int part = 0;
+        if (Application.isPlaying)
+        {
+            if (streamBuild != null) { streamDirty = true; return; }
+            streamDirty = false;
+            nextStreamRefresh = Time.time + 2f;
+            streamBuild = StartCoroutine(BuildStream(new System.Random(seed), true));
+        }
+        else
+        {
+            IEnumerator routine = BuildStream(random, false);
+            while (routine.MoveNext()) { }
+        }
+    }
+
+    private static void DestroyStreamPiece(GameObject piece)
+    {
+        if (piece == null) return;
+        Mesh mesh = piece.GetComponent<MeshFilter>().sharedMesh;
+        if (Application.isPlaying) { Destroy(mesh); Destroy(piece); }
+        else { DestroyImmediate(mesh); DestroyImmediate(piece); }
+    }
+
+    private IEnumerator BuildStream(System.Random random, bool incremental)
+    {
+        // Project the footprint onto terrain faces themselves: a height grid bridged sharp ridges,
+        // while its neighbourhood maximum made the water visibly hover above slopes.
+        var surface = new RealmStreamSurface(start);
+        Bounds corridor = new Bounds(start, Vector3.zero);
+        for (int i = 0; i <= 40; i++) corridor.Encapsulate(PathPoint(i / 40f));
+        corridor.Expand(new Vector3(6f, 200f, 6f));
+        long sliceStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+        int work = 0;
+        bool SliceExpired() => ++work >= 128 ||
+            (System.Diagnostics.Stopwatch.GetTimestamp() - sliceStarted) * 1000.0 / System.Diagnostics.Stopwatch.Frequency >= 1.5;
+        void ResetSlice() { work = 0; sliceStarted = System.Diagnostics.Stopwatch.GetTimestamp(); }
+        if (incremental) { yield return null; ResetSlice(); }
+        foreach (ProceduralWorldChunk chunk in FindObjectsByType<ProceduralWorldChunk>(FindObjectsSortMode.None))
+        {
+            if (chunk.Owner != world || !chunk.TryGetComponent(out MeshCollider collider)
+                || !collider.enabled || !collider.bounds.Intersects(corridor) || collider.sharedMesh == null) continue;
+            // Snapshot one chunk at a time; later erosion may replace or destroy its mesh.
+            Mesh terrain = collider.sharedMesh;
+            Vector3[] vertices = terrain.vertices, normals = terrain.normals;
+            int[] triangles = terrain.triangles;
+            Matrix4x4 matrix = chunk.transform.localToWorldMatrix;
+            Matrix4x4 normalMatrix = matrix.inverse.transpose;
+            for (int i = 0; i + 2 < triangles.Length; i += 3)
+            {
+                if (incremental && SliceExpired()) { yield return null; ResetSlice(); }
+                int ia = triangles[i], ib = triangles[i + 1], ic = triangles[i + 2];
+                Vector3 a = matrix.MultiplyPoint3x4(vertices[ia]), b = matrix.MultiplyPoint3x4(vertices[ib]), c = matrix.MultiplyPoint3x4(vertices[ic]);
+                Vector3 faceNormal = Vector3.Cross(b - a, c - a).normalized;
+                if (faceNormal.y < 0.2f) continue;
+                Bounds faceBounds = new Bounds(a, Vector3.zero); faceBounds.Encapsulate(b); faceBounds.Encapsulate(c);
+                if (!corridor.Intersects(faceBounds)) continue;
+                // Upward cave floors can share the same XZ coordinates. Only stamp the top exposed surface.
+                Vector3 centre = (a + b + c) / 3f;
+                if (!Ground(centre, out Vector3 top, out _) || Mathf.Abs(top.y - centre.y) > 0.06f) continue;
+                bool smooth = normals.Length == vertices.Length;
+                surface.Add(a, b, c, smooth ? normalMatrix.MultiplyVector(normals[ia]).normalized : faceNormal,
+                    smooth ? normalMatrix.MultiplyVector(normals[ib]).normalized : faceNormal,
+                    smooth ? normalMatrix.MultiplyVector(normals[ic]).normalized : faceNormal);
+            }
+            if (incremental) { yield return null; ResetSlice(); }
+        }
+        int steps = Mathf.Max(2, Mathf.CeilToInt(RealmSites.Flat(end - start).magnitude * 1.15f / 0.5f));
+        var mesh = new RealmMeshes();
+        int part = 0, sectionSteps = 0;
+        float distance = 0f, previousDistance = 0f;
+        Vector3 previous = PathPoint(0f), left = Vector3.zero, right = Vector3.zero;
+        bool connected = false;
         void Flush()
         {
-            if (rows.Count >= 3)
+            if (mesh.VertexCount > 0)
             {
-                var mesh = new RealmMeshes();
-                mesh.Grid(rows, (float)random.NextDouble());
                 GameObject piece = Part("Stream " + part++, mesh.Build("Stream"), streamMaterial, 0, false);
-                piece.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                stagedStreamPieces.Add(piece);
+                var renderer = piece.GetComponent<MeshRenderer>();
+                renderer.enabled = !incremental;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
-            rows.Clear();
+            mesh = new RealmMeshes(); sectionSteps = 0;
         }
         for (int i = 0; i <= steps; i++)
         {
+            if (incremental && (work >= 6 || SliceExpired())) { yield return null; ResetSlice(); }
             float t = i / (float)steps;
-            Vector3 p = PathPoint(t);
-            if (InSinkhole(p, 3f)) { Flush(); continue; }
+            Vector3 point = PathPoint(t);
+            distance += RealmSites.Flat(point - previous).magnitude;
+            float halfWidth = 1.3f + 0.5f * Mathf.Sin(distance * 0.6f + seed) + 0.25f * Mathf.Sin(distance * 1.64f);
             Vector3 side = PathSide(t);
-            float halfWidth = 1.3f + 0.5f * Mathf.Sin(i * 0.15f + seed) + 0.25f * Mathf.Sin(i * 0.41f);
-            var row = new Vector3[across + 1];
-            bool steep = false;
-            for (int k = 0; k <= across; k++)
+            Vector3 nextLeft = point - side * halfWidth, nextRight = point + side * halfWidth;
+            bool clear = !InSinkhole(point, 3f);
+            if (connected && clear && !InSinkhole((point + previous) * 0.5f, 3f))
             {
-                // Each vertex is placed on the ground right under it, a little above, so the water never dips in.
-                float s = k / (float)across * 2f - 1f;
-                Vector3 at = p + side * s * halfWidth;
-                Ground(at, out Vector3 hit, out Vector3 normal);
-                steep |= normal.y < 0.5f;
-                // The highest ground in a small patch round the vertex, so bumps between vertices stay under the water.
-                float top = hit.y;
-                Vector3 forward = Vector3.Cross(side, Vector3.up);
-                foreach (Vector3 offset in new[] { forward * 0.45f, -forward * 0.45f, side * 0.3f, -side * 0.3f })
-                    if (Ground(at + offset, out Vector3 around, out _)) top = Mathf.Max(top, around.y);
-                row[k] = new Vector3(hit.x, top + 0.16f, hit.z);
+                surface.Stamp(mesh, left, right, nextLeft, nextRight, previousDistance, distance);
+                if (++sectionSteps >= 12 || mesh.VertexCount >= 512) Flush();
             }
-            // Water does not run up cliffs: break the stream there.
-            if (steep) { Flush(); continue; }
-            rows.Add(row);
+            else Flush();
+            // These endpoints and flow distances carry across render sections without any reset.
+            left = nextLeft; right = nextRight; previous = point; previousDistance = distance; connected = clear;
         }
         Flush();
+        pieces -= streamPieces.Count;
+        foreach (GameObject piece in streamPieces) DestroyStreamPiece(piece);
+        streamPieces.Clear();
+        streamPieces.AddRange(stagedStreamPieces);
+        stagedStreamPieces.Clear();
+        foreach (GameObject piece in streamPieces) if (piece != null) piece.GetComponent<Renderer>().enabled = true;
+        streamBuild = null;
     }
 
     /// <summary>Lamp stalks on both banks: twisted root trunks holding a glowing orb in a cupped top.</summary>
@@ -273,7 +421,7 @@ public sealed class RealmDressing : MonoBehaviour
             float t = Mathf.Lerp(0.06f, 0.94f, (i + (side > 0 ? 0.25f : 0.75f)) / lampsPerSide);
             Vector3 p = PathPoint(t) + PathSide(t) * side * Mathf.Lerp(4f, 7f, (float)random.NextDouble());
             if (InSinkhole(p, 2f)) continue;
-            Ground(p, out Vector3 basePoint, out _);
+            if (!Ground(p, out Vector3 basePoint, out _)) continue;
             float height = Mathf.Lerp(3f, 5.5f, (float)random.NextDouble());
             tops.Add(Lamp(basePoint, height, random));
             lampBases.Add(basePoint);
@@ -355,7 +503,7 @@ public sealed class RealmDressing : MonoBehaviour
                 path.Add(at + dir * s + side * bend * s * s / length + normal * thick * 0.25f);
             }
             float phase = (float)random.NextDouble() * 6f;
-            mesh.Tube(path, u => Mathf.Max(0.03f, thick * Mathf.Pow(Mathf.Sin(u * Mathf.PI), 0.7f) * (1f + 0.15f * Mathf.Sin(u * 12f + phase))),
+            mesh.Tube(path, u => Mathf.Max(0.03f, thick * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(u * Mathf.PI)), 0.7f) * (1f + 0.15f * Mathf.Sin(u * 12f + phase))),
                 9, 0f, 1f, (float)random.NextDouble(), thick * 0.3f);
         }
 
@@ -366,7 +514,8 @@ public sealed class RealmDressing : MonoBehaviour
         {
             Vector3 p;
             // A few clumps round the spire's foot and beside the shelters; never in a row along the water.
-            if (i % 2 == 0 || shelterSpots.Count == 0)
+            if (layout.active) p = ThemePoint(layout.kelp, random);
+            else if (i % 2 == 0 || shelterSpots.Count == 0)
             {
                 float a = (float)random.NextDouble() * Mathf.PI * 2f;
                 p = spireFoot + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (rim + Mathf.Lerp(2f, 9f, (float)random.NextDouble()));
@@ -377,7 +526,8 @@ public sealed class RealmDressing : MonoBehaviour
                 p = shelter + new Vector3((float)random.NextDouble() - 0.5f, 0f, (float)random.NextDouble() - 0.5f) * 7f;
             }
             if (InSinkhole(p, 1.5f)) continue;
-            Ground(p, out Vector3 ground, out Vector3 normal);
+            if (layout.active && (layout.District(p) != 0 || layout.OnApproach(p))) continue;
+            if (!Ground(p, out Vector3 ground, out Vector3 normal)) continue;
             int lumps = random.Next(1, 4);
             for (int k = 0; k < lumps; k++)
                 Lump(ground + new Vector3((float)random.NextDouble() - 0.5f, 0f, (float)random.NextDouble() - 0.5f) * 1.2f, normal,
@@ -387,6 +537,7 @@ public sealed class RealmDressing : MonoBehaviour
         // Collars round lamp feet, and drips from the cups.
         for (int i = 0; i < lampBases.Count; i++)
         {
+            if (layout.active && layout.District(lampBases[i]) != 0) continue;
             if (random.NextDouble() < 0.2)
             {
                 var ring = new List<Vector3>();
@@ -396,13 +547,11 @@ public sealed class RealmDressing : MonoBehaviour
                     float a = start + k / 14f * sweep;
                     ring.Add(lampBases[i] + new Vector3(Mathf.Cos(a), 0.1f + k * 0.01f, Mathf.Sin(a)) * 0.45f);
                 }
-                mesh.Tube(ring, u => 0.14f * Mathf.Pow(Mathf.Sin(u * Mathf.PI), 0.6f) + 0.03f, 8, 0f, 1f, (float)random.NextDouble(), 0.04f);
+                mesh.Tube(ring, u => 0.14f * Mathf.Pow(Mathf.Max(0f, Mathf.Sin(u * Mathf.PI)), 0.6f) + 0.03f, 8, 0f, 1f, (float)random.NextDouble(), 0.04f);
             }
         }
-        foreach (Vector3 spot in fossilSpots)
-            Lump(spot + Vector3.up * 0.4f, Vector3.up, Mathf.Lerp(1f, 1.8f, (float)random.NextDouble()), 0.2f);
 
-        GameObject slime = Part("Slime", mesh.Build("Slime"), slimeMaterial, 0, false);
+        GameObject slime = Part("Slime", mesh.Build("Slime"), slimeMaterial, 7, true);
         slime.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
     }
 
@@ -410,6 +559,7 @@ public sealed class RealmDressing : MonoBehaviour
     private void Drips(Vector3 cup, float radius, System.Random random)
     {
         if (slimeMaterial == null) return;
+        if (layout.active && layout.District(cup) != 0) return;
         var mesh = new RealmMeshes();
         int count = random.Next(1, 3);
         for (int i = 0; i < count; i++)
@@ -429,7 +579,7 @@ public sealed class RealmDressing : MonoBehaviour
     {
         Vector3 centre = PathPoint(t) + PathSide(t) * side * Mathf.Lerp(9f, 12f, (float)random.NextDouble());
         if (InSinkhole(centre, 5f)) return;
-        Ground(centre, out Vector3 ground, out _);
+        if (!Ground(centre, out Vector3 ground, out _)) return;
         shelterSpots.Add(ground);
         float radius = Mathf.Lerp(3f, 3.8f, (float)random.NextDouble());
         float height = Mathf.Lerp(3.5f, 4.6f, (float)random.NextDouble());
@@ -482,14 +632,16 @@ public sealed class RealmDressing : MonoBehaviour
     {
         HangingSpire spire = FindFirstObjectByType<HangingSpire>();
         var spots = new List<Vector3>();
-        if (spire != null && spire.Built)
+        if (!layout.active && spire != null && spire.Built)
             foreach (var landing in spire.Landings)
                 if (random.NextDouble() < 0.5) spots.Add(landing.top - landing.inward * Mathf.Lerp(4f, 8f, (float)random.NextDouble()) + Vector3.up * Mathf.Lerp(1f, 5f, (float)random.NextDouble()));
-        while (spots.Count < floatingCrystals)
+        for (int attempt = 0; spots.Count < floatingCrystals && attempt < floatingCrystals * 12; attempt++)
         {
             float t = (float)random.NextDouble();
-            Vector3 p = PathPoint(t) + PathSide(t) * Mathf.Lerp(-10f, 10f, (float)random.NextDouble());
-            p.y = RealmSites.Surface(world, p) + Mathf.Lerp(7f, 16f, (float)random.NextDouble());
+            Vector3 p = layout.active ? ThemePoint(layout.crystal, random) : PathPoint(t) + PathSide(t) * Mathf.Lerp(-10f, 10f, (float)random.NextDouble());
+            if (layout.active && (layout.District(p) != 1 || layout.OnApproach(p))) continue;
+            if (!Ground(p, out Vector3 floor, out _)) continue;
+            p.y = floor.y + Mathf.Lerp(5f, 9f, (float)random.NextDouble());
             spots.Add(p);
         }
         for (int i = 0; i < Mathf.Min(floatingCrystals, spots.Count); i++)
@@ -497,7 +649,7 @@ public sealed class RealmDressing : MonoBehaviour
             var mesh = new RealmMeshes();
             float length = Mathf.Lerp(1.2f, 3.2f, (float)random.NextDouble());
             mesh.Crystal(Vector3.zero, Quaternion.identity, length, length * Mathf.Lerp(0.16f, 0.26f, (float)random.NextDouble()), random.Next(5, 8), (float)random.NextDouble(), random);
-            GameObject crystal = RealmSites.Part("Floating Crystal", root, mesh.Build("Floating Crystal"), crystalMaterial, 0, false);
+            GameObject crystal = RealmSites.Part("Floating Crystal", root, mesh.Build("Floating Crystal"), crystalMaterial, 7, true);
             pieces++;
             crystal.transform.position = spots[i];
             crystal.transform.rotation = Quaternion.Euler((float)random.NextDouble() * 40f - 20f, (float)random.NextDouble() * 360f, (float)random.NextDouble() * 40f - 20f);
@@ -510,7 +662,7 @@ public sealed class RealmDressing : MonoBehaviour
     {
         Vector3 centre = PathPoint(t) + PathSide(t) * side * Mathf.Lerp(7f, 14f, (float)random.NextDouble());
         if (InSinkhole(centre, 4f)) return;
-        Ground(centre, out Vector3 ground, out Vector3 normal);
+        if (!Ground(centre, out Vector3 ground, out Vector3 normal)) return;
         var mesh = new RealmMeshes();
         float piece = (float)random.NextDouble();
         Quaternion tilt = Quaternion.FromToRotation(Vector3.up, normal) *
@@ -558,9 +710,11 @@ public sealed class RealmDressing : MonoBehaviour
     /// <summary>A clump of dark anemone fingers by the water, glowing at the tips.</summary>
     private void Anemones(float t, float side, System.Random random)
     {
-        Vector3 p = PathPoint(t) + PathSide(t) * side * Mathf.Lerp(1.8f, 3.2f, (float)random.NextDouble());
+        Vector3 p = layout.active ? ThemePoint(layout.kelp, random)
+            : PathPoint(t) + PathSide(t) * side * Mathf.Lerp(1.8f, 3.2f, (float)random.NextDouble());
+        if (layout.active && (layout.District(p) != 0 || layout.OnApproach(p))) return;
         if (InSinkhole(p, 2f)) return;
-        Ground(p, out Vector3 ground, out Vector3 normal);
+        if (!Ground(p, out Vector3 ground, out Vector3 normal)) return;
         var mesh = new RealmMeshes();
         int fingers = random.Next(7, 13);
         for (int i = 0; i < fingers; i++)
@@ -577,7 +731,7 @@ public sealed class RealmDressing : MonoBehaviour
             }
             mesh.Tube(path, u => Mathf.Lerp(0.08f, 0.035f, u), 6, 0f, 1f, (float)random.NextDouble(), 0.05f);
         }
-        Part("Anemones", mesh.Build("Anemones"), anemoneMaterial, 0, false);
+        Part("Anemones", mesh.Build("Anemones"), anemoneMaterial, 7, true);
     }
 
     private void OnDestroy()
