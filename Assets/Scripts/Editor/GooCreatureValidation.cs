@@ -68,7 +68,6 @@ public static class GooCreatureValidation
             Set(body, "carrier", carrier); Set(body, "climber", climber);
             Set(climber, "controller", controller); Set(climber, "viewCamera", camera);
             Set(carrier, "carryCamera", camera);
-            Set(carrier, "firmGrip", true);
             rig.SetActive(true);
             staging.SetActive(true);
             rig.transform.SetParent(null, true);

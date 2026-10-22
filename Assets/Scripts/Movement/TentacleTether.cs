@@ -162,6 +162,9 @@ public sealed class TentacleTether : MonoBehaviour
             pinnedArms.Clear();
             restLengths.Clear();
             aiming = aimValid = false;
+            reeling = false;
+            reelHeldTime = 0f;
+            ShowAim(false);
         }
     }
 
