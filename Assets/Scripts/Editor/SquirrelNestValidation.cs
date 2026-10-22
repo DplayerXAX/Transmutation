@@ -27,7 +27,7 @@ public static class SquirrelNestValidation
             Set(nest, "foodCapacity", 2);
             nest.AssignOwner(squirrel);
             var fmObject = new GameObject("Food Manager"); SceneManager.MoveGameObjectToScene(fmObject, scene);
-            var fm = fmObject.AddComponent<FoodManager>(); Set(fm, "initialFoodCount", 0);
+            var fm = fmObject.AddComponent<SquirrelSystemManager>(); Set(fm, "initialFoodCount", 0);
             var treeObject = new GameObject("Tree"); SceneManager.MoveGameObjectToScene(treeObject, scene);
             treeObject.transform.position = new Vector3(4f, 0f, 3f);
             var tree = treeObject.AddComponent<SquirrelTree>();
@@ -108,7 +108,7 @@ public static class SquirrelNestValidation
             for (int i = 0; i < 3; i++) Food(scene, fm, replacementPosition + new Vector3(-2f + i * 2f, 1f, -3f));
             for (int i = 0; i < 2500 && squirrel.KnownNestCount < 3; i++) Step(squirrel, physics, 1);
             Check(squirrel.KnownNestCount == 3 && replacement.StoredFoodCount == 2 && squirrel.Nest != replacement,
-                "full storage creates a separate additional nest without discarding the full one");
+                $"full storage creates a separate additional nest without discarding the full one (known={squirrel.KnownNestCount}, stored={replacement.StoredFoodCount}, state={squirrel.CurrentActivity}, carried={squirrel.CarriedCount})");
             float spacing = Vector3.ProjectOnPlane(squirrel.Nest.transform.position - replacementPosition, Vector3.up).magnitude;
             Check(spacing >= 3.5f && spacing <= 10.1f, "additional nests stay nearby and do not overlap");
             Check(Vector3.ProjectOnPlane(tree.GroundPosition - squirrel.Nest.transform.position, Vector3.up).magnitude <= 6f,
@@ -137,7 +137,7 @@ public static class SquirrelNestValidation
     }
     private static GameObject Primitive(Scene scene, PrimitiveType type, Vector3 position)
     { var go = GameObject.CreatePrimitive(type); SceneManager.MoveGameObjectToScene(go, scene); go.transform.position = position; return go; }
-    private static SquirrelFood Food(Scene scene, FoodManager manager, Vector3 position)
+    private static SquirrelFood Food(Scene scene, SquirrelSystemManager manager, Vector3 position)
     { var f = Primitive(scene, PrimitiveType.Capsule, position).AddComponent<SquirrelFood>(); manager.Register(f); return f; }
     private static void Step(Squirrel squirrel, PhysicsScene physics, int count)
     {

@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Owns squirrel population, randomized sizes, capacities and home assignments.</summary>
+/// <summary>Scene-local owner of squirrel population, nests, food growth and food fights.</summary>
 [DisallowMultipleComponent]
-public sealed class SquirrelManager : MonoBehaviour
+public sealed partial class SquirrelSystemManager : MonoBehaviour
 {
-    [SerializeField] private FoodManager foodManager;
     [SerializeField] private GameObject squirrelPrefab;
     [SerializeField] private GameObject nestPrefab;
     [SerializeField] private List<Squirrel> squirrels = new List<Squirrel>();
@@ -15,7 +14,7 @@ public sealed class SquirrelManager : MonoBehaviour
     [SerializeField, Min(1)] private int baseCapacity = 3;
     [Tooltip("Minimum population spawned from Squirrel Prefab.")]
     [SerializeField, Min(1)] private int population = 3;
-    [SerializeField, Min(0f)] private float spawnRadius = 2f;
+    [SerializeField, Min(0f)] private float squirrelSpawnRadius = 2f;
     [Header("Homes and territories")]
     [SerializeField, Min(1f)] private float territoryRadius = 12f;
     [SerializeField, Min(0.5f)] private float nestTreeDistance = 1.8f;
@@ -51,7 +50,6 @@ public sealed class SquirrelManager : MonoBehaviour
         if (tree != null && !trees.Contains(tree)) trees.Add(tree);
     }
 
-    public void SetFoodManager(FoodManager manager) => foodManager = manager;
 
     private void LateUpdate()
     {
@@ -117,18 +115,27 @@ public sealed class SquirrelManager : MonoBehaviour
         fights.Clear();
     }
 
-    private void Start()
+    [Header("Scene discovery")]
+    [SerializeField] private bool autoDiscoverScene = true;
+    private bool initialized;
+    public bool IsInitialized => initialized;
+    private void Start() => InitializeSystem();
+
+    public void InitializeSystem()
     {
+        if (initialized) return;
+        if (autoDiscoverScene) DiscoverScene();
         squirrels.RemoveAll(squirrel => squirrel == null);
         nests.RemoveAll(nest => nest == null);
         trees.RemoveAll(tree => tree == null);
-        if (foodManager == null || trees.Count == 0 ||
+        if (trees.Count == 0 ||
             (squirrels.Count < population && squirrelPrefab == null) ||
             (nests.Count < Mathf.Max(population, squirrels.Count) && nestPrefab == null))
         {
-            Debug.LogWarning("SquirrelManager needs a FoodManager, Squirrel Prefab, Nest Prefab and tree anchors.", this);
+            Debug.LogWarning("SquirrelSystemManager needs Squirrel/Nest prefabs and tree anchors in this scene.", this);
             return;
         }
+        initialized = true;
         // Instantiate the asset so runtime changes never become the next spawn template.
         while (squirrels.Count < population)
         {
@@ -168,12 +175,12 @@ public sealed class SquirrelManager : MonoBehaviour
             home.name = squirrel.name + " Nest";
             home.AssignOwner(squirrel);
             squirrel.ConfigureNestBuilding(nestPrefab, this);
-            squirrel.Initialize(foodManager, home, Random.Range(minimum, maximum), baseCapacity, territoryRadius);
+            squirrel.Initialize(this, home, Random.Range(minimum, maximum), baseCapacity, territoryRadius);
             // Body height is adjusted after random scaling so all sizes stand on the same floor.
-            SquirrelTree.PlaceOnGround(squirrel.transform, ground + Vector3.forward * Mathf.Min(spawnRadius, territoryRadius * 0.5f));
+            SquirrelTree.PlaceOnGround(squirrel.transform, ground + Vector3.forward * Mathf.Min(squirrelSpawnRadius, territoryRadius * 0.5f));
         }
         // Explicit initialization order: relocate both existing food and new food only after trees are known.
-        foodManager.GenerateAroundTrees(trees);
+        GenerateAroundTrees(trees);
         Physics.SyncTransforms();
     }
 }

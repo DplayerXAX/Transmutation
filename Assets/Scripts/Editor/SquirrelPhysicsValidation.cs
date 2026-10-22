@@ -34,10 +34,10 @@ public static class SquirrelPhysicsValidation
             var homeObject = new GameObject("Test Nest");
             SceneManager.MoveGameObjectToScene(homeObject, scene);
             var home = homeObject.AddComponent<SquirrelNest>();
-            var foodObject = new GameObject("Test FoodManager");
+            var foodObject = new GameObject("Test SquirrelSystemManager");
             SceneManager.MoveGameObjectToScene(foodObject, scene);
             home.AssignOwner(squirrel);
-            squirrel.Initialize(foodObject.AddComponent<FoodManager>(), home, 1f, 3);
+            squirrel.Initialize(foodObject.AddComponent<SquirrelSystemManager>(), home, 1f, 3);
             Check(body != null && !body.isKinematic && body.useGravity,
                 "squirrel uses a dynamic body with gravity");
             Check(body.constraints == RigidbodyConstraints.FreezeRotation,
@@ -83,8 +83,8 @@ public static class SquirrelPhysicsValidation
             SceneManager.MoveGameObjectToScene(foodModel, scene);
             foodModel.transform.position = new Vector3(0f, 1f, 4f);
             var food = foodModel.AddComponent<SquirrelFood>();
-            foodObject.GetComponent<FoodManager>().Register(food);
-            squirrel.Initialize(foodObject.GetComponent<FoodManager>(), home, 1f, 3);
+            foodObject.GetComponent<SquirrelSystemManager>().Register(food);
+            squirrel.Initialize(foodObject.GetComponent<SquirrelSystemManager>(), home, 1f, 3);
             body.position = actor.transform.position = new Vector3(0f, 0.5f, 0f);
             body.linearVelocity = Vector3.zero;
             Physics.SyncTransforms();
