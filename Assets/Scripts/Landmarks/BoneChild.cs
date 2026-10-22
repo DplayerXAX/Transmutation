@@ -33,9 +33,9 @@ public sealed class BoneChild : MonoBehaviour
     [Tooltip("Height it hovers at when warm and not steered (above the ground).")]
     [Min(0.5f)] public float hoverHeight = 2.5f;
     [Tooltip("Heat spent each second while airborne.")]
-    [Min(0f)] public float flightHeatPerSecond = 1.125f;
+    [Min(0f)] public float flightHeatPerSecond = 1.35f;
     [Tooltip("Extra heat spent per metre of actual upward travel.")]
-    [Min(0f)] public float climbHeatPerMetre = 0.45f;
+    [Min(0f)] public float climbHeatPerMetre = 0.54f;
     [Range(1, 3)] public int bubbleCapacity = 3;
 
     public float Warmth { get; private set; }
@@ -377,6 +377,12 @@ public sealed class BoneChild : MonoBehaviour
             desired = BoneRide.Steer(dt);
             speed = flySpeed;
         }
+        else if (LookForFire())
+        {
+            // Unsteered but lured: it flies after a free fire bubble (one shot from a carried fire source leads it).
+            desired = (chasing.transform.position - head).normalized;
+            speed = flySpeed * 0.8f;
+        }
         else
         {
             // Unsteered: slow loops over the spot where it lay, at hover height.
@@ -580,6 +586,8 @@ public sealed class BoneChild : MonoBehaviour
     private bool CanCatch(Creature creature) =>
         creature != null && storedFuel.Count < Mathf.Clamp(bubbleCapacity, 1, 3) && isActiveAndEnabled && creature.isActiveAndEnabled && !creature.IsDead &&
         !creature.IsCarried && !creature.IsBubbleCaptured && !(creature is TentacleCreature) &&
+        // Only small loose bodies: never a fire source or fire flower (fixtures), a web, or anything unportable.
+        !(creature is FireSource) && !(creature is FireFlower) && creature.CanBeCarried && creature.GetComponent<Rigidbody>() != null &&
         (creature is FireBubble || creature.Heat > 0.5f) && !IsCradled(creature);
 
     /// <summary>Catch a throw as it crosses the head/chest's reach, including the visible ribs between colliders.</summary>
@@ -808,11 +816,18 @@ public static class BoneRide
         return Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
     }
 
-    /// <summary>Mount input is resolved before the carrier can interpret RMB as dropping its creature.</summary>
+    /// <summary>
+    /// Mount input is resolved before the carrier can interpret RMB as dropping its creature.
+    /// Left click near a mount gets on. Right click gets off; so does left click when the hand holds nothing
+    /// with its own left-click use (a tentacle aims, a fire source shoots).
+    /// </summary>
     public static bool HandleInput(PlayerCreatureCarrier carrier)
     {
         Mouse mouse = Mouse.current;
         bool rightPress = mouse != null && mouse.rightButton.wasPressedThisFrame;
+        bool leftPress = mouse != null && mouse.leftButton.wasPressedThisFrame;
+        Creature held = carrier != null ? carrier.CarriedCreature : null;
+        bool leftIsBusy = held != null && (held is TentacleCreature || held.CanUseWhileCarried);
         if (approachCarrier != null)
         {
             if (rightPress || (Keyboard.current != null && (Keyboard.current.cKey.wasPressedThisFrame || Keyboard.current.rKey.wasPressedThisFrame)))
@@ -824,12 +839,12 @@ public static class BoneRide
             if (Mount is Component mounted && (mounted == null || !mounted.gameObject.activeInHierarchy))
             { GetOff(); return true; }
             bool canDismount = !waitForMountRelease;
-            if (mouse == null || !mouse.rightButton.isPressed) waitForMountRelease = false;
-            if (CanToggle && canDismount && (rightPress || ScriptedToggle)) { ScriptedToggle = false; GetOff(true); }
+            if (mouse == null || (!mouse.rightButton.isPressed && !mouse.leftButton.isPressed)) waitForMountRelease = false;
+            if (CanToggle && canDismount && (rightPress || (leftPress && !leftIsBusy) || ScriptedToggle)) { ScriptedToggle = false; GetOff(true); }
             return true;
         }
         if (toggledFrame == Time.frameCount) return true;
-        if (!CanToggle || (!rightPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
+        if (!CanToggle || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
         if (!TryNearby(out Component mount, out Transform seat)) return false;
         ScriptedToggle = false;
         return BeginApproach(mount, seat, carrier);

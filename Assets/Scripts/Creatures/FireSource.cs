@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// A Creature that stores Heat and continuously radiates it to nearby creatures.
@@ -29,6 +30,19 @@ public sealed class FireSource : Creature
 
     [Tooltip("Rigidbody used to keep a normal source stationary or allow a transformed source to fall.")]
     [SerializeField] private Rigidbody sourceBody;
+
+    [Header("Carried")]
+    [Tooltip("Fire bubble shot with left click while carried. Empty = the kind the fire flowers in the scene bloom.")]
+    [SerializeField] private FireBubble shotBubblePrefab;
+    [Tooltip("Heat each shot takes out of the source and puts into the bubble.")]
+    [Min(0f)] [SerializeField] private float shotHeat = 20f;
+    [Min(0.1f)] [SerializeField] private float shotCooldown = 0.8f;
+    [Tooltip("Horizontal speed of a shot bubble; it keeps this heading while it floats.")]
+    [Min(0.1f)] [SerializeField] private float shotSpeed = 4f;
+    private float nextShot;
+
+    public override bool CanUseWhileCarried => !IsDead;
+    public override string CarriedPrompt => IsDead ? null : "[LMB] Shoot fire bubble";
 
     // Creatures currently overlapping the radiation trigger.
     private readonly HashSet<Creature> creaturesInRange = new HashSet<Creature>();
@@ -97,6 +111,30 @@ public sealed class FireSource : Creature
 
         // Radiation is spent even when no creature receives it.
         SpendHeat(actualRadiationRate * deltaTime);
+    }
+
+    /// <summary>Carried: shoots a fire bubble ahead along the view, paid for with the source's own Heat.</summary>
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!IsCarried || IsDead || !SimulationEnabled || Time.time < nextShot || Heat < shotHeat) return;
+        FireBubble prefab = shotBubblePrefab;
+        if (prefab == null)
+        {
+            FireFlower flower = FindFirstObjectByType<FireFlower>();
+            if (flower != null) prefab = flower.BubblePrefab;
+        }
+        if (prefab == null) return;
+        Vector3 direction = interaction.Direction.sqrMagnitude > 1e-4f ? interaction.Direction.normalized : transform.forward;
+        float reach = bodyCollider != null ? bodyCollider.radius * Mathf.Abs(transform.lossyScale.x) : 0.5f;
+        FireBubble bubble = Instantiate(prefab, transform.position + direction * (reach + 0.8f), Quaternion.identity);
+        SceneManager.MoveGameObjectToScene(bubble.gameObject, gameObject.scene);
+        // It leaves through the source's own body.
+        foreach (Collider own in GetComponentsInChildren<Collider>())
+            foreach (Collider other in bubble.GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(own, other, true);
+        bubble.Launch(direction, shotSpeed);
+        bubble.AddHeat(SpendHeat(shotHeat));
+        nextShot = Time.time + shotCooldown;
     }
 
     /// <summary>Registers a Creature entering the Heat trigger.</summary>

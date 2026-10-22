@@ -430,9 +430,19 @@ public sealed class TentacleTether : MonoBehaviour
         aiming = aimValid = false;
     }
 
+    /// <summary>A thrown creature has landed with its arms still stuck: with two or more it hangs between the last two.</summary>
+    public void SettleThrown(TentacleCreature creature)
+    {
+        if (creature == null || creature.IsDead || creature.IsCarried) return;
+        List<Vector3> pins = creature.PinnedPoints();
+        // Where it cannot hang (rock between it and a pin), the arms just stay stuck.
+        if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], creature, keepPinsIfInvalid: true);
+    }
+
     /// <summary>Pickup cancels the old spring without triggering a release/launch.</summary>
     public void DetachForPickup(TentacleCreature creature)
     {
+        creature.ForgetThrownArms();
         for (int i = cords.Count - 1; i >= 0; i--)
             if (cords[i].creature == creature) RemoveCord(i);
         if (creature.Suspended) creature.Suspend(false);
@@ -465,6 +475,14 @@ public sealed class TentacleTether : MonoBehaviour
     public void PlaceDroppedCreature(TentacleCreature creature)
     {
         if (creature == null || creature.IsCarried) return;
+        // Thrown: its stuck arms stay as they are while it flies (see SettleThrown for the landing).
+        if (creature.ArmsKeptFromThrow)
+        {
+            if (lastCarried == creature) lastCarried = null;
+            ResetPull();
+            ShowAim(false);
+            return;
+        }
         if (!creature.IsDead)
         {
             ParkBalloons(creature);
@@ -483,9 +501,9 @@ public sealed class TentacleTether : MonoBehaviour
 
     // ---------------- Cords ----------------
 
-    private void MakeCord(Vector3 a, Vector3 b, TentacleCreature creature, bool teaching = false)
+    private void MakeCord(Vector3 a, Vector3 b, TentacleCreature creature, bool teaching = false, bool keepPinsIfInvalid = false)
     {
-        if ((b - a).magnitude < 0.8f) { creature.UnpinAll(); return; }
+        if ((b - a).magnitude < 0.8f) { if (!keepPinsIfInvalid) creature.UnpinAll(); return; }
         // A player's drop is already its rest pose. Recentering long wall anchors caused a fast, unsolicited flight.
         Vector3 rest = teaching ? (a + b) * 0.5f + Vector3.down * 0.4f : creature.transform.position;
         var cord = new Cord { a = a, b = b, pocket = creature.transform.position, creature = creature, teaching = teaching };
@@ -499,7 +517,8 @@ public sealed class TentacleTether : MonoBehaviour
         // releases its suckers instead of teleporting the creature through the obstruction.
         if (!PocketClear(cord, cord.pocket))
         {
-            creature.UnpinAll(); return;
+            if (!keepPinsIfInvalid) creature.UnpinAll();
+            return;
         }
         cord.rest = SafePocket(cord, cord.pocket, rest);
         if (!teaching)

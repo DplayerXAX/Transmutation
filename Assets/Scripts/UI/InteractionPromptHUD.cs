@@ -94,7 +94,8 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (BoneRide.Mount != null)
         {
             title = BoneRide.Mount is BoneKiln ? "BONE MOTHER" : "BONE CHILD";
-            hint = "[RMB] Dismount";
+            Creature inHand = carrier != null ? carrier.CarriedCreature : null;
+            hint = inHand != null && (inHand is TentacleCreature || inHand.CanUseWhileCarried) ? "[RMB] Dismount" : "[LMB / RMB] Dismount";
             if (carrier != null && carrier.CarriesTentacle)
             {
                 hint += "    [W/S] Up / Down    [A/D] Left / Right    [Space / Ctrl] Forward / Back";
@@ -103,7 +104,8 @@ public sealed class InteractionPromptHUD : MonoBehaviour
                 PlayerGooCoating goo = carrier.GetComponentInParent<PlayerGooCoating>();
                 if (goo == null || !goo.CanClimb) hint += "\nApply goo before transferring to a climbing wall";
             }
-            else hint += "    Carry a tentacle to steer";
+            else if (inHand is FireSource) hint += "\n[LMB] Shoot fire bubbles ahead to lure it";
+            else hint += "    Carry a tentacle to steer, or a fire source to lure it";
             if (BoneRide.Mount is BoneChild mountedChild) hint += $"\nFire reserve: {mountedChild.StoredBubbleCount}/{mountedChild.bubbleCapacity}";
             if (BoneRide.Mount is BoneKiln mountedMother && !mountedMother.Awake)
                 hint += $"\nFire bubbles: {mountedMother.AttachedFireCount}/{mountedMother.RequiredFireBubbles}";
@@ -125,7 +127,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (BoneRide.TryNearby(out Component nearbyBone, out _))
         {
             rideMother = nearbyBone as BoneKiln;
-            rideHint = nearbyBone is BoneKiln ? "[RMB] Ride bone mother" : "[RMB] Ride bone child";
+            rideHint = nearbyBone is BoneKiln ? "[LMB] Ride bone mother" : "[LMB] Ride bone child";
         }
         if (rideHint != null)
         {

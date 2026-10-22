@@ -57,7 +57,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Seconds from the click until the reaching hand closes on the creature and it is picked up.")]
     [Min(0f)] [SerializeField] private float grabReachTime = 0.22f;
     [Tooltip("How fast a picked-up creature is brought from where it was taken to where it is held (m/s).")]
-    [Min(0.1f)] [SerializeField] private float bringInSpeed = 4f;
+    [Min(0.1f)] [SerializeField] private float bringInSpeed = 12f;
     private Creature pendingCreature;
     private float pendingAt;
     private Vector3 carryTargetLocal;

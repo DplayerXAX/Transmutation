@@ -168,6 +168,9 @@ public sealed class TentacleCreature : Creature
     // Skin and bones are laid out in world space, so the carried size is applied to them by hand (1 = normal).
     private float limbSize = 1f;
     private bool throwPoseAttached;
+    /// <summary>Thrown with arms still stuck: they stay stuck until the creature is picked up again.</summary>
+    public bool ArmsKeptFromThrow { get; private set; }
+    public void ForgetThrownArms() => ArmsKeptFromThrow = false;
 
     public override bool TryHandleCarriedRightMouse(PlayerCreatureCarrier carrier, bool pressed, bool held, bool released)
         => carrier.TentacleLockedForRide;
@@ -176,7 +179,8 @@ public sealed class TentacleCreature : Creature
     {
         if (IsDead) return;
         if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
-        UnpinAll();
+        // Stuck arms stay stuck through the throw; only picking it up again lets them go.
+        ArmsKeptFromThrow = PinnedPoints().Count > 0;
         Suspend(false);
         EndPet();
         LetGo(false);
@@ -216,6 +220,8 @@ public sealed class TentacleCreature : Creature
         tentacleRoot.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         tentacleRoot.localScale = Vector3.one;
         LayoutThrowPose();
+        // Landed with two arms still stuck: it hangs between them, as if set down.
+        if (ArmsKeptFromThrow && SimulationEnabled && TentacleTether.Instance != null) TentacleTether.Instance.SettleThrown(this);
     }
 
     public override string CarriedPrompt

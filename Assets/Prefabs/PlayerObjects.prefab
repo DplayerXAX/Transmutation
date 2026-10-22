@@ -648,7 +648,7 @@ MonoBehaviour:
   clearBelowCrosshair: 8
   clearRightOfCrosshair: 6
   grabReachTime: 0.22
-  bringInSpeed: 4
+  bringInSpeed: 12
 --- !u!114 &5322836975175712463
 MonoBehaviour:
   m_ObjectHideFlags: 0

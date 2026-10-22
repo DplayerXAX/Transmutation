@@ -23,7 +23,7 @@ public sealed class SettleWhenGroundReady : MonoBehaviour
     private void Update()
     {
         // Kept still every frame (its own start-up code may switch physics back on).
-        if (body != null) { body.isKinematic = true; body.linearVelocity = Vector3.zero; }
+        if (body != null) { if (!body.isKinematic) body.linearVelocity = Vector3.zero; body.isKinematic = true; }
         if (Time.time < nextCheck) return;
         nextCheck = Time.time + 0.25f;
         Vector3 from = transform.position + Vector3.up * 20f;

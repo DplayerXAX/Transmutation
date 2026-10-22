@@ -66,6 +66,8 @@ public sealed class FireFlower : Creature
     [Header("Bubble Output")]
     [Tooltip("Bubble prefab released from each density shape when blooming finishes.")]
     [SerializeField] private FireBubble bubblePrefab;
+    /// <summary>The fire bubble this flower blooms (a carried fire source shoots the same kind).</summary>
+    public FireBubble BubblePrefab => bubblePrefab;
 
     [Header("Visuals")]
     [Tooltip("Renderer using the Fire Flower shader. Automatically found on this flower or its children when left empty.")]
