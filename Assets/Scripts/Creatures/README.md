@@ -301,3 +301,29 @@ priority over foraging and food fights; creature carrying/capture still pauses a
 real inventory, full orbit, jumping retrieval, following, return, silent warning, broken eye contact,
 escalation and physics-based escape placement in isolated scenes.
 **Configure Squirrel Reaction Prefab** can reapply the prefab components and visual markers in edit mode.
+
+### Museum display prefab
+
+Drag **Assets/Prefabs/Systems/SquirrelMuseumDisplay.prefab** into a museum/display level with an
+existing player. This is a **variant of SquirrelSystemManager.prefab**, retaining the same creature,
+food, nest and player-reaction behavior. The original system prefab is unchanged.
+
+The exhibit includes a **32 x 22 m Ground-layer platform** and **two simple tree anchors**. Keep the
+root upright at scale one; place its origin at the desired floor height. It starts with **two equal-size
+squirrels and two owned nests**, each with an **8 m territory**. Only its explicitly assigned child
+trees are used; scene-wide discovery is disabled, so other trees and squirrels are not added to the exhibit.
+Population is fixed at two initial squirrels; food replenishment never creates more squirrels.
+
+There are **six initial food items**, then **one new item every 12 seconds**, capped at **eight unstored
+items**. Normal gathering, nest storage/expansion, missing-home rebuilding, migration and witnessed
+player reactions remain available. Forage and building begin around the included trees, but witnessed
+player pursuit can leave the platform; this is an interactive habitat, not a sealed enclosure.
+
+Adjust **Population**, **Size Range**, **Territory Radius** and food settings on the variant's manager
+if a different exhibit size is needed. Keep **Auto Discover Scene** off and the **Trees** list bound to
+this exhibit's child anchors. Add suitable ground around it if players should be able to lead squirrels
+farther away. A player/camera is supplied by the museum level, not by this prefab.
+
+**Tools > Creatures > Validate Squirrel Museum Display (Play Mode)** verifies variant inheritance,
+relocated placement, the two-squirrel population, local anchor isolation and capped periodic food.
+**Create Squirrel Museum Display Prefab** rebuilds a missing asset without overwriting an existing one.
