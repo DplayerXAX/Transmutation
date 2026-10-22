@@ -19,8 +19,8 @@ public sealed class TrappingBubble : LeashBubble
     [Tooltip("Largest measured model dimension that can be captured, in metres.")]
     [Min(0.1f)] [SerializeField] private float maxCaptureSize = 4f;
     [Min(0f)] [SerializeField] private float fittingPadding = 0.1f;
-    [Min(0f)] [SerializeField] private float releaseImmunity = 0.75f;
-    [Min(0f)] [SerializeField] private float shooterProtection = 0.75f;
+    [Min(0f)] [SerializeField] private float releaseImmunity = 0.25f;
+    [Min(0f)] [SerializeField] private float shooterProtection = 0.25f;
     [Min(0f)] [SerializeField] private float escapeHeight = 4f;
 
     [Header("Breaking")]
@@ -187,6 +187,15 @@ public sealed class TrappingBubble : LeashBubble
         HandleContact(other, false);
     }
     private void OnCollisionEnter(Collision collision) => HandleContact(collision.collider, true);
+
+    // A player who touched the bubble while still immune (just fired it, or just escaped another bubble)
+    // gets no second Enter event; keep trying while they stay in contact.
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.isTrigger || popped || IsOccupied || !SimulationEnabled) return;
+        var player = other.GetComponentInParent<SmoothFirstPersonController>();
+        if (player != null && !IgnoreTarget(player.gameObject)) TryCapture(player.gameObject);
+    }
 
     private void HandleContact(Collider other, bool solidContact)
     {

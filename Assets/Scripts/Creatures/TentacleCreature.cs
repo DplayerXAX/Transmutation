@@ -173,7 +173,7 @@ public sealed class TentacleCreature : Creature
         get
         {
             if (Carrier != null && Carrier.TentacleLockedForRide)
-                return "[LMB] Turn left    [RMB] Turn right    [W/S] Up/Down    [C] Dismount";
+                return "[W/S] Up/Down    [A/D] Left/Right    [Space / Ctrl] Forward/Back    [RMB] Dismount\n[LMB] Aim / release to transfer    [W] Catch wall";
             TentacleTether control = TentacleTether.Instance;
             string tether = control != null && control.NewestIsBalloon
                 ? "[Hold LMB] Aim / release to shoot    [Hold R] Pull balloon closer    [Tap R] Let go"
@@ -321,6 +321,10 @@ public sealed class TentacleCreature : Creature
         point = tentacles[index].Pin;
         return true;
     }
+
+    public bool ArmPinnedInto(int index, Transform root) => root != null && tentacles != null
+        && index >= 0 && index < tentacles.Length && tentacles[index].pinned
+        && tentacles[index].pinAnchor != null && tentacles[index].pinAnchor.IsChildOf(root);
 
     public void UnpinArm(int index)
     {

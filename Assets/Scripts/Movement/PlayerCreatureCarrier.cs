@@ -119,6 +119,16 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             return;
         }
 
+        if (BoneRide.HandleInput(this)) { rideInputGuard = true; return; }
+        // Releasing the mounting click must not become a delayed drop in hold-to-carry mode.
+        if (rideInputGuard)
+        {
+            bool freshPress = (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+                || (carryInput == CarryInput.ToggleKey && Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame);
+            if (!freshPress) return;
+            rideInputGuard = false;
+        }
+
         if (interactionPickup && CarriedCreature != null)
         {
             if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
@@ -314,6 +324,7 @@ private void FitCarryPoint(Creature creature)
 
     private void FixedUpdate()
     {
+        BoneRide.StepApproach(Time.fixedDeltaTime);
         RestoreDroppedCollisions();
         if (CarriedCreature == null || firmGrip) return;
         if (!CarriesTentacle) BringIn(Time.fixedDeltaTime);
@@ -352,7 +363,8 @@ private void FitCarryPoint(Creature creature)
     public bool CarriesTentacle => CarriedCreature is TentacleCreature && !CarriedCreature.IsDead;
 
     /// <summary>The attached creature stays on the rider while the mouse buttons pull the reins.</summary>
-    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Mount != null;
+    private bool rideInputGuard;
+    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Busy;
 
     private void SnapHeld()
     {
@@ -472,6 +484,11 @@ private void FitCarryPoint(Creature creature)
         rotation = delta * rotation;
     }
 
-    private void OnDisable() => ReleaseCarriedCreature();
-    private void OnApplicationFocus(bool focused) { if (!focused) Release(); }
+    private void OnDisable() { BoneRide.CancelApproach(); ReleaseCarriedCreature(); }
+    private void OnApplicationFocus(bool focused)
+    {
+        if (focused) return;
+        if (BoneRide.Approaching) { BoneRide.CancelApproach(); rideInputGuard = true; }
+        else Release();
+    }
 }

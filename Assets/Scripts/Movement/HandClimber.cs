@@ -170,6 +170,8 @@ public sealed class HandClimber : MonoBehaviour
     public bool IsClimbing => climbing;
     public bool Controls(SmoothFirstPersonController player) => controller == player;
     public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
+    /// <summary>A new mount-to-wall transfer can catch immediately without an old regrab cooldown.</summary>
+    public void PrepareForTraversalTransfer() { regrabTimer = 0f; lungeTimer = Mathf.Max(lungeTimer, 0.35f); }
     public bool IsMantling => mantling;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;

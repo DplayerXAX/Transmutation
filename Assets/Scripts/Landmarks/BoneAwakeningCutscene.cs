@@ -30,6 +30,7 @@ public sealed class BoneAwakeningCutscene : MonoBehaviour
     {
         mother = owner; gameplayCamera = camera;
         current = this; running = true;
+        BoneRide.CancelApproach();
         TentacleTether.Instance?.PauseInput();
         var controller = FindFirstObjectByType<SmoothFirstPersonController>();
         if (controller != null)

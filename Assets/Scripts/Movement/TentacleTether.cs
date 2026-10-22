@@ -93,6 +93,7 @@ public sealed class TentacleTether : MonoBehaviour
     public int BalloonCount => balloons.Count;
     public bool NewestIsBalloon => pinnedArms.Count > 0 && balloons.ContainsKey(pinnedArms[pinnedArms.Count - 1]);
     public bool AimingAtBalloon => aiming && aimValid && aimBubble != null;
+    public bool AimingAtBone => aiming && aimValid && BoneRide.TryGrappleTarget(aimAnchor, aimPoint, out _, out _);
     public PlayerCreatureCarrier BalloonCarrier => carrier;
     public GameObject BalloonPlayer => carrier != null && carrier.PlayerController != null ? carrier.PlayerController.gameObject
         : carrier != null ? carrier.gameObject : null;
@@ -212,8 +213,8 @@ public sealed class TentacleTether : MonoBehaviour
             return;
         }
         if (lastCarried != carried) AdoptBalloons(carried);
-        // While riding, both mouse buttons belong to the reins. Do not fire on release or reel them in.
-        if (BoneRide.Mount != null)
+        // Boarding owns movement; once seated, LMB can target the next wall or creature.
+        if (BoneRide.Approaching)
         {
             aiming = false;
             aimValid = false;
@@ -225,7 +226,7 @@ public sealed class TentacleTether : MonoBehaviour
         if (view == null) view = Camera.main;
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
-        // Off the mount, a carried tentacle owns left mouse; on the mount the reins own it.
+        // A carried tentacle keeps the same aiming gesture on foot and on a mount.
         bool pressed = Application.isFocused && mouse != null && mouse.leftButton.isPressed;
         bool aimNow = pressed && Aim(out aimPoint, out aimValid);
         ShowAim(aimNow);
@@ -240,14 +241,14 @@ public sealed class TentacleTether : MonoBehaviour
             if (reelHeldTime <= TapTime) ReelAll();
             reelHeldTime = 0f;
         }
-        reeling = reelHeld && reelHeldTime > TapTime && pinnedArms.Count > 0;
+        if (automaticReel && (Time.time > automaticReelUntil || pinnedArms.Count == 0)) automaticReel = false;
+        reeling = (automaticReel || (reelHeld && reelHeldTime > TapTime)) && pinnedArms.Count > 0;
         // Once the hands hold a wall, a reeled arm lets go (so it does not pull the climber back down).
         if (climber == null) climber = FindFirstObjectByType<HandClimber>();
-        if (climber != null && climber.IsClimbing && reeledArm >= 0 && !reeling)
+        if (climber != null && climber.IsClimbing && reeledArm >= 0)
         {
-            carried.UnpinArm(reeledArm);
-            pinnedArms.Remove(reeledArm);
-            restLengths.Remove(reeledArm);
+            ReleaseArm(carried, reeledArm);
+            automaticReel = reeling = false;
             reeledArm = -1;
         }
 
@@ -268,9 +269,16 @@ public sealed class TentacleTether : MonoBehaviour
         if (lastCarried != creature) AdoptBalloons(creature);
         LeashBubble bubble = anchor != null ? anchor.GetComponentInParent<LeashBubble>() : null;
         if (bubble != null && (!bubble.CanLeash(this) || balloons.ContainsValue(bubble))) return;
-        if (pinnedArms.Count >= 2)
+        bool transferring = BoneRide.Mount != null && bubble == null
+            && (anchor == null || BoneRide.MountRoot == null || !anchor.IsChildOf(BoneRide.MountRoot));
+        if (transferring) BoneRide.GetOff(true);
+        bool rein = BoneRide.MountRoot != null && anchor != null && anchor.IsChildOf(BoneRide.MountRoot);
+        int freePins = 0, oldestFree = -1;
+        foreach (int pin in pinnedArms)
+            if (!creature.ArmPinnedInto(pin, BoneRide.MountRoot)) { freePins++; if (oldestFree < 0) oldestFree = pin; }
+        if (!rein && freePins >= 2)
         {
-            ReleaseArm(creature, pinnedArms[0]);
+            ReleaseArm(creature, oldestFree);
         }
         int arm = creature.PinArm(point, anchor);
         if (arm >= 0)
@@ -284,6 +292,18 @@ public sealed class TentacleTether : MonoBehaviour
                 if (bubble.AttachLeash(this, creature, arm, length)) balloons[arm] = bubble;
                 else ReleaseArm(creature, arm);
             }
+            else if (BoneRide.TryGrappleTarget(anchor, point, out Component mount, out Transform seat))
+            {
+                if (!BoneRide.BeginApproach(mount, seat, carrier, true, transferring)) ReleaseArm(creature, arm);
+                else PauseInput();
+            }
+            else if (transferring)
+            {
+                automaticReel = reeling = true;
+                automaticReelUntil = Time.time + 5f;
+                if (climber == null) climber = FindFirstObjectByType<HandClimber>();
+                climber?.PrepareForTraversalTransfer();
+            }
         }
         shotTimer = 0f;
     }
@@ -292,6 +312,9 @@ public sealed class TentacleTether : MonoBehaviour
     private const float TapTime = 0.2f;
     private float reelHeldTime;
     private bool reeling;
+    private bool automaticReel;
+    private float automaticReelUntil;
+    public bool AutomaticReel => automaticReel;
     private int reeledArm = -1;
     private Vector3 reelApproach;
     private HandClimber climber;
@@ -327,12 +350,15 @@ public sealed class TentacleTether : MonoBehaviour
         {
             RaycastHit hit = aimHits[i];
             if (hit.distance >= closest || (playerBody != null && hit.rigidbody == playerBody)
+                || (BoneRide.MountRoot != null && hit.collider.transform.IsChildOf(BoneRide.MountRoot))
                 || (carrier != null && carrier.CarriedCreature != null && hit.collider.GetComponentInParent<Creature>() == carrier.CarriedCreature)) continue;
             closest = hit.distance;
             point = hit.point + hit.normal * 0.05f;
             aimAnchor = hit.collider.transform;
             aimBubble = hit.collider.GetComponentInParent<LeashBubble>();
             valid = aimBubble == null || aimBubble.CanLeash(this);
+            if (aimBubble == null && (aimAnchor.GetComponentInParent<BoneChild>() != null || aimAnchor.GetComponentInParent<BoneKiln>() != null))
+                valid = BoneRide.TryGrappleTarget(aimAnchor, point, out _, out _);
         }
         if (aimAnchor == null) point = ray.origin + ray.direction * range;
         return true;
@@ -360,7 +386,8 @@ public sealed class TentacleTether : MonoBehaviour
         aimLine.gameObject.SetActive(on);
         aimMarker.gameObject.SetActive(on && aimValid);
         if (!on) return;
-        Color colour = aimValid ? (aimBubble != null ? new Color(0.45f, 0.85f, 1f) : new Color(0.85f, 1f, 0.95f)) : new Color(0.6f, 0.15f, 0.2f);
+        Color colour = aimValid ? (AimingAtBone ? new Color(1f, 0.75f, 0.3f)
+            : aimBubble != null ? new Color(0.45f, 0.85f, 1f) : new Color(0.85f, 1f, 0.95f)) : new Color(0.6f, 0.15f, 0.2f);
         aimLine.sharedMaterial.SetColor("_BaseColor", colour);
         Vector3 from = carrier.HandAnchor != null ? carrier.HandAnchor.position : view.transform.position + view.transform.forward * 0.5f;
         for (int i = 0; i < 16; i++)
@@ -383,6 +410,7 @@ public sealed class TentacleTether : MonoBehaviour
 
     private void ReelAll()
     {
+        BoneRide.CancelApproach();
         ResetPull();
         if (carrier != null && carrier.CarriedCreature is TentacleCreature creature) creature.UnpinAll();
     }
@@ -393,6 +421,7 @@ public sealed class TentacleTether : MonoBehaviour
         pinnedArms.Clear();
         restLengths.Clear();
         reeling = false;
+        automaticReel = false;
         reelHeldTime = 0f;
         reeledArm = -1;
         aiming = aimValid = false;
@@ -611,7 +640,8 @@ public sealed class TentacleTether : MonoBehaviour
             if (cords[i].creature.SimulationEnabled) Spring(cords[i], Time.fixedDeltaTime);
             if (!PocketClear(cords[i], cords[i].pocket)) RemoveCord(i);
         }
-        if (BoneRide.Mount != null) return;
+        if (BoneRide.Busy) return;
+        if (automaticReel && Time.time > automaticReelUntil) automaticReel = reeling = false;
         if (reeling && pinnedArms.Count > 0) ReelIn(Time.fixedDeltaTime);
         else PullBack();
     }
