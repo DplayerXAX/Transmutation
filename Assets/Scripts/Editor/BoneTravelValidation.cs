@@ -143,7 +143,7 @@ public static class BoneTravelValidation
             Set(hud, "carrier", carrier); Set(hud, "rideMother", rideMother);
             object[] prompt = { null, null };
             typeof(InteractionPromptHUD).GetMethod("ChoosePrompt", Private).Invoke(hud, prompt);
-            Check(((string)prompt[1]).Contains("[C] Ride bone mother"), "approaching the ride seat displays C before held-object hints");
+            Check(((string)prompt[1]).Contains("[RMB] Ride bone mother"), "approaching the ride seat displays RMB before held-object hints");
             var occluder = Make("Occluding terrain/model", playerAt + Vector3.forward * 1.5f).AddComponent<BoxCollider>();
             occluder.size = new Vector3(4f, 4f, 0.2f);
             Physics.SyncTransforms();
@@ -153,7 +153,7 @@ public static class BoneTravelValidation
             Check(BoneRide.Mount == (object)rideMother && riderBody.isKinematic, "mounting transfers the player to the mother");
             prompt = new object[] { null, null };
             typeof(InteractionPromptHUD).GetMethod("ChoosePrompt", Private).Invoke(hud, prompt);
-            Check(((string)prompt[1]).Contains("[C] Dismount"), "riding displays C to dismount");
+            Check(((string)prompt[1]).Contains("[RMB] Dismount"), "riding displays RMB to dismount");
             BoneRide.GetOff();
             Check(BoneRide.Mount == null && !riderBody.isKinematic, "dismount restores player movement");
             Debug.Log($"Bone travel validation passed: {checks} assertions.");

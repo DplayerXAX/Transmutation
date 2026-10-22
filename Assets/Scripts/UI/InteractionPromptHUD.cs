@@ -94,21 +94,41 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (BoneRide.Mount != null)
         {
             title = BoneRide.Mount is BoneKiln ? "BONE MOTHER" : "BONE CHILD";
-            hint = "[C] Dismount";
-            if (carrier != null && carrier.CarriesTentacle) hint += "    [LMB / RMB] Turn    [W/S] Up / Down";
-            else hint += "    Carry a tentacle to steer";
+            Creature inHand = carrier != null ? carrier.CarriedCreature : null;
+            hint = inHand != null && (inHand is TentacleCreature || inHand.CanUseWhileCarried) ? "[RMB] Dismount" : "[LMB / RMB] Dismount";
+            if (carrier != null && carrier.CarriesTentacle)
+            {
+                hint += "    [W/S] Up / Down    [A/D] Left / Right    [Space / Ctrl] Forward / Back";
+                hint += TentacleTether.Instance != null && TentacleTether.Instance.AimingAtBone
+                    ? "\n[Release LMB] Transfer to bone" : "\n[LMB] Aim / release to pull to wall    [W] Catch and climb";
+                PlayerGooCoating goo = carrier.GetComponentInParent<PlayerGooCoating>();
+                if (goo == null || !goo.CanClimb) hint += "\nApply goo before transferring to a climbing wall";
+            }
+            else if (inHand is FireSource) hint += "\n[LMB] Shoot fire bubbles ahead to lure it";
+            else hint += "    Carry a tentacle to steer, or a fire source to lure it";
             if (BoneRide.Mount is BoneChild mountedChild) hint += $"\nFire reserve: {mountedChild.StoredBubbleCount}/{mountedChild.bubbleCapacity}";
             if (BoneRide.Mount is BoneKiln mountedMother && !mountedMother.Awake)
                 hint += $"\nFire bubbles: {mountedMother.AttachedFireCount}/{mountedMother.RequiredFireBubbles}";
             return;
         }
+        if (BoneRide.Approaching)
+        {
+            title = "BOARDING";
+            hint = "Pulling onto back    [RMB / C / R] Cancel";
+            return;
+        }
+        if (TentacleTether.Instance != null && TentacleTether.Instance.AimingAtBone)
+        {
+            title = "BONE GRAPPLE";
+            hint = "[Release LMB] Pull to bone and ride";
+            return;
+        }
         string rideHint = null;
-        if (rideMother == null) rideMother = FindFirstObjectByType<BoneKiln>();
-        if (rideMother != null && rideMother.TryGetRideSeat(out _)) rideHint = "[C] Ride bone mother";
-        if (rideHint == null)
-            foreach (BoneChild child in BoneChild.All)
-                if (child != null && child.isActiveAndEnabled && BoneRide.Near(child.RidePoint, 2f + child.size, child.transform))
-                { rideHint = "[C] Ride bone child"; break; }
+        if (BoneRide.TryNearby(out Component nearbyBone, out _))
+        {
+            rideMother = nearbyBone as BoneKiln;
+            rideHint = nearbyBone is BoneKiln ? "[LMB] Ride bone mother" : "[LMB] Ride bone child";
+        }
         if (rideHint != null)
         {
             title = rideHint.Contains("mother") ? "BONE MOTHER" : "BONE CHILD";

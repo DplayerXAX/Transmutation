@@ -214,16 +214,6 @@ public sealed class BoneKiln : MonoBehaviour
         UpdateHeat();
 
         UpdateWake(Time.deltaTime);
-        if (!BoneAwakeningCutscene.Playing && Ridden)
-        {
-            if (BoneRide.CanToggle && BoneRide.PressedC()) BoneRide.GetOff();
-        }
-        else if (!BoneAwakeningCutscene.Playing && BoneRide.Mount == null && BoneRide.CanToggle && TryGetRideSeat(out Transform seat) && BoneRide.PressedC())
-        {
-            rideSeat = seat;
-            BoneRide.GetOn(this, root, seat, ReinPoints());
-        }
-
         // One smooth ripple runs along the ribcage: every rib follows the one before it a little later, like
         // a centipede's legs. Awake, it runs faster and fuller (legs while crawling, fins while flying).
         int count = ribs.Count;
@@ -259,6 +249,7 @@ public sealed class BoneKiln : MonoBehaviour
     public bool Ridden => BoneRide.Mount == (object)this;
     public bool Reined => BoneRide.Reins(root) >= 2;
     public Transform Skull => skull;
+    public Transform RideRoot => root;
     public Vector3 RideForward => awake ? (emerging ? -headDir : headDir) : root != null ? -root.forward : transform.forward;
 
     public bool TryGetRideSeat(out Transform seat)
@@ -275,6 +266,33 @@ public sealed class BoneKiln : MonoBehaviour
             nearest = distance; seat = station.transform;
         }
         return seat != null;
+    }
+
+    public bool TryGrappleSeat(Vector3 hit, out Transform seat)
+    {
+        seat = null;
+        if (root == null || !isActiveAndEnabled || emerging || BoneAwakeningCutscene.Playing) return false;
+        float nearest = skull != null ? (skull.position - hit).sqrMagnitude : float.PositiveInfinity;
+        seat = skull;
+        foreach (Station station in stations)
+            if (station.transform != null && (station.transform.position - hit).sqrMagnitude < nearest)
+            { seat = station.transform; nearest = (seat.position - hit).sqrMagnitude; }
+        return seat != null;
+    }
+
+    public Vector3 RiderPosition(Transform seat)
+    {
+        Renderer skin = seat.GetComponent<Renderer>();
+        float top = skin != null ? skin.bounds.max.y : seat.position.y + 2f;
+        return new Vector3(seat.position.x, top + 1.08f, seat.position.z);
+    }
+
+    public bool MountAt(Transform seat)
+    {
+        if (seat == null || root == null || !seat.IsChildOf(root) || !isActiveAndEnabled || emerging || BoneAwakeningCutscene.Playing) return false;
+        rideSeat = seat;
+        BoneRide.GetOn(this, root, seat, ReinPoints());
+        return Ridden;
     }
 
     /// <summary>Two vertebrae just behind the skull, for the reins.</summary>
@@ -728,13 +746,15 @@ public sealed class BoneKiln : MonoBehaviour
         if (warmth < 0.35f) flying = false;
         desired.y = Mathf.Min(desired.y, 0f) + Mathf.Max(0f, desired.y) * strength;
         desired += Vector3.down * ((1f - strength) * 1.5f);
-        desired.Normalize();
+        if (!(Ridden && Reined)) desired.Normalize();
         speed *= Mathf.Lerp(0.35f, 1f, strength);
-        headDir = Vector3.RotateTowards(headDir, desired, (emerging ? 1.6f : 0.9f) * deltaTime, 0f).normalized;
+        if (desired.sqrMagnitude > 0.0001f)
+            headDir = Vector3.RotateTowards(headDir, desired.normalized, (emerging ? 1.6f : 0.9f) * deltaTime, 0f).normalized;
         // Serpentine: sideways weave on the ground, up-and-down swells in the air.
         Vector3 weaveAxis = flying ? Vector3.Cross(headDir, Vector3.up) : Vector3.up;
         if (weaveAxis.sqrMagnitude < 0.25f) weaveAxis = Vector3.right;
         Vector3 move = Quaternion.AngleAxis((flying ? 14f : 24f) * Mathf.Sin(t * (flying ? 0.9f : 1.6f)), weaveAxis.normalized) * headDir;
+        if (Ridden && Reined) move = Vector3.ClampMagnitude(desired, 1f);
         float previousY = head.y;
         move.y -= (1f - strength) * 0.5f;
         Vector3 intended = move * (speed * deltaTime);

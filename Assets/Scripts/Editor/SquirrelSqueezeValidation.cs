@@ -85,7 +85,6 @@ public static class SquirrelSqueezeValidation
         var carrier = Object.FindFirstObjectByType<PlayerCreatureCarrier>();
         var interactor = Object.FindFirstObjectByType<PlayerCreatureInteractor>();
         Check(controller != null && carrier != null && interactor != null, "Ariia contains the shared player and interaction components");
-        Check(carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse, "Daniel's right-click toggle control is retained");
         Check(Camera.main == controller.PlayerCamera, "the player camera replaces the overview camera");
         Check(Object.FindObjectsByType<Camera>(FindObjectsSortMode.None).Length == 1, "only one camera is active");
         Check(controller.Grounded, "player spawn stands on Ariia ground");

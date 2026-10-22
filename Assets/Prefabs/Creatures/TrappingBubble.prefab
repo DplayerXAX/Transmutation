@@ -202,8 +202,8 @@ MonoBehaviour:
   initialDiameter: 0.8
   maxCaptureSize: 4
   fittingPadding: 0.1
-  releaseImmunity: 0.75
-  shooterProtection: 0.75
+  releaseImmunity: 0.25
+  shooterProtection: 0.25
   escapeHeight: 4
   requireExplicitInteractionToPop: 0
   shell: {fileID: 9149729476682847983}

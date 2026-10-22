@@ -127,6 +127,18 @@ public sealed class FireBubble : LeashBubble
         if (bubbleBody != null) restingPosition = bubbleBody.position;
     }
 
+    /// <summary>Sends a fresh bubble off along a chosen heading (shot from a carried fire source) instead of a random one.</summary>
+    public void Launch(Vector3 direction, float speed)
+    {
+        FindPhysicsReferences();
+        Vector3 flat = Vector3.ProjectOnPlane(direction, Vector3.up);
+        if (flat.sqrMagnitude < 1e-4f) flat = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        flat.Normalize();
+        driftVelocity = flat * speed;
+        swayDirection = new Vector3(-flat.z, 0f, flat.x);
+        bubbleBody.linearVelocity = direction.normalized * speed;
+    }
+
     public bool BindToBone(BoneChild owner) => BindToBone(owner, owner != null ? owner.transform : null);
     public bool BindToBone(BoneKiln owner, Transform bone) => BindToBone((Component)owner, bone);
 

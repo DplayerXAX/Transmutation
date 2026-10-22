@@ -36,7 +36,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     [Tooltip("How quickly hands chase their targets.")]
     [Min(0.1f)] [SerializeField] private float handFollow = 18f;
     [Tooltip("How far the arms swing forward and back when walking and running (1 = the original swing).")]
-    [Range(0.5f, 2f)] [SerializeField] private float armSwingScale = 1.1f;
+    [Range(0.5f, 2f)] [SerializeField] private float armSwingScale = 1.43f;
     [Tooltip("Shoulders, a collar between them and a slim torso down to the hips, so the arms are joined to a " +
              "body when the camera clips into something and the tops of the arms come into view.")]
     [SerializeField] private bool showTorso = true;

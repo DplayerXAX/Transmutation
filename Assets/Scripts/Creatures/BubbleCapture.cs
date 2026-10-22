@@ -134,7 +134,10 @@ public sealed class BubbleCapture : MonoBehaviour
             {
                 player.PrepareBubbleEscape();
                 float velocity = Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * bubble.EscapeHeight);
-                body.linearVelocity = Vector3.up * velocity;
+                // Out and towards where the player looks, so the next bubble can be aimed for.
+                Camera view = player.PlayerCamera != null ? player.PlayerCamera : Camera.main;
+                Vector3 ahead = view != null ? Vector3.ProjectOnPlane(view.transform.forward, Vector3.up).normalized : Vector3.zero;
+                body.linearVelocity = Vector3.up * velocity + ahead * bubble.EscapeForward;
             }
         }
         bodies.Clear(); colliders.Clear();

@@ -494,24 +494,24 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 Log($"    threw a fuzzy creature {Vector3.Distance(from, fuzz.transform.position):0.0} m, hit {thrower.LastHit}, carried {fuzz.IsCarried}, moving on its own again {fuzz.SimulationEnabled}");
             }
         }
-        BoneRide.ScriptedTurn = null;
+        BoneRide.ScriptedMove = null;
         BoneRide.ScriptedRise = 0f;
     }
 
-    /// <summary>Pulls the right rein and climbs while looking elsewhere, then measures the mount's movement.</summary>
+    /// <summary>Strafes right and climbs, then measures the mount's movement.</summary>
     private IEnumerator Steer(Transform headPart, string label, float seconds)
     {
         Vector3 start = headPart.position;
         float yaw = controller.LookYaw + 70f;
         controller.SetLook(yaw, -10f);
-        BoneRide.ScriptedTurn = 1f;
+        BoneRide.ScriptedMove = Vector2.right;
         BoneRide.ScriptedRise = 1f;
         yield return new WaitForSeconds(seconds);
-        BoneRide.ScriptedTurn = null;
+        BoneRide.ScriptedMove = null;
         BoneRide.ScriptedRise = 0f;
         Vector3 moved = headPart.position - start;
         Vector3 rider = body.position - headPart.position;
-        Log($"    steered the {label} with the right rein for {seconds:0} s: moved {moved.magnitude:0.0} m, rose {moved.y:+0.0;-0.0} m; rider {rider.magnitude:0.0} m from its head");
+        Log($"    moved the {label} right and up for {seconds:0} s: moved {moved.magnitude:0.0} m, rose {moved.y:+0.0;-0.0} m; rider {rider.magnitude:0.0} m from its head");
     }
 
     private void ShotOf(Vector3 target, string file)

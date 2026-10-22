@@ -8,17 +8,14 @@ using UnityEngine.Rendering;
 /// ProceduralWorld's spawn (x = east, y = north).
 ///   Tower A: short, climbable with goo on the hands (all hand climbing spends goo). Flat top.
 ///   Tower B: tall and floating (nothing below cutHeight), flat top with the seed.
-///   Sky spider: its web hangs in the air between the towers (its own SkySpider / SkyWeb behaviour).
-///   Updraft: a vent under the web lifts light bubbles (never one holding the player) up to it; there the
-///     bubble bursts and what was inside drops into the silk and sticks: a fixed point in mid air that a
-///     tentacle arm can be shot at, until the spider has eaten it.
+///   Sky spider: lives on the ground between the towers (its own SkySpider / SkyWeb behaviour). Its web is
+///     solid (SkyWeb walkable strands): carried up and set down in the gap, it spins a web to cross on.
 /// The compost creature turns corpses (the spider's leftovers, bird bones) into new goo.
 /// Routes: goo + tentacle (climb A, tether across); fire + bone child + tentacle (fly);
-/// bubble flower + any small creature + updraft + spider web + tentacle (reel up to the catch, then on to B).
+/// goo + spider (climb A with the spider, drop it in the gap, walk or climb its web to B).
 /// Goo, fuzz, tentacle creatures and bubble flowers grow back at home when lost (eaten, used up).
 /// </summary>
 [DisallowMultipleComponent]
-[DefaultExecutionOrder(500)] // after the bubbles have set their own velocity
 public sealed class BasinLevel : MonoBehaviour
 {
     [SerializeField] private ProceduralWorld world;
@@ -44,22 +41,25 @@ public sealed class BasinLevel : MonoBehaviour
     [Header("Layout (metres from spawn: x east, y north)")]
     [SerializeField] private Vector2 towerA = new Vector2(-15f, 30f);
     [SerializeField] private Vector2 towerB = new Vector2(15f, 36f);
-    [SerializeField] private Vector2 bubbleShelf = new Vector2(30f, 26f);
+    [SerializeField] private Vector2 bubbleShelf = new Vector2(-28f, 22f);
+    [SerializeField] private Vector2 spiderHome = new Vector2(8f, 26f);
     [Tooltip("More bubble flowers round the two towers.")]
     [SerializeField] private Vector2[] towerFlowers =
     {
         new Vector2(-9f, 22f), new Vector2(-25f, 31f), new Vector2(26f, 37f), new Vector2(14f, 47f),
     };
-    [SerializeField] private Vector2 fireGarden = new Vector2(22f, 18f);
-    [SerializeField] private Vector2 gooPool = new Vector2(-6f, 18f);
+    [SerializeField] private Vector2 fireGarden = new Vector2(24f, 26f);
+    [SerializeField] private Vector2 gooPool = new Vector2(-4f, 27f);
     [SerializeField] private Vector2 fuzzStart = new Vector2(0f, 16f);
-    [SerializeField] private Vector2 compostHome = new Vector2(-24f, 18f);
+    [SerializeField] private Vector2 compostHome = new Vector2(2f, 37f);
     [Tooltip("Where tentacle creatures live (each grows back there).")]
     [SerializeField] private Vector2[] tentacleSpots =
     {
-        new Vector2(-11f, 22f), new Vector2(6f, 24f), new Vector2(24f, 28f),
+        new Vector2(-11f, 22f), new Vector2(6f, 24f), new Vector2(-24f, 38f), new Vector2(18f, 22f), new Vector2(-2f, 44f),
     };
-    [Range(0, 8)] [SerializeField] private int gooCount = 4;
+    [Range(0, 12)] [SerializeField] private int gooCount = 7;
+    [Tooltip("Radius of the goo pool (the ring on the ground, and how far the blobs spread).")]
+    [Min(1f)] [SerializeField] private float gooPoolRadius = 6.5f;
     [Range(0, 8)] [SerializeField] private int fuzzCount = 4;
     [Range(0, 4)] [SerializeField] private int boneChildren = 2;
 
@@ -74,29 +74,21 @@ public sealed class BasinLevel : MonoBehaviour
     [SerializeField] private bool slipperyTowers;
     [SerializeField] private int seed = 41;
 
-    [Header("Updraft")]
-    [Min(0f)] [SerializeField] private float liftSpeed = 2.4f;
-    [Min(1f)] [SerializeField] private float columnRadius = 3.5f;
-
-    [Header("Spider Web")]
-    [Tooltip("Height of the web's centre above tower A's top (it hangs half way between the towers).")]
-    [SerializeField] private float webAboveA = 3f;
+    [Tooltip("Radius of the loop the bone children crawl round the fire garden.")]
+    [Min(8f)] [SerializeField] private float boneLoop = 8f;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private bool built;
     [SerializeField] private bool lifeSpawned;
-    [SerializeField] private int bubblesInDraft;
 
     private const string SeedId = "basin_seed";
 
     private Transform root;
     private SkySpider spider;
-    private Vector3 origin, topA, topB, vent, webCentre;
+    private Vector3 origin, topA, topB;
     private SpireShape shapeA, shapeB;
     private Transform towerATransform, towerBTransform;
-    private readonly List<Transform> streaks = new List<Transform>();
-    private TrappingBubble[] bubbles = new TrappingBubble[0];
-    private float bubbleScan, regrowScan, lifeWait;
+    private float regrowScan, lifeWait;
 
     private sealed class Slot
     {
@@ -151,55 +143,6 @@ public sealed class BasinLevel : MonoBehaviour
             if (world.GenerationComplete || lifeWait > 20f) SpawnLife();
         }
         else Regrow();
-
-        AnimateDraft();
-    }
-
-    // ---------------- Updraft ----------------
-
-    private void FixedUpdate()
-    {
-        if (root == null) return;
-        bubbleScan -= Time.fixedDeltaTime;
-        if (bubbleScan <= 0f)
-        {
-            bubbleScan = 0.25f;
-            bubbles = FindObjectsByType<TrappingBubble>(FindObjectsSortMode.None);
-        }
-        bubblesInDraft = 0;
-        foreach (TrappingBubble bubble in bubbles)
-        {
-            if (bubble == null || bubble.IsPopped) continue;
-            // A bubble with the player inside is far too heavy for the draft.
-            if (bubble.IsOccupied && bubble.Occupant.GetComponent<SmoothFirstPersonController>() != null) continue;
-            Vector3 p = bubble.transform.position;
-            Vector3 fromVent = Flat(p - vent);
-            if (fromVent.magnitude > columnRadius * 1.6f || p.y < vent.y - 2f || p.y > webCentre.y + 3f) continue;
-
-            // Up the column, drawn to its axis, slowing as it nears the web.
-            Rigidbody body = bubble.GetComponent<Rigidbody>();
-            float lift = Mathf.Clamp((webCentre.y - p.y) * 0.8f, -0.5f, liftSpeed);
-            body.position += (-fromVent * 0.8f + Vector3.up * lift) * Time.fixedDeltaTime;
-            bubblesInDraft++;
-
-            // At the web the bubble bursts; what was inside drops into the silk.
-            if (Vector3.Distance(p, webCentre) < 1.8f) bubble.Pop();
-        }
-    }
-
-    /// <summary>Wisps rising up the column to the web, so the draft can be seen.</summary>
-    private void AnimateDraft()
-    {
-        if (streaks.Count == 0) return;
-        for (int i = 0; i < streaks.Count; i++)
-        {
-            float t = Mathf.Repeat(Time.time * 0.12f + i / (float)streaks.Count, 1f);
-            float a = i * 2.39f + Time.time * 0.3f;
-            Vector3 ring = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * columnRadius * (0.3f + 0.5f * Mathf.Abs(Mathf.Sin(i * 1.7f)));
-            Vector3 p = vent + ring * (1f - t * 0.6f) + Vector3.up * Mathf.Lerp(0.5f, webCentre.y - vent.y, t);
-            streaks[i].position = p;
-            streaks[i].localScale = Vector3.one * Mathf.Sin(t * Mathf.PI);
-        }
     }
 
     // ---------------- Building ----------------
@@ -216,20 +159,13 @@ public sealed class BasinLevel : MonoBehaviour
         towerATransform = Tower("Tower A", towerA, towerAHeight, 0f, 3, 31.7f + seed, random, out shapeA, out topA);
         towerBTransform = Tower("Tower B", towerB, towerBHeight, towerBCut, 2, 47.3f + seed, random, out shapeB, out topB);
 
-        // The web hangs half way between the towers, a little above A's top; the vent is right under it.
-        Vector3 between = Vector3.Lerp(topA, topB, 0.5f);
-        vent = Ground(between);
-        webCentre = new Vector3(between.x, topA.y + webAboveA, between.z);
-        Ring(vent + Vector3.up * 0.06f, columnRadius, "Vent Ring");
-        DraftStreaks();
-
         RealmSites.Seed(SeedId, topB + Vector3.up * 1.2f, seedMaterial, root);
 
         Ring(Ground(Local(fireGarden)) + Vector3.up * 0.06f, 2.4f, "Garden Ring");
-        Ring(Ground(Local(gooPool)) + Vector3.up * 0.06f, 3.2f, "Goo Ring");
+        Ring(Ground(Local(gooPool)) + Vector3.up * 0.06f, gooPoolRadius, "Goo Ring");
         Ring(Ground(Local(bubbleShelf)) + Vector3.up * 0.06f, 1.8f, "Flower Ring");
         Debug.Log($"Basin Level built: tower A top {topA.y - origin.y:0.0} m, tower B top {topB.y - origin.y:0.0} m, " +
-                  $"gap {Flat(topB - topA).magnitude:0.0} m, web {webCentre.y - vent.y:0.0} m above the vent.", this);
+                  $"gap {Flat(topB - topA).magnitude:0.0} m.", this);
     }
 
     private Transform Tower(string name, Vector2 at, float height, float cut, int ledges, float noise, System.Random random, out SpireShape shape, out Vector3 top)
@@ -290,15 +226,6 @@ public sealed class BasinLevel : MonoBehaviour
         lid.transform.localPosition = Vector3.zero;
     }
 
-    private void DraftStreaks()
-    {
-        var mesh = new FacetMesh(-0.8f, 0.8f, 0.5f);
-        mesh.Tube(Vector3.down * 0.8f, Vector3.up * 0.8f, 0.018f, 4);
-        Mesh shared = mesh.Build("Draft Streak");
-        for (int i = 0; i < 18; i++)
-            streaks.Add(Part("Draft " + i, root, shared, silkMaterial, 2, false, false).transform);
-    }
-
     private void Ring(Vector3 centre, float radius, string name)
     {
         var mesh = new FacetMesh(centre.y - 0.1f, centre.y + 0.1f, 0.2f);
@@ -322,22 +249,23 @@ public sealed class BasinLevel : MonoBehaviour
 
         // Fire garden: the source keeps the flower blooming fire bubbles; bone children loop round it.
         Vector3 garden = Ground(Local(fireGarden));
-        if (fireSourcePrefab != null) Instantiate(fireSourcePrefab, garden + Vector3.up * 0.6f, Quaternion.identity).name = "Basin Fire Source";
-        if (fireFlowerPrefab != null) Instantiate(fireFlowerPrefab, Ground(garden + Vector3.right * 1.4f), Quaternion.identity).name = "Basin Fire Flower";
+        // Flower first: its marching-cubes volume is what the fire source's own glow is drawn into.
+        if (fireFlowerPrefab != null) Instantiate(fireFlowerPrefab, SurfaceAt(garden + Vector3.right * 1.4f), Quaternion.identity).name = "Basin Fire Flower";
+        if (fireSourcePrefab != null) Instantiate(fireSourcePrefab, SurfaceAt(garden) + Vector3.up * 0.6f, Quaternion.identity).name = "Basin Fire Source";
         Shader comb = Shader.Find("Capstone/Landmarks/BoneComb");
         Material skin = comb != null ? new Material(comb) { name = "Basin Bone Ribs (runtime)" } : boneMaterial;
         for (int c = 0; c < boneChildren; c++)
         {
             float angle = (c / (float)Mathf.Max(1, boneChildren) + (float)random.NextDouble() * 0.1f) * Mathf.PI * 2f;
             Vector3 dir = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-            Vector3 spot = Ground(garden + dir * 9f);
+            Vector3 spot = Ground(garden + dir * boneLoop);
             BoneChild.Spawn(root, spot, Quaternion.LookRotation(-dir).eulerAngles.y, seed * 31 + c, boneMaterial, skin, garden);
         }
 
-        // The spider spins its web where it starts.
+        // The spider starts low over the ground and spins its first web there.
         if (spiderPrefab != null)
         {
-            spider = Instantiate(spiderPrefab, webCentre, Quaternion.identity);
+            spider = Instantiate(spiderPrefab, Ground(Local(spiderHome)) + Vector3.up * 2.5f, Quaternion.identity);
             spider.name = "Basin Spider";
         }
 
@@ -351,7 +279,7 @@ public sealed class BasinLevel : MonoBehaviour
         if (compostPrefab != null) AddSlot(compostPrefab.gameObject, Ground(Local(compostHome)), 20f);
         Vector3 pool = Local(gooPool);
         for (int i = 0; i < gooCount && gooPrefab != null; i++)
-            AddSlot(gooPrefab.gameObject, Ground(pool + Around(i, gooCount, 1.6f)), 12f);
+            AddSlot(gooPrefab.gameObject, Ground(pool + Around(i, gooCount, gooPoolRadius * (i % 2 == 0 ? 0.45f : 0.75f))), 12f);
         Vector3 fuzz = Local(fuzzStart);
         for (int i = 0; i < fuzzCount && fuzzTemplate != null; i++)
             AddSlot(fuzzTemplate.gameObject, Ground(fuzz + Around(i, fuzzCount, 1.8f)), 20f);
@@ -399,6 +327,16 @@ public sealed class BasinLevel : MonoBehaviour
     {
         world.ColumnHeights(point, out float surface, out _, out _);
         return new Vector3(point.x, surface, point.z);
+    }
+
+    /// <summary>The built ground at a point (the generated mesh, overhangs included); the analytic surface if none.</summary>
+    private Vector3 SurfaceAt(Vector3 point)
+    {
+        Vector3 rough = Ground(point);
+        float top = float.NegativeInfinity;
+        foreach (RaycastHit hit in Physics.RaycastAll(rough + Vector3.up * 30f, Vector3.down, 60f, 1 << 7, QueryTriggerInteraction.Ignore))
+            if (world.OwnsCollider(hit.collider)) top = Mathf.Max(top, hit.point.y);
+        return float.IsNegativeInfinity(top) ? rough : new Vector3(rough.x, top, rough.z);
     }
 
     private float LowestGround(Vector3 centre, float radius)

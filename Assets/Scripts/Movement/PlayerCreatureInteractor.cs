@@ -47,8 +47,11 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     {
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
+        // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
+        bool ridingReined = BoneRide.Mount != null &&
+                            (BoneRide.MountRoot == null || BoneRide.Reins(BoneRide.MountRoot) >= 2 || !HeldHasOwnUse());
         if (BoneAwakeningCutscene.Playing ||
-            BoneRide.Mount != null ||
+            ridingReined ||
             !Application.isFocused)
         {
             pendingHeldUse = null;
@@ -70,13 +73,19 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !Mouse.current.leftButton.wasPressedThisFrame)
             return;
 
+        // Left click next to a bone creature climbs on (BoneRide), not an interaction.
+        if (BoneRide.Approaching || (BoneRide.Mount == null && BoneRide.TryNearby(out _, out _)))
+            return;
+
         // Aria: Tentacle uses left mouse for its own actions.
         if (carrier != null && carrier.CarriesTentacle)
             return;
 
         // Both branches: Avoid conflicting with throwable input.
+        // A held creature with its own left-click use (bubble flower, goo) still gets the click.
         if (CreatureThrower.Instance != null &&
-            CreatureThrower.Instance.HoldingThrowable)
+            CreatureThrower.Instance.HoldingThrowable &&
+            !HeldHasOwnUse())
             return;
 
         TryInteract();
@@ -122,6 +131,12 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         return true;
     }
 
+    private bool HeldHasOwnUse() =>
+        carrier != null &&
+        carrier.CarriedCreature != null &&
+        !carrier.CarriedCreature.IsDead &&
+        carrier.CarriedCreature.CanUseWhileCarried;
+
     private void OnDisable()
     {
         if (squeezedSquirrel != null)
@@ -158,7 +173,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             if (carrier.CarriesTentacle ||
                 carrier.CarriedCreature is Squirrel ||
                 (CreatureThrower.Instance != null &&
-                 CreatureThrower.Instance.HoldingThrowable))
+                 CreatureThrower.Instance.HoldingThrowable &&
+                 !HeldHasOwnUse()))
                 return;
 
             TryInteract();

@@ -139,7 +139,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private BubbleCapture bubbleCapture;
     private bool bubbleMovementLocked;
     private int suppressedJumpFrame = -1;
-    public bool BubbleMovementBlocked => bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
+    public bool BubbleMovementBlocked => BoneRide.Busy || bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
         (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
 
     public bool IsContainingBubble(Collider collider) => bubbleCapture != null && bubbleCapture.IsCaptured &&

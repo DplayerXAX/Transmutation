@@ -62,7 +62,7 @@ public sealed class CreatureThrower : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (BoneAwakeningCutscene.Playing) { aiming = false; ShowArc(false); return; }
+        if (BoneAwakeningCutscene.Playing) { ShowArc(false); return; }
         if (view == null) view = Camera.main;
         bool preview = debugShowThrowTrajectory && HoldingThrowable && Aiming && view != null;
         if (preview) PlanArc(StartPoint(), LaunchVelocity(carrier.ThrowCharge01));

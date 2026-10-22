@@ -10,10 +10,10 @@ using UnityEngine.Rendering;
 ///     its ribs fluttering faster the closer one is, rearing its head up to reach one floating just above it.
     ///   - Heat: up to three rib pairs embrace fire bubbles in reserve; flying spends them oldest first.
 ///     The body warms to amber; the other ribs beat like wings and it rises and drifts in slow loops.
-///   - Riding: [C] climbs on its back (and off again).
+///   - Riding: [RMB] gets on or off. A carried tentacle can grapple onto the back.
 ///   - Reins: with a tentacle creature on the back, climbing on sends two of its arms into the child's spine
-///     (or shoot them in yourself). With reins it flies forward: hold left/right mouse to turn left/right,
-///     W to climb and S to sink. Without reins it ignores the rider; without heat it cannot fly at all.
+///     (or shoot them in yourself). W/S changes altitude, A/D moves sideways, Space/Ctrl moves forward/back.
+///     Without reins it ignores the rider; without heat it cannot fly at all.
 /// The mother (BoneKiln) is ridden the same way, once she is awake.
 /// Built by BoneKiln.
 /// </summary>
@@ -33,9 +33,9 @@ public sealed class BoneChild : MonoBehaviour
     [Tooltip("Height it hovers at when warm and not steered (above the ground).")]
     [Min(0.5f)] public float hoverHeight = 2.5f;
     [Tooltip("Heat spent each second while airborne.")]
-    [Min(0f)] public float flightHeatPerSecond = 1.125f;
+    [Min(0f)] public float flightHeatPerSecond = 1.35f;
     [Tooltip("Extra heat spent per metre of actual upward travel.")]
-    [Min(0f)] public float climbHeatPerMetre = 0.45f;
+    [Min(0f)] public float climbHeatPerMetre = 0.54f;
     [Range(1, 3)] public int bubbleCapacity = 3;
 
     public float Warmth { get; private set; }
@@ -51,6 +51,20 @@ public sealed class BoneChild : MonoBehaviour
     public Transform Head => beads.Count > 0 ? beads[0] : transform;
     public Vector3 Chest => beads.Count > 3 ? beads[3].position : transform.position;
     public Vector3 RidePoint => beads.Count > 2 ? beads[2].position : Head.position;
+    public Vector3 RiderPosition => RidePoint + (beads.Count > 2 ? beads[2].up : Vector3.up) * (0.55f * size) + Vector3.up;
+
+    public bool TryGetRideSeat(out Transform seat)
+    {
+        seat = beads.Count > 2 && isActiveAndEnabled ? beads[2] : null;
+        return seat != null;
+    }
+
+    public bool MountAt(Transform seat)
+    {
+        if (!TryGetRideSeat(out Transform ownSeat) || seat != ownSeat || BoneAwakeningCutscene.Playing) return false;
+        BoneRide.GetOn(this, transform, seat, ReinPoints());
+        return Ridden;
+    }
 
     private readonly List<Transform> beads = new List<Transform>();      // one per vertebra (bone + skin), head first
     private readonly List<Transform[]> ribs = new List<Transform[]>();   // [left, right] on vertebrae 2..4
@@ -231,10 +245,6 @@ public sealed class BoneChild : MonoBehaviour
         Flying = flying;
         if (flying) { resting = false; crawlTimer = Mathf.Max(crawlTimer, 8f); rearUp = 0f; }
         else if (resting && chasing == null) Lively = Mathf.MoveTowards(Lively, 0f, dt);
-        if (Ridden) { if (BoneRide.CanToggle && BoneRide.PressedC()) BoneRide.GetOff(); }
-        else if (BoneRide.Mount == null && BoneRide.CanToggle && BoneRide.Near(RidePoint, 2f + size, transform) && BoneRide.PressedC())
-            BoneRide.GetOn(this, transform, beads[2], ReinPoints());
-
         if (flying)
         {
             Fly(dt);
@@ -367,6 +377,12 @@ public sealed class BoneChild : MonoBehaviour
             desired = BoneRide.Steer(dt);
             speed = flySpeed;
         }
+        else if (LookForFire())
+        {
+            // Unsteered but lured: it flies after a free fire bubble (one shot from a carried fire source leads it).
+            desired = (chasing.transform.position - head).normalized;
+            speed = flySpeed * 0.8f;
+        }
         else
         {
             // Unsteered: slow loops over the spot where it lay, at hover height.
@@ -380,9 +396,10 @@ public sealed class BoneChild : MonoBehaviour
         desired.y = Mathf.Min(desired.y, 0f) + Mathf.Max(desired.y, 0f) * strength;
         desired += Vector3.down * ((1f - strength) * 1.5f);
         speed *= Mathf.Lerp(0.35f, 1f, strength);
-        if (desired.sqrMagnitude < 1e-4f) desired = headDir * 0.01f;
-        headDir = Vector3.RotateTowards(headDir, desired.normalized, 1.6f * dt, 0f).normalized;
-        Vector3 step = headDir * (speed * Mathf.Clamp01(desired.magnitude) * dt);
+        if (desired.sqrMagnitude > 1e-4f)
+            headDir = Vector3.RotateTowards(headDir, desired.normalized, 1.6f * dt, 0f).normalized;
+        Vector3 step = (Ridden && Reined ? Vector3.ClampMagnitude(desired, 1f)
+            : headDir * Mathf.Clamp01(desired.magnitude)) * (speed * dt);
         step.y -= (1f - strength) * 2.5f * dt;
         // Never into rock: stop at it and slide along.
         if (Physics.SphereCast(head, 0.45f, step.normalized, out RaycastHit block, step.magnitude + 0.3f, Ground, QueryTriggerInteraction.Ignore)
@@ -569,6 +586,8 @@ public sealed class BoneChild : MonoBehaviour
     private bool CanCatch(Creature creature) =>
         creature != null && storedFuel.Count < Mathf.Clamp(bubbleCapacity, 1, 3) && isActiveAndEnabled && creature.isActiveAndEnabled && !creature.IsDead &&
         !creature.IsCarried && !creature.IsBubbleCaptured && !(creature is TentacleCreature) &&
+        // Only small loose bodies: never a fire source or fire flower (fixtures), a web, or anything unportable.
+        !(creature is FireSource) && !(creature is FireFlower) && creature.CanBeCarried && creature.GetComponent<Rigidbody>() != null &&
         (creature is FireBubble || creature.Heat > 0.5f) && !IsCradled(creature);
 
     /// <summary>Catch a throw as it crosses the head/chest's reach, including the visible ribs between colliders.</summary>
@@ -739,8 +758,8 @@ public static class BoneRide
     /// <summary>What is being ridden (a BoneChild or a BoneKiln), or null.</summary>
     public static object Mount { get; private set; }
     public static Transform MountRoot { get; private set; }
-    /// <summary>For automated checks: -1 pulls left, +1 pulls right; null reads the mouse.</summary>
-    public static float? ScriptedTurn;
+    /// <summary>For automated checks: x strafes, y moves forward/back; null reads A/D and Space/Ctrl.</summary>
+    public static Vector2? ScriptedMove;
     public static float ScriptedRise;
     public static bool ScriptedToggle;
     private static int toggledFrame = -1;
@@ -748,20 +767,44 @@ public static class BoneRide
     private static Rigidbody body;
     private static bool wasKinematic;
     private static Vector3 heading;
+    private static bool wasRestricted, waitForMountRelease;
+    private static Vector2 moveInput;
+    private static float riseInput;
+    private static Vector3 seatVelocity, lastSeat;
+    private static bool hasSeatSample;
+    private static Component approachMount;
+    private static Transform approachSeat, approachRoot;
+    private static PlayerCreatureCarrier approachCarrier;
+    private static bool approachKinematic, approachRestricted, landing, approachNeedsTentacle;
+    private static float approachSpeed, approachTime, blockedTime;
+    private static BoneKiln nearbyMother;
+    private static readonly RaycastHit[] boardingHits = new RaycastHit[64];
+    private static readonly Collider[] boardingOverlaps = new Collider[64];
+    public static bool Approaching => approachSeat != null;
+    public static bool Busy => Mount != null || approachCarrier != null;
 
-    public static bool LeftReinHeld => Application.isFocused && Mouse.current != null && Mouse.current.leftButton.isPressed;
-    public static bool RightReinHeld => Application.isFocused && Mouse.current != null && Mouse.current.rightButton.isPressed;
+    public static bool LeftReinHeld => moveInput.x < -0.05f || Mathf.Abs(moveInput.y) > 0.05f;
+    public static bool RightReinHeld => moveInput.x > 0.05f || Mathf.Abs(moveInput.y) > 0.05f;
 
-    /// <summary>Forward flight with independent rein steering and W/S altitude; looking remains free.</summary>
+    /// <summary>W/S controls altitude, A/D strafes, Space/Ctrl moves forward/back relative to view.</summary>
     public static Vector3 Steer(float deltaTime)
     {
-        float turn = ScriptedTurn ?? ((RightReinHeld ? 1f : 0f) - (LeftReinHeld ? 1f : 0f));
-        heading = Quaternion.AngleAxis(Mathf.Clamp(turn, -1f, 1f) * 45f * deltaTime, Vector3.up) * heading;
         Keyboard keys = Keyboard.current;
+        Vector2 input = ScriptedMove ?? Vector2.zero;
         float rise = ScriptedRise;
-        if (Application.isFocused && keys != null)
+        if ((Application.isFocused || Application.isBatchMode) && keys != null)
+        {
+            if (ScriptedMove == null) input = new Vector2((keys.dKey.isPressed ? 1f : 0f) - (keys.aKey.isPressed ? 1f : 0f),
+                (keys.spaceKey.isPressed ? 1f : 0f) - (keys.leftCtrlKey.isPressed || keys.rightCtrlKey.isPressed ? 1f : 0f));
             rise += (keys.wKey.isPressed ? 1f : 0f) - (keys.sKey.isPressed ? 1f : 0f);
-        return (heading + Vector3.up * Mathf.Clamp(rise, -1f, 1f) * 0.8f).normalized;
+        }
+        moveInput = Vector2.MoveTowards(moveInput, Vector2.ClampMagnitude(input, 1f), 8f * deltaTime);
+        riseInput = Mathf.MoveTowards(riseInput, Mathf.Clamp(rise, -1f, 1f), 8f * deltaTime);
+        Camera view = controller != null && controller.PlayerCamera != null ? controller.PlayerCamera : Camera.main;
+        Vector3 forward = view != null ? Vector3.ProjectOnPlane(view.transform.forward, Vector3.up).normalized : heading;
+        if (forward.sqrMagnitude < 0.001f) forward = heading;
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
+        return Vector3.ClampMagnitude(forward * moveInput.y + right * moveInput.x + Vector3.up * riseInput * 0.8f, 1f);
     }
 
     /// <summary>One getting on or off per frame (so the same key press does not do both).</summary>
@@ -773,7 +816,175 @@ public static class BoneRide
         return Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
     }
 
-    /// <summary>True when the player stands within radius of point and no resting place is closer (C sits there).</summary>
+    /// <summary>
+    /// Mount input is resolved before the carrier can interpret RMB as dropping its creature.
+    /// Left click near a mount gets on. Right click gets off; so does left click when the hand holds nothing
+    /// with its own left-click use (a tentacle aims, a fire source shoots).
+    /// </summary>
+    public static bool HandleInput(PlayerCreatureCarrier carrier)
+    {
+        Mouse mouse = Mouse.current;
+        bool rightPress = mouse != null && mouse.rightButton.wasPressedThisFrame;
+        bool leftPress = mouse != null && mouse.leftButton.wasPressedThisFrame;
+        Creature held = carrier != null ? carrier.CarriedCreature : null;
+        bool leftIsBusy = held != null && (held is TentacleCreature || held.CanUseWhileCarried);
+        if (approachCarrier != null)
+        {
+            if (rightPress || (Keyboard.current != null && (Keyboard.current.cKey.wasPressedThisFrame || Keyboard.current.rKey.wasPressedThisFrame)))
+                CancelApproach();
+            return true;
+        }
+        if (Mount != null)
+        {
+            if (Mount is Component mounted && (mounted == null || !mounted.gameObject.activeInHierarchy))
+            { GetOff(); return true; }
+            bool canDismount = !waitForMountRelease;
+            if (mouse == null || (!mouse.rightButton.isPressed && !mouse.leftButton.isPressed)) waitForMountRelease = false;
+            if (CanToggle && canDismount && (rightPress || (leftPress && !leftIsBusy) || ScriptedToggle)) { ScriptedToggle = false; GetOff(true); }
+            return true;
+        }
+        if (toggledFrame == Time.frameCount) return true;
+        if (!CanToggle || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
+        if (!TryNearby(out Component mount, out Transform seat)) return false;
+        ScriptedToggle = false;
+        return BeginApproach(mount, seat, carrier);
+    }
+
+    public static bool TryNearby(out Component mount, out Transform seat)
+    {
+        mount = null; seat = null;
+        if (Busy || BoneAwakeningCutscene.Playing || !FindPlayer()) return false;
+        float nearest = float.PositiveInfinity;
+        if (nearbyMother == null) nearbyMother = Object.FindFirstObjectByType<BoneKiln>();
+        if (nearbyMother != null && nearbyMother.TryGetRideSeat(out Transform motherSeat))
+        { mount = nearbyMother; seat = motherSeat; nearest = PlayerDistance(seat.position); }
+        foreach (BoneChild child in BoneChild.All)
+            if (child != null && child.TryGetRideSeat(out Transform childSeat) && Near(child.RidePoint, 2f + child.size, child.transform))
+            {
+                float distance = PlayerDistance(childSeat.position);
+                if (distance < nearest) { mount = child; seat = childSeat; nearest = distance; }
+            }
+        return mount != null;
+    }
+
+    public static bool TryGrappleTarget(Transform anchor, Vector3 hit, out Component mount, out Transform seat)
+    {
+        mount = null; seat = null;
+        if (anchor == null || approachCarrier != null || BoneAwakeningCutscene.Playing) return false;
+        BoneChild child = anchor.GetComponentInParent<BoneChild>();
+        if (child != null && Mount != (object)child && child.TryGetRideSeat(out seat)) { mount = child; return true; }
+        BoneKiln mother = anchor.GetComponentInParent<BoneKiln>();
+        if (mother != null && Mount != (object)mother && mother.TryGrappleSeat(hit, out seat)) { mount = mother; return true; }
+        return false;
+    }
+
+    private static Vector3 RiderPosition(Component mount, Transform seat) => mount is BoneChild child
+        ? child.RiderPosition : ((BoneKiln)mount).RiderPosition(seat);
+
+    /// <summary>One short controlled pull; free look stays enabled, and all motion is swept against scenery.</summary>
+    public static bool BeginApproach(Component mount, Transform seat, PlayerCreatureCarrier carrier, bool needsTentacle = false, bool transfer = false)
+    {
+        if (Busy || mount == null || seat == null || carrier == null || !FindPlayer() || (controller.BubbleMovementBlocked && !transfer)
+            || BoneAwakeningCutscene.Playing || (RestSpotSystem.Instance != null && RestSpotSystem.Instance.Sitting)
+            || !controller.enabled || (!CanToggle && !transfer)) return false;
+        if (!(mount is BoneChild) && !(mount is BoneKiln)) return false;
+        Transform root = mount is BoneKiln mother ? mother.RideRoot : mount.transform;
+        if (root == null) return false;
+        Vector3 goal = RiderPosition(mount, seat);
+        if (Vector3.Distance(body.position, goal) > 34f) return false;
+        float incomingSpeed = !body.isKinematic ? Mathf.Clamp(Vector3.Dot(body.linearVelocity, (goal - body.position).normalized), 0f, 12f) : 0f;
+        controller.GetComponent<AdvancedFirstPersonTraversal>()?.StopForBubbleCapture();
+        foreach (HandClimber climber in Object.FindObjectsByType<HandClimber>(FindObjectsSortMode.None))
+            if (climber.Controls(controller)) climber.StopForBubbleCapture();
+        approachKinematic = body.isKinematic; approachRestricted = controller.Restricted;
+        if (!body.isKinematic) { body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
+        body.isKinematic = true; controller.SetRestricted(true);
+        approachMount = mount; approachSeat = seat; approachRoot = root; approachCarrier = carrier;
+        approachNeedsTentacle = needsTentacle;
+        approachSpeed = incomingSpeed; approachTime = blockedTime = 0f;
+        landing = Vector3.Distance(body.position, goal) < 3f;
+        toggledFrame = Time.frameCount;
+        waitForMountRelease = true;
+        return true;
+    }
+
+    private static bool BoardingObstacle(Collider collider) => collider != null && !collider.isTrigger
+        && collider.attachedRigidbody != body && !collider.transform.IsChildOf(body.transform)
+        && !collider.transform.IsChildOf(approachRoot)
+        && (approachCarrier.CarriedCreature == null || collider.GetComponentInParent<Creature>() != approachCarrier.CarriedCreature);
+
+    private static Vector3 SweepBoarding(Vector3 from, Vector3 to)
+    {
+        Collider capsule = body.GetComponent<Collider>();
+        Vector3 centre = from, extents = new Vector3(0.35f, 0.95f, 0.35f);
+        if (capsule != null)
+        { centre += capsule.bounds.center - body.transform.position; extents = capsule.bounds.extents; }
+        float radius = Mathf.Max(0.1f, Mathf.Min(extents.x, extents.z) - 0.025f);
+        Vector3 half = Vector3.up * Mathf.Max(0f, extents.y - 0.025f - radius);
+        Vector3 delta = to - from;
+        float distance = delta.magnitude;
+        if (distance < 0.00001f) return from;
+        int count = Physics.CapsuleCastNonAlloc(centre + half, centre - half, radius, delta / distance,
+            boardingHits, distance + 0.03f, ~0, QueryTriggerInteraction.Ignore);
+        if (count == boardingHits.Length) return from;
+        float travel = distance;
+        for (int i = 0; i < count; i++)
+            if (BoardingObstacle(boardingHits[i].collider)) travel = Mathf.Min(travel, Mathf.Max(0f, boardingHits[i].distance - 0.03f));
+        Vector3 step = delta / distance * travel;
+        count = Physics.OverlapCapsuleNonAlloc(centre + half + step, centre - half + step, radius,
+            boardingOverlaps, ~0, QueryTriggerInteraction.Ignore);
+        if (count == boardingOverlaps.Length) return from;
+        for (int i = 0; i < count; i++) if (BoardingObstacle(boardingOverlaps[i])) return from;
+        return from + step;
+    }
+
+    public static void StepApproach(float dt)
+    {
+        if (approachCarrier == null || dt <= 0f) return;
+        if (approachMount == null || approachSeat == null || !approachMount.gameObject.activeInHierarchy
+            || (approachMount is Behaviour behaviour && !behaviour.isActiveAndEnabled) || !FindPlayer()
+            || (approachNeedsTentacle && (!approachCarrier.CarriesTentacle || !approachCarrier.CarriedCreature.isActiveAndEnabled))
+            || (approachMount is BoneKiln approachingMother && !approachingMother.TryGrappleSeat(approachSeat.position, out _))
+            || BoneAwakeningCutscene.Playing || (controller.GetComponent<BubbleCapture>() is BubbleCapture capture && capture.BlocksPlayerMovement) || !controller.enabled)
+        { CancelApproach(); return; }
+        approachTime += dt;
+        if (approachTime > 6f) { CancelApproach(); return; }
+        Vector3 seat = RiderPosition(approachMount, approachSeat);
+        Vector3 goal = seat + (landing ? Vector3.zero : Vector3.up * 1.2f);
+        if (!landing && Vector3.Distance(body.position, goal) < 0.6f) { landing = true; goal = seat; }
+        float distance = Vector3.Distance(body.position, goal);
+        approachSpeed = Mathf.MoveTowards(approachSpeed, Mathf.Min(12f, distance * 5f), 28f * dt);
+        Vector3 next = SweepBoarding(body.position, Vector3.MoveTowards(body.position, goal, approachSpeed * dt));
+        blockedTime = (next - body.position).sqrMagnitude < 0.00001f && distance > 0.15f ? blockedTime + dt : 0f;
+        if (blockedTime > 0.3f) { CancelApproach(); return; }
+        body.position = next; body.transform.position = next;
+        controller.SuppressJumpForCurrentFrame();
+        if (landing && Vector3.Distance(next, seat) < 0.12f)
+        {
+            Component mount = approachMount; Transform mountSeat = approachSeat;
+            EndApproach();
+            if (mount is BoneChild child) child.MountAt(mountSeat);
+            else if (mount is BoneKiln mother) mother.MountAt(mountSeat);
+            if (Mount == null) TentacleTether.Instance?.LetGoAll();
+        }
+    }
+
+    private static void EndApproach()
+    {
+        approachMount = null; approachSeat = approachRoot = null; approachCarrier = null;
+        if (body != null) body.isKinematic = approachKinematic;
+        if (controller != null) controller.SetRestricted(approachRestricted);
+        toggledFrame = Time.frameCount;
+    }
+
+    public static void CancelApproach()
+    {
+        if (approachCarrier == null) return;
+        EndApproach();
+        TentacleTether.Instance?.LetGoAll();
+    }
+
+    /// <summary>True when the player stands within radius of a visible seat.</summary>
     public static bool Near(Vector3 point, float radius, Transform self)
     {
         if (!FindPlayer()) return false;
@@ -782,9 +993,6 @@ public static class BoneRide
         foreach (RaycastHit hit in Physics.RaycastAll(body.position, (point - body.position).normalized, d, ~0, QueryTriggerInteraction.Ignore))
             if (!hit.collider.transform.IsChildOf(self) && hit.collider.GetComponentInParent<SmoothFirstPersonController>() == null
                 && hit.collider.GetComponentInParent<Creature>() == null) return false;
-        if (RestSpotSystem.Instance != null)
-            foreach (RestSpot spot in RestSpotSystem.Instance.Spots)
-                if (spot != null && Vector3.Distance(spot.Seat, body.position) < Mathf.Min(d, 2.6f)) return false;
         return true;
     }
 
@@ -810,7 +1018,10 @@ public static class BoneRide
         heading = Vector3.ProjectOnPlane(mount is BoneKiln mother ? mother.RideForward : seat.forward, Vector3.up).normalized;
         if (heading.sqrMagnitude < 1e-4f) heading = Vector3.forward;
         wasKinematic = body.isKinematic;
-        body.linearVelocity = Vector3.zero;
+        wasRestricted = controller.Restricted;
+        moveInput = Vector2.zero; riseInput = 0f;
+        hasSeatSample = false; seatVelocity = Vector3.zero;
+        if (!body.isKinematic) body.linearVelocity = Vector3.zero;
         body.isKinematic = true;
         controller.SetRestricted(true);
         // With a tentacle creature on the back, two of its arms whip into the spine: the reins.
@@ -820,17 +1031,24 @@ public static class BoneRide
                 if (Reins(root) < 2) tether.FireAt(point.position, point);
     }
 
-    public static void GetOff()
+    public static void GetOff(bool keepMomentum = false)
     {
         if (Mount == null || !FindPlayer()) return;
         toggledFrame = Time.frameCount;
         Mount = null;
         MountRoot = null;
-        ScriptedTurn = null;
+        ScriptedMove = null;
         ScriptedRise = 0f;
+        moveInput = Vector2.zero; riseInput = 0f;
         body.position += Vector3.up * 0.6f;
+        body.transform.position = body.position;
         body.isKinematic = wasKinematic;
-        controller.SetRestricted(false);
+        controller.SetRestricted(wasRestricted);
+        if (keepMomentum && !body.isKinematic)
+        {
+            body.linearVelocity = seatVelocity;
+            controller.Fling(seatVelocity, 0.35f);
+        }
         // The reins let go.
         TentacleTether.Instance?.LetGoAll();
     }
@@ -840,6 +1058,8 @@ public static class BoneRide
     {
         if (!FindPlayer()) return;
         Vector3 at = point + Vector3.up * 1f;
+        if (hasSeatSample && Time.deltaTime > 0f) seatVelocity = Vector3.ClampMagnitude((at - lastSeat) / Time.deltaTime, 18f);
+        lastSeat = at; hasSeatSample = true;
         body.position = at;
         body.transform.position = at;
         controller.SuppressJumpForCurrentFrame();

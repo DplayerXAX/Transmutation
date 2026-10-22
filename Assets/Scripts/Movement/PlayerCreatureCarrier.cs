@@ -57,7 +57,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Seconds from the click until the reaching hand closes on the creature and it is picked up.")]
     [Min(0f)] [SerializeField] private float grabReachTime = 0.22f;
     [Tooltip("How fast a picked-up creature is brought from where it was taken to where it is held (m/s).")]
-    [Min(0.1f)] [SerializeField] private float bringInSpeed = 4f;
+    [Min(0.1f)] [SerializeField] private float bringInSpeed = 12f;
     private Creature pendingCreature;
     private float pendingAt;
     private Vector3 carryTargetLocal;
@@ -111,6 +111,15 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
             Release();
             return;
         }
+
+        if (BoneRide.HandleInput(this)) { rideInputGuard = true; CancelRightMouse(); return; }
+        // Releasing the mounting click must not become a putdown or throw.
+        if (rideInputGuard)
+        {
+            if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame) return;
+            rideInputGuard = false;
+        }
+
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             ReleaseCarriedCreature();
         Mouse mouse = Mouse.current;
@@ -314,6 +323,7 @@ private void FitCarryPoint(Creature creature)
 
     private void FixedUpdate()
     {
+        BoneRide.StepApproach(Time.fixedDeltaTime);
         RestoreDroppedCollisions();
     }
 
@@ -348,7 +358,8 @@ private void FitCarryPoint(Creature creature)
     public bool CarriesTentacle => CarriedCreature is TentacleCreature && !CarriedCreature.IsDead;
 
     /// <summary>The attached creature stays on the rider while the mouse buttons pull the reins.</summary>
-    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Mount != null;
+    private bool rideInputGuard;
+    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Busy;
 
     private void SnapHeld()
     {
@@ -471,6 +482,11 @@ private void FitCarryPoint(Creature creature)
         rotation = delta * rotation;
     }
 
-    private void OnDisable() => ReleaseCarriedCreature();
-    private void OnApplicationFocus(bool focused) { if (!focused) Release(); }
+    private void OnDisable() { BoneRide.CancelApproach(); ReleaseCarriedCreature(); }
+    private void OnApplicationFocus(bool focused)
+    {
+        if (focused) return;
+        if (BoneRide.Approaching) { BoneRide.CancelApproach(); rideInputGuard = true; }
+        else Release();
+    }
 }

@@ -155,11 +155,18 @@ public static class BasinLevelSetup
 
         // The level itself.
         GameObject levelObject = scene.GetRootGameObjects().FirstOrDefault(r => r.name == "Basin Level") ?? new GameObject("Basin Level");
+        // A spider whose webs are large enough to span the gap between the towers.
+        SkySpider spiderTemplate = holder.GetComponentInChildren<SkySpider>(true);
+        if (spiderTemplate == null) spiderTemplate = ((GameObject)PrefabUtility.InstantiatePrefab(spider.gameObject, holder.transform)).GetComponent<SkySpider>();
+        var serializedSpider = new SerializedObject(spiderTemplate);
+        serializedSpider.FindProperty("webScale").floatValue = 1.8f;
+        serializedSpider.ApplyModifiedProperties();
+
         // Replaced each time so the layout follows the current defaults in BasinLevel.
         BasinLevel level = levelObject.GetComponent<BasinLevel>();
         if (level != null) Object.DestroyImmediate(level);
         level = levelObject.AddComponent<BasinLevel>();
-        level.Setup(world, gooTemplate, flowerTemplate, spider, fireSource, fireFlower, compost, tentacle, fuzz);
+        level.Setup(world, gooTemplate, flowerTemplate, spiderTemplate, fireSource, fireFlower, compost, tentacle, fuzz);
         level.SetMaterials(tower, bone, silk, ink, seed);
         // Keeps fire flowers from multiplying without end.
         if (levelObject.GetComponent<RealmPopulation>() == null) levelObject.AddComponent<RealmPopulation>();

@@ -168,6 +168,9 @@ public sealed class TentacleCreature : Creature
     // Skin and bones are laid out in world space, so the carried size is applied to them by hand (1 = normal).
     private float limbSize = 1f;
     private bool throwPoseAttached;
+    /// <summary>Thrown with arms still stuck: they stay stuck until the creature is picked up again.</summary>
+    public bool ArmsKeptFromThrow { get; private set; }
+    public void ForgetThrownArms() => ArmsKeptFromThrow = false;
 
     public override bool TryHandleCarriedRightMouse(PlayerCreatureCarrier carrier, bool pressed, bool held, bool released)
         => carrier.TentacleLockedForRide;
@@ -176,7 +179,8 @@ public sealed class TentacleCreature : Creature
     {
         if (IsDead) return;
         if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
-        UnpinAll();
+        // Stuck arms stay stuck through the throw; only picking it up again lets them go.
+        ArmsKeptFromThrow = PinnedPoints().Count > 0;
         Suspend(false);
         EndPet();
         LetGo(false);
@@ -216,6 +220,8 @@ public sealed class TentacleCreature : Creature
         tentacleRoot.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         tentacleRoot.localScale = Vector3.one;
         LayoutThrowPose();
+        // Landed with two arms still stuck: it hangs between them, as if set down.
+        if (ArmsKeptFromThrow && SimulationEnabled && TentacleTether.Instance != null) TentacleTether.Instance.SettleThrown(this);
     }
 
     public override string CarriedPrompt
@@ -223,7 +229,7 @@ public sealed class TentacleCreature : Creature
         get
         {
             if (Carrier != null && Carrier.TentacleLockedForRide)
-                return "[LMB] Turn left    [RMB] Turn right    [W/S] Up/Down    [C] Dismount";
+                return "[W/S] Up/Down    [A/D] Left/Right    [Space / Ctrl] Forward/Back    [RMB] Dismount\n[LMB] Aim / release to transfer    [W] Catch wall";
             TentacleTether control = TentacleTether.Instance;
             string tether = control != null && control.NewestIsBalloon
                 ? "[Hold LMB] Aim / release to shoot    [Hold R] Pull balloon closer    [Tap R] Let go"
@@ -371,6 +377,10 @@ public sealed class TentacleCreature : Creature
         point = tentacles[index].Pin;
         return true;
     }
+
+    public bool ArmPinnedInto(int index, Transform root) => root != null && tentacles != null
+        && index >= 0 && index < tentacles.Length && tentacles[index].pinned
+        && tentacles[index].pinAnchor != null && tentacles[index].pinAnchor.IsChildOf(root);
 
     public void UnpinArm(int index)
     {

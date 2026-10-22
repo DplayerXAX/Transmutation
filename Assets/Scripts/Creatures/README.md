@@ -145,7 +145,7 @@ FireSource --heat--> FireFlower --blooms--> FireBubble --falls, lies still--> ne
 
 | Script | What it does |
 | --- | --- |
-| `FireSource` | Stores Heat and radiates it each physics step to every creature inside its trigger sphere, less with distance. The trigger radius follows the remaining Heat. |
+| `FireSource` | Stores Heat and radiates it each physics step to every creature inside its trigger sphere, less with distance. The trigger radius follows the remaining Heat. Carried, left click shoots a fire bubble along the view (`shotHeat` 20 from its own Heat, `shotSpeed` 4, it keeps that heading). |
 | `FireFlower` | States: Closed, Heating, Blooming, Recovering. Heat spreads its linked `DensityShapeOverlay`s outward and grows its body cylinder. At `bloomHeatThreshold` (70) it blooms, spawns one `FireBubble` per shape (sharing leftover Heat), then pulls the shapes back in. |
 | `FireBubble` | Floats on one heading with sway, then falls (lifetime or `fallStartWorldY`). After lying still for a delay it turns into a `fireFlowerPrefab`. Its shader flow speed follows Heat. |
 | `FireEater` | Wanders on the ground (aligns to the surface normal, slides along walls, unsticks itself). Seeks fallen bubbles within `detectionRadius`, flees the player inside `playerAwarenessRadius` unless eating, digests, then plants a Fire Flower. |

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 /// <summary>A physics bubble with one occupant. Separate from the FireFlower's FireBubble.</summary>
@@ -19,9 +20,13 @@ public sealed class TrappingBubble : LeashBubble
     [Tooltip("Largest measured model dimension that can be captured, in metres.")]
     [Min(0.1f)] [SerializeField] private float maxCaptureSize = 4f;
     [Min(0f)] [SerializeField] private float fittingPadding = 0.1f;
-    [Min(0f)] [SerializeField] private float releaseImmunity = 0.75f;
-    [Min(0f)] [SerializeField] private float shooterProtection = 0.75f;
+    [Min(0f)] [SerializeField] private float releaseImmunity = 0.25f;
+    [Min(0f)] [SerializeField] private float shooterProtection = 0.25f;
     [Min(0f)] [SerializeField] private float escapeHeight = 4f;
+    [Tooltip("Space out of a bubble also pushes the player this fast towards where they look (m/s).")]
+    [Min(0f)] [SerializeField] private float escapeForward = 3f;
+    [Tooltip("With the player inside, WASD nudges the bubble this fast (m/s), relative to the view.")]
+    [Min(0f)] [SerializeField] private float playerSteerSpeed = 1.2f;
 
     [Header("Breaking")]
     [Tooltip("For un-leashed bubbles: scenery stops bubbles and other creatures do not pop occupied bubbles. " +
@@ -44,6 +49,7 @@ public sealed class TrappingBubble : LeashBubble
     public bool IsPopped => popped;
     public float ReleaseImmunity => releaseImmunity;
     public float EscapeHeight => escapeHeight;
+    public float EscapeForward => escapeForward;
     public override float Radius => solidCollider != null ? solidCollider.radius * Mathf.Abs(transform.lossyScale.x) : initialDiameter * 0.5f;
     public float InitialRadius => initialDiameter * 0.5f;
     public float ElapsedTime => elapsedTime;
@@ -118,9 +124,26 @@ public sealed class TrappingBubble : LeashBubble
             velocity += new Vector3(Mathf.Cos(motionTime * angularSpeed + phase), 0f,
                 Mathf.Sin(motionTime * angularSpeed + phase)) * (swayDistance * angularSpeed);
         }
+        velocity += PlayerSteer();
         // Unity's contact solver stops this velocity against walls and ceilings.
         velocity = LeashVelocity(velocity, deltaTime);
         body.linearVelocity = velocity;
+    }
+
+    /// <summary>A player inside nudges the bubble with WASD, relative to where they look.</summary>
+    private Vector3 PlayerSteer()
+    {
+        if (!IsOccupied || playerSteerSpeed <= 0f || Keyboard.current == null || !Application.isFocused) return Vector3.zero;
+        var player = Occupant.GetComponent<SmoothFirstPersonController>();
+        if (player == null) return Vector3.zero;
+        Keyboard keys = Keyboard.current;
+        Vector2 input = new Vector2((keys.dKey.isPressed ? 1f : 0f) - (keys.aKey.isPressed ? 1f : 0f),
+            (keys.wKey.isPressed ? 1f : 0f) - (keys.sKey.isPressed ? 1f : 0f));
+        if (input.sqrMagnitude < 0.01f) return Vector3.zero;
+        Camera view = player.PlayerCamera != null ? player.PlayerCamera : Camera.main;
+        Vector3 forward = view != null ? Vector3.ProjectOnPlane(view.transform.forward, Vector3.up).normalized : player.transform.forward;
+        Vector3 right = Vector3.Cross(Vector3.up, forward);
+        return Vector3.ClampMagnitude(forward * input.y + right * input.x, 1f) * playerSteerSpeed;
     }
 
     private GameObject FindTarget(Collider collider)
@@ -187,6 +210,15 @@ public sealed class TrappingBubble : LeashBubble
         HandleContact(other, false);
     }
     private void OnCollisionEnter(Collision collision) => HandleContact(collision.collider, true);
+
+    // A player who touched the bubble while still immune (just fired it, or just escaped another bubble)
+    // gets no second Enter event; keep trying while they stay in contact.
+    private void OnTriggerStay(Collider other)
+    {
+        if (other.isTrigger || popped || IsOccupied || !SimulationEnabled) return;
+        var player = other.GetComponentInParent<SmoothFirstPersonController>();
+        if (player != null && !IgnoreTarget(player.gameObject)) TryCapture(player.gameObject);
+    }
 
     private void HandleContact(Collider other, bool solidContact)
     {

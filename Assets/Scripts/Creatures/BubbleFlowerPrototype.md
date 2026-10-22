@@ -69,3 +69,9 @@ Run **Tools > Creatures > Validate Bubble Flower Assets** in Edit Mode, then
 **Validate Bubble Flower Runtime (Play Mode)** in Play Mode. Runtime checks create an unsaved local
 physics scene and write a report under `Temp/BubbleFlowerValidation`, without changing authored scenes.
 Check the playable scene for firing, popping, the trapped HUD, Space escape, and both toggle settings.
+
+## Riding bubbles
+
+Inside a bubble, WASD nudges it relative to the view (`playerSteerSpeed`, 1.2 m/s). Space bursts out upward
+(`escapeHeight`) and also pushes the player towards where they look (`escapeForward`, 3 m/s). While touching
+a bubble the player is pulled in as soon as their short immunity (0.25 s) ends.
