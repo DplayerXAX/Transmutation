@@ -404,7 +404,6 @@ public static class BirdFlockValidation
             carrier.enabled = false;
             typeof(PlayerCreatureCarrier).GetField("carryPoint", PrivateInstance).SetValue(carrier, anchorObject.transform);
             carrierObject.SetActive(true);
-            foreach (bool firmGrip in new[] { false, true })
             {
                 BirdCreature bird = Spawn(birdPrefab, staging.transform, contact);
                 BirdFlockManager manager = bird.FlockManager;
@@ -424,13 +423,12 @@ public static class BirdFlockValidation
                     && bird.FlightBody.position == position && bird.FlightBody.rotation == rotation,
                     "captured-state guard prevents flocking from fighting the silk joint even if simulation is reenabled");
                 bird.SetSimulationEnabled(false);
-                typeof(PlayerCreatureCarrier).GetField("firmGrip", PrivateInstance).SetValue(carrier, firmGrip);
                 typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", PrivateInstance).Invoke(carrier, new object[] { bird });
                 Check(bird.IsCarried && carrier.CarriedCreature == bird && !bird.IsWebCaptured
                     && bird.SimulationEnabled && web.CaptureCount == 0, "pickup frees bird and transfers movement to carrier");
                 Check(!web.IsEligible(bird.FlightBody) && !capture.CanCapture, "held bird cannot be recaptured; cooldown is retained");
                 manager.SimulateStep(0.02f, 1f);
-                Check(manager.FlyingBirdCount == 0, "spring and firm grips both exclude carried birds from flocking");
+                Check(manager.FlyingBirdCount == 0 && bird.FlightBody.isKinematic, "firm carrying excludes held birds from flocking");
                 carrier.Release();
                 Check(bird.IsFlying && !bird.FlightBody.isKinematic && !bird.FlightBody.useGravity,
                     "release restores dynamic flying creature physics");
@@ -439,7 +437,7 @@ public static class BirdFlockValidation
                     "released prey resumes flock flight");
                 Object.DestroyImmediate(bird.gameObject);
             }
-            Status = "Bird web capture passed: " + checks + " assertions, including spring and firm carrying.";
+            Status = "Bird web capture passed: " + checks + " assertions, including firm carrying.";
             WriteReport("web-capture.txt", Status);
             Debug.Log(Status);
             return Status;

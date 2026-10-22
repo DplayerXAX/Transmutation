@@ -69,7 +69,7 @@ public static class BoneRideValidation
             Call(carrier, "OnApplicationFocus", false);
             Check(carrier.CarriesTentacle && tentacle.IsCarried, "drop, release and focus loss preserve attachment");
             InputState.Change(mouse, new MouseState());
-            Call(carrier, "UpdateHoldRightMouse");
+            Call(carrier, "UpdateRightMouse", false, false, true, 0.02f);
             Check(carrier.CarriesTentacle, "releasing the right mouse button cannot drop the tentacle");
 
             BoneRide.ScriptedMove = Vector2.zero;

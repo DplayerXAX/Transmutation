@@ -27,11 +27,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     [Header("Text")]
     [SerializeField] private bool showCreatureName = true;
-    [SerializeField] private string carryHint = "[Hold RMB]  Carry";
-    [SerializeField] private string releaseHint = "[Release RMB]  Drop";
-    [Tooltip("Used when the carrier is in Toggle Key mode. {0} is the key name.")]
-    [SerializeField] private string pickUpKeyHintFormat = "[{0}]  Pick up";
-    [SerializeField] private string dropKeyHintFormat = "[{0}]  Drop";
+    [SerializeField] private string pickUpHint = "[RMB] Pick up";
+    [SerializeField] private string putDownThrowHint = "Tap RMB: Put down · Hold RMB: Throw";
+    [SerializeField] private string throwChargeHintFormat = "Throw {0}% · Release RMB to throw";
     [SerializeField] private string interactHintFormat = "[LMB]  {0}";
     [SerializeField] private string petHint = "[Hold LMB]  Pet";
     [SerializeField] private string pettingHint = "Petting...";
@@ -219,21 +217,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         }
     }
 
-    private bool UsesToggleKey => carrier != null && carrier.InputMode != PlayerCreatureCarrier.CarryInput.HoldRightMouse;
-
-    // Click right to pick up and again to drop, or a key in Toggle Key mode.
-    private string ToggleName =>
-        carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse ? "RMB" : carrier.ToggleKeyBinding.ToString();
-
-    private string PickUpHint() =>
-        UsesToggleKey ? string.Format(pickUpKeyHintFormat, ToggleName) : carryHint;
-
     private string PickupTargetHint(Creature target) => string.IsNullOrEmpty(target.PickupActionPrompt)
-        ? PickUpHint() : "[" + (UsesToggleKey ? ToggleName : "RMB") + "] " + target.PickupActionPrompt;
+        ? pickUpHint : "[RMB] " + target.PickupActionPrompt;
 
     private string DropHint() =>
         carrier != null && carrier.TentacleLockedForRide ? "Dismount before dropping the tentacle" :
-        UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;
+        carrier != null && carrier.IsChargingThrow ? string.Format(throwChargeHintFormat, Mathf.RoundToInt(carrier.ThrowCharge01 * 100f)) : putDownThrowHint;
 
     private string NameOf(Creature creature)
     {
