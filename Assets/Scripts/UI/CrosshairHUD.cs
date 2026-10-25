@@ -172,7 +172,7 @@ public sealed class CrosshairHUD : MonoBehaviour
                 active = UnityEngine.InputSystem.Mouse.current != null && UnityEngine.InputSystem.Mouse.current.leftButton.isPressed;
                 return Mode.Flower;
             }
-            if (CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)
+            if (carrier.ThrowEnabled && CreatureThrower.Instance != null && CreatureThrower.Instance.HoldingThrowable)
             {
                 active = CreatureThrower.Instance.Aiming;
                 return Mode.Throw;

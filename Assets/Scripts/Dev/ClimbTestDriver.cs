@@ -95,6 +95,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestTentacle") >= 0)
+        {
+            yield return CheckTentacleHolds();
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestFlower") >= 0)
         {
             // A carried bubble flower still shoots: left click (the interactor) fires along the view; the thrower leaves it alone.
@@ -527,6 +533,211 @@ public sealed class ClimbTestDriver : MonoBehaviour
     }
 
     /// <summary>
+    /// Stuck arms stay stuck: one arm stuck then put down (it waits there), picked up again (arms let go),
+    /// two arms stuck while standing right against the wall then put down (it hangs, or waits, arms still stuck).
+    /// Also: right click never throws, and the camera's field of view.
+    /// </summary>
+    private IEnumerator CheckTentacleHolds()
+    {
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        TentacleTether tether = carrier != null ? carrier.GetComponent<TentacleTether>() : null;
+        Log($"Tentacle holds: field of view {Camera.main.fieldOfView:0}, throw enabled {carrier?.ThrowEnabled}");
+        TentacleCreature tentacle = null;
+        foreach (TentacleCreature t in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None)) { tentacle = t; if (t.GetComponent<SpireCrawler>() == null) break; }
+        if (tentacle == null || tether == null) { Log("    no tentacle creature or tether"); yield break; }
+        var crawl = tentacle.GetComponent<SpireCrawler>();
+        if (crawl != null) Destroy(crawl);
+        if (!FindSpire(out Cliff cliff, 0f, "Stage Tower 1")) { Log("    no wall to use"); yield break; }
+
+        IEnumerator Carry()
+        {
+            body.isKinematic = false;
+            body.position = tentacle.transform.position + Vector3.up * 0.5f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+            yield return new WaitForSeconds(0.6f);
+        }
+        // Stand at the foot of the wall, facing it, close enough to touch it.
+        IEnumerator StandAtWall()
+        {
+            Vector3 stand = cliff.feet + Vector3.up * (halfHeight + 0.1f) - cliff.inward * 0.9f;
+            Teleport(stand, cliff.inward);
+            yield return new WaitForSeconds(0.6f);
+        }
+        bool WallPoint(Vector3 sideways, float up, out Vector3 point, out Transform anchor)
+        {
+            point = default; anchor = null;
+            Vector3 from = body.position + Vector3.up * up + sideways;
+            if (!Physics.Raycast(from, cliff.inward, out RaycastHit hit, 6f, 1 << 7, QueryTriggerInteraction.Ignore)) return false;
+            point = hit.point + hit.normal * 0.05f; anchor = hit.collider.transform;
+            return true;
+        }
+        Vector3 side = Vector3.Cross(Vector3.up, cliff.inward).normalized;
+
+        // 1. One arm, then put down.
+        yield return Carry();
+        yield return StandAtWall();
+        if (WallPoint(Vector3.zero, 1.2f, out Vector3 p1, out Transform a1)) tether.FireAt(p1, a1);
+        yield return new WaitForSeconds(0.5f);
+        Log($"    one arm shot: stuck {tentacle.PinnedCount}, problem '{tether.Problem}'");
+        carrier.Drop();
+        Vector3 putAt = tentacle.transform.position;
+        yield return new WaitForSeconds(4f);
+        Log($"    put down with one arm: stuck after 4 s {tentacle.PinnedCount}, waiting by its arm {tentacle.HeldByArms}, moved {Vector3.Distance(putAt, tentacle.transform.position):0.0} m");
+
+        // 2. Picked up again: its arms let go.
+        yield return Carry();
+        Log($"    picked up again: stuck {tentacle.PinnedCount} (picking up lets the arms go)");
+
+        // 3. Two arms, standing right against the wall, then put down.
+        yield return StandAtWall();
+        bool shotA = WallPoint(side * -2.5f, 1.5f, out Vector3 pa, out Transform aa);
+        bool shotB = WallPoint(side * 2.5f, 1.5f, out Vector3 pb, out Transform ab);
+        if (shotA) tether.FireAt(pa, aa);
+        yield return new WaitForSeconds(0.3f);
+        if (shotB) tether.FireAt(pb, ab);
+        yield return new WaitForSeconds(0.5f);
+        Log($"    two arms shot ({shotA}, {shotB}): stuck {tentacle.PinnedCount}, problem '{tether.Problem}'");
+        carrier.Drop();
+        {
+            // Would the old rule (body and both arms clear where it was put down, or let go) have kept it?
+            Vector3 at = tentacle.transform.position;
+            bool bodyBlocked = false;
+            foreach (Collider c in Physics.OverlapSphere(at, tentacle.TetherBodyRadius, ~0, QueryTriggerInteraction.Ignore))
+                if (c.GetComponentInParent<Creature>() == null && c.GetComponentInParent<SmoothFirstPersonController>() == null) bodyBlocked = true;
+            bool armBlocked = false;
+            foreach (Vector3 pin in tentacle.PinnedPoints())
+            {
+                Vector3 span = pin - at;
+                foreach (RaycastHit h in Physics.SphereCastAll(at, 0.16f, span.normalized, Mathf.Max(0f, span.magnitude - 0.24f), ~0, QueryTriggerInteraction.Ignore))
+                    if (h.collider.GetComponentInParent<Creature>() == null && h.collider.GetComponentInParent<SmoothFirstPersonController>() == null) armBlocked = true;
+            }
+            Log($"      where it was put down: body against rock {bodyBlocked}, an arm through rock {armBlocked} (either one made the old rule let both arms go)");
+        }
+        for (int k = 0; k < 4; k++)
+        {
+            yield return new WaitForSeconds(1.5f);
+            Log($"      {1.5f * (k + 1):0.0} s after putting it down: stuck {tentacle.PinnedCount}, hung {tentacle.Suspended}, waiting by its arms {tentacle.HeldByArms}, cords {tether.CordCount}");
+        }
+        // 4. Walk off and come back: still stuck.
+        body.position += -cliff.inward * 6f;
+        Physics.SyncTransforms();
+        yield return new WaitForSeconds(3f);
+        Log($"    after walking away: stuck {tentacle.PinnedCount}, hung {tentacle.Suspended}");
+
+        // 5. A third shot replaces the oldest; tap R lets everything go.
+        yield return Carry();
+        yield return StandAtWall();
+        for (int k = 0; k < 3; k++)
+        {
+            if (WallPoint(side * (k - 1) * 1.5f, 1.4f, out Vector3 pk, out Transform ak)) tether.FireAt(pk, ak);
+            yield return new WaitForSeconds(0.3f);
+        }
+        Log($"    three shots: stuck {tentacle.PinnedCount} (two at most)");
+        // Shooting at empty sky says why.
+        tether.FireAt(body.position + Vector3.up * 200f, null);
+        Log($"    after that: problem '{tether.Problem}'");
+        // Mouse-only: with arms stuck, holding the right button reels in and does not put the creature down;
+        // a quick right click puts it down.
+        {
+            if (!carrier.CarriesTentacle) yield return Carry();
+            yield return StandAtWall();
+            if (WallPoint(Vector3.zero, 3.5f, out Vector3 pr, out Transform ar)) tether.FireAt(pr, ar);
+            body.position += -cliff.inward * 4f + Vector3.up * 0.3f;
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(0.4f);
+            var rmbReel = typeof(PlayerCreatureCarrier).GetMethod("UpdateRightMouse", Private);
+            float startGap = Vector3.Distance(body.position, pr);
+            bool everReeled = false;
+            rmbReel.Invoke(carrier, new object[] { true, true, false, 0f });
+            for (int k = 0; k < 60; k++)
+            {
+                yield return new WaitForFixedUpdate();
+                // The carrier calls this every frame with the button state; frames here stand in for that.
+                typeof(PlayerCreatureCarrier).GetMethod("UpdateRightMouse", Private).Invoke(carrier, new object[] { false, true, false, Time.fixedDeltaTime });
+                everReeled |= tether.Reeling;
+                if (k % 15 == 0) Log($"      reel frame {k}: steps {tether.ReelSteps}, busy {BoneRide.Busy}, carried {tentacle.IsCarried}, reeling {tether.Reeling}, velocity {body.linearVelocity.magnitude:0.0}, kinematic {body.isKinematic}, gap {Vector3.Distance(body.position, pr):0.0}");
+            }
+            rmbReel.Invoke(carrier, new object[] { false, false, true, 0f });
+            yield return new WaitForSeconds(0.3f);
+            Log($"    held right button with an arm stuck: reeled {everReeled}, gap {startGap:0.0} -> {Vector3.Distance(body.position, pr):0.0} m, still carried {tentacle.IsCarried}");
+            // The same pull with the reel key, for comparison.
+            float keyGap = Vector3.Distance(body.position, pr);
+            tether.ScriptedReel = true;
+            for (int k = 0; k < 60; k++)
+            {
+                yield return new WaitForFixedUpdate();
+                if (k % 20 == 0) Log($"      key reel frame {k}: steps {tether.ReelSteps}, reeling {tether.Reeling}, velocity {body.linearVelocity.magnitude:0.0}, gap {Vector3.Distance(body.position, pr):0.0}");
+            }
+            tether.ScriptedReel = false;
+            yield return null;
+            Log($"    reel key: gap {keyGap:0.0} -> {Vector3.Distance(body.position, pr):0.0} m");
+            rmbReel.Invoke(carrier, new object[] { true, true, false, 0f });
+            rmbReel.Invoke(carrier, new object[] { false, false, true, 0.05f });
+            yield return new WaitForSeconds(0.3f);
+            Log($"    quick right click: carried {tentacle.IsCarried} (false = put down), stuck {tentacle.PinnedCount}");
+        }
+        // Boarding a bone child by shooting an arm into it: a resting one, then a flying one.
+        for (int run = 0; run < 2; run++)
+        {
+            BoneChild child = null;
+            foreach (BoneChild c in BoneChild.All) if (c != null) { child = c; break; }
+            if (child == null) { Log("    no bone child"); break; }
+            if (run == 1)
+            {
+                FireBubble fire = FindFirstObjectByType<FireBubble>();
+                if (fire == null) { Log("    no fire bubble to warm a child"); break; }
+                if (fire.Heat < 6f) fire.AddHeat(8f);
+                child.Cradle(fire);
+                yield return new WaitForSeconds(5f);
+            }
+            if (!carrier.CarriesTentacle) yield return Carry();
+            Vector3 aimAt = child.RidePoint;
+            Vector3 off = Vector3.ProjectOnPlane(Random.onUnitSphere, Vector3.up).normalized;
+            body.isKinematic = false;
+            body.position = aimAt + off * 9f + Vector3.up * 1f;
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(0.3f);
+            Transform bead = null; float near = float.MaxValue;
+            foreach (Collider c in child.GetComponentsInChildren<Collider>())
+            { float d = Vector3.Distance(c.bounds.center, child.RidePoint); if (d < near) { near = d; bead = c.transform; } }
+            float start = Time.time;
+            tether.FireAt(child.RidePoint, bead);
+            bool approached = BoneRide.Approaching;
+            while (Time.time - start < 7f && BoneRide.Mount == null && (BoneRide.Approaching || Time.time - start < 0.3f)) yield return null;
+            Log($"    boarding a {(run == 1 ? $"flying (warmth {child.Warmth:0.00})" : "resting")} child from 9 m: started {approached}, mounted {BoneRide.Mount == (object)child} after {Time.time - start:0.0} s, ended: {BoneRide.LastApproachEnd}, problem '{tether.Problem}'");
+            if (BoneRide.Mount != null) { BoneRide.GetOff(); yield return new WaitForSeconds(0.3f); }
+        }
+        // Right click on the tentacle: a long press still only puts it down.
+        if (!carrier.CarriesTentacle) yield return Carry();
+        var rmb = typeof(PlayerCreatureCarrier).GetMethod("UpdateRightMouse", Private);
+        rmb.Invoke(carrier, new object[] { true, true, false, 0f });
+        for (int k = 0; k < 30; k++) { rmb.Invoke(carrier, new object[] { false, true, false, 0.02f }); }
+        rmb.Invoke(carrier, new object[] { false, false, true, 0.02f });
+        yield return new WaitForSeconds(0.3f);
+        Log($"    tentacle after a 0.6 s right click: carried {tentacle.IsCarried}, thrown {tentacle.ArmsKeptFromThrow}, stuck {tentacle.PinnedCount}");
+        // A fuzzy creature: a 0.6 s right click charges and throws it.
+        FuzzCreature fuzz = FindFirstObjectByType<FuzzCreature>();
+        if (fuzz != null)
+        {
+            body.position = fuzz.transform.position + Vector3.up * 1f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { fuzz });
+            yield return new WaitForSeconds(0.5f);
+            Vector3 from = fuzz.transform.position;
+            Log($"    fuzzy carried before the click: {carrier.CarriedCreature == fuzz} (carrying {carrier.CarriedCreature?.name}), throw enabled {carrier.ThrowEnabled}, allowThrow {typeof(PlayerCreatureCarrier).GetField("chargedThrow", Private)?.GetValue(carrier)}, carries tentacle {carrier.CarriesTentacle}");
+            rmb.Invoke(carrier, new object[] { true, true, false, 0f });
+            for (int k = 0; k < 30; k++) { rmb.Invoke(carrier, new object[] { false, true, false, 0.02f }); if (k == 20) Log($"    charging: {carrier.IsChargingThrow}, charge {carrier.ThrowCharge01:0.00}"); }
+            rmb.Invoke(carrier, new object[] { false, false, true, 0.02f });
+            yield return new WaitForSeconds(2f);
+            Log($"    fuzzy after a 0.6 s right click: carried {fuzz.IsCarried}, flew {Vector3.Distance(from, fuzz.transform.position):0.0} m");
+        }
+        carrier.Release();
+    }
+
+    /// <summary>
     /// The towers without bridges: bare hands should slide off; with a tentacle creature carried the player climbs
     /// the first tower, shoots an arm at the second, reels across, climbs it, and does the same to the spire's crown.
     /// </summary>
@@ -590,7 +801,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
         yield return new WaitForSeconds(0.3f);
         Log($"Route {label}: reeled for {Time.time - start:0.0} s, now {Vector3.Distance(body.position, hit.point):0.0} m from the arm's end, reeling {tether.Reeling}");
         {
-            object[] wallArgs = { null };
+            object[] wallArgs = { null, false };
             bool sees = (bool)typeof(HandClimber).GetMethod("FindWall", Private).Invoke(climber, wallArgs);
             var seen = (RaycastHit)wallArgs[0];
             Vector3 fwd = controller.Orientation != null ? controller.Orientation.forward : controller.transform.forward;
@@ -1339,7 +1550,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
         // Why a climb would not start: report what the climber sees from here.
         var findWall = typeof(HandClimber).GetMethod("FindWall", Private);
         var wallIsTall = typeof(HandClimber).GetMethod("WallIsTall", Private);
-        object[] args = { null };
+        object[] args = { null, false };
         bool sees = (bool)findWall.Invoke(climber, args);
         var seen = (RaycastHit)args[0];
         Vector3 forward = controller.Orientation != null ? controller.Orientation.forward : controller.transform.forward;

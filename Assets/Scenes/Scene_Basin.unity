@@ -119,6 +119,22 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!4 &110895268 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  m_PrefabInstance: {fileID: 1506379946}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &110895271 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  m_PrefabInstance: {fileID: 1506379946}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f43184ee6586d204b8636d219972b415, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BubbleFlower
 --- !u!1 &318428658
 GameObject:
   m_ObjectHideFlags: 0
@@ -296,6 +312,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 428005854}
   m_CullTransparentMesh: 1
+--- !u!4 &582378589 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+  m_PrefabInstance: {fileID: 1693428986}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &582378592 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+  m_PrefabInstance: {fileID: 1693428986}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5348b434368379747a235de92b0ab9ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GooCreature
 --- !u!1 &663679482
 GameObject:
   m_ObjectHideFlags: 0
@@ -350,6 +382,22 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &736281390 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  m_PrefabInstance: {fileID: 1059490446}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &736281392 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  m_PrefabInstance: {fileID: 1059490446}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0590b163620944946b8f5cb9e8aec789, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkySpider
 --- !u!1 &748032329
 GameObject:
   m_ObjectHideFlags: 0
@@ -670,8 +718,72 @@ Transform:
   m_Children:
   - {fileID: 1700000012}
   - {fileID: 1700000052}
+  - {fileID: 582378589}
+  - {fileID: 110895268}
+  - {fileID: 736281390}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1059490446
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 982107082}
+    m_Modifications:
+    - target: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: webScale
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1209126781797158621, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_Name
+      value: SkySpider
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
 --- !u!1 &1069027180
 GameObject:
   m_ObjectHideFlags: 0
@@ -681,8 +793,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1069027183}
-  - component: {fileID: 1069027182}
   - component: {fileID: 1069027181}
+  - component: {fileID: 1069027184}
   m_Layer: 0
   m_Name: Basin Level
   m_TagString: Untagged
@@ -709,54 +821,6 @@ MonoBehaviour:
   newFireFlowers: 0
   newFireBubbles: 0
   trimmed: 0
---- !u!114 &1069027182
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1069027180}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6788c1b8609336949a353c33d8fb0db5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BasinLevel
-  world: {fileID: 1700000033}
-  gooPrefab: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
-  bubbleFlowerPrefab: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
-  spiderPrefab: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
-  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
-  fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
-  tentacleTemplate: {fileID: 1700000015}
-  fuzzTemplate: {fileID: 1700000055}
-  towerMaterial: {fileID: 2100000, guid: 8f8a494806cfe8844b2dde280a6f426a, type: 2}
-  boneMaterial: {fileID: 2100000, guid: 13101d2602b674a4dadaf78740e988f4, type: 2}
-  silkMaterial: {fileID: 2100000, guid: 146fbeff2cb54c6e89d31e22c493a613, type: 2}
-  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
-  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
-  towerA: {x: -15, y: 30}
-  towerB: {x: 15, y: 36}
-  spiderDen: {x: -42, y: 6}
-  bubbleShelf: {x: 40, y: 6}
-  fireGarden: {x: 24, y: -30}
-  gooPool: {x: -30, y: -22}
-  fuzzStart: {x: 4, y: 6}
-  gooCount: 4
-  fuzzCount: 4
-  boneChildren: 2
-  towerAHeight: 20
-  towerBHeight: 28
-  towerBCut: 10
-  seed: 41
-  liftSpeed: 2.4
-  columnRadius: 3.5
-  growTime: 10
-  silkWidth: 1.6
-  built: 0
-  lifeSpawned: 0
-  silkGrowth: 0
-  silkDone: 0
-  bubblesInDraft: 0
 --- !u!4 &1069027183
 Transform:
   m_ObjectHideFlags: 0
@@ -772,6 +836,61 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1069027184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1069027180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6788c1b8609336949a353c33d8fb0db5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BasinLevel
+  world: {fileID: 1700000033}
+  gooPrefab: {fileID: 582378592}
+  bubbleFlowerPrefab: {fileID: 110895271}
+  spiderPrefab: {fileID: 736281392}
+  fireSourcePrefab: {fileID: 3959365805291875168, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
+  fireFlowerPrefab: {fileID: 2092708705502317261, guid: c05a285be30dfe8488310060958d1d64, type: 3}
+  compostPrefab: {fileID: 296603038041281245, guid: 331bf545ab7c4344a87cc8c873d94622, type: 3}
+  tentacleTemplate: {fileID: 1700000015}
+  fuzzTemplate: {fileID: 1700000055}
+  towerMaterial: {fileID: 2100000, guid: 8f8a494806cfe8844b2dde280a6f426a, type: 2}
+  boneMaterial: {fileID: 2100000, guid: 13101d2602b674a4dadaf78740e988f4, type: 2}
+  silkMaterial: {fileID: 2100000, guid: 146fbeff2cb54c6e89d31e22c493a613, type: 2}
+  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
+  seedMaterial: {fileID: 2100000, guid: e160f5251e5321b4bb9a52cd9a349ce1, type: 2}
+  towerA: {x: -15, y: 30}
+  towerB: {x: 15, y: 36}
+  bubbleShelf: {x: -28, y: 22}
+  spiderHome: {x: 8, y: 26}
+  towerFlowers:
+  - {x: -9, y: 22}
+  - {x: -25, y: 31}
+  - {x: 26, y: 37}
+  - {x: 14, y: 47}
+  fireGarden: {x: 24, y: 26}
+  gooPool: {x: -4, y: 27}
+  fuzzStart: {x: 0, y: 16}
+  compostHome: {x: 2, y: 37}
+  tentacleSpots:
+  - {x: -11, y: 22}
+  - {x: 6, y: 24}
+  - {x: -24, y: 38}
+  gooCount: 4
+  gooPoolRadius: 6.5
+  fuzzCount: 4
+  boneChildren: 2
+  towerAHeight: 20
+  towerBHeight: 28
+  towerBCut: 10
+  slipperyTowers: 0
+  seed: 41
+  boneLoop: 8
+  built: 0
+  lifeSpawned: 0
 --- !u!1 &1154897107
 GameObject:
   m_ObjectHideFlags: 0
@@ -971,6 +1090,71 @@ MonoBehaviour:
   scalingFactor: 1
   m_posOffsetData: {fileID: 0}
   listenerMask: 1
+--- !u!1001 &1506379946
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 982107082}
+    m_Modifications:
+    - target: {fileID: 78356777658104957, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_Name
+      value: BubbleFlower
+      objectReference: {fileID: 0}
+    - target: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: groundFiringInterval.x
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: groundFiringInterval.y
+      value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
 --- !u!1 &1691532687
 GameObject:
   m_ObjectHideFlags: 0
@@ -1022,6 +1206,67 @@ Transform:
   - {fileID: 1918885744}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1693428986
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 982107082}
+    m_Modifications:
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: foodTags
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7537355415353030912, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_Name
+      value: GooCreature
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
 --- !u!1 &1700000001
 GameObject:
   m_ObjectHideFlags: 0
@@ -1077,10 +1322,9 @@ MonoBehaviour:
   hintColor: {r: 1, g: 1, b: 1, a: 0.92}
   fadeTime: 0.12
   showCreatureName: 1
-  carryHint: '[Hold RMB]  Carry'
-  releaseHint: '[Release RMB]  Drop'
-  pickUpKeyHintFormat: '[{0}]  Pick up'
-  dropKeyHintFormat: '[{0}]  Drop'
+  pickUpHint: '[RMB] Pick up'
+  putDownThrowHint: "Tap RMB: Put down \xB7 Hold RMB: Throw"
+  throwChargeHintFormat: "Throw {0}% \xB7 Release RMB to throw"
   interactHintFormat: '[LMB]  {0}'
   petHint: '[Hold LMB]  Pet'
   pettingHint: Petting...
@@ -1185,6 +1429,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Tentacle Creature
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
@@ -1194,10 +1445,6 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -1868,6 +2115,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
@@ -1877,10 +2131,6 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6

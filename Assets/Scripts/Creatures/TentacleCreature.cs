@@ -172,8 +172,11 @@ public sealed class TentacleCreature : Creature
     public bool ArmsKeptFromThrow { get; private set; }
     public void ForgetThrownArms() => ArmsKeptFromThrow = false;
 
+    // Riding owns the right button; otherwise the tether takes a held right click (reel) or a two-button chord
+    // (let go), and a plain tap is left to the carrier (put down).
     public override bool TryHandleCarriedRightMouse(PlayerCreatureCarrier carrier, bool pressed, bool held, bool released)
-        => carrier.TentacleLockedForRide;
+        => carrier.TentacleLockedForRide
+           || (TentacleTether.Instance != null && TentacleTether.Instance.HandleRightMouse(pressed, held, released));
 
     public override void PrepareForThrow(PlayerCreatureCarrier carrier)
     {
@@ -232,8 +235,8 @@ public sealed class TentacleCreature : Creature
                 return "[W/S] Up/Down    [A/D] Left/Right    [Space / Ctrl] Forward/Back    [RMB] Dismount\n[LMB] Aim / release to transfer    [W] Catch wall";
             TentacleTether control = TentacleTether.Instance;
             string tether = control != null && control.NewestIsBalloon
-                ? "[Hold LMB] Aim / release to shoot    [Hold R] Pull balloon closer    [Tap R] Let go"
-                : "[Hold LMB] Aim / release to shoot    [R] Release / hold to reel";
+                ? "[Hold LMB] Aim, release to shoot    [Hold RMB] Pull balloon closer\n[LMB + RMB] Let go    [Tap RMB] Put down"
+                : "[Hold LMB] Aim, release to shoot    [Hold RMB] Reel in\n[LMB + RMB] Let go    [Tap RMB] Put down";
             if (control != null && control.AimingAtBalloon) tether = "[Release LMB] Leash bubble\n" + tether;
             if (!gripping) return tether;
             bool grounded = Carrier != null && Carrier.PlayerController != null && Carrier.PlayerController.Grounded;
@@ -353,14 +356,15 @@ public sealed class TentacleCreature : Creature
         for (int i = 0; i < tentacles.Length; i++)
         {
             Tentacle t = tentacles[i];
-            if (t.pinned || t.wrapping || t.touchingHand) continue;
+            // An arm still marked as touching a hand that is no longer petting it is free.
+            if (t.pinned || t.wrapping || (t.touchingHand && IsPetted)) continue;
             float d = (t.foot - point).sqrMagnitude;
             if (d < bestDistance) { bestDistance = d; best = i; }
         }
         if (best < 0) return -1;
         Tentacle arm = tentacles[best];
         arm.pinned = true;
-        arm.planted = arm.stepping = false;
+        arm.planted = arm.stepping = arm.touchingHand = false;
         arm.pinPoint = point;
         arm.pinAnchor = anchor;
         arm.pinBubble = anchor != null ? anchor.GetComponentInParent<LeashBubble>() : null;
@@ -418,6 +422,21 @@ public sealed class TentacleCreature : Creature
             foreach (Tentacle t in tentacles)
                 if (t.pinned && t.pinAnchor != null && t.pinAnchor.IsChildOf(root)) n++;
         return n;
+    }
+
+    /// <summary>
+    /// Put down with arms still stuck to the world, and not hung between two: it stays where it was put, its stuck
+    /// arms stretched to where they hold, until it is picked up again (then they let go).
+    /// </summary>
+    public bool HeldByArms
+    {
+        get
+        {
+            if (IsCarried || Suspended || tentacles == null) return false;
+            foreach (Tentacle t in tentacles)
+                if (t.pinned && (t.pinBubble == null || t.pinBubble.LeashCreature != this)) return true;
+            return false;
+        }
     }
 
     /// <summary>How many arms are shot out and stuck right now.</summary>
@@ -513,7 +532,7 @@ public sealed class TentacleCreature : Creature
     private void UpdateHunt(float deltaTime)
     {
         huntCooldownTimer = Mathf.Max(0f, huntCooldownTimer - deltaTime);
-        bool able = !IsCarried && !ExternalMovement && !IsPetted && huntCooldownTimer <= 0f && huntRadius > 0f;
+        bool able = !IsCarried && !ExternalMovement && !IsPetted && !HeldByArms && huntCooldownTimer <= 0f && huntRadius > 0f;
         if (!able)
         {
             if (prey != null) LetGo(cooldown: IsPetted);
@@ -664,6 +683,9 @@ public sealed class TentacleCreature : Creature
             return;
         }
         Vector3 position = transform.position;
+        // Held by its own stuck arms: it waits where it was put down.
+        bool heldByArms = HeldByArms;
+        if (heldByArms) wanderTarget = home;
         if (prey != null)
         {
             // Stalking: creep straight at it, a little faster than wandering; holding: stay over it.
@@ -675,7 +697,7 @@ public sealed class TentacleCreature : Creature
         if (toTarget.magnitude < 0.3f && prey == null)
         {
             pauseTimer -= deltaTime;
-            if (pauseTimer <= 0f)
+            if (pauseTimer <= 0f && !heldByArms)
             {
                 Vector2 offset = Random.insideUnitCircle * wanderRadius;
                 wanderTarget = home + new Vector3(offset.x, 0f, offset.y);
