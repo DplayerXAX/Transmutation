@@ -20,6 +20,9 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [SerializeField] private LayerMask pickupLayers = ~0;
 
     [Header("Input")]
+    [Tooltip("On: hold right click to charge a throw, release to throw (a tap puts down). A tentacle creature is never " +
+             "thrown: right click only puts it down, so its stuck arms are not thrown about by a long press. Off: right click only puts down.")]
+    [SerializeField] private bool chargedThrow = true;
     [Tooltip("Hold this many seconds before releasing RMB becomes a throw instead of a putdown.")]
     [Min(0.01f)] [SerializeField] private float throwHoldThreshold = 0.2f;
     [Tooltip("Total RMB hold time needed to reach maximum throw speed.")]
@@ -66,7 +69,9 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private float rightMouseHeldTime;
     private CreatureThrower thrower;
 
-    public bool IsChargingThrow => rightMouseCreature != null && rightMouseCreature == CarriedCreature && rightMouseHeldTime >= throwHoldThreshold;
+    /// <summary>True when a held right click can throw (see chargedThrow).</summary>
+    public bool ThrowEnabled => chargedThrow && !CarriesTentacle;
+    public bool IsChargingThrow => ThrowEnabled && rightMouseCreature != null && rightMouseCreature == CarriedCreature && rightMouseHeldTime >= throwHoldThreshold;
     public float ThrowCharge01 => IsChargingThrow ? Mathf.InverseLerp(throwHoldThreshold, fullThrowHoldTime, rightMouseHeldTime) : 0f;
 
     private Vector3 carryPointHome;
@@ -108,7 +113,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (!Application.isFocused && !Application.isBatchMode)
         {
             CancelRightMouse();
-            Release();
+            // A tentacle creature stays on the back (dropping it would end its stuck arms' rig by surprise).
+            if (!CarriesTentacle) Release();
             return;
         }
 
@@ -487,6 +493,6 @@ private void FitCarryPoint(Creature creature)
     {
         if (focused) return;
         if (BoneRide.Approaching) { BoneRide.CancelApproach(); rideInputGuard = true; }
-        else Release();
+        else if (!CarriesTentacle) Release();
     }
 }

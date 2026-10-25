@@ -777,6 +777,10 @@ public static class BoneRide
     private static PlayerCreatureCarrier approachCarrier;
     private static bool approachKinematic, approachRestricted, landing, approachNeedsTentacle;
     private static float approachSpeed, approachTime, blockedTime;
+    private static Vector3 approachLastSeat;
+    private static string lastBlocker;
+    /// <summary>Why the last boarding pull ended (for tests).</summary>
+    public static string LastApproachEnd { get; private set; }
     private static BoneKiln nearbyMother;
     private static readonly RaycastHit[] boardingHits = new RaycastHit[64];
     private static readonly Collider[] boardingOverlaps = new Collider[64];
@@ -902,16 +906,21 @@ public static class BoneRide
         approachMount = mount; approachSeat = seat; approachRoot = root; approachCarrier = carrier;
         approachNeedsTentacle = needsTentacle;
         approachSpeed = incomingSpeed; approachTime = blockedTime = 0f;
+        approachLastSeat = Vector3.zero;
         landing = Vector3.Distance(body.position, goal) < 3f;
         toggledFrame = Time.frameCount;
         waitForMountRelease = true;
         return true;
     }
 
+    // Only scenery stops the pull: creatures (followers, bubbles on leashes) and the bone creatures themselves
+    // (the mother's ribs round her children, the children round her) are passed through.
     private static bool BoardingObstacle(Collider collider) => collider != null && !collider.isTrigger
         && collider.attachedRigidbody != body && !collider.transform.IsChildOf(body.transform)
         && !collider.transform.IsChildOf(approachRoot)
-        && (approachCarrier.CarriedCreature == null || collider.GetComponentInParent<Creature>() != approachCarrier.CarriedCreature);
+        && collider.GetComponentInParent<Creature>() == null
+        && collider.GetComponentInParent<BoneKiln>() == null && collider.GetComponentInParent<BoneChild>() == null;
+    private static readonly HashSet<Collider> touchingAtStart = new HashSet<Collider>();
 
     private static Vector3 SweepBoarding(Vector3 from, Vector3 to)
     {
@@ -929,12 +938,19 @@ public static class BoneRide
         if (count == boardingHits.Length) return from;
         float travel = distance;
         for (int i = 0; i < count; i++)
-            if (BoardingObstacle(boardingHits[i].collider)) travel = Mathf.Min(travel, Mathf.Max(0f, boardingHits[i].distance - 0.03f));
+            if (BoardingObstacle(boardingHits[i].collider) && boardingHits[i].distance - 0.03f < travel)
+            { travel = Mathf.Max(0f, boardingHits[i].distance - 0.03f); lastBlocker = boardingHits[i].collider.name; }
         Vector3 step = delta / distance * travel;
+        // Whatever it already touches where it starts (the ground under the feet) does not count as being blocked;
+        // only something newly run into does.
+        touchingAtStart.Clear();
+        int already = Physics.OverlapCapsuleNonAlloc(centre + half, centre - half, radius, boardingOverlaps, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < already; i++) touchingAtStart.Add(boardingOverlaps[i]);
         count = Physics.OverlapCapsuleNonAlloc(centre + half + step, centre - half + step, radius,
             boardingOverlaps, ~0, QueryTriggerInteraction.Ignore);
         if (count == boardingOverlaps.Length) return from;
-        for (int i = 0; i < count; i++) if (BoardingObstacle(boardingOverlaps[i])) return from;
+        for (int i = 0; i < count; i++)
+            if (BoardingObstacle(boardingOverlaps[i]) && !touchingAtStart.Contains(boardingOverlaps[i])) { lastBlocker = boardingOverlaps[i].name + " (overlap)"; return from; }
         return from + step;
     }
 
@@ -946,22 +962,38 @@ public static class BoneRide
             || (approachNeedsTentacle && (!approachCarrier.CarriesTentacle || !approachCarrier.CarriedCreature.isActiveAndEnabled))
             || (approachMount is BoneKiln approachingMother && !approachingMother.TryGrappleSeat(approachSeat.position, out _))
             || BoneAwakeningCutscene.Playing || (controller.GetComponent<BubbleCapture>() is BubbleCapture capture && capture.BlocksPlayerMovement) || !controller.enabled)
-        { CancelApproach(); return; }
+        { LastApproachEnd = "mount, seat or tentacle no longer valid"; CancelApproach(); return; }
         approachTime += dt;
-        if (approachTime > 6f) { CancelApproach(); return; }
+        if (approachTime > 6f) { LastApproachEnd = "took too long"; CancelApproach(); return; }
         Vector3 seat = RiderPosition(approachMount, approachSeat);
+        // The mount keeps moving (flying, crawling, bobbing): follow its motion as well as closing in, or the
+        // pull would trail behind it for ever and never land.
+        Vector3 seatStep = approachTime > dt && approachLastSeat != Vector3.zero ? seat - approachLastSeat : Vector3.zero;
+        if (seatStep.magnitude > 2f) seatStep = Vector3.zero; // a jump of the seat itself, not motion
+        approachLastSeat = seat;
         Vector3 goal = seat + (landing ? Vector3.zero : Vector3.up * 1.2f);
-        if (!landing && Vector3.Distance(body.position, goal) < 0.6f) { landing = true; goal = seat; }
+        if (!landing && Vector3.Distance(body.position, goal) < 1f) { landing = true; goal = seat; }
         float distance = Vector3.Distance(body.position, goal);
-        approachSpeed = Mathf.MoveTowards(approachSpeed, Mathf.Min(12f, distance * 5f), 28f * dt);
-        Vector3 next = SweepBoarding(body.position, Vector3.MoveTowards(body.position, goal, approachSpeed * dt));
-        blockedTime = (next - body.position).sqrMagnitude < 0.00001f && distance > 0.15f ? blockedTime + dt : 0f;
-        if (blockedTime > 0.3f) { CancelApproach(); return; }
+        // A quick, decisive pull: fast in, easing only over the last metre.
+        approachSpeed = Mathf.MoveTowards(approachSpeed, Mathf.Min(26f, distance * 10f + 2f), 90f * dt);
+        Vector3 target = Vector3.MoveTowards(body.position + seatStep, goal, approachSpeed * dt);
+        Vector3 next = SweepBoarding(body.position, target);
+        float wanted = (target - body.position).magnitude;
+        // Blocked: hardly any of the wanted move happened (not just "no move at all").
+        blockedTime = wanted > 0.001f && (next - body.position).magnitude < wanted * 0.2f && distance > 0.4f ? blockedTime + dt : 0f;
+        if (blockedTime > 0.35f)
+        {
+            LastApproachEnd = "blocked by " + lastBlocker;
+            CancelApproach();
+            TentacleTether.Instance?.Notice("Rock in the way: get a clear line to it");
+            return;
+        }
         body.position = next; body.transform.position = next;
         controller.SuppressJumpForCurrentFrame();
-        if (landing && Vector3.Distance(next, seat) < 0.12f)
+        if (landing && Vector3.Distance(next, seat) < 0.4f)
         {
             Component mount = approachMount; Transform mountSeat = approachSeat;
+            LastApproachEnd = "landed";
             EndApproach();
             if (mount is BoneChild child) child.MountAt(mountSeat);
             else if (mount is BoneKiln mother) mother.MountAt(mountSeat);

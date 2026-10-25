@@ -13,14 +13,19 @@ using UnityEngine.Rendering;
 ///     (and anything loose at the pocket) out over the line. It never pulls anyone in by itself.
 ///   - A stuck arm on the carried creature is a spring: walk further than it was shot and it pulls you back.
 ///   - Picking the creature up again ends the cord. R pulls every shot arm back in.
+/// Stuck arms only let go when the player says so (tap R, picking the creature up, a third shot replacing the
+/// oldest) or when what they hold is gone. Putting the creature down never lets them go: with two stuck it
+/// hangs between them where it can (otherwise it waits where it was put, arms still stuck); with one it waits
+/// there, held by that arm. A shot that cannot stick says why next to the crosshair.
 /// Added to the player by itself; it does nothing unless the carrier holds a tentacle creature.
 /// The earlier carried behaviours (arms round the wrists, sticky climbing) are unchanged.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class TentacleTether : MonoBehaviour
 {
-    [Tooltip("Tap: every shot arm lets go. Hold: the newest stuck arm shortens and hauls the player to where it stuck " +
-             "(across a gap to another tower); hold W on arrival to grab the wall, and the arm lets go once the hands hold.")]
+    [Tooltip("Mouse only: hold the right button to reel in on the newest stuck arm (it hauls the player to where it stuck; " +
+             "hold W on arrival to grab the wall, and the arm lets go once the hands hold); press both buttons together " +
+             "to let every arm go; a quick right click puts the creature down. This key still works too: tap = let go, hold = reel.")]
     [SerializeField] private Key reelKey = Key.R;
     [Min(1f)] [SerializeField] private float reelSpeed = 9f;
     [Min(1f)] [SerializeField] private float reelAcceleration = 30f;
@@ -28,7 +33,7 @@ public sealed class TentacleTether : MonoBehaviour
     [Min(0f)] [SerializeField] private float armPull = 5f;
     [Min(0f)] [SerializeField] private float armDamping = 4f;
     [Min(0f)] [SerializeField] private float maxArmPull = 40f;
-    [Min(2f)] [SerializeField] private float range = 28f;
+    [Min(2f)] [SerializeField] private float range = 36f;
     [Range(1, 6)] [SerializeField] private int maxCords = 3;
     [Tooltip("Fastest a cord can fling something (m/s).")]
     [Min(1f)] [SerializeField] private float maxFling = 32f;
@@ -152,6 +157,21 @@ public sealed class TentacleTether : MonoBehaviour
 
     public int CordCount => cords.Count;
 
+    // Why the last shot could not stick (shown next to the crosshair for a moment).
+    private string problem;
+    private float problemUntil;
+    /// <summary>Why the last shot could not stick, while it is still shown (for tests and the HUD).</summary>
+    public string Problem => Time.time < problemUntil ? problem : null;
+
+    /// <summary>Shows a short reason next to the crosshair (for example a boarding pull that was blocked).</summary>
+    public void Notice(string message) => Say(message);
+
+    private void Say(string message)
+    {
+        problem = message;
+        problemUntil = Time.time + 1.8f;
+    }
+
     public void ReleaseCreature(TentacleCreature creature)
     {
         for (int i = cords.Count - 1; i >= 0; i--)
@@ -230,11 +250,17 @@ public sealed class TentacleTether : MonoBehaviour
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
         // A carried tentacle keeps the same aiming gesture on foot and on a mount.
-        bool pressed = Application.isFocused && mouse != null && mouse.leftButton.isPressed;
+        // Both buttons together: every arm lets go, and this left press does not aim or shoot.
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame && rightDown) Chord();
+        if (mouse == null || !mouse.leftButton.isPressed) leftSuppressed = false;
+        bool pressed = Application.isFocused && mouse != null && mouse.leftButton.isPressed && !leftSuppressed;
         bool aimNow = pressed && Aim(out aimPoint, out aimValid);
         ShowAim(aimNow);
-        if (!pressed && aiming && aimValid && Application.isFocused && mouse != null && mouse.leftButton.wasReleasedThisFrame)
-            FireAt(aimPoint, aimAnchor);
+        if (!pressed && aiming && !leftSuppressed && Application.isFocused && mouse != null && mouse.leftButton.wasReleasedThisFrame)
+        {
+            if (aimValid) FireAt(aimPoint, aimAnchor);
+            else Say(aimAnchor == null ? $"Too far: an arm reaches {range:0} m" : "The arm cannot hold on to that");
+        }
         aiming = pressed;
         // Tap R: let go. Hold R: reel in on the newest stuck arm.
         bool reelHeld = ScriptedReel ?? (keyboard != null && keyboard[reelKey].isPressed);
@@ -245,15 +271,20 @@ public sealed class TentacleTether : MonoBehaviour
             reelHeldTime = 0f;
         }
         if (automaticReel && (Time.time > automaticReelUntil || pinnedArms.Count == 0)) automaticReel = false;
-        reeling = (automaticReel || (reelHeld && reelHeldTime > TapTime)) && pinnedArms.Count > 0;
+        reeling = (automaticReel || (reelHeld && reelHeldTime > TapTime) || (rightMode == RightReel && rightDown)) && pinnedArms.Count > 0;
         // Once the hands hold a wall, a reeled arm lets go (so it does not pull the climber back down).
         if (climber == null) climber = FindFirstObjectByType<HandClimber>();
         if (climber != null && climber.IsClimbing && reeledArm >= 0)
         {
-            ReleaseArm(carried, reeledArm);
+            // Arrived: the hands have the wall, so the arm lets go. Climbing somewhere else entirely keeps it.
+            bool arrived = carried.ArmPin(reeledArm, out Vector3 reeledPin) && playerBody != null && Vector3.Distance(playerBody.position, reeledPin) < 3f;
+            if (arrived) ReleaseArm(carried, reeledArm);
             automaticReel = reeling = false;
             reeledArm = -1;
         }
+        else if (!reeling && reeledArm >= 0 && carried.ArmPin(reeledArm, out Vector3 stillPin) && playerBody != null
+                 && Vector3.Distance(playerBody.position, stillPin) > 3f)
+            reeledArm = -1; // Stopped reeling part way: nothing to let go of later.
 
         shotTimer += Time.deltaTime;
     }
@@ -268,7 +299,8 @@ public sealed class TentacleTether : MonoBehaviour
     public void FireAt(Vector3 point, Transform anchor)
     {
         TentacleCreature creature = carrier != null ? carrier.CarriedCreature as TentacleCreature : null;
-        if (creature == null || !creature.SimulationEnabled) return;
+        if (creature == null) return;
+        if (!creature.SimulationEnabled) { Say("The tentacle creature cannot move right now"); return; }
         if (lastCarried != creature) AdoptBalloons(creature);
         LeashBubble bubble = anchor != null ? anchor.GetComponentInParent<LeashBubble>() : null;
         if (bubble != null && (!bubble.CanLeash(this) || balloons.ContainsValue(bubble))) return;
@@ -284,6 +316,7 @@ public sealed class TentacleTether : MonoBehaviour
             ReleaseArm(creature, oldestFree);
         }
         int arm = creature.PinArm(point, anchor);
+        if (arm < 0) Say("No free arm: tap R to let the stuck ones go");
         if (arm >= 0)
         {
             pinnedArms.Add(arm);
@@ -313,6 +346,48 @@ public sealed class TentacleTether : MonoBehaviour
 
     private readonly List<int> pinnedArms = new List<int>();
     private const float TapTime = 0.2f;
+
+    // The right mouse button while carrying the tentacle creature: a tap puts it down (the carrier does that),
+    // holding it reels in, pressing it together with the left button lets every arm go.
+    private const int RightNone = 0, RightReel = 1, RightChord = 2;
+    private int rightMode;
+    private bool rightDown, leftSuppressed;
+    private float rightHeldFor;
+
+    /// <summary>
+    /// Called by the carried creature with the right button's state each frame. Returns true when the tether
+    /// has used the press (reeling, or a two-button let-go), so it is not taken as putting the creature down.
+    /// </summary>
+    public bool HandleRightMouse(bool pressed, bool held, bool released)
+    {
+        if (pressed)
+        {
+            rightMode = RightNone;
+            rightHeldFor = 0f;
+            Mouse mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.isPressed) Chord();
+        }
+        rightDown = (pressed || held) && !released;
+        if (rightDown) rightHeldFor += Time.deltaTime;
+        if (rightDown && rightMode == RightNone && rightHeldFor > TapTime && pinnedArms.Count > 0) rightMode = RightReel;
+        bool used = rightMode != RightNone;
+        if (released || !rightDown)
+        {
+            rightDown = false;
+            rightMode = RightNone;
+        }
+        return used;
+    }
+
+    /// <summary>Both mouse buttons together: every stuck arm lets go, and the aim in progress is dropped.</summary>
+    private void Chord()
+    {
+        ReelAll();
+        rightMode = RightChord;
+        leftSuppressed = true;
+        aiming = aimValid = false;
+        ShowAim(false);
+    }
     private float reelHeldTime;
     private bool reeling;
     private bool automaticReel;
@@ -327,6 +402,8 @@ public sealed class TentacleTether : MonoBehaviour
 
     /// <summary>True while the newest stuck arm is hauling the player in.</summary>
     public bool Reeling => reeling;
+    /// <summary>Physics steps the reel has actually pulled (for tests).</summary>
+    public int ReelSteps { get; private set; }
     private readonly Dictionary<int, float> restLengths = new Dictionary<int, float>();
 
     private bool aiming, aimValid;
@@ -420,6 +497,8 @@ public sealed class TentacleTether : MonoBehaviour
 
     private void ResetPull()
     {
+        if (rightMode == RightReel) rightMode = RightChord; // nothing left to reel: the press stays used up
+        rightDown = false; // re-read from the button on the next frame the creature is carried
         ReleaseBalloons();
         pinnedArms.Clear();
         restLengths.Clear();
@@ -465,7 +544,7 @@ public sealed class TentacleTether : MonoBehaviour
             cord.creature.Suspend(false);
             if (carrier != null) carrier.DeferTentacleCollisionRestore(cord.creature);
             else SetCreatureSolid(cord, true);
-            cord.creature.UnpinAll();
+            // The arms stay stuck: picking it up (DetachForPickup) or its death lets them go, not this.
         }
         if (cord.root != null) Destroy(cord.root);
         cords.RemoveAt(index);
@@ -489,9 +568,10 @@ public sealed class TentacleTether : MonoBehaviour
             if (creature.BalloonLeashes().Count > 0) creature.UnpinTerrainArms();
             else
             {
+                // Two stuck: it hangs between the last two. One stuck: it waits where it was put, held by that arm.
+                // Either way the arms stay stuck (TentacleCreature.HeldByArms keeps it from wandering off).
                 List<Vector3> pins = creature.PinnedPoints();
-                if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], creature);
-                else creature.UnpinAll();
+                if (pins.Count >= 2) MakeCord(pins[pins.Count - 2], pins[pins.Count - 1], creature, keepPinsIfInvalid: true);
             }
         }
         if (lastCarried == creature) lastCarried = null;
@@ -513,12 +593,19 @@ public sealed class TentacleTether : MonoBehaviour
                 if ((pin - a).sqrMagnitude < 0.01f) cord.armA = i;
                 else if ((pin - b).sqrMagnitude < 0.01f) cord.armB = i;
             }
-        // Keep the actual dropped position when the midpoint lies behind rock. An invalid rig
-        // releases its suckers instead of teleporting the creature through the obstruction.
+        // Where it was put down may be against rock (it rode on the player's back). Look for the nearest clear
+        // place to hang, between there and the line between the two arms. With none, it is not hung: it waits
+        // where it is with its arms still stuck (unless asked to let go).
         if (!PocketClear(cord, cord.pocket))
         {
-            if (!keepPinsIfInvalid) creature.UnpinAll();
-            return;
+            if (!FindHangPocket(cord, creature.transform.position, out Vector3 clear))
+            {
+                if (!keepPinsIfInvalid) creature.UnpinAll();
+                return;
+            }
+            cord.pocket = clear;
+            creature.transform.position = clear;
+            if (creature.TryGetComponent(out Rigidbody hangBody)) hangBody.position = clear;
         }
         cord.rest = SafePocket(cord, cord.pocket, rest);
         if (!teaching)
@@ -544,6 +631,42 @@ public sealed class TentacleTether : MonoBehaviour
         if (playerBody != null) Pass(cord, playerBody, true);
         cord.passUntil = Time.time + 0.5f;
         cords.Add(cord);
+    }
+
+    /// <summary>
+    /// The nearest place the hung body fits (clear of rock): along the way from where it was put towards the
+    /// middle of the two arms, a little below that middle, and round about it.
+    /// </summary>
+    private static bool FindHangPocket(Cord cord, Vector3 from, out Vector3 pocket)
+    {
+        Vector3 mid = (cord.a + cord.b) * 0.5f;
+        Vector3 low = mid + Vector3.down * 0.4f;
+        Vector3 along = (cord.b - cord.a).normalized;
+        Vector3 side = Vector3.Cross(along, Vector3.up);
+        if (side.sqrMagnitude < 1e-4f) side = Vector3.Cross(along, Vector3.forward);
+        side.Normalize();
+        for (int i = 1; i <= 8; i++)
+        {
+            pocket = Vector3.Lerp(from, low, i / 8f);
+            if (BodyClear(cord, pocket)) return true;
+        }
+        float[] rings = { 0.6f, 1.2f, 2f };
+        foreach (float r in rings)
+            for (int k = 0; k < 8; k++)
+            {
+                float angle = k * Mathf.PI / 4f;
+                pocket = low + (Vector3.up * Mathf.Sin(angle) + side * Mathf.Cos(angle)) * r;
+                if (BodyClear(cord, pocket)) return true;
+            }
+        pocket = from;
+        return false;
+    }
+
+    private static bool BodyClear(Cord cord, Vector3 at)
+    {
+        int count = Physics.OverlapSphereNonAlloc(at, PocketRadius(cord), terrainOverlaps, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++) if (TerrainSolid(terrainOverlaps[i])) return false;
+        return true;
     }
 
     public bool HangCreature(TentacleCreature creature, Vector3 a, Transform anchorA, Vector3 b, Transform anchorB)
@@ -612,15 +735,11 @@ public sealed class TentacleTether : MonoBehaviour
         return true;
     }
 
-    private static bool PocketClear(Cord cord, Vector3 at)
-    {
-        int count = Physics.OverlapSphereNonAlloc(at, PocketRadius(cord), terrainOverlaps, ~0, QueryTriggerInteraction.Ignore);
-        var results = count < terrainOverlaps.Length ? terrainOverlaps
-            : Physics.OverlapSphere(at, PocketRadius(cord), ~0, QueryTriggerInteraction.Ignore);
-        if (results != terrainOverlaps) count = results.Length;
-        for (int i = 0; i < count; i++) if (TerrainSolid(results[i])) return false;
-        return ArmClear(at, cord.a) && ArmClear(at, cord.b);
-    }
+    // The body clear of rock. The arms are checked only as a rule for moving it (SafePocket): a hang whose arm
+    // already wraps round an edge (stuck round a corner) is allowed, it just may not be dragged to cut deeper.
+    private static bool PocketClear(Cord cord, Vector3 at) => BodyClear(cord, at);
+
+    private static bool ArmsClear(Cord cord, Vector3 at) => ArmClear(at, cord.a) && ArmClear(at, cord.b);
 
     // Sweep the body, then constrain the whole two-arm triangle. A clear destination alone is
     // insufficient: the return path or an arm can otherwise cut through a thin rock.
@@ -635,16 +754,18 @@ public sealed class TentacleTether : MonoBehaviour
             if (TerrainSolid(results[i].collider)) travel = Mathf.Min(travel, Mathf.Max(0f, results[i].distance - 0.03f));
         to = from + delta / distance * travel;
         int steps = Mathf.Clamp(Mathf.CeilToInt(travel / 0.35f), 1, 32);
+        bool armsWereClear = ArmsClear(cord, from);
+        bool Ok(Vector3 p) => PocketClear(cord, p) && (!armsWereClear || ArmsClear(cord, p));
         Vector3 safe = from;
         for (int i = 1; i <= steps; i++)
         {
             Vector3 candidate = Vector3.Lerp(from, to, i / (float)steps);
-            if (!PocketClear(cord, candidate))
+            if (!Ok(candidate))
             {
                 for (int refine = 0; refine < 5; refine++)
                 {
                     Vector3 half = (safe + candidate) * 0.5f;
-                    if (PocketClear(cord, half)) safe = half; else candidate = half;
+                    if (Ok(half)) safe = half; else candidate = half;
                 }
                 break;
             }
@@ -659,8 +780,10 @@ public sealed class TentacleTether : MonoBehaviour
         for (int i = cords.Count - 1; i >= 0; i--)
         {
             if (cords[i].creature == null || cords[i].creature.IsDead || cords[i].creature.IsCarried) { RemoveCord(i); continue; }
+            // An arm whose hold is gone (what it held was destroyed): it can no longer hang between the two.
+            if ((cords[i].armA >= 0 && !cords[i].creature.ArmPin(cords[i].armA, out _))
+                || (cords[i].armB >= 0 && !cords[i].creature.ArmPin(cords[i].armB, out _))) { RemoveCord(i); continue; }
             if (cords[i].creature.SimulationEnabled) Spring(cords[i], Time.fixedDeltaTime);
-            if (!PocketClear(cords[i], cords[i].pocket)) RemoveCord(i);
         }
         if (BoneRide.Busy) return;
         if (automaticReel && Time.time > automaticReelUntil) automaticReel = reeling = false;
@@ -692,6 +815,7 @@ public sealed class TentacleTether : MonoBehaviour
             Vector3 flat = Vector3.ProjectOnPlane(pin - playerBody.position, Vector3.up);
             reelApproach = flat.sqrMagnitude > 1e-4f ? flat.normalized : Vector3.forward;
         }
+        ReelSteps++;
         Vector3 goal = pin - reelApproach * 0.6f + Vector3.down * 0.5f;
         Vector3 to = goal - playerBody.position;
         float distance = to.magnitude;
@@ -924,6 +1048,24 @@ public sealed class TentacleTether : MonoBehaviour
     }
 
     private void OnDisable() => ReelAll();
+
+    private GUIStyle problemStyle;
+
+    private void OnGUI()
+    {
+        string message = Problem;
+        if (message == null || carrier == null || !carrier.CarriesTentacle) return;
+        if (problemStyle == null)
+        {
+            problemStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 17 };
+            problemStyle.normal.textColor = new Color(1f, 0.72f, 0.7f, 0.95f);
+        }
+        var rect = new Rect(0f, Screen.height * 0.5f + 34f, Screen.width, 26f);
+        var shadow = new GUIStyle(problemStyle);
+        shadow.normal.textColor = new Color(0f, 0f, 0f, 0.7f);
+        GUI.Label(new Rect(rect.x + 1f, rect.y + 1f, rect.width, rect.height), message, shadow);
+        GUI.Label(rect, message, problemStyle);
+    }
 }
 
 /// <summary>The broad bridge is easy to walk on, but climbing palms grip the visible arm itself.</summary>
