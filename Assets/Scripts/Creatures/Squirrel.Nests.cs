@@ -160,10 +160,12 @@ public sealed partial class Squirrel
         { target.Release(this); target = null; }
         if (target == null)
         {
-            if (Time.time < nextSearch) return true;
-            nextSearch = Time.time + searchInterval;
-            target = foodManager.ReserveBuildingFood(this, migrationSearchRadius);
-            if (target == null) return true;
+            if (Time.time >= nextSearch)
+            {
+                nextSearch = Time.time + searchInterval;
+                target = foodManager.ReserveBuildingFood(this, migrationSearchRadius);
+            }
+            if (target == null) { TickIdlePatrol(deltaTime); return true; }
         }
         if (!MoveTo(target.transform.position, target.GetComponent<Collider>(), true)) return true;
         target.HideInside(this);

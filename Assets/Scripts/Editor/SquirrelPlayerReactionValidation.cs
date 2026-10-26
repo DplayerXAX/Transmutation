@@ -30,6 +30,16 @@ public static class SquirrelPlayerReactionValidation
             Check(Get<float>(f.Squirrel, "orbitTravel") >= 355f && !f.Squirrel.IsSocialReaction,
                 "squirrel physically completes a full orbit");
             Check(f.Nest.StoredFoodCount == 2, "celebration preserves exact donated inventory");
+            Vector3 afterOrbit = f.Body.position;
+            for (int i = 0; i < 400; i++) f.Step();
+            Check(Vector3.ProjectOnPlane(f.Body.position - afterOrbit, Vector3.up).magnitude > 0.75f,
+                "after celebrating, squirrel returns home or patrols even when no ground food remains");
+            Check(Vector3.ProjectOnPlane(f.Body.position - f.Player.transform.position, Vector3.up).magnitude > 3.5f,
+                $"empty-handed squirrel actively leaves the player after celebrating (position={f.Body.position}, goal={Get<Vector3>(f.Squirrel, "patrolPoint")})");
+            var freshFood = f.Food();
+            for (int i = 0; i < 400 && freshFood.Owner != f.Squirrel; i++)
+            { Set(f.Squirrel, "nextSearch", 0f); f.Step(); }
+            Check(freshFood.Owner == f.Squirrel, "post-celebration squirrel resumes collecting newly available food");
         }
         using (var f = new Fixture())
         {

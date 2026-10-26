@@ -269,16 +269,20 @@ public sealed partial class Squirrel : Creature
         if (target == null)
         {
             if (carried.Count == 0) foodShortageTime += deltaTime;
-            if (Time.time < nextSearch) return;
-            nextSearch = Time.time + searchInterval;
-            target = foodManager.ReserveNearest(this, searchRadius);
-            activity = target != null ? Activity.Collecting :
-                carried.Count > 0 ? Activity.Returning : Activity.Searching;
+            if (Time.time >= nextSearch)
+            {
+                nextSearch = Time.time + searchInterval;
+                target = foodManager.ReserveNearest(this, searchRadius);
+                activity = target != null ? Activity.Collecting :
+                    carried.Count > 0 ? Activity.Returning : Activity.Searching;
+            }
             if (target == null)
             {
                 if (carried.Count == 0 && foodShortageTime >= foodShortageDelay) TryPlanMigration();
+                if (activity == Activity.Searching) TickIdlePatrol(deltaTime);
                 return;
             }
+            hasPatrolPoint = false;
             foodShortageTime = 0f;
         }
         if (!MoveTo(target.transform.position, target.GetComponent<Collider>())) return;

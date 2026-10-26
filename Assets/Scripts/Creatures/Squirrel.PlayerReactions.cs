@@ -257,10 +257,17 @@ public sealed partial class Squirrel
     }
     private void FinishSocialReaction()
     {
+        bool celebrated = activity == Activity.Celebrating;
         if (warningMarker != null) warningMarker.enabled = false;
+        if (celebrated) patrolPlayer = observedPlayer;
         observedPlayer = null; observedNest = null; stolenFood = null;
-        activity = resumeAfterSocial;
+        // Empty-handed squirrels leave to forage/patrol away from the player immediately.
+        // Only squirrels carrying food need to approach the nest to unload it.
+        activity = celebrated && resumeAfterSocial != Activity.GatheringNestMaterials &&
+            resumeAfterSocial != Activity.BuildingNest && nest != null && !nest.IsDead
+            ? (carried.Count > 0 ? Activity.Returning : Activity.Searching) : resumeAfterSocial;
         motor.ResetRoute(); nextSearch = 0f;
+        hasPatrolPoint = false;
     }
     private void CancelSocialReaction()
     {
