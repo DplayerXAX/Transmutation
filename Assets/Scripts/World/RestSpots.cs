@@ -155,11 +155,14 @@ public sealed class RestSpotSystem : MonoBehaviour
         // Seated: the move, jump and climb keys do nothing (only C stands up).
         if (sittingAt != null) controller.SuppressJumpForCurrentFrame();
 
-        if (keyboard != null && !meditating)
+        // Right click (with empty hands and no creature in the crosshair) sits down and stands up; C still works.
+        bool rightClick = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && Application.isFocused && RightClickFree();
+        bool toggle = rightClick || (keyboard != null && keyboard.cKey.wasPressedThisFrame);
+        if (!meditating)
         {
-            if (sittingAt == null && near != null && keyboard.cKey.wasPressedThisFrame) Sit(near);
-            else if (sittingAt != null && keyboard.cKey.wasPressedThisFrame) Stand();
-            Record(keyboard);
+            if (sittingAt == null && near != null && toggle) Sit(near);
+            else if (sittingAt != null && toggle) Stand();
+            if (keyboard != null) Record(keyboard);
         }
     }
 
@@ -424,6 +427,23 @@ public sealed class RestSpotSystem : MonoBehaviour
 #endif
     }
 
+    /// <summary>True when right click would sit down here or stand up (the mouse icon shows it).</summary>
+    public bool RightClickSits => (sittingAt != null || near != null) && RightClickFree() && !(meditation != null && meditation.IsMeditating);
+
+    private PlayerCreatureCarrier carrier;
+
+    /// <summary>Right click is free for sitting: nothing in the hands and no creature in the crosshair to pick up.</summary>
+    private bool RightClickFree()
+    {
+        if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        if (carrier == null) return true;
+        if (sittingAt != null) return carrier.CarriedCreature == null; // seated: right click stands up (unless it puts a creature down)
+        return carrier.CarriedCreature == null && carrier.FindCreature() == null && !BoneRide.Busy;
+    }
+
+    [Tooltip("Off: no written prompts by the rest spot (the mouse icon shows right click). Recording messages still show.")]
+    [SerializeField] private bool showPrompts = false;
+
     // ---------------- Prompt ----------------
 
     private void Say(string message)
@@ -438,8 +458,8 @@ public sealed class RestSpotSystem : MonoBehaviour
         if (meditating) return;
         string line = null;
         if (Time.time < toastUntil) line = toast;
-        else if (sittingAt != null) line = LandmarkProgress.HasRested(sittingAt.kind) ? "[C] Stand" : "[M] Meditate      [C] Stand";
-        else if (near != null) line = LandmarkProgress.HasRested(near.kind) ? "[C] Sit" : "[C] Sit      [M] Meditate";
+        else if (showPrompts && sittingAt != null) line = LandmarkProgress.HasRested(sittingAt.kind) ? "[RMB] Stand" : "[M] Meditate      [RMB] Stand";
+        else if (showPrompts && near != null) line = LandmarkProgress.HasRested(near.kind) ? "[RMB] Sit" : "[RMB] Sit      [M] Meditate";
         if (line == null) return;
         var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
         style.normal.textColor = new Color(0.95f, 0.95f, 0.92f, 0.95f);

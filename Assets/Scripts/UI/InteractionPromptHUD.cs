@@ -2,8 +2,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Shows short control hints under the crosshair: carrying and interacting with the
-/// Creature in view, and climbing / wall running / ledge actions when they are possible.
+/// Under the crosshair, a small mouse icon whose left or right button lights up when that button does something
+/// right now (pick up, put down, pet, use, aim and shoot, ride, sit...). The written hints are worked out as
+/// before but hidden by default (Show Text brings them back); the icon reads which mouse buttons they mention.
 /// Builds its own overlay Canvas, so it only needs to exist once in the scene.
 /// </summary>
 [DisallowMultipleComponent]
@@ -24,6 +25,13 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     [SerializeField] private Color hintColor = new Color(1f, 1f, 1f, 0.92f);
     [Tooltip("Seconds to fade the prompt in or out.")]
     [Min(0.01f)] [SerializeField] private float fadeTime = 0.12f;
+
+    [Header("Mouse Icon")]
+    [Tooltip("Off: no written hints, only the mouse icon. On: the old text hints as well.")]
+    [SerializeField] private bool showText = false;
+    [SerializeField] private Vector2 iconOffset = new Vector2(0f, -38f);
+    [Min(0.3f)] [SerializeField] private float iconScale = 0.8f;
+    private MouseButtonIcon icon;
 
     [Header("Text")]
     [SerializeField] private bool showCreatureName = true;
@@ -58,10 +66,20 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) { group.alpha = 0f; return; }
+        if (BoneAwakeningCutscene.Playing) { group.alpha = 0f; if (icon != null) icon.Show(false, false, false, false, 0.01f); return; }
         string title = null;
         string hint = null;
         ChoosePrompt(ref title, ref hint);
+
+        // Which mouse buttons the hint mentions: those are the ones that do something now.
+        bool leftUsable = hint != null && hint.Contains("LMB");
+        bool rightUsable = hint != null && hint.Contains("RMB");
+        if (!leftUsable && !rightUsable && RestSpotSystem.Instance != null && RestSpotSystem.Instance.RightClickSits) rightUsable = true;
+        if (petter != null && petter.IsPetting) leftUsable = true;
+        var mouse = UnityEngine.InputSystem.Mouse.current;
+        if (icon != null)
+            icon.Show(leftUsable, rightUsable, mouse != null && mouse.leftButton.isPressed, mouse != null && mouse.rightButton.isPressed, fadeTime);
+        if (!showText) hint = null;
 
         bool visible = !string.IsNullOrEmpty(hint);
         if (visible)
@@ -114,7 +132,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (BoneRide.Approaching)
         {
             title = "BOARDING";
-            hint = "Pulling onto back    [RMB / C / R] Cancel";
+            hint = "Pulling onto back    [RMB] Cancel";
             return;
         }
         if (TentacleTether.Instance != null && TentacleTether.Instance.AimingAtBone)
@@ -269,6 +287,18 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         layout.childForceExpandHeight = false;
         var fitter = stack.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        // The icon sits on its own canvas so the text's fading never hides it.
+        var iconCanvas = new GameObject("MouseIconCanvas", typeof(RectTransform));
+        iconCanvas.transform.SetParent(transform, false);
+        var iconRoot = iconCanvas.AddComponent<Canvas>();
+        iconRoot.renderMode = RenderMode.ScreenSpaceOverlay;
+        iconRoot.sortingOrder = 101;
+        var iconScaler = iconCanvas.AddComponent<CanvasScaler>();
+        iconScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        iconScaler.referenceResolution = new Vector2(1920f, 1080f);
+        iconScaler.matchWidthOrHeight = 0.5f;
+        icon = MouseButtonIcon.Build(iconCanvas.transform, iconOffset, iconScale);
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         titleText = CreateText(stack.transform, "Title", font, titleFontSize, titleColor);

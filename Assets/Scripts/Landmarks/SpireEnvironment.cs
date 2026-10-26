@@ -220,7 +220,7 @@ public static class SpireEnvironment
         if (cube != null) return cube;
         GameObject temp = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cube = temp.GetComponent<MeshFilter>().sharedMesh;
-        Object.Destroy(temp);
+        LandmarkShapes.Discard(temp);
         return cube;
     }
 

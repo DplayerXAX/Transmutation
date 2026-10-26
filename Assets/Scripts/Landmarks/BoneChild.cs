@@ -47,7 +47,8 @@ public sealed class BoneChild : MonoBehaviour
     }
     public int StoredBubbleCount => storedFuel.Count;
     public bool Ridden => BoneRide.Mount == (object)this;
-    public bool Reined => BoneRide.Reins(transform) >= 2;
+    // One tentacle arm stuck into it (the one that pulled the rider on) is enough to steer it.
+    public bool Reined => BoneRide.Reins(transform) >= 1;
     public Transform Head => beads.Count > 0 ? beads[0] : transform;
     public Vector3 Chest => beads.Count > 3 ? beads[3].position : transform.position;
     public Vector3 RidePoint => beads.Count > 2 ? beads[2].position : Head.position;
@@ -201,6 +202,7 @@ public sealed class BoneChild : MonoBehaviour
         headDir = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
         bodyRenderers = GetComponentsInChildren<Renderer>();
         All.Add(this);
+        if (Application.isPlaying) HeatHaze.Attach(this);
     }
 
     private static Mesh sphere;
@@ -790,16 +792,23 @@ public static class BoneRide
     public static bool LeftReinHeld => moveInput.x < -0.05f || Mathf.Abs(moveInput.y) > 0.05f;
     public static bool RightReinHeld => moveInput.x > 0.05f || Mathf.Abs(moveInput.y) > 0.05f;
 
-    /// <summary>W/S controls altitude, A/D strafes, Space/Ctrl moves forward/back relative to view.</summary>
+    /// <summary>How fast a ridden bone creature cruises on by itself (share of its full speed); Space speeds it up, Ctrl slows it.</summary>
+    public static float CruiseShare = 0.7f;
+
+    /// <summary>
+    /// It flies on by itself, the way the rider looks (level); A/D slide it left and right, W/S climb and dive,
+    /// Space flies faster and Ctrl slower.
+    /// </summary>
     public static Vector3 Steer(float deltaTime)
     {
         Keyboard keys = Keyboard.current;
-        Vector2 input = ScriptedMove ?? Vector2.zero;
+        Vector2 input = ScriptedMove ?? new Vector2(0f, CruiseShare);
         float rise = ScriptedRise;
         if ((Application.isFocused || Application.isBatchMode) && keys != null)
         {
-            if (ScriptedMove == null) input = new Vector2((keys.dKey.isPressed ? 1f : 0f) - (keys.aKey.isPressed ? 1f : 0f),
-                (keys.spaceKey.isPressed ? 1f : 0f) - (keys.leftCtrlKey.isPressed || keys.rightCtrlKey.isPressed ? 1f : 0f));
+            float throttle = CruiseShare + (keys.spaceKey.isPressed ? 1f - CruiseShare : 0f)
+                             - (keys.leftCtrlKey.isPressed || keys.rightCtrlKey.isPressed ? CruiseShare * 0.7f : 0f);
+            if (ScriptedMove == null) input = new Vector2((keys.dKey.isPressed ? 1f : 0f) - (keys.aKey.isPressed ? 1f : 0f), throttle);
             rise += (keys.wKey.isPressed ? 1f : 0f) - (keys.sKey.isPressed ? 1f : 0f);
         }
         moveInput = Vector2.MoveTowards(moveInput, Vector2.ClampMagnitude(input, 1f), 8f * deltaTime);
@@ -817,7 +826,7 @@ public static class BoneRide
     public static bool PressedC()
     {
         if (ScriptedToggle) { ScriptedToggle = false; return true; }
-        return Keyboard.current != null && Keyboard.current.cKey.wasPressedThisFrame;
+        return false; // creature controls are on the mouse buttons only
     }
 
     /// <summary>
@@ -834,8 +843,7 @@ public static class BoneRide
         bool leftIsBusy = held != null && (held is TentacleCreature || held.CanUseWhileCarried);
         if (approachCarrier != null)
         {
-            if (rightPress || (Keyboard.current != null && (Keyboard.current.cKey.wasPressedThisFrame || Keyboard.current.rKey.wasPressedThisFrame)))
-                CancelApproach();
+            if (rightPress) CancelApproach(); // right click cancels the pull (mouse only)
             return true;
         }
         if (Mount != null)

@@ -194,6 +194,8 @@ public sealed class CrosshairHUD : MonoBehaviour
                 TentacleTether tether = TentacleTether.Instance;
                 active = tether != null && tether.Aiming;
                 valid = tether != null && tether.AimValid;
+                // A shot that could not stick: the cross flashes red for a moment (there is no text).
+                if (tether != null && tether.Problem != null) { active = true; valid = false; }
                 return Mode.Tentacle;
             }
             if (carrier.CarriedCreature is BubbleFlower)

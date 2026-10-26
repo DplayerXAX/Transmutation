@@ -11,6 +11,25 @@ materials in `Assets/Materials/Landmarks/`, adds a `HangingSpire` linked to the 
 
 **Tools > Capstone > Landmarks > Reset Landmark Progress (Seeds And Glyphs)** clears the saved progress.
 
+## Editing landmarks in the Scene view
+
+The landmarks are still built by code, but they also show while editing (`Editor/LandmarkScenePreview.cs`,
+toggle **Tools > Capstone > Landmarks > Show Landmarks In Scene View**, on by default). The `HangingSpire` and
+`BoneKiln` objects in the scene are handles: each is copied onto an unsaved preview object named
+`[Preview] ... (not saved)` and built there with the same code as in Play mode, without the creatures and the
+kiln's children (they roam anyway). Clicking the preview selects the handle. Previews are removed before Play mode
+and never saved.
+
+- **Placement > Place At This Object**: the landmark uses the sinkhole nearest to its object (the kiln skips the
+  spire's) instead of `preferredDistance`. Move the object and the preview follows; it is rebuilt when the mouse
+  is let go. **Tools > Capstone > Terrain > Make Scene Editable** turns this on and puts both handles where the
+  landmarks stand now, so nothing moves until you move it.
+- **Move Its Sinkhole Under This Object** (inspector button, saved terrain only): moves that sinkhole in the
+  saved layout to the handle, rebuilds the world and the landmark. Sculpt edits are kept. Ctrl+Z does not undo it.
+- Inspector changes (height, seed, ledges...) rebuild the preview too. Only move the handles; turning them does
+  nothing (the door still faces the spawn).
+- `BuildPreview()` on both components builds in edit mode; `LandmarkShapes.Discard` destroys safely in both modes.
+
 ## Hanging Spire
 
 `HangingSpire` waits until `ProceduralWorld.LayoutReady`, picks a sinkhole and builds around it:
