@@ -153,6 +153,28 @@ FireSource --heat--> FireFlower --blooms--> FireBubble --falls, lies still--> ne
 The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects injecting density into a
 `MarchingCubesVolume` (see `Scripts/MarchingCubes/README.md`).
 
+### Heat haze
+
+`HeatHaze` makes heat visible as a 3D heat wave: shells of evenly spaced dots swell outward from the warm thing and
+fade, one after another. Each shell's surface folds with slow waves; crests carry bigger, brighter dots (trough red,
+heat colour, pale crest), the far side of a shell is dimmer, and a few horizontal bands glitch to cyan / magenta now
+and then (shader `Capstone/Effects/HeatHaze`, loaded from `Assets/Shaders/Effects/Resources`).
+It only reads heat; it never changes it.
+
+- **Auto attach:** at runtime it is added to every `FireSource`, `FireBubble`, `FireFlower` and `FuzzCreature`
+  (through `Creature.Activated`), and to `BoneChild` / `BoneKiln` when they build. Add it by hand to any other
+  Creature to show its `Heat`.
+- **Intensity (0..1):** `Heat / fullHeat` for creatures (`baseline` keeps always-hot fire bubbles going),
+  `Warmth` for the bone child and mother. Eased, so the haze swells and settles. Below `threshold` it is hidden.
+  The look follows intensity squared: low heat shows only a sparse scatter of small, faint dots (about 12%);
+  the full dense, bright shells need real heat. Fire sources use `fullHeat` 6000, fire bubbles 40, fuzz 25.
+- **Shells:** centred on the heat (the mother's kiln heart or, once awake, her skull; a child's chest). They leave at
+  `inner` and fade at `radius` (a fire source uses its radiation radius); more intensity = wider shells and deeper
+  folds (`fold`). `shells`, `dotsPerShell`, `cycle` (seconds per shell) and `dotScale` are set per kind in
+  `HeatHaze.Attach`.
+- **Cost:** one draw per source. The dotted shell mesh (Fibonacci spheres) is built once per count and shared;
+  radius, folds and colour are all in the vertex shader.
+
 ## Other creatures
 
 **Corrupt Seed** is passive Plant food that infects its consumer through a separate

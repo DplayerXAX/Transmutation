@@ -95,6 +95,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         Log($"World ready: {lastBuilt} chunks after {Time.realtimeSinceStartup - waitStart:0}s at {world.transform.position}. Player half height {halfHeight:0.00}.");
         Time.timeScale = 3f;
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestIcons") >= 0)
+        {
+            yield return CheckMouseIcon();
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestTentacle") >= 0)
         {
             yield return CheckTentacleHolds();
@@ -532,6 +538,71 @@ public sealed class ClimbTestDriver : MonoBehaviour
         Save(captureCamera, Path.Combine(framesPath, file));
     }
 
+    /// <summary>The mouse icon under the crosshair in a few situations, and its drawn shapes saved as pictures.</summary>
+    private IEnumerator CheckMouseIcon()
+    {
+        var icon = FindFirstObjectByType<MouseButtonIcon>();
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        Log($"Mouse icon: {(icon != null)}, text hidden {FindFirstObjectByType<InteractionPromptHUD>() != null}");
+        if (icon == null) yield break;
+        string State() => icon.Visible ? $"left {(icon.LeftLit ? "lit" : "dim")}, right {(icon.RightLit ? "lit" : "dim")}" : "hidden";
+        yield return new WaitForSeconds(0.5f);
+        Log($"    nothing to do: {State()}");
+        // Looking at a fuzzy creature close by.
+        FuzzCreature fuzz = FindFirstObjectByType<FuzzCreature>();
+        if (fuzz != null)
+        {
+            Vector3 eyeSpot = fuzz.transform.position - Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized * 2.5f;
+            Teleport(eyeSpot + Vector3.up * 0.6f, fuzz.transform.position - eyeSpot);
+            Vector3 to = fuzz.transform.position - Camera.main.transform.position;
+            controller.SetLook(Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, -Mathf.Atan2(to.y, new Vector2(to.x, to.z).magnitude) * Mathf.Rad2Deg);
+            yield return new WaitForSeconds(0.6f);
+            Log($"    looking at a fuzzy creature: {State()} (pickup target {carrier.FindCreature()?.name}, {Vector3.Distance(Camera.main.transform.position, fuzz.transform.position):0.0} m)");
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { fuzz });
+            yield return new WaitForSeconds(0.6f);
+            Log($"    holding a fuzzy creature: {State()}");
+            carrier.Release();
+        }
+        TentacleCreature tentacle = FindFirstObjectByType<TentacleCreature>();
+        if (tentacle != null)
+        {
+            body.position = tentacle.transform.position + Vector3.up * 0.5f;
+            Physics.SyncTransforms();
+            yield return null;
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { tentacle });
+            yield return new WaitForSeconds(0.6f);
+            Log($"    tentacle on the back: {State()}");
+            carrier.Release();
+            yield return new WaitForSeconds(0.3f);
+        }
+        if (RestSpotSystem.Instance != null && RestSpotSystem.Instance.Spots.Count > 0)
+        {
+            RestSpot spot = RestSpotSystem.Instance.Spots[0];
+            Teleport(spot.Seat + spot.transform.forward * 1.2f + Vector3.up * 0.6f, -spot.transform.forward);
+            controller.SetLook(controller.LookYaw, -60f);
+            yield return new WaitForSeconds(0.6f);
+            Log($"    next to a rest spot: {State()} (right click sits: {RestSpotSystem.Instance.RightClickSits})");
+        }
+        if (framesPath != null && MouseButtonIcon.Textures != null)
+        {
+            Directory.CreateDirectory(framesPath);
+            // As it would look with the right button usable and the left not, on a dark background, three times larger.
+            Texture2D[] t = MouseButtonIcon.Textures;
+            int w = t[0].width, h = t[0].height, k = 3;
+            var sheet = new Texture2D(w * k, h * k, TextureFormat.RGBA32, false);
+            for (int y = 0; y < h * k; y++)
+            for (int x = 0; x < w * k; x++)
+            {
+                Color c = new Color(0.1f, 0.11f, 0.12f, 1f);
+                float o = t[0].GetPixel(x / k, y / k).a * 0.85f, l = t[1].GetPixel(x / k, y / k).a * 0.12f, r = t[2].GetPixel(x / k, y / k).a * 0.78f;
+                c = Color.Lerp(c, Color.white, Mathf.Clamp01(o + l + r));
+                sheet.SetPixel(x, y, c);
+            }
+            sheet.Apply();
+            File.WriteAllBytes(Path.Combine(framesPath, "mouse_icon.png"), sheet.EncodeToPNG());
+        }
+    }
+
     /// <summary>
     /// Stuck arms stay stuck: one arm stuck then put down (it waits there), picked up again (arms let go),
     /// two arms stuck while standing right against the wall then put down (it hangs, or waits, arms still stuck).
@@ -707,7 +778,89 @@ public sealed class ClimbTestDriver : MonoBehaviour
             bool approached = BoneRide.Approaching;
             while (Time.time - start < 7f && BoneRide.Mount == null && (BoneRide.Approaching || Time.time - start < 0.3f)) yield return null;
             Log($"    boarding a {(run == 1 ? $"flying (warmth {child.Warmth:0.00})" : "resting")} child from 9 m: started {approached}, mounted {BoneRide.Mount == (object)child} after {Time.time - start:0.0} s, ended: {BoneRide.LastApproachEnd}, problem '{tether.Problem}'");
-            if (BoneRide.Mount != null) { BoneRide.GetOff(); yield return new WaitForSeconds(0.3f); }
+            if (BoneRide.Mount != null)
+            {
+                // Steering on it: it flies on by itself the way the rider looks; A/D sideways, W/S up and down.
+                yield return new WaitForSeconds(0.4f);
+                {
+                    Vector3 look = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+                    Vector3 cruiseFrom = child.RidePoint;
+                    yield return new WaitForSeconds(2f);
+                    Vector3 cruised = child.RidePoint - cruiseFrom;
+                    Log($"      no keys for 2 s: flew {cruised.magnitude:0.0} m, {Vector3.Dot(cruised, look):0.0} m along the view");
+                }
+                Log($"      on board: reins {BoneRide.Reins(child.transform)}, reined {child.Reined}, warmth {child.Warmth:0.00}");
+                Vector3 before = child.RidePoint;
+                Vector3 right = Vector3.Cross(Vector3.up, Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized);
+                BoneRide.ScriptedMove = new Vector2(1f, 0f);
+                yield return new WaitForSeconds(1.5f);
+                Vector3 moved = child.RidePoint - before;
+                Log($"      D held 1.5 s: moved {moved.magnitude:0.0} m, {Vector3.Dot(moved, right):0.0} m to the right, {moved.y:+0.0;-0.0} m up");
+                BoneRide.ScriptedMove = Vector2.zero;
+                before = child.RidePoint;
+                BoneRide.ScriptedRise = 1f;
+                yield return new WaitForSeconds(1.5f);
+                BoneRide.ScriptedRise = 0f;
+                Log($"      W held 1.5 s: rose {child.RidePoint.y - before.y:+0.0;-0.0} m");
+                BoneRide.ScriptedRise = -1f;
+                before = child.RidePoint;
+                yield return new WaitForSeconds(2f);
+                BoneRide.ScriptedRise = 0f;
+                Log($"      S held 2 s: rose {child.RidePoint.y - before.y:+0.0;-0.0} m");
+                // Left click while riding: an arm shot at the ground pulls the rider off towards it.
+                if (Physics.Raycast(body.position, Vector3.down + Camera.main.transform.forward, out RaycastHit spotHit, 40f, 1 << 7))
+                {
+                    tether.FireAt(spotHit.point + spotHit.normal * 0.05f, spotHit.collider.transform);
+                    yield return new WaitForSeconds(0.3f);
+                    Log($"      shot an arm from its back at {spotHit.collider.name} {spotHit.distance:0.0} m: still riding {BoneRide.Mount != null}, reeling {tether.Reeling}, carrying tentacle {carrier.CarriesTentacle}, stuck {tentacle.PinnedCount}, problem '{tether.Problem}'");
+                }
+                else Log("      nothing below to shoot at");
+                BoneRide.ScriptedMove = null;
+                BoneRide.GetOff(); yield return new WaitForSeconds(0.3f);
+            }
+        }
+        // Trapped in a bubble with the tentacle on the back: an arm shot out and reeled in drags the whole bubble.
+        {
+            BubbleFlower flower = FindFirstObjectByType<BubbleFlower>();
+            var prefab = flower != null ? typeof(BubbleFlower).GetField("bubblePrefab", Private)?.GetValue(flower) as TrappingBubble : null;
+            if (prefab == null) Log("    no trapping bubble to test with");
+            else
+            {
+                if (!carrier.CarriesTentacle) yield return Carry();
+                tether.LetGoAll();
+                yield return StandAtWall();
+                body.position += -cliff.inward * 8f + Vector3.up * 1.5f;
+                Physics.SyncTransforms();
+                yield return null;
+                TrappingBubble bubble = Instantiate(prefab, body.position, Quaternion.identity);
+                yield return new WaitForFixedUpdate();
+                var capture = controller.GetComponent<BubbleCapture>() ?? controller.gameObject.AddComponent<BubbleCapture>();
+                for (int w = 0; w < 30 && !capture.CanCapture; w++) yield return new WaitForSeconds(0.1f);
+                CreatureBounds.TryMeasure(controller.transform, out Bounds measured);
+                Log($"    before trapping: can capture {capture.CanCapture} (captured {capture.IsCaptured}, enabled {capture.isActiveAndEnabled}), player measures {CreatureBounds.LargestSide(measured):0.0} m");
+                bool trapped = capture.IsCaptured || bubble.TryCapture(controller.gameObject);
+                if (capture.IsCaptured && capture.OwningBubble != null) bubble = capture.OwningBubble;
+                yield return new WaitForSeconds(0.5f);
+                Vector3 target = cliff.feet + Vector3.up * 3f;
+                if (Physics.Raycast(bubble.transform.position, (target - bubble.transform.position).normalized, out RaycastHit wallHit, 30f, 1 << 7, QueryTriggerInteraction.Ignore))
+                {
+                    tether.FireAt(wallHit.point + wallHit.normal * 0.05f, wallHit.collider.transform);
+                    Vector3 start = bubble.transform.position;
+                    float gap0 = Vector3.Distance(start, wallHit.point);
+                    tether.ScriptedReel = true;
+                    for (int q = 0; q < 4; q++)
+                    {
+                        yield return new WaitForSeconds(0.5f);
+                        Log($"      {0.5f * (q + 1):0.0} s reeling: bubble {(bubble != null ? Vector3.Distance(bubble.transform.position, wallHit.point).ToString("0.0") + " m from the arm's end" : "gone")}, inside {capture.IsCaptured}, reel steps {tether.ReelSteps}");
+                    }
+                    tether.ScriptedReel = false;
+                    Log($"    trapped in a bubble ({trapped}, captured {capture.IsCaptured}): reeled 2 s, bubble went from {gap0:0.0} to {Vector3.Distance(bubble != null ? bubble.transform.position : start, wallHit.point):0.0} m from the arm's end, player still inside {capture.IsCaptured}");
+                }
+                else Log("    trapped bubble: no wall to shoot");
+                if (capture.IsCaptured) capture.Escape();
+                if (bubble != null) Destroy(bubble.gameObject);
+                yield return new WaitForSeconds(0.5f);
+            }
         }
         // Right click on the tentacle: a long press still only puts it down.
         if (!carrier.CarriesTentacle) yield return Carry();

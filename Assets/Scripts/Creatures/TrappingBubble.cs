@@ -103,6 +103,19 @@ public sealed class TrappingBubble : LeashBubble
         if (shooter != null) IgnoreColliders(shooter, Time.time + shooterProtection);
     }
 
+    private Vector3 tug;
+    private float tugUntil;
+
+    /// <summary>
+    /// Pulls the bubble (and whoever is inside) at this velocity for a moment: the player inside reeling in a stuck
+    /// tentacle arm (TentacleTether) drags the whole bubble towards where it stuck. Call every physics step to keep pulling.
+    /// </summary>
+    public void Tug(Vector3 velocity)
+    {
+        tug = velocity;
+        tugUntil = Time.time + 0.1f;
+    }
+
     protected override void TickCreature(float deltaTime) { }
     private void FixedUpdate() => SimulateStep(Time.fixedDeltaTime);
 
@@ -125,6 +138,8 @@ public sealed class TrappingBubble : LeashBubble
                 Mathf.Sin(motionTime * angularSpeed + phase)) * (swayDistance * angularSpeed);
         }
         velocity += PlayerSteer();
+        // A tentacle arm reeled in from inside pulls the whole bubble along it.
+        if (Time.time < tugUntil) velocity += tug;
         // Unity's contact solver stops this velocity against walls and ceilings.
         velocity = LeashVelocity(velocity, deltaTime);
         body.linearVelocity = velocity;

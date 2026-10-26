@@ -258,7 +258,8 @@ public sealed class BoneKiln : MonoBehaviour
 
     /// <summary>True while the player rides her.</summary>
     public bool Ridden => BoneRide.Mount == (object)this;
-    public bool Reined => BoneRide.Reins(root) >= 2;
+    // One tentacle arm stuck into her (the one that pulled the rider on) is enough to steer her.
+    public bool Reined => BoneRide.Reins(root) >= 1;
     public Transform Skull => skull;
     public Transform RideRoot => root;
     public Vector3 RideForward => awake ? (emerging ? -headDir : headDir) : root != null ? -root.forward : transform.forward;
@@ -321,6 +322,7 @@ public sealed class BoneKiln : MonoBehaviour
     private void Build(int spireHole)
     {
         built = true;
+        if (Application.isPlaying) HeatHaze.Attach(this);
         var random = new System.Random(seed);
         sinkholeIndex = sinkholeOverride >= 0 && sinkholeOverride < world.SinkholeCount ? sinkholeOverride : PickSinkhole(spireHole);
         if (sinkholeIndex < 0)
@@ -939,8 +941,6 @@ public sealed class BoneKiln : MonoBehaviour
         Vector3 spireMouth = spireHole >= 0 ? world.SinkholeCentre(spireHole, spawn.y, out _) : Vector3.positiveInfinity;
         int best = -1;
         float bestScore = float.MaxValue;
-        for (int i = 0; i < world.SinkholeCount; i++)
-        {
         if (placeAtThisObject)
         {
             for (int i = 0; i < world.SinkholeCount; i++)
@@ -952,6 +952,8 @@ public sealed class BoneKiln : MonoBehaviour
             }
             return best;
         }
+        for (int i = 0; i < world.SinkholeCount; i++)
+        {
             if (i == spireHole) continue;
             Vector3 hole = world.SinkholeCentre(i, spawn.y, out _);
             if (!InsideMap(hole, 0.62f)) continue;
