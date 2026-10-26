@@ -3287,6 +3287,63 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 400000, guid: 77149edcf0c144bbb96b12309d7acb0b, type: 3}
   m_PrefabInstance: {fileID: 2100000500}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2100000600
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2100000601}
+  - component: {fileID: 2100000602}
+  m_Layer: 0
+  m_Name: Glow Bee Colonies
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2100000601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000600}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2100000602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 293e9b2225ba437daa16cc6bae2173b1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::GlowBeeColony
+  nestCount: 3
+  beesPerNest: 4
+  flowersPerNest: 5
+  seed: 814
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  sceneryLayers:
+    serializedVersion: 2
+    m_Bits: 129
+  nestSeparation: 9
+  spiderPrefab: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  spawnSpider: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3320,3 +3377,4 @@ SceneRoots:
   - {fileID: 2100000400}
   - {fileID: 2100000411}
   - {fileID: 2100000501}
+  - {fileID: 2100000601}
