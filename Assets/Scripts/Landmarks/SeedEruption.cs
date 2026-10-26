@@ -70,7 +70,7 @@ public sealed class SeedEruption : MonoBehaviour
         {
             GameObject copy = Instantiate(core.gameObject, transform);
             copy.name = "Shard";
-            foreach (MonoBehaviour behaviour in copy.GetComponentsInChildren<MonoBehaviour>(true)) Destroy(behaviour);
+            foreach (MonoBehaviour behaviour in copy.GetComponentsInChildren<MonoBehaviour>(true)) LandmarkShapes.Discard(behaviour);
             copy.SetActive(false);
             shards[i].transform = copy.transform;
         }

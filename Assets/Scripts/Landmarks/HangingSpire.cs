@@ -43,6 +43,8 @@ public sealed class HangingSpire : MonoBehaviour
     [Min(0f)] [SerializeField] private float preferredDistance = 85f;
     [Tooltip("Use this sinkhole index instead (-1 = choose automatically).")]
     [SerializeField] private int sinkholeOverride = -1;
+    [Tooltip("Use the sinkhole nearest to this object. Move the object in the Scene view to move the spire.")]
+    [SerializeField] private bool placeAtThisObject;
 
     [Header("Shape")]
     [SerializeField] private int seed = 11;
@@ -368,7 +370,8 @@ public sealed class HangingSpire : MonoBehaviour
         LandmarkDecor.Spire(root, basePoint, upper, stageTowers, spireMaterial, glyphMaterial, seed);
         // Crystal blades, a drifting shard field, ink guide lines, ground etchings and rising motes.
         SpireEnvironment.Build(root, basePoint, upper, stageTowers, spireMaterial, glyphMaterial, seed);
-        SpawnCreatures(spireObject.GetComponent<Collider>(), basePoint, upper.height, doorAngle, random);
+        // The edit mode preview shows only the architecture.
+        if (Application.isPlaying) SpawnCreatures(spireObject.GetComponent<Collider>(), basePoint, upper.height, doorAngle, random);
         Debug.Log($"Hanging Spire built on sinkhole {sinkholeIndex} at {basePoint}.");
     }
 
@@ -377,6 +380,16 @@ public sealed class HangingSpire : MonoBehaviour
         int best = 0;
         float bestScore = float.MaxValue;
         Vector3 spawn = world.transform.position;
+        if (placeAtThisObject)
+        {
+            for (int i = 0; i < world.SinkholeCount; i++)
+            {
+                Vector3 centre = world.SinkholeCentre(i, transform.position.y, out _);
+                float distance = new Vector2(centre.x - transform.position.x, centre.z - transform.position.z).magnitude;
+                if (distance < bestScore) { bestScore = distance; best = i; }
+            }
+            return best;
+        }
         for (int i = 0; i < world.SinkholeCount; i++)
         {
             Vector3 centre = world.SinkholeCentre(i, spawn.y, out _);
@@ -646,7 +659,7 @@ public sealed class HangingSpire : MonoBehaviour
         {
             GameObject plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
             bridgeMesh = plane.GetComponent<MeshFilter>().sharedMesh;
-            Destroy(plane);
+            LandmarkShapes.Discard(plane);
         }
         var random = new System.Random(seed * 31 + 7);
         signBaseY = basePoint.y;
@@ -816,6 +829,15 @@ public sealed class HangingSpire : MonoBehaviour
     public bool Built => built;
     /// <summary>The sinkhole the tower stands on (-1 before it is built).</summary>
     public int SinkholeIndex => sinkholeIndex;
+    public Transform Root => root;
+    public bool PlaceAtThisObject { get => placeAtThisObject; set => placeAtThisObject = value; }
+
+    /// <summary>Builds the landmark now, in edit mode, for the Scene view preview (LandmarkScenePreview).</summary>
+    public void BuildPreview()
+    {
+        if (Application.isPlaying || built || world == null || !world.LayoutReady || world.SinkholeCount == 0) return;
+        Build();
+    }
 
     public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
 
@@ -838,8 +860,8 @@ public sealed class HangingSpire : MonoBehaviour
         copy.SetActive(true);
         copy.transform.SetPositionAndRotation(holder.position, seedSource.transform.rotation);
         copy.transform.localScale = seedSource.transform.lossyScale;
-        foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) Destroy(c);
-        foreach (Rigidbody r in copy.GetComponentsInChildren<Rigidbody>(true)) Destroy(r);
+        foreach (Collider c in copy.GetComponentsInChildren<Collider>(true)) LandmarkShapes.Discard(c);
+        foreach (Rigidbody r in copy.GetComponentsInChildren<Rigidbody>(true)) LandmarkShapes.Discard(r);
 
         Bounds bounds = new Bounds(holder.position, Vector3.zero);
         bool any = false;

@@ -17,7 +17,7 @@ public static class TerrainSculptSetup
     public const string TerrainFolder = "Assets/Terrain/Sculpted";
     public const string DecorFolder = "Assets/Prefabs/WorldDecor";
     private const string MaterialFolder = "Assets/Materials/World/";
-    private const int VariantsPerKind = 3;
+    private const int DefaultVariants = 3;
 
     [MenuItem("Tools/Capstone/Terrain/Bake Open Scene World To Sculpted Terrain")]
     private static void BakeMenu()
@@ -80,8 +80,15 @@ public static class TerrainSculptSetup
         public WorldDecorator.Group group;
     }
 
+    /// <summary>Prefab path for one decorator kind and shape variant (made by MakeDecorPrefabs).</summary>
+    public static string DecorPrefabPath(string kindName, DecorShapes.Shape shape, int variant) =>
+        DecorFolder + "/Decor_" + SafeName(kindName, shape) + "_" + variant + ".prefab";
+
+    private static string SafeName(string kindName, DecorShapes.Shape shape) =>
+        Regex.Replace(string.IsNullOrEmpty(kindName) ? shape.ToString() : kindName, "[^A-Za-z0-9]", "");
+
     [MenuItem("Tools/Capstone/Terrain/Make Decor Prefabs (From World Decorator)")]
-    private static void MakeDecorPrefabs()
+    public static void MakeDecorPrefabs()
     {
         WorldDecorator decorator = Object.FindFirstObjectByType<WorldDecorator>(FindObjectsInactive.Include);
         var materials = new Dictionary<WorldDecorator.Group, Material>
@@ -92,7 +99,7 @@ public static class TerrainSculptSetup
             { WorldDecorator.Group.InnerGlow, AssetDatabase.LoadAssetAtPath<Material>(MaterialFolder + "MAT_Decor_InnerGlow.mat") },
         };
         var kinds = new List<KindInfo>();
-        int seed = 7, layer = 7;
+        int seed = 7, layer = 7, variantsPerKind = DefaultVariants;
         var colliders = new Dictionary<WorldDecorator.Group, bool>
         {
             { WorldDecorator.Group.Stone, true }, { WorldDecorator.Group.Organic, true },
@@ -104,6 +111,8 @@ public static class TerrainSculptSetup
             // Same kinds, seeds and materials as the decorator in the open scene.
             var serialized = new SerializedObject(decorator);
             seed = serialized.FindProperty("seed").intValue;
+            // One prefab per variant the decorator uses, so baked decor matches it piece for piece.
+            variantsPerKind = decorator.VariantsPerShape;
             layer = serialized.FindProperty("decorLayer").intValue;
             Override(materials, WorldDecorator.Group.Stone, serialized.FindProperty("stoneMaterial"));
             Override(materials, WorldDecorator.Group.Organic, serialized.FindProperty("organicMaterial"));
@@ -141,12 +150,12 @@ public static class TerrainSculptSetup
             {
                 KindInfo kind = kinds[k];
                 EditorUtility.DisplayProgressBar("Decor Prefabs", kind.name, (float)k / kinds.Count);
-                string safe = Regex.Replace(string.IsNullOrEmpty(kind.name) ? kind.shape.ToString() : kind.name, "[^A-Za-z0-9]", "");
-                for (int v = 0; v < VariantsPerKind; v++)
+                string safe = SafeName(kind.name, kind.shape);
+                for (int v = 0; v < variantsPerKind; v++)
                 {
                     // Same seed formula as WorldDecorator, so these match the procedural pieces.
                     DecorMesh shape = DecorShapes.Build(kind.shape, seed * 7919 + v * 104729 + (int)kind.shape * 1299709);
-                    Mesh mesh = SaveMesh(shape, DecorFolder + "/Meshes/Decor_" + safe + "_" + v + ".asset", (v + 0.5f) / VariantsPerKind);
+                    Mesh mesh = SaveMesh(shape, DecorFolder + "/Meshes/Decor_" + safe + "_" + v + ".asset", (v + 0.5f) / variantsPerKind);
 
                     var piece = new GameObject("Decor_" + safe + "_" + v) { layer = layer };
                     piece.AddComponent<MeshFilter>().sharedMesh = mesh;

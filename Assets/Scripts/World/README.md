@@ -41,7 +41,7 @@ Mesh convention: stands on y = 0, grows along +y, `uv.x` = 0 at the base to 1 at
 Decor and creatures can also be placed by hand instead of (or as well as) by the runtime spawners.
 
 - **Tools > Capstone > Terrain > Make Decor Prefabs (From World Decorator)** saves every decorator kind as
-  3 prefabs in `Assets/Prefabs/WorldDecor/` (meshes in `Meshes/`), with the same shapes, materials, layer
+  one prefab per shape variant (`variantsPerShape`, 8) in `Assets/Prefabs/WorldDecor/` (meshes in `Meshes/`), with the same shapes, materials, layer
   and colliders as the procedural pieces. Running it again overwrites them in place (scenes keep their links).
 - **Sculpt And Place Window > Place**: build a palette (buttons add all decor or all creature prefabs),
   click in the Scene view to place, Shift + click to remove. Options: several per click with a scatter radius,
@@ -56,7 +56,19 @@ Decor and creatures can also be placed by hand instead of (or as well as) by the
 
 Hand placing needs the terrain visible in the Scene view: the window builds it (Show Terrain In Scene) and, with
 **Auto Show Terrain** on, rebuilds it after opening the scene, leaving Play Mode or reloading scripts.
-Landmarks (spire, kiln) and spawned flora still appear only in Play Mode.
+
+## Baked decor (the decorator's pieces as editable prefabs)
+
+**Tools > Capstone > Terrain > Bake Decor Into Scene As Prefabs** (`Editor/SceneEditableSetup.cs`) asks the
+`WorldDecorator` where it would put every piece (`PlanPieces`, the same placement as at runtime, including the
+tower districts and the clearing round the kiln) and puts one prefab instance per piece under
+`Placed World Objects`, named `Decor_<Kind>_<variant> (baked)`. Then it switches the decorator off, so nothing is
+placed twice. The pieces are ordinary scene objects: move, copy or delete them, or Shift + click them away in the
+Place tab. Baking again replaces only the `(baked)` ones; hand-placed objects stay. **Remove Baked Decor** deletes
+them and switches the decorator back on. Bake again after moving a landmark or a sinkhole if decor is in the way.
+
+Landmarks show in the Scene view too (see `Landmarks/README.md`). Spawned flora and creatures still appear only in
+Play Mode.
 
 ## CaveHarvest
 

@@ -53,6 +53,22 @@ public sealed partial class ProceduralWorld
         return JsonUtility.ToJson(captured);
     }
 
+    /// <summary>
+    /// Moves one sinkhole of the saved terrain so its shaft starts at worldPoint (x, z), then rebuilds the world.
+    /// Sculpt edits are kept. Edit mode only.
+    /// </summary>
+    public bool MoveSinkhole(int index, Vector3 worldPoint)
+    {
+        if (Application.isPlaying || !UsingSculptedTerrain) return false;
+        DensityField saved = JsonUtility.FromJson<DensityField>(sculptData.Layout);
+        if (saved == null || saved.sinkholes == null || index < 0 || index >= saved.sinkholes.Length) return false;
+        Vector3 local = worldPoint - transform.position;
+        saved.sinkholes[index].position = new Vector2(local.x, local.z);
+        sculptData.SetLayout(JsonUtility.ToJson(saved), CheckValues(saved));
+        Generate(true);
+        return true;
+    }
+
     private bool UseSavedLayout()
     {
         if (!UsingSculptedTerrain) return false;

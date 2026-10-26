@@ -87,7 +87,7 @@ public sealed class KilnBubbleNest : MonoBehaviour
         var glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         glow.name = "Ember core"; glow.transform.SetParent(cup.transform, false);
         glow.transform.localPosition = Vector3.up * 0.34f; glow.transform.localScale = Vector3.one * 0.34f;
-        Destroy(glow.GetComponent<Collider>());
+        LandmarkShapes.Discard(glow.GetComponent<Collider>());
         glow.GetComponent<Renderer>().sharedMaterial = nest.emberMaterial;
         glow.SetActive(false); nest.ember = glow.transform;
         nest.timer = 2f + seed % 5;

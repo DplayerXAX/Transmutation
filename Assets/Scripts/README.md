@@ -39,6 +39,9 @@ One README per game system. Start here.
 | Terrain > Sculpt And Place Window | Sculpt brushes, hand placing prefabs on the ground, runtime spawner switches |
 | Terrain > Show Terrain In Scene View | Builds the world in Edit Mode (to sculpt or place on it) |
 | Terrain > Make Decor Prefabs (From World Decorator) | Saves the decorator's shapes as prefabs in `Assets/Prefabs/WorldDecor/` |
+| Terrain > Make Scene Editable (Terrain, Landmarks, Decor) | Saved terrain, landmark handles on their current spots (Scene view preview), decor baked to prefabs |
+| Terrain > Bake Decor Into Scene As Prefabs / Remove Baked Decor | Decorator pieces as prefab instances under `Placed World Objects` (decorator off), or back |
+| Landmarks > Show Landmarks In Scene View | Toggle: builds the spire and kiln in Edit Mode as an unsaved preview |
 
 All menu code is in `Editor/`.
 

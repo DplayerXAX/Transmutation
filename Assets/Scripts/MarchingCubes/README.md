@@ -89,6 +89,7 @@ Every stroke is one undo step. The asset is saved with the scene (Ctrl+S) or the
 | --- | --- |
 | `Sculpt(tool, point, radius, amount, flattenHeight)`, `BeginSculptStroke()` / `EndSculptStroke()` | Sculpt window |
 | `CaptureLayout()`, `SyncSculptFromData()` (after undo / clear), `UsingSculptedTerrain`, `CanSculpt` | Setup menu, window, undo hook |
+| `MoveSinkhole(index, worldPoint)` | Landmark inspectors: moves a sinkhole of the saved layout (edits kept), rebuilds the world |
 
 `Editor/TerrainSculptValidation.Run` is a batch-mode check of the brushes, saving and clearing.
 

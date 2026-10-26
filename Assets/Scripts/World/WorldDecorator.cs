@@ -94,6 +94,17 @@ public sealed class WorldDecorator : MonoBehaviour
         public readonly List<Vector2> uvs = new List<Vector2>();
         public readonly List<int> triangles = new List<int>();
         public readonly List<(Bounds bounds, int start, int count)> pieces = new List<(Bounds, int, int)>();
+        // Same order as pieces: what was placed where, for the editor bake.
+        public readonly List<BakedPiece> placed = new List<BakedPiece>();
+    }
+
+    /// <summary>One placed piece: kind index, shape variant and transform (world space, uniform scale).</summary>
+    public struct BakedPiece
+    {
+        public int kind, variant;
+        public Vector3 position;
+        public Quaternion rotation;
+        public float scale;
     }
 
     /// <summary>World-space triangles of one chunk sub-mesh, for area-weighted sampling.</summary>
@@ -289,18 +300,33 @@ public sealed class WorldDecorator : MonoBehaviour
         Decorate(chunk, mesh);
     }
 
-    private void Decorate(GameObject chunk, Mesh chunkMesh)
-    {
-        PruneDestroyedChunks();
-        if (chunkMesh == null)
-        {
-            chunkVersions.TryGetValue(chunk, out int previous);
-            chunkVersions[chunk] = previous + 1;
-            return;
-        }
-        chunkVersions.TryGetValue(chunk, out int version);
-        chunkVersions[chunk] = ++version;
+    public IReadOnlyList<Kind> Kinds => kinds;
+    public int VariantsPerShape => variantsPerShape;
 
+    /// <summary>
+    /// Editor bake: every piece this decorator would place on the given terrain chunks, as separate pieces
+    /// (nothing is built). districts = the realm layout to use; reserved = boxes to keep clear (landmarks).
+    /// </summary>
+    public List<BakedPiece> PlanPieces(IEnumerable<GameObject> chunks, RealmDecorLayout.Snapshot districts, Bounds[] reserved)
+    {
+        var pieces = new List<BakedPiece>();
+        foreach (GameObject chunk in chunks)
+        {
+            if (chunk == null || !chunk.TryGetComponent(out MeshFilter filter) || filter.sharedMesh == null) continue;
+            Job job = MakeJob(chunk, filter.sharedMesh, 0);
+            job.layout = districts;
+            Compute(job);
+            foreach (Buffer buffer in job.result.Values)
+            {
+                CullOccupied(buffer, reserved ?? System.Array.Empty<Bounds>());
+                pieces.AddRange(buffer.placed);
+            }
+        }
+        return pieces;
+    }
+
+    private Job MakeJob(GameObject chunk, Mesh chunkMesh, int version)
+    {
         Vector3 key = chunk.transform.localPosition;
         var job = new Job
         {
@@ -319,6 +345,22 @@ public sealed class WorldDecorator : MonoBehaviour
         for (int subMesh = 0; subMesh < job.triangles.Length; subMesh++) job.triangles[subMesh] = chunkMesh.GetTriangles(subMesh);
         // Shapes are built here on the main thread; workers only read them.
         foreach (Kind kind in job.kinds) GetVariants(kind.shape);
+        return job;
+    }
+
+    private void Decorate(GameObject chunk, Mesh chunkMesh)
+    {
+        PruneDestroyedChunks();
+        if (chunkMesh == null)
+        {
+            chunkVersions.TryGetValue(chunk, out int previous);
+            chunkVersions[chunk] = previous + 1;
+            return;
+        }
+        chunkVersions.TryGetValue(chunk, out int version);
+        chunkVersions[chunk] = ++version;
+
+        Job job = MakeJob(chunk, chunkMesh, version);
 
         if (!Application.isPlaying)
         {
@@ -406,15 +448,16 @@ public sealed class WorldDecorator : MonoBehaviour
                 point = PointOn(ground, t, random);
                 pointNormal = ground.normal[t];
             }
-            DecorMesh shape = kind.uniformClusters ? shapes[sharedVariant] : shapes[random.Next(shapes.Length)];
+            int variant = kind.uniformClusters ? sharedVariant : random.Next(shapes.Length);
+            DecorMesh shape = shapes[variant];
             if (district.Weight(kind.shape, kind.inner, point) < 0.2f) continue;
             float scale = kind.uniformClusters ? sharedScale * Range(random, 0.88f, 1.12f) : Range(random, kind.scaleRange.x, kind.scaleRange.y);
-            if (Place(kind, shape, buffer, point, pointNormal, scale, random, worldToChunk, occupied)) placed++;
+            if (Place(kind, kindIndex, variant, shape, buffer, point, pointNormal, scale, random, worldToChunk, occupied)) placed++;
         }
         return placed;
     }
 
-    private bool Place(Kind kind, DecorMesh shape, Buffer buffer, Vector3 point, Vector3 normal, float scale, System.Random random, Matrix4x4 worldToChunk, List<Bounds> occupied)
+    private bool Place(Kind kind, int kindIndex, int variant, DecorMesh shape, Buffer buffer, Vector3 point, Vector3 normal, float scale, System.Random random, Matrix4x4 worldToChunk, List<Bounds> occupied)
     {
         // Floors grow up, ceilings hang down, then lean towards the ground normal.
         Vector3 reference = normal.y >= 0f ? Vector3.up : Vector3.down;
@@ -451,6 +494,7 @@ public sealed class WorldDecorator : MonoBehaviour
         int triangleStart = buffer.triangles.Count;
         foreach (int index in shape.triangles) buffer.triangles.Add(start + index);
         buffer.pieces.Add((footprint, triangleStart, buffer.triangles.Count - triangleStart));
+        buffer.placed.Add(new BakedPiece { kind = kindIndex, variant = variant, position = position, rotation = rotation, scale = scale });
         return true;
     }
 
@@ -538,6 +582,7 @@ public sealed class WorldDecorator : MonoBehaviour
             if (!intersects) continue;
             buffer.triangles.RemoveRange(piece.start, piece.count);
             buffer.pieces.RemoveAt(p);
+            buffer.placed.RemoveAt(p);
             for (int later = p; later < buffer.pieces.Count; later++)
             {
                 var shifted = buffer.pieces[later];

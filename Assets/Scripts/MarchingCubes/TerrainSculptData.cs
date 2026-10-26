@@ -49,6 +49,15 @@ public sealed class TerrainSculptData : ScriptableObject, ISerializationCallback
         dirty = true;
     }
 
+    /// <summary>Replaces the frozen layout but keeps every sculpt edit (used to move a sinkhole).</summary>
+    public void SetLayout(string layoutJson, float[] checkValues)
+    {
+        layout = layoutJson;
+        checks = checkValues;
+        revision++;
+        dirty = true;
+    }
+
     /// <summary>Sets the density change at one grid sample; zero removes it.</summary>
     public void SetEdit(Vector3Int sample, float delta)
     {

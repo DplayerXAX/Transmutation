@@ -34,6 +34,8 @@ public sealed class BoneKiln : MonoBehaviour
     [Min(20f)] [SerializeField] private float preferredDistance = 80f;
     [Tooltip("Use this sinkhole index instead (-1 = choose automatically).")]
     [SerializeField] private int sinkholeOverride = -1;
+    [Tooltip("Use the sinkhole nearest to this object (not the spire's). Move the object in the Scene view to move her.")]
+    [SerializeField] private bool placeAtThisObject;
 
     [Header("Shape")]
     [SerializeField] private int seed = 5;
@@ -168,6 +170,15 @@ public sealed class BoneKiln : MonoBehaviour
         }
     }
     public Transform Root => root;
+    public int SinkholeIndex => sinkholeIndex;
+    public bool PlaceAtThisObject { get => placeAtThisObject; set => placeAtThisObject = value; }
+
+    /// <summary>Builds her now, in edit mode, for the Scene view preview (LandmarkScenePreview).</summary>
+    public void BuildPreview(int spireHole)
+    {
+        if (Application.isPlaying || built || world == null || !world.LayoutReady || world.SinkholeCount < 2) return;
+        Build(spireHole);
+    }
     public IReadOnlyList<BoneRib> Ribs => ribs;
     public Bounds AwakeningFrame()
     {
@@ -451,7 +462,7 @@ public sealed class BoneKiln : MonoBehaviour
         for (int s = -1; s <= 1; s += 2)
         {
             GameObject eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(eye.GetComponent<Collider>());
+            LandmarkShapes.Discard(eye.GetComponent<Collider>());
             eye.name = "Eye Socket";
             eye.transform.SetParent(skull, false);
             eye.transform.localPosition = new Vector3(s * 2.3f, 2.1f, 1.6f);
@@ -517,8 +528,8 @@ public sealed class BoneKiln : MonoBehaviour
         // Bone shards, loose vertebrae, glassy rib tips and flora scattered round the mouth.
         LandmarkDecor.Kiln(root, mouth, holeRadius, GroundHeight, boneMaterial, ribMaterial, floraMaterial, seed);
 
-        // Her young, curled up round the mouth, away from where her tail lies.
-        for (int c = 0; c < children; c++)
+        // Her young, curled up round the mouth, away from where her tail lies. They roam, so the edit mode preview leaves them out.
+        for (int c = 0; Application.isPlaying && c < children; c++)
         {
             float angle = 120f + c * (120f / Mathf.Max(1, children - 1)) + (float)random.NextDouble() * 15f;
             Vector3 dir = Quaternion.Euler(0f, angle, 0f) * heading;
@@ -539,7 +550,7 @@ public sealed class BoneKiln : MonoBehaviour
                 KilnBubbleNest.Build(root, spot, boneMaterial, seed * 17 + n, gather, heartPoint);
             }
 
-        SpawnNearbyTentacles(heading, R);
+        if (Application.isPlaying) SpawnNearbyTentacles(heading, R);
         foreach (Renderer renderer in boneRenderers)
         {
             BoneFireContact contact = renderer.gameObject.AddComponent<BoneFireContact>();
@@ -930,6 +941,17 @@ public sealed class BoneKiln : MonoBehaviour
         float bestScore = float.MaxValue;
         for (int i = 0; i < world.SinkholeCount; i++)
         {
+        if (placeAtThisObject)
+        {
+            for (int i = 0; i < world.SinkholeCount; i++)
+            {
+                if (i == spireHole) continue;
+                Vector3 centre = world.SinkholeCentre(i, transform.position.y, out _);
+                float distance = new Vector2(centre.x - transform.position.x, centre.z - transform.position.z).magnitude;
+                if (distance < bestScore) { bestScore = distance; best = i; }
+            }
+            return best;
+        }
             if (i == spireHole) continue;
             Vector3 hole = world.SinkholeCentre(i, spawn.y, out _);
             if (!InsideMap(hole, 0.62f)) continue;
