@@ -216,13 +216,18 @@ public sealed class OreColossus : Creature
         phaseTime += deltaTime;
         if (heartBroken && phase != Phase.Settling) BeginSettling();
         else if (pendingStaggers > 0 && (phase == Phase.Walking || phase == Phase.Resting)) BeginStagger();
-        pendingStaggers = 0;
 
         switch (phase)
         {
             case Phase.Walking: TickWalking(deltaTime); break;
             case Phase.Resting: if (phaseTime >= phaseLength) { Begin(Phase.Walking, 0f); PickWaypoint(false); } break;
-            case Phase.Staggering: if (phaseTime >= phaseLength) Begin(Phase.Walking, 0f); break;
+            case Phase.Staggering:
+                if (phaseTime >= phaseLength)
+                {
+                    if (pendingStaggers > 0) BeginStagger();
+                    else Begin(Phase.Walking, 0f);
+                }
+                break;
         }
         if (phase != Phase.Walking) speed = Mathf.MoveTowards(speed, 0f, deltaTime * 2f);
         Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
@@ -811,6 +816,8 @@ public sealed class OreColossus : Creature
 
     private void BeginStagger()
     {
+        // Thresholds reached during a stagger wait their turn; consume only the one starting now.
+        pendingStaggers--;
         Begin(Phase.Staggering, staggerTime);
         speed = 0f;
         Vector3 at = heart != null ? heart.transform.position : transform.position;
@@ -819,6 +826,7 @@ public sealed class OreColossus : Creature
 
     private void BeginSettling()
     {
+        pendingStaggers = 0;
         Begin(Phase.Settling, 0f);
         settleReady = false;
         speed = 0f;
@@ -896,7 +904,8 @@ public sealed class OreColossus : Creature
             Vector3 probe = start + backward * d;
             float ground = (GroundAt(probe, out Vector3 point, out _) ? point.y : rootGroundY) - 0.3f;
             float drop = start.y - ground;
-            if (Mathf.Sqrt(d * d + drop * drop) > total) break;
+            // Ground height can rise again beyond a trench, making a later landing reachable.
+            if (Mathf.Sqrt(d * d + drop * drop) > total) continue;
             float slope = Mathf.Abs(Mathf.Atan2(drop, d) * Mathf.Rad2Deg);
             if (slope < bestSlope) { bestSlope = slope; bestDistance = d; bestGround = ground; }
             if (slope <= maxRampSlope) { bestDistance = d; bestGround = ground; break; }

@@ -283,6 +283,7 @@ public static class OreColossusValidation
             Check(larvaCast != null && larvaCast.parts.Count > 0, "the meditation journal can cast the larva");
             if (larvaCast != null) foreach (CreatureCast.Part part in larvaCast.parts) Object.DestroyImmediate(part.mesh);
 
+            RegressionChecks();
             fluidReport = FluidChecks();
         }
         catch (Failure failure) { Debug.LogError(failure.Message); throw; }
@@ -301,6 +302,61 @@ public static class OreColossusValidation
         int count = 0;
         foreach (GeodeLarva larva in Object.FindObjectsByType<GeodeLarva>(FindObjectsSortMode.None)) if (larva.gameObject.scene == scene) count++;
         return count;
+    }
+
+    private static void RegressionChecks()
+    {
+        var scene = SceneManager.CreateScene("Ore Colossus Regression " + Guid.NewGuid(), new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+        Vector3 origin = new Vector3(0f, -1000f, 0f);
+        try
+        {
+            // A deep trench immediately behind the tail, followed by a reachable level landing.
+            RegressionFloor(scene, origin + new Vector3(0f, -10.5f, 0f), new Vector3(200f, 1f, 200f));
+            RegressionFloor(scene, origin + new Vector3(0f, -0.5f, 46.75f), new Vector3(200f, 1f, 106.5f));
+            Collider landing = RegressionFloor(scene, origin + new Vector3(0f, -0.5f, -56.25f), new Vector3(200f, 1f, 87.5f));
+            Physics.SyncTransforms();
+            OreColossus colossus = Colossus(scene, origin);
+            Advance(colossus, 1);
+
+            // Two more quarters crack while the first stagger is still playing.
+            OreHeart heart = colossus.Heart;
+            heart.Target.Configure(new Collider[] { heart.Collider }, 1f, 0f, 0.9f, 0f);
+            Call(heart.Target, "Erode", heart.transform.position, 2.5f);
+            Advance(colossus, 1);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Staggering, "the first quarter starts a stagger");
+            Advance(colossus, 40);
+            Call(heart.Target, "Erode", heart.transform.position, 5f);
+            Advance(colossus, 50);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Staggering, "a quarter cracked during a stagger is played after it");
+            Advance(colossus, 70);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Staggering, "multiple queued quarters each receive their own stagger");
+            Advance(colossus, 70);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Walking, "walking resumes after all queued staggers finish");
+
+            // Breaking the heart must take priority even when another stagger is waiting.
+            Call(colossus, "OnHeartThreshold");
+            colossus.DebugShatter();
+            Advance(colossus, 1);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Settling, "a broken heart settles without waiting for queued staggers");
+            for (int i = 0; i < 300 && !colossus.Settled; i++) Advance(colossus, 1);
+            Check(colossus.Settled, "the colossus settles beside the trench");
+            Transform tip = colossus.TailPlate(colossus.TailPlateCount - 1);
+            Vector3 tipEnd = tip.position + tip.forward * 3f;
+            Check(landing.Raycast(new Ray(tipEnd + Vector3.up * 2f, Vector3.down), out RaycastHit hit, 4f) &&
+                Mathf.Abs(tipEnd.y - hit.point.y) < 0.45f, "the tail crosses an unreachable trench sample and reaches the farther landing");
+            Check(Vector3.Angle(tip.forward, Vector3.ProjectOnPlane(tip.forward, Vector3.up)) <= colossus.MaxRampSlope + 0.5f,
+                "the ramp across the trench stays within the slope limit");
+        }
+        finally { SceneManager.UnloadSceneAsync(scene); }
+    }
+
+    private static Collider RegressionFloor(Scene scene, Vector3 position, Vector3 size)
+    {
+        var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        floor.name = "Regression ground"; floor.layer = 7;
+        SceneManager.MoveGameObjectToScene(floor, scene);
+        floor.transform.position = position; floor.transform.localScale = size;
+        return floor.GetComponent<Collider>();
     }
 
     /// <summary>Real water against an erosion target, on a tiny generated world with its own fluid system.</summary>
