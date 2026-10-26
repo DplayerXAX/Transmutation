@@ -13,6 +13,8 @@ public sealed class GlowBeeNest : Creature
     private float storedNectar, fermentation;
     public Vector3 Entrance => transform.position + transform.forward * 0.65f + Vector3.up * 0.15f;
     public float StoredNectar => storedNectar;
+    public int HoneyCapacity => honeyCapacity;
+    public int NectarPerHoney => nectarPerHoney;
     public float FermentationProgress => fermentation / fermentationSeconds;
     public int HoneyCount { get { RemoveHarvested(); return products.Count; } }
     public override bool CanBeCarried => false;

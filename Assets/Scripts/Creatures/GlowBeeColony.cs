@@ -27,6 +27,8 @@ public sealed class GlowBeeColony : MonoBehaviour
     private Material shell, dark, wing, glow, petal, stem;
     private Light sun;
     private float nextPredatorRefresh;
+    private float nextPlayerRefresh;
+    public PlayerHoneyEffects PlayerEffects { get; private set; }
     private System.Random random;
     public int SceneryLayers => sceneryLayers.value;
     public IReadOnlyList<GlowBeeNest> Nests => nests;
@@ -53,6 +55,16 @@ public sealed class GlowBeeColony : MonoBehaviour
     }
 
     private float Range(float min, float max) => Mathf.Lerp(min, max, (float)random.NextDouble());
+
+    private void Update()
+    {
+        if (Time.time < nextPlayerRefresh) return;
+        nextPlayerRefresh = Time.time + 1f;
+        if (PlayerEffects != null && PlayerEffects.isActiveAndEnabled) return;
+        foreach (var carrier in FindObjectsByType<PlayerCreatureCarrier>(FindObjectsSortMode.None))
+            if (carrier.gameObject.scene == gameObject.scene)
+            { PlayerEffects = PlayerHoneyEffects.Ensure(carrier); break; }
+    }
 
     private void FindConcealedSites()
     {

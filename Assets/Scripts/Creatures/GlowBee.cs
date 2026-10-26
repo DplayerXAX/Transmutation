@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider), typeof(WebCapture))]
 public sealed class GlowBee : Creature
 {
-    public enum Activity { Seeking, Gathering, Returning, Fleeing, Resting }
+    public enum Activity { Seeking, Gathering, Returning, Fleeing, Resting, CirclingPlayer }
     [Min(0.1f)] [SerializeField] private float flightSpeed = 2.4f;
     [Min(0.1f)] [SerializeField] private float gatheringSeconds = 2.5f;
     [Min(0.1f)] [SerializeField] private float predatorDistance = 4f;
@@ -13,6 +13,9 @@ public sealed class GlowBee : Creature
     private NectarFlower flower;
     private Rigidbody body;
     private float timer, nextSearch, nectar;
+    private float orbitUntil, nextOrbit;
+    [Min(0.5f)] [SerializeField] private float playerInterestRange = 5f;
+    [Min(0.5f)] [SerializeField] private float orbitSeconds = 3f;
     private Vector3 destination;
     private Transform leftWing, rightWing;
     public Activity State { get; private set; }
@@ -81,6 +84,26 @@ public sealed class GlowBee : Creature
             }
             return;
         }
+        var player = colony.PlayerEffects;
+        bool canVisit = player != null && player.isActiveAndEnabled &&
+            (player.transform.position - nest.transform.position).sqrMagnitude < 24f * 24f;
+        float interestRange = player != null && player.IsScented ? 12f : playerInterestRange;
+        if (canVisit && (Time.time < orbitUntil || (Time.time >= nextOrbit &&
+            (player.transform.position - body.position).sqrMagnitude < interestRange * interestRange)))
+        {
+            if (State != Activity.CirclingPlayer)
+            {
+                orbitUntil = Time.time + orbitSeconds;
+                timer = 0f;
+            }
+            State = Activity.CirclingPlayer;
+            float angle = Time.time * 1.6f + Mathf.Abs(GetInstanceID() % 100) * 0.63f;
+            destination = player.transform.position + new Vector3(Mathf.Cos(angle) * 1.8f,
+                1.25f + Mathf.Sin(angle * 1.7f) * 0.3f, Mathf.Sin(angle) * 1.8f);
+            nextOrbit = orbitUntil + 8f;
+            return;
+        }
+        if (State == Activity.CirclingPlayer) State = Activity.Seeking;
         if (State == Activity.Resting)
         {
             destination = nest.Entrance;
