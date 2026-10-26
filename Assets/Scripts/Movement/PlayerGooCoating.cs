@@ -36,6 +36,18 @@ public sealed class PlayerGooCoating : MonoBehaviour
         if (!handClimbers.Contains(climber)) handClimbers.Add(climber);
     }
 
+    /// <summary>The player's coating, from whatever object started an interaction (camera, carrier or player).</summary>
+    public static PlayerGooCoating FindFor(GameObject source)
+    {
+        if (source == null) return null;
+        PlayerGooCoating coating = source.GetComponentInParent<PlayerGooCoating>();
+        if (coating != null) return coating;
+        // The prefab's CameraHolder is a sibling of Player, not its child.
+        PlayerCreatureCarrier carrier = source.GetComponentInParent<PlayerCreatureCarrier>();
+        if (carrier == null) carrier = source.transform.root.GetComponentInChildren<PlayerCreatureCarrier>();
+        return carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerGooCoating>() : null;
+    }
+
     public bool TryApplyGoo()
     {
         if (!isActiveAndEnabled || remainingSeconds >= MaximumSeconds) return false;
@@ -49,12 +61,14 @@ public sealed class PlayerGooCoating : MonoBehaviour
     internal void AdvanceAttachedTime(float deltaTime)
     {
         if (!CanClimb || deltaTime <= 0f) return;
-        bool attached = false;
+        float rate = 0f;
         var player = GetComponent<SmoothFirstPersonController>();
         foreach (HandClimber climber in handClimbers)
-            attached |= climber != null && climber.isActiveAndEnabled && climber.Controls(player) && climber.IsClimbing;
-        if (!attached) return;
-        SetRemaining(Mathf.Max(0f, remainingSeconds - deltaTime));
+            // Hands on a goo splat use none of the coating; fast climbing (Shift) uses it faster.
+            if (climber != null && climber.isActiveAndEnabled && climber.Controls(player) && climber.IsClimbing && !climber.OnGooPaint)
+                rate = Mathf.Max(rate, climber.GooDrainRate);
+        if (rate <= 0f) return;
+        SetRemaining(Mathf.Max(0f, remainingSeconds - deltaTime * rate));
         if (remainingSeconds <= 0f) ReleaseAttachments();
     }
 

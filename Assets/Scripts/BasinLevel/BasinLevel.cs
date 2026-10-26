@@ -88,17 +88,9 @@ public sealed class BasinLevel : MonoBehaviour
     private Vector3 origin, topA, topB;
     private SpireShape shapeA, shapeB;
     private Transform towerATransform, towerBTransform;
-    private float regrowScan, lifeWait;
+    private float lifeWait;
 
-    private sealed class Slot
-    {
-        public GameObject template;
-        public Vector3 home;
-        public float delay;
-        public GameObject current;
-        public float timer;
-    }
-    private readonly List<Slot> slots = new List<Slot>();
+    private readonly RegrowingSlots slots = new RegrowingSlots();
 
     public Vector3 TopA => topA;
     public Vector3 TopB => topB;
@@ -142,7 +134,7 @@ public sealed class BasinLevel : MonoBehaviour
             lifeWait += Time.deltaTime;
             if (world.GenerationComplete || lifeWait > 20f) SpawnLife();
         }
-        else Regrow();
+        else slots.Tick(Time.deltaTime);
     }
 
     // ---------------- Building ----------------
@@ -285,39 +277,7 @@ public sealed class BasinLevel : MonoBehaviour
             AddSlot(fuzzTemplate.gameObject, Ground(fuzz + Around(i, fuzzCount, 1.8f)), 20f);
     }
 
-    private void AddSlot(GameObject template, Vector3 home, float delay)
-    {
-        var slot = new Slot { template = template, home = home, delay = delay };
-        slots.Add(slot);
-        Respawn(slot);
-    }
-
-    private static void Respawn(Slot slot)
-    {
-        GameObject copy = Instantiate(slot.template, slot.home + Vector3.up * 0.5f, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
-        copy.name = slot.template.name;
-        copy.SetActive(true);
-        // Held still until the ground under it is surely there.
-        if (copy.GetComponent<Rigidbody>() != null) copy.AddComponent<SettleWhenGroundReady>();
-        slot.current = copy;
-        slot.timer = 0f;
-    }
-
-    /// <summary>Lost creatures (eaten by birds, goo used up, fallen out of the world) grow back at home.</summary>
-    private void Regrow()
-    {
-        regrowScan -= Time.deltaTime;
-        if (regrowScan > 0f) return;
-        regrowScan = 1f;
-        foreach (Slot slot in slots)
-        {
-            bool alive = slot.current != null && slot.current.activeInHierarchy;
-            if (alive && slot.current.TryGetComponent(out Creature creature)) alive = !creature.IsDead;
-            if (alive) continue;
-            slot.timer += 1f;
-            if (slot.timer >= slot.delay) Respawn(slot);
-        }
-    }
+    private void AddSlot(GameObject template, Vector3 home, float delay) => slots.Add(template, home, delay);
 
     // ---------------- Helpers ----------------
 

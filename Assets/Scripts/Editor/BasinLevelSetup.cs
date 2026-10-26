@@ -104,18 +104,8 @@ public static class BasinLevelSetup
         if (tentacle == null || fuzz == null)
             Debug.LogWarning("Basin Level: no TentacleCreature or FuzzCreature in the scene to copy; that creature is left out.");
 
-        // Goo counts as Matter here, so the birds (Plant eaters, plus anything untagged) leave it alone.
-        GooCreature gooTemplate = holder.GetComponentInChildren<GooCreature>(true);
-        if (gooTemplate == null) gooTemplate = ((GameObject)PrefabUtility.InstantiatePrefab(goo.gameObject, holder.transform)).GetComponent<GooCreature>();
-        var serializedGoo = new SerializedObject(gooTemplate);
-        serializedGoo.FindProperty("foodTags").intValue = (int)Creature.FoodTag.Matter;
-        serializedGoo.ApplyModifiedProperties();
-        // Bubble flowers that blow a bubble only every 10-16 seconds.
-        BubbleFlower flowerTemplate = holder.GetComponentInChildren<BubbleFlower>(true);
-        if (flowerTemplate == null) flowerTemplate = ((GameObject)PrefabUtility.InstantiatePrefab(flower.gameObject, holder.transform)).GetComponent<BubbleFlower>();
-        var serializedFlower = new SerializedObject(flowerTemplate);
-        serializedFlower.FindProperty("groundFiringInterval").vector2Value = new Vector2(10f, 16f);
-        serializedFlower.ApplyModifiedProperties();
+        GooCreature gooTemplate = GooTemplate(holder, goo);
+        BubbleFlower flowerTemplate = FlowerTemplate(holder, flower);
 
         // Remove the landmarks, realm sites and leftovers.
         int removed = 0;
@@ -155,12 +145,7 @@ public static class BasinLevelSetup
 
         // The level itself.
         GameObject levelObject = scene.GetRootGameObjects().FirstOrDefault(r => r.name == "Basin Level") ?? new GameObject("Basin Level");
-        // A spider whose webs are large enough to span the gap between the towers.
-        SkySpider spiderTemplate = holder.GetComponentInChildren<SkySpider>(true);
-        if (spiderTemplate == null) spiderTemplate = ((GameObject)PrefabUtility.InstantiatePrefab(spider.gameObject, holder.transform)).GetComponent<SkySpider>();
-        var serializedSpider = new SerializedObject(spiderTemplate);
-        serializedSpider.FindProperty("webScale").floatValue = 1.8f;
-        serializedSpider.ApplyModifiedProperties();
+        SkySpider spiderTemplate = SpiderTemplate(holder, spider);
 
         // Replaced each time so the layout follows the current defaults in BasinLevel.
         BasinLevel level = levelObject.GetComponent<BasinLevel>();
@@ -191,6 +176,77 @@ public static class BasinLevelSetup
         Selection.activeGameObject = levelObject;
         Debug.Log($"Basin Level set up in {scene.name}: removed {removed} root objects, world set to a 176 m basin.");
         return true;
+    }
+
+    // ---------------- Scene_Daniel: creatures round the spire ----------------
+
+    [MenuItem("Tools/Capstone/Basin Level/Add Basin Creatures Round The Spire (Open Scene)")]
+    private static void AddSpireCreatures()
+    {
+        Scene scene = SceneManager.GetActiveScene();
+        if (Object.FindFirstObjectByType<HangingSpire>() == null)
+        {
+            EditorUtility.DisplayDialog("Basin Level", "No Hanging Spire in the open scene (run Landmarks > Add Hanging Spire first).", "OK");
+            return;
+        }
+        var goo = AssetDatabase.LoadAssetAtPath<GooCreature>("Assets/Prefabs/Creatures/GooCreature.prefab");
+        var flower = AssetDatabase.LoadAssetAtPath<BubbleFlower>("Assets/Prefabs/Creatures/BubbleFlower.prefab");
+        var spider = AssetDatabase.LoadAssetAtPath<SkySpider>("Assets/Prefabs/Creatures/SkySpider.prefab");
+        var compost = AssetDatabase.LoadAssetAtPath<CompostCreature>("Assets/Prefabs/Creatures/CompostCreature.prefab");
+        var bird = AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/BirdCreature.prefab");
+        var ink = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_Ink.mat");
+        if (goo == null || flower == null || spider == null || compost == null || bird == null)
+        {
+            EditorUtility.DisplayDialog("Basin Level", "Missing creature prefabs in Assets/Prefabs/Creatures (goo, bubble flower, spider, compost, bird).", "OK");
+            return;
+        }
+
+        GameObject holder = scene.GetRootGameObjects().FirstOrDefault(r => r.name == "Spire Creature Templates");
+        if (holder == null) holder = new GameObject("Spire Creature Templates");
+        holder.SetActive(false);
+        GameObject owner = scene.GetRootGameObjects().FirstOrDefault(r => r.name == "Spire Creatures") ?? new GameObject("Spire Creatures");
+        SpireCreatures creatures = owner.GetComponent<SpireCreatures>();
+        if (creatures == null) creatures = owner.AddComponent<SpireCreatures>();
+        creatures.Setup(GooTemplate(holder, goo), FlowerTemplate(holder, flower), SpiderTemplate(holder, spider), compost, bird, ink);
+        EditorUtility.SetDirty(creatures);
+        EditorSceneManager.MarkSceneDirty(scene);
+        Selection.activeGameObject = owner;
+        Debug.Log("Spire Creatures added: goo pool + compost, bubble flowers, a spider and birds round the stage towers (placed in Play mode). Save the scene to keep it.");
+    }
+
+    // ---------------- Templates (inactive copies with basin tuning) ----------------
+
+    // Goo counts as Matter, so the birds (Plant eaters, plus anything untagged) leave it alone.
+    private static GooCreature GooTemplate(GameObject holder, GooCreature prefab)
+    {
+        GooCreature template = holder.GetComponentInChildren<GooCreature>(true);
+        if (template == null) template = ((GameObject)PrefabUtility.InstantiatePrefab(prefab.gameObject, holder.transform)).GetComponent<GooCreature>();
+        var serialized = new SerializedObject(template);
+        serialized.FindProperty("foodTags").intValue = (int)Creature.FoodTag.Matter;
+        serialized.ApplyModifiedProperties();
+        return template;
+    }
+
+    // Bubble flowers that blow a bubble only every 10-16 seconds.
+    private static BubbleFlower FlowerTemplate(GameObject holder, BubbleFlower prefab)
+    {
+        BubbleFlower template = holder.GetComponentInChildren<BubbleFlower>(true);
+        if (template == null) template = ((GameObject)PrefabUtility.InstantiatePrefab(prefab.gameObject, holder.transform)).GetComponent<BubbleFlower>();
+        var serialized = new SerializedObject(template);
+        serialized.FindProperty("groundFiringInterval").vector2Value = new Vector2(10f, 16f);
+        serialized.ApplyModifiedProperties();
+        return template;
+    }
+
+    // A spider whose webs are large enough to span the gap between two towers.
+    private static SkySpider SpiderTemplate(GameObject holder, SkySpider prefab)
+    {
+        SkySpider template = holder.GetComponentInChildren<SkySpider>(true);
+        if (template == null) template = ((GameObject)PrefabUtility.InstantiatePrefab(prefab.gameObject, holder.transform)).GetComponent<SkySpider>();
+        var serialized = new SerializedObject(template);
+        serialized.FindProperty("webScale").floatValue = 1.8f;
+        serialized.ApplyModifiedProperties();
+        return template;
     }
 
     private static bool Keep(GameObject rootObject)

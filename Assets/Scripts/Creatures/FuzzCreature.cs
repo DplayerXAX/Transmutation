@@ -11,6 +11,9 @@ using UnityEngine;
 /// joined by thick goo. The rope can be climbed (HandClimber grips the bodies and the goo). Pick the top one up
 /// again and the rope comes apart. Other scripts can call Anchor() to make a rope (the bubble well, for one).
 ///
+/// Heat turns its black fur red (it cools slowly). Goo applied to it (or thrown at it) turns it green and stays
+/// on it: left click it any time, carried or not, to take a coat of goo for your own hands.
+///
 /// The body is a lumpy procedural blob; fur is drawn as stacked shells by the StickyFur shader,
 /// which droops the hair and drags it behind the motion.
 /// </summary>
@@ -52,11 +55,28 @@ public sealed class FuzzCreature : Creature
     [SerializeField] private Material gooMaterial;
     [Range(1, 24)] [SerializeField] private int furShells = 12;
 
+    [Header("Heat And Goo")]
+    [Tooltip("Heat at which the fur is fully red.")]
+    [Min(0.1f)] [SerializeField] private float heatForRed = 15f;
+    [Tooltip("Heat lost per second.")]
+    [Min(0f)] [SerializeField] private float coolRate = 0.6f;
+    [SerializeField] private Color hotRoot = new Color(0.45f, 0.03f, 0.02f, 1f);
+    [SerializeField] private Color hotTip = new Color(1f, 0.32f, 0.12f, 1f);
+    [SerializeField] private Color gooRoot = new Color(0.03f, 0.3f, 0.07f, 1f);
+    [SerializeField] private Color gooTip = new Color(0.45f, 1f, 0.35f, 1f);
+    [Tooltip("Coats of goo it can hold.")]
+    [Range(1, 4)] [SerializeField] private int maxGoo = 2;
+
     [Header("Runtime State (Read Only)")]
+    [SerializeField] private int gooCoats;
     [SerializeField] private bool following;
     [SerializeField] private int chainIndex = -1;
 
     private static readonly int ShellId = Shader.PropertyToID("_Shell");
+    private static readonly int RootColorId = Shader.PropertyToID("_RootColor");
+    private static readonly int TipColorId = Shader.PropertyToID("_TipColor");
+    private Color baseRoot = new Color(0.03f, 0.03f, 0.035f, 1f), baseTip = new Color(0.9f, 0.9f, 0.88f, 1f);
+    private float gooBlend;
     private static readonly int VelocityId = Shader.PropertyToID("_Velocity");
     private static readonly RaycastHit[] Hits = new RaycastHit[8];
 
@@ -184,6 +204,11 @@ public sealed class FuzzCreature : Creature
         home = transform.position;
         wanderTarget = home;
         hopPhase = seed * 1.3f;
+        if (furMaterial != null && furMaterial.HasProperty(RootColorId))
+        {
+            baseRoot = furMaterial.GetColor(RootColorId);
+            baseTip = furMaterial.GetColor(TipColorId);
+        }
         BuildBlob();
         BuildGoo();
     }
@@ -236,6 +261,8 @@ public sealed class FuzzCreature : Creature
     protected override void TickCreature(float deltaTime)
     {
         if (deltaTime <= 0f) return;
+        if (Heat > 0f && coolRate > 0f) SpendHeat(coolRate * deltaTime);
+        gooBlend = Mathf.MoveTowards(gooBlend, gooCoats > 0 ? 1f : 0f, deltaTime * 2f);
         // Picked up: if it was the top of a rope, the rope comes apart.
         if (IsCarried && Anchored) DissolveRope();
         else if (IsCarried && InRope) { Rope.Remove(this); SetGrip(false); }
@@ -317,6 +344,29 @@ public sealed class FuzzCreature : Creature
 
         UpdateBlob(deltaTime);
         UpdateGoo();
+    }
+
+    // ---------------- Goo ----------------
+
+    public bool HasGoo => gooCoats > 0 && !IsDead;
+    public override bool CanUseWhileCarried => HasGoo;
+    public override string InteractionPrompt => HasGoo ? "Take goo" : null;
+    public override string CarriedPrompt => HasGoo ? "[LMB] Take goo" : null;
+
+    /// <summary>Goo applied to (or thrown at) it: it holds one more coat. False when full or dead.</summary>
+    public bool TryCoatWithGoo()
+    {
+        if (IsDead || gooCoats >= maxGoo) return false;
+        gooCoats++;
+        return true;
+    }
+
+    /// <summary>Left click: one coat of its goo goes onto the player's hands.</summary>
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!HasGoo || interaction.Source == null) return;
+        PlayerGooCoating coating = PlayerGooCoating.FindFor(interaction.Source);
+        if (coating != null && coating.TryApplyGoo()) gooCoats--;
     }
 
     // ---------------- Petting ----------------
@@ -544,9 +594,15 @@ public sealed class FuzzCreature : Creature
         blobMesh.bounds = new Bounds(Vector3.zero, Vector3.one * radius * 4f); // Room for fur.
 
         Vector3 drag = -velocity;
+        // Black, warming to red; green while it holds goo.
+        float warm = Mathf.Clamp01(Heat / heatForRed);
+        Color root = Color.Lerp(Color.Lerp(baseRoot, hotRoot, warm), gooRoot, gooBlend);
+        Color tip = Color.Lerp(Color.Lerp(baseTip, hotTip, warm), gooTip, gooBlend);
         for (int s = 0; s < shells.Length; s++)
         {
             shells[s].GetPropertyBlock(block);
+            block.SetColor(RootColorId, root);
+            block.SetColor(TipColorId, tip);
             block.SetFloat(ShellId, s / (float)Mathf.Max(1, furShells));
             block.SetVector(VelocityId, drag);
             shells[s].SetPropertyBlock(block);
