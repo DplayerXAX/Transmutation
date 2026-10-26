@@ -277,9 +277,12 @@ public sealed partial class Squirrel
 
     private void CreateFacingMarkers()
     {
-        // +Z is the motor's forward. These visible plates do not add physics obstacles.
-        CreateMarker("Front (green)", new Vector3(0f, 0f, 0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.95f, 0.35f));
-        CreateMarker("Back (blue)", new Vector3(0f, 0f, -0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.35f, 1f));
+        // Authored FBX visuals already carry the facing colors; legacy placeholders use plates.
+        if (transform.Find("Squirrel Visual") == null)
+        {
+            CreateMarker("Front (green)", new Vector3(0f, 0f, 0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.95f, 0.35f));
+            CreateMarker("Back (blue)", new Vector3(0f, 0f, -0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.35f, 1f));
+        }
         warningMarker = CreateMarker("Warning flash", new Vector3(0f, 0.9f, 0f), Vector3.one * 0.25f, Color.red);
         warningMarker.enabled = false;
     }

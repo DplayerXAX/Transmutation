@@ -11,8 +11,11 @@ public static class SquirrelReactionSetup
         try
         {
             if (root.GetComponent<Squirrel>() == null) root.AddComponent<Squirrel>();
-            Marker(root, "Front (green)", new Vector3(0, 0, 0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.95f, 0.35f), "SquirrelFront");
-            Marker(root, "Back (blue)", new Vector3(0, 0, -0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.35f, 1f), "SquirrelBack");
+            if (root.transform.Find("Squirrel Visual") == null)
+            {
+                Marker(root, "Front (green)", new Vector3(0, 0, 0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.95f, 0.35f), "SquirrelFront");
+                Marker(root, "Back (blue)", new Vector3(0, 0, -0.51f), new Vector3(0.75f, 0.7f, 0.04f), new Color(0.15f, 0.35f, 1f), "SquirrelBack");
+            }
             Marker(root, "Warning flash", new Vector3(0, 0.9f, 0), Vector3.one * 0.25f, Color.red, "SquirrelWarning").enabled = false;
             PrefabUtility.SaveAsPrefabAsset(root, path);
         }
