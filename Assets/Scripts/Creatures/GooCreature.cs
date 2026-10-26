@@ -83,24 +83,53 @@ public sealed class GooCreature : Creature
         return null;
     }
 
-    /// <summary>
-    /// A throw hit something: a fuzzy creature takes the goo, a wall or the ground gets a climbable splat.
-    /// True when the blob was used up (the throw ends there).
-    /// </summary>
-    public bool SplatOn(RaycastHit hit)
+    /// <summary>Fuzz stores a coat; other solid surfaces receive climbable paint.</summary>
+    public override void ReceiveImpact(CreatureImpact impact)
     {
-        if (usePending || IsDead || hit.collider == null) return false;
-        FuzzCreature fuzz = hit.collider.GetComponentInParent<FuzzCreature>();
+        if (usePending || !CanReceiveImpact(impact) || impact.OtherCollider == null) return;
+        FuzzCreature fuzz = impact.OtherCreature as FuzzCreature;
         if (fuzz != null)
         {
-            if (!fuzz.TryCoatWithGoo()) return false;
+            if (!fuzz.TryCoatWithGoo()) return;
+            Debug.Log("goo explode", this);
             UseUp();
-            return true;
+            return;
         }
-        if (hit.collider.GetComponentInParent<Creature>() != null) return false;
+        if (impact.OtherCreature != null) return;
+        // Claim before spawning paint or notifying death listeners, so one blob can react only once.
+        usePending = true;
         Renderer look = blob != null ? blob.GetComponentInChildren<Renderer>() : GetComponentInChildren<Renderer>();
-        GooPaint.Splat(hit.point, hit.normal, look != null ? look.sharedMaterial : null);
+        Material material = look != null ? look.sharedMaterial : null;
+        RaycastHit support = default;
+        bool supportedStrike = impact.ReceiverVelocity.sqrMagnitude < 1f &&
+            (impact.ReceiverVelocity - impact.RelativeVelocity).y < -1f && TryFindSupport(impact.OtherCollider, out support);
+        // The normal points out of the struck surface, so this patch sits on that surface's receiving side.
+        GooPaint.Splat(impact.Point, impact.Normal, material, surface: impact.OtherCollider.transform);
+        if (supportedStrike && !SameSurface(support.collider, impact.OtherCollider))
+            GooPaint.Splat(support.point, support.normal, material, surface: support.collider.transform);
+        Debug.Log("goo explode", this);
         UseUp();
-        return true;
+    }
+
+    private static bool SameSurface(Collider a, Collider b) => a == b ||
+        (a.attachedRigidbody != null && a.attachedRigidbody == b.attachedRigidbody);
+
+    private bool TryFindSupport(Collider striker, out RaycastHit nearest)
+    {
+        nearest = default;
+        Collider solid = GetComponent<Collider>();
+        Vector3 center = solid != null ? solid.bounds.center : transform.position;
+        float reach = (solid != null ? solid.bounds.extents.y : 0.25f) + 0.2f;
+        float best = float.PositiveInfinity;
+        foreach (RaycastHit hit in Physics.RaycastAll(center + Vector3.up * 0.05f, Vector3.down, reach,
+                     ~0, QueryTriggerInteraction.Ignore))
+        {
+            if (hit.distance >= best || hit.normal.y < 0.5f || SameSurface(hit.collider, striker) ||
+                hit.collider.transform.IsChildOf(transform) || CreatureSpatialQuery.Owner(hit.collider) != null ||
+                hit.collider.GetComponent<GooPaint>() != null) continue;
+            best = hit.distance;
+            nearest = hit;
+        }
+        return !float.IsPositiveInfinity(best);
     }
 }

@@ -57,6 +57,20 @@ public enum FoodTag
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
 
+    [Header("Impact")]
+    [Tooltip("Minimum closing speed into a solid surface that triggers ReceiveImpact (m/s).")]
+    [Min(0f)] [SerializeField] private float minimumImpactSpeed = 15.6f;
+    public float MinimumImpactSpeed => Mathf.Max(0f, minimumImpactSpeed);
+
+    internal bool CanReceiveImpact(CreatureImpact impact) => isActiveAndEnabled && !IsDead && !consumptionPending &&
+        !IsCarried && !IsBubbleCaptured && !BoneChild.IsCradled(this) &&
+        !(TryGetComponent<WebCapture>(out var web) && web.IsCaptured) &&
+        impact.OtherBodyId != 0 && !impact.IsTrigger && impact.OtherCreature != this &&
+        impact.NormalSpeed > 0f && impact.NormalSpeed >= MinimumImpactSpeed;
+
+    /// <summary>Reacts to a meaningful solid hit, whether thrown or struck by another body.</summary>
+    public virtual void ReceiveImpact(CreatureImpact impact) { }
+
     [Header("Health and Polarity")]
     [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
     [SerializeField] private CreaturePolarity initialPolarity = CreaturePolarity.Random;
@@ -458,6 +472,13 @@ public enum FoodTag
                 (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
         }
         InitializeCreature();
+        // Keep physics messages separate from subclass OnCollisionEnter methods.
+        if (Application.isPlaying)
+        {
+            if (!TryGetComponent<CreatureImpactRelay>(out var impactRelay))
+                impactRelay = gameObject.AddComponent<CreatureImpactRelay>();
+            impactRelay.Initialize(this);
+        }
         // Serialized death survives a script reload; initialization must not restore living physics.
         if (isDead)
         {
