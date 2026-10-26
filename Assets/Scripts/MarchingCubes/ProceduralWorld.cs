@@ -109,18 +109,6 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         var random = new System.Random(seed);
         noiseOffset = new Vector2((float)random.NextDouble() * 1000f, (float)random.NextDouble() * 1000f);
 
-        float maxHill = surfaceAmplitude * (1f + ridges) + rimHeight * (basin ? 1.3f : 1f) + overhangAmplitude + 4f;
-        yMax = maxHill;
-        yMin = -crustThickness - innerGap - surfaceAmplitude * (1f + ridges) * Mathf.Max(innerInvert, ceilingMirror) - innerDetail - caveDepth - 4f;
-
-        if (erosionTestCourse) { yMin = -14f; yMax = 14f; }
-        float chunkSize = chunkCells * cellSize;
-        chunkCount = new Vector3Int(
-            Mathf.CeilToInt(worldSize.x / chunkSize),
-            Mathf.CeilToInt((yMax - yMin) / chunkSize),
-            Mathf.CeilToInt(worldSize.y / chunkSize));
-        gridMin = new Vector3(-chunkCount.x * chunkSize * 0.5f, yMin, -chunkCount.z * chunkSize * 0.5f);
-
         var holes = new List<Sinkhole>();
         if (firstSinkholeDistance > 0f)
             holes.Add(new Sinkhole { position = new Vector2(0f, firstSinkholeDistance), radius = sinkholeRadius.y });
@@ -139,6 +127,24 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             holes.Add(new Sinkhole { position = position, radius = radius });
         }
         sinkholes = holes.ToArray();
+    }
+
+    /// <summary>Grid extents from the active field (inspector settings or a saved sculpted layout).</summary>
+    private void PrepareGrid(float headroom)
+    {
+        DensityField f = field;
+        float maxHill = f.surfaceAmplitude * (1f + f.ridges) + f.rimHeight * (f.basin ? 1.3f : 1f) + f.overhangAmplitude + 4f;
+        // Headroom only grows the top, so the grid minimum (and every saved sample index) stays put.
+        yMax = maxHill + headroom;
+        yMin = -f.crustThickness - f.innerGap - f.surfaceAmplitude * (1f + f.ridges) * Mathf.Max(f.innerInvert, f.ceilingMirror) - f.innerDetail - f.caveDepth - 4f;
+
+        if (f.erosionTestCourse) { yMin = -14f; yMax = 14f; }
+        float chunkSize = f.chunkCells * f.cellSize;
+        chunkCount = new Vector3Int(
+            Mathf.CeilToInt(f.worldSize.x / chunkSize),
+            Mathf.CeilToInt((yMax - yMin) / chunkSize),
+            Mathf.CeilToInt(f.worldSize.y / chunkSize));
+        gridMin = new Vector3(-chunkCount.x * chunkSize * 0.5f, yMin, -chunkCount.z * chunkSize * 0.5f);
     }
 
     private float SurfaceHeight(float x, float z) => field.SurfaceHeight(x, z);
@@ -176,6 +182,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public bool erosionTestCourse;
         public Vector2 noiseOffset;
         public Sinkhole[] sinkholes;
+        // Used when a saved layout is read back from JSON.
+        public DensityField() { }
         public DensityField(ProceduralWorld world)
         {
             worldSize = world.worldSize;

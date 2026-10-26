@@ -36,6 +36,28 @@ one chunk are merged into one mesh per material and parented to the chunk.
 **DecorShapes** builds the raw meshes: bent tubes and lumpy blobs with random harmonics.
 Mesh convention: stands on y = 0, grows along +y, `uv.x` = 0 at the base to 1 at the tip.
 
+## Hand-placed decor and creatures
+
+Decor and creatures can also be placed by hand instead of (or as well as) by the runtime spawners.
+
+- **Tools > Capstone > Terrain > Make Decor Prefabs (From World Decorator)** saves every decorator kind as
+  3 prefabs in `Assets/Prefabs/WorldDecor/` (meshes in `Meshes/`), with the same shapes, materials, layer
+  and colliders as the procedural pieces. Running it again overwrites them in place (scenes keep their links).
+- **Sculpt And Place Window > Place**: build a palette (buttons add all decor or all creature prefabs),
+  click in the Scene view to place, Shift + click to remove. Options: several per click with a scatter radius,
+  scale range, random turn, align to slope (1 = along the ground normal, e.g. for ceilings), sink.
+  Placed objects go under the root object `Placed World Objects`. Prefabs with a Rigidbody get
+  `SettleWhenGroundReady`, so at runtime they wait for their chunk instead of falling through.
+- **Drop Selected Objects To The Ground** snaps any selection onto the terrain below it.
+- With **Keep Placed Objects On Ground** on, sculpting moves placed objects up or down with the ground.
+- **Spawners tab**: switches the runtime spawners on or off (disables the component): `WorldDecorator`,
+  `CaveHarvest`, `RealmFlora`, `RealmDressing`, `SpireOvergrowth`, `TowerGroves`, `SpireCreatures`, `BasinLevel`.
+  All stay on unless you switch them off.
+
+Hand placing needs the terrain visible in the Scene view: the window builds it (Show Terrain In Scene) and, with
+**Auto Show Terrain** on, rebuilds it after opening the scene, leaving Play Mode or reloading scripts.
+Landmarks (spire, kiln) and spawned flora still appear only in Play Mode.
+
 ## CaveHarvest
 
 Also listens to `ChunkCreated`, Play Mode only. In the inner world it hangs fruit bunches on thin stalks

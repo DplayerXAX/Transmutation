@@ -6,7 +6,7 @@ using UnityEngine;
 public sealed partial class ProceduralWorld
 {
     private static ChunkResult BuildChunk(DensityField field, Vector3 minimum, Vector3Int coord, int epoch, int revision,
-        Dictionary<Vector3Int, float> edits, CancellationToken token)
+        Dictionary<Vector3Int, float> edits, CancellationToken token, BaseCache cache = null)
     {
         int cells = field.chunkCells, n = cells + 1, halo = n + 2;
         float spacing = field.cellSize;
@@ -31,6 +31,9 @@ public sealed partial class ProceduralWorld
         if (!field.erosionTestCourse && edits.Count == 0 &&
             (origin.y > maxTop + band || origin.y + cells * spacing < minFloor - field.caveDepth - band)) return result;
         var values = new float[halo * halo * halo];
+        // Sculpting rebuilds the same chunks many times; the generated part is computed once and reused.
+        float[] cached = cache?.values;
+        float[] fill = cache != null && cached == null ? new float[values.Length] : null;
         var tops = new float[n * n];
         var ceilings = new float[n * n];
         for (int z = -1; z <= n; z++) for (int x = -1; x <= n; x++)
@@ -45,9 +48,13 @@ public sealed partial class ProceduralWorld
                 var key = first + new Vector3Int(x, y, z);
                 p = minimum + (Vector3)key * spacing;
                 edits.TryGetValue(key, out float delta);
-                values[((y + 1) * halo + z + 1) * halo + x + 1] = field.Density(p, h, ceiling, floor) + delta;
+                int index = ((y + 1) * halo + z + 1) * halo + x + 1;
+                float generated = cached != null ? cached[index] : field.Density(p, h, ceiling, floor);
+                if (fill != null) fill[index] = generated;
+                values[index] = generated + delta;
             }
         }
+        if (fill != null) cache.values = fill;
         var density = new float[n * n * n];
         var gradients = new Vector3[density.Length];
         bool positive = false, negative = false;

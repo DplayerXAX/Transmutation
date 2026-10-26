@@ -6,7 +6,7 @@ One README per game system. Start here.
 | --- | --- | --- |
 | Player | [Movement/README.md](Movement/README.md) | Movement, camera, wall guard, hand climbing, procedural body, carrying, interaction, prompt HUD |
 | Creatures | [Creatures/README.md](Creatures/README.md) | `Creature` base, fire cycle (Source, Flower, Bubble, Eater), Fuzz, Tentacle |
-| World generation | [MarchingCubes/README.md](MarchingCubes/README.md) | `ProceduralWorld` (surface, caves, inner world), `MarchingCubesVolume`, density shapes |
+| World generation | [MarchingCubes/README.md](MarchingCubes/README.md) | `ProceduralWorld` (surface, caves, inner world), saved sculpted terrain (`TerrainSculptData`), `MarchingCubesVolume`, density shapes |
 | World look and sky | [World/README.md](World/README.md) | `WorldDecorator`, `CaveHarvest`, `TerrainLinesLit` and decor shaders, skyboxes |
 | Meditation | [Meditation/README.md](Meditation/README.md) | M key meditation, reflection space, drawing on steles, creature journal and casts |
 | Landmarks | [Landmarks/README.md](Landmarks/README.md) | Hanging Spire, seeds, inscriptions, glyphs on steles |
@@ -35,6 +35,10 @@ One README per game system. Start here.
 | Audio > Set Up Adaptive Music In Open Scene | Event bank, AudioManager, landmark / cave channels, footsteps |
 | Audio > Add Music Zone At Scene View | Box zone with a `MusicChannel` |
 | Audio > Relink Clips By File Name | Fills Unity clips in the bank from `Assets/Audio` |
+| Terrain > Bake Open Scene World To Sculpted Terrain | Freezes the ProceduralWorld layout into `Assets/Terrain/Sculpted/<Scene>_Terrain.asset` and assigns it |
+| Terrain > Sculpt And Place Window | Sculpt brushes, hand placing prefabs on the ground, runtime spawner switches |
+| Terrain > Show Terrain In Scene View | Builds the world in Edit Mode (to sculpt or place on it) |
+| Terrain > Make Decor Prefabs (From World Decorator) | Saves the decorator's shapes as prefabs in `Assets/Prefabs/WorldDecor/` |
 
 All menu code is in `Editor/`.
 
