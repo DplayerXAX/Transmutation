@@ -167,6 +167,8 @@ public sealed class CreatureThrower : MonoBehaviour
                 next = hit.point + hit.normal * 0.3f;
                 landed = true;
                 LastHit = hit.collider.name + (hit.collider.transform.parent != null ? " in " + hit.collider.transform.parent.name : "");
+                // Goo thrown at a fuzzy coats it; at a wall or the ground it leaves a climbable splat.
+                if (f.creature is GooCreature goo && goo.SplatOn(hit)) { flights.RemoveAt(i); continue; }
                 // A fire bubble thrown at a bone child is caught in its ribs.
                 BoneChild child = hit.collider.GetComponentInParent<BoneChild>();
                 if (child != null && child.Catch(f.creature)) { Land(f, next, caught: true); flights.RemoveAt(i); continue; }

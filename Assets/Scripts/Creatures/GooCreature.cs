@@ -1,6 +1,10 @@
 using UnityEngine;
 
-/// <summary>A portable, passive blob consumed to coat the player's climbing hands.</summary>
+/// <summary>
+/// A portable, passive blob consumed to coat the player's climbing hands. Applied with the crosshair on a fuzzy
+/// creature, it coats the fuzzy instead (which keeps it for later). Thrown at a fuzzy it coats it too; thrown at a
+/// wall or the ground it leaves a climbable splat (GooPaint).
+/// </summary>
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
 public sealed class GooCreature : Creature
 {
@@ -31,6 +35,13 @@ public sealed class GooCreature : Creature
     {
         if (usePending || IsDead || IsConsumptionPending || IsBubbleCaptured || !isActiveAndEnabled || !SimulationEnabled ||
             interaction.Source == null) return;
+        // Crosshair on a fuzzy creature close by: it gets the goo instead of the hands.
+        FuzzCreature fuzz = FuzzInSight();
+        if (fuzz != null)
+        {
+            if (fuzz.TryCoatWithGoo()) UseUp();
+            return;
+        }
         PlayerGooCoating coating = interaction.Source.GetComponentInParent<PlayerGooCoating>();
         if (coating == null)
         {
@@ -47,10 +58,49 @@ public sealed class GooCreature : Creature
         // Claim before notifying supply listeners: callbacks cannot use this same blob twice.
         usePending = true;
         if (!coating.TryApplyGoo()) { usePending = false; return; }
+        UseUp();
+    }
+
+    private void UseUp()
+    {
+        usePending = true;
         if (Carrier != null) Carrier.Release();
         CreatureRegistry.Unregister(this);
         Die();
         gameObject.SetActive(false);
         Destroy(gameObject);
+    }
+
+    private FuzzCreature FuzzInSight()
+    {
+        Camera view = Camera.main;
+        if (view == null) return null;
+        foreach (RaycastHit hit in Physics.RaycastAll(view.transform.position, view.transform.forward, 4f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            FuzzCreature fuzz = hit.collider.GetComponentInParent<FuzzCreature>();
+            if (fuzz != null && !fuzz.IsDead) return fuzz;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// A throw hit something: a fuzzy creature takes the goo, a wall or the ground gets a climbable splat.
+    /// True when the blob was used up (the throw ends there).
+    /// </summary>
+    public bool SplatOn(RaycastHit hit)
+    {
+        if (usePending || IsDead || hit.collider == null) return false;
+        FuzzCreature fuzz = hit.collider.GetComponentInParent<FuzzCreature>();
+        if (fuzz != null)
+        {
+            if (!fuzz.TryCoatWithGoo()) return false;
+            UseUp();
+            return true;
+        }
+        if (hit.collider.GetComponentInParent<Creature>() != null) return false;
+        Renderer look = blob != null ? blob.GetComponentInChildren<Renderer>() : GetComponentInChildren<Renderer>();
+        GooPaint.Splat(hit.point, hit.normal, look != null ? look.sharedMaterial : null);
+        UseUp();
+        return true;
     }
 }

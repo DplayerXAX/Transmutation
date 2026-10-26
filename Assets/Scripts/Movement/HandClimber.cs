@@ -191,9 +191,30 @@ public sealed class HandClimber : MonoBehaviour
                 gooCoating = controller.GetComponent<PlayerGooCoating>();
                 if (gooCoating != null) gooCoating.RegisterClimber(this);
             }
-            return gooCoating != null && gooCoating.CanClimb;
+            return (gooCoating != null && gooCoating.CanClimb) || OnGooPaint;
         }
     }
+
+    /// <summary>
+    /// Hands on a goo splat (GooPaint) climb without goo of their own and use none. Not climbing yet: a splat
+    /// within reach of the hands counts, so the climb can start there.
+    /// </summary>
+    public bool OnGooPaint
+    {
+        get
+        {
+            if (body == null) return false;
+            if (climbing) return GooPaint.Covers(HandPosition(0)) || GooPaint.Covers(HandPosition(1));
+            return GooPaint.Near(body.position + Vector3.up * handHeight, 1.2f);
+        }
+    }
+
+    [Tooltip("Goo used per second while fast climbing (Shift), as a multiple of normal climbing.")]
+    [Min(1f)] [SerializeField] private float fastGooDrain = 2f;
+    /// <summary>How fast the hands use goo right now: more while fast climbing.</summary>
+    public float GooDrainRate => Mathf.Lerp(1f, fastGooDrain, fastBlend);
+    // Goo-coated hands stick: smooth surfaces (SlipperySurface) do not slide them down.
+    private bool GooCoated => gooCoating != null && gooCoating.CanClimb;
 
     public void StopForGooDepletion()
     {
@@ -792,7 +813,7 @@ public sealed class HandClimber : MonoBehaviour
         // Any hand on (or reaching for) the smooth surface drags the whole grip down with it.
         bool sliding = false;
         SlipperySurface surface = null;
-        if (!StickyHands)
+        if (!StickyHands && !GooCoated)
             for (int i = 0; i < 2 && !sliding; i++)
             {
                 sliding = hands[i].moving ? OnSlippery(hands[i].to, hands[i].toNormal, out _) : OnSlippery(hands[i].hold, hands[i].normal, out _);
