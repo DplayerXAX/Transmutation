@@ -698,7 +698,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e28ecbf6082b3eb4cb03cd5dd2032840, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::CreatureThrower
-  throwSpeed: 13
+  throwSpeed: 26
   minimumThrowSpeed: 4
   throwGravity: 14
   maxFlightTime: 4

@@ -186,17 +186,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GooCreature
   creatureName: Goo
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   blob: {fileID: 4239405748722241425}
