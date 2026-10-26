@@ -224,7 +224,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private string DropHint() =>
         carrier != null && carrier.TentacleLockedForRide ? "Dismount before dropping the tentacle" :
-        carrier != null && carrier.IsChargingThrow ? string.Format(throwChargeHintFormat, Mathf.RoundToInt(carrier.ThrowCharge01 * 100f))
+        carrier != null && carrier.IsChargingThrow ? "[Release RMB] Throw"
         : carrier != null && !carrier.ThrowEnabled ? "[RMB] Put down" : putDownThrowHint;
 
     private string NameOf(Creature creature)

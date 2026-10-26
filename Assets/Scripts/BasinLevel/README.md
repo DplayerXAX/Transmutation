@@ -51,6 +51,24 @@ Positions are metres from the spawn (x east, y north), set on `BasinLevel`.
 Without goo the hands cannot climb, but walking or jumping forward into an edge whose top is within reach
 (`HandClimber.lipReach`, 1.5 m above the body's centre) still pulls the player over it.
 
+## Scene_Daniel: creatures round the spire
+
+**Tools > Capstone > Basin Level > Add Basin Creatures Round The Spire (Open Scene)** adds a `SpireCreatures`
+object and inactive templates (goo tagged Matter, bubble flowers firing every 10-16 s, a spider with 1.8x webs).
+In Play mode, once the spire is built: a goo pool (6 blobs) between the two stage towers with the compost
+creature beside it, two bubble flowers out from each stage tower, the spider on the ground beyond the second
+tower, and 16 birds overhead. Goo, flowers and compost grow back.
+
+## Goo, fuzz and splats
+
+- Fuzz turns red with heat (cools slowly) and green while it holds goo (up to 2 coats). Apply goo with the
+  crosshair on a fuzz, or throw goo at it, to coat it; left click a green fuzz any time (carried too) to take a coat.
+- Thrown goo that hits a wall or the ground leaves a splat (`GooPaint`): hands climb on it without goo of their
+  own and use none; it also gives a grip on surfaces that are otherwise not climbable. Oldest splats dry up past 24.
+- Goo-coated hands do not slide on smooth surfaces (`SlipperySurface`, e.g. the spire towers in Scene_Daniel).
+  Fast climbing (Shift) uses goo twice as fast (`HandClimber.fastGooDrain`).
+- Throw power shows as a bar under the crosshair while right click is held.
+
 ## Regrowth
 
 Birds eat untagged creatures (fuzz, goo, the tentacle creature). Goo, fuzz, tentacle creatures and
@@ -62,7 +80,9 @@ locks. Creatures are placed once the world has finished generating.
 | Script | Job |
 | --- | --- |
 | `BasinLevel` | Builds the towers (`LandmarkShapes.Spire` with drums, `SpireStructure`, a floor over the shaft), vent and rings; spawns and regrows creatures; The spider and its web are the normal `SkySpider` / `SkyWeb`. |
-| `Editor/BasinLevelSetup` | The two menu commands. |
+| `RegrowingSlots` | Keeps one copy of a template alive at each home spot; regrows lost ones after a delay. |
+| `SpireCreatures` | Scene_Daniel: goo pool + compost, bubble flowers, a spider and birds round the Hanging Spire's two stage towers. |
+| `Editor/BasinLevelSetup` | The menu commands (basin scene, set up open scene, add creatures round the spire). |
 
 ## Links to other systems
 

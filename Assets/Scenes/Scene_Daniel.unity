@@ -119,6 +119,64 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &12159619
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 12159621}
+  - component: {fileID: 12159620}
+  m_Layer: 0
+  m_Name: Spire Creatures
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &12159620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 12159619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9017b85f0a362d84a9c6021b111801c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpireCreatures
+  goo: {fileID: 683607478}
+  bubbleFlower: {fileID: 1999036309}
+  spider: {fileID: 452337506}
+  compost: {fileID: 296603038041281245, guid: 331bf545ab7c4344a87cc8c873d94622, type: 3}
+  bird: {fileID: 5093084902333548627, guid: 7e93df72226606c479cd69ed0d8b706c, type: 3}
+  inkMaterial: {fileID: 2100000, guid: 5692f0cfa9e2fce49b3e9f497023a8fe, type: 2}
+  poolOut: 6
+  poolRadius: 5.5
+  gooCount: 6
+  flowersPerTower: 2
+  flowerDistance: 11
+  spiderDistance: 14
+  birdCount: 16
+  placed: 0
+--- !u!4 &12159621
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 12159619}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &61648147
 GameObject:
   m_ObjectHideFlags: 0
@@ -477,17 +535,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -904,6 +967,83 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 428005854}
   m_CullTransparentMesh: 1
+--- !u!1001 &452337505
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1101141825}
+    m_Modifications:
+    - target: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: webScale
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1209126781797158621, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_Name
+      value: SkySpider
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+--- !u!114 &452337506 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  m_PrefabInstance: {fileID: 452337505}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0590b163620944946b8f5cb9e8aec789, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SkySpider
+--- !u!4 &452337507 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2134113511327656323, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  m_PrefabInstance: {fileID: 452337505}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &467306207
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1386,6 +1526,83 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &683607476
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1101141825}
+    m_Modifications:
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: foodTags
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 7537355415353030912, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+      propertyPath: m_Name
+      value: GooCreature
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+--- !u!4 &683607477 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+  m_PrefabInstance: {fileID: 683607476}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &683607478 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+  m_PrefabInstance: {fileID: 683607476}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5348b434368379747a235de92b0ab9ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GooCreature
 --- !u!1 &720752128
 GameObject:
   m_ObjectHideFlags: 0
@@ -2460,6 +2677,40 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3863990412615785016, guid: 11a0aff559ef7da42993af8226a22196, type: 3}
   m_PrefabInstance: {fileID: 399799290}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1101141824
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1101141825}
+  m_Layer: 0
+  m_Name: Spire Creature Templates
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1101141825
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101141824}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 683607477}
+  - {fileID: 1999036308}
+  - {fileID: 452337507}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &1115079077 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6342294243449890601, guid: 2bf7aed082620804a9de7354e62676bb, type: 3}
@@ -3237,7 +3488,9 @@ MonoBehaviour:
   bubblesToWarm: 15
   flightHeatPerSecond: 3.6
   climbHeatPerMetre: 1.05
+  restingHeatPerSecond: 0.225
   wakeAfter: 2.5
+  emergenceDuration: 14
   helixTwist: 9
   helixRoll: 30
   crawlSpeed: 6
@@ -3436,10 +3689,9 @@ MonoBehaviour:
   hintColor: {r: 1, g: 1, b: 1, a: 0.92}
   fadeTime: 0.12
   showCreatureName: 1
-  carryHint: '[Hold RMB]  Carry'
-  releaseHint: '[Release RMB]  Drop'
-  pickUpKeyHintFormat: '[{0}]  Pick up'
-  dropKeyHintFormat: '[{0}]  Drop'
+  pickUpHint: '[RMB] Pick up'
+  putDownThrowHint: "Tap RMB: Put down \xB7 Hold RMB: Throw"
+  throwChargeHintFormat: "Throw {0}% \xB7 Release RMB to throw"
   interactHintFormat: '[LMB]  {0}'
   petHint: '[Hold LMB]  Pet'
   pettingHint: Petting...
@@ -3544,17 +3796,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Tentacle Creature
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -3843,6 +4100,9 @@ MonoBehaviour:
   spawnFlatRadius: 18
   spawnBlend: 30
   rimHeight: 30
+  basin: 0
+  basinFloor: 0.62
+  basinSlope: 0.3
   crustThickness: 9
   innerGap: 20
   ceilingMirror: 0.8
@@ -3911,6 +4171,8 @@ MonoBehaviour:
   seed: 7
   variantsPerShape: 6
   spawnClearRadius: 10
+  density: 0.5
+  clusterFullness: 0.6
   kinds:
   - name: Shards
     shape: 0
@@ -4222,8 +4484,10 @@ MonoBehaviour:
     uniformClusters: 1
   stoneColliders: 1
   innerColliders: 1
+  organicColliders: 1
   decorLayer: 7
   chunksPerFrame: 2
+  updateBudgetMilliseconds: 2.5
   piecesPlaced: 0
   chunksWaiting: 0
 --- !u!114 &1700000035
@@ -4395,17 +4659,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -4426,6 +4695,14 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
   ropeDrop: 2
@@ -4525,17 +4802,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -4556,6 +4838,14 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
   ropeDrop: 2
@@ -4655,17 +4945,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -4686,6 +4981,14 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
   ropeDrop: 2
@@ -4785,17 +5088,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -4816,6 +5124,14 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
   ropeDrop: 2
@@ -4983,17 +5299,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -5197,17 +5518,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -5492,17 +5818,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -5656,6 +5987,87 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: -4.9, y: -5.302, z: 45.369}
+--- !u!1001 &1999036307
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1101141825}
+    m_Modifications:
+    - target: {fileID: 78356777658104957, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_Name
+      value: BubbleFlower
+      objectReference: {fileID: 0}
+    - target: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: groundFiringInterval.x
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: groundFiringInterval.y
+      value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+--- !u!4 &1999036308 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6697255322445170742, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  m_PrefabInstance: {fileID: 1999036307}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1999036309 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5411923428829405605, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+  m_PrefabInstance: {fileID: 1999036307}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f43184ee6586d204b8636d219972b415, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BubbleFlower
 --- !u!1001 &2073160748
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6122,3 +6534,5 @@ SceneRoots:
   - {fileID: 399799290}
   - {fileID: 1672255347}
   - {fileID: 720752131}
+  - {fileID: 1101141825}
+  - {fileID: 12159621}

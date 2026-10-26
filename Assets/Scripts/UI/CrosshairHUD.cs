@@ -30,6 +30,11 @@ public sealed class CrosshairHUD : MonoBehaviour
     private Image dotImage;
     private readonly Image[] tickImages = new Image[Ticks];
     private CanvasGroup group;
+    // Throw power: a thin bar under the crosshair that fills while right click is held.
+    private RectTransform chargeBack, chargeFill;
+    private Image chargeBackImage, chargeFillImage;
+    private const float ChargeWidth = 46f, ChargeHeight = 3f, ChargeOffset = 30f;
+    private float chargeShown;
 
     // Eased shape: how far out the ticks are, how long, how many show, their turn, colour and dot size.
     private float radius = 10f, length = 6f, shown, turn, dotSize = 4f, alpha;
@@ -67,6 +72,13 @@ public sealed class CrosshairHUD : MonoBehaviour
         group.blocksRaycasts = false;
         dot = Piece(canvasObject.transform, "Dot", out dotImage);
         for (int i = 0; i < Ticks; i++) ticks[i] = Piece(canvasObject.transform, "Tick", out tickImages[i]);
+        chargeBack = Piece(canvasObject.transform, "Throw Power Back", out chargeBackImage);
+        chargeBack.sizeDelta = new Vector2(ChargeWidth + 2f, ChargeHeight + 2f);
+        chargeBack.anchoredPosition = new Vector2(0f, -ChargeOffset);
+        chargeFill = Piece(chargeBack, "Throw Power", out chargeFillImage);
+        chargeFill.pivot = new Vector2(0f, 0.5f);
+        chargeFill.anchorMin = chargeFill.anchorMax = new Vector2(0f, 0.5f);
+        chargeFill.anchoredPosition = new Vector2(1f, 0f);
         HideSceneCrosshair();
     }
 
@@ -149,6 +161,23 @@ public sealed class CrosshairHUD : MonoBehaviour
             tc.a *= fade;
             tickImages[i].color = tc;
         }
+        UpdateChargeBar(mode);
+    }
+
+    private void UpdateChargeBar(Mode mode)
+    {
+        bool charging = mode == Mode.Throw && carrier != null && carrier.IsChargingThrow;
+        float target = charging ? carrier.ThrowCharge01 : 0f;
+        // Fills as fast as the charge; empties quickly after the throw.
+        chargeShown = charging ? target : Mathf.MoveTowards(chargeShown, 0f, Time.unscaledDeltaTime * 4f);
+        float show = charging ? 1f : Mathf.Clamp01(chargeShown * 4f);
+        chargeBack.gameObject.SetActive(show > 0.01f);
+        if (show <= 0.01f) return;
+        chargeFill.sizeDelta = new Vector2(ChargeWidth * chargeShown, ChargeHeight);
+        chargeBackImage.color = new Color(0f, 0f, 0f, 0.35f * show);
+        Color fill = Color.Lerp(warm, new Color(1f, 0.45f, 0.25f, 1f), chargeShown);
+        fill.a *= show;
+        chargeFillImage.color = fill;
     }
 
     private Mode Choose(out bool active, out bool valid)
