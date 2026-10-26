@@ -1,37 +1,37 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Runs the 3D main menu. Mouse hover / click picks a MainMenuButton by raycast; arrow keys or A / D
-/// (and a gamepad d-pad) move the selection, Enter / Space / gamepad south loads it, Esc quits.
-/// The camera drifts slowly and leans toward the mouse. Loading fades the screen to black.
+/// Simple UI main menu. Each entry is a UI Button that loads a scene. Mouse, arrow keys and gamepad work
+/// through the EventSystem; Esc quits. Loading fades the screen to black.
 /// </summary>
 public class MainMenuController : MonoBehaviour
 {
-    public Camera menuCamera;
-    public MainMenuButton[] buttons;
+    [System.Serializable]
+    public class Entry
+    {
+        public Button button;
+        [Tooltip("Scene name as listed in Build Settings.")]
+        public string sceneName;
+        [Tooltip("Shown when the scene is not in Build Settings yet.")]
+        public string unavailableMessage = "This place is not built yet.";
+    }
+
+    public Entry[] entries;
 
     [Header("UI")]
     [Tooltip("Full screen black image used for fades.")]
     public Image fade;
     [Tooltip("Short message line, e.g. when a scene is not built yet.")]
     public Text message;
-    public float fadeTime = 0.8f;
+    public float fadeTime = 0.6f;
     public float messageTime = 2.5f;
 
-    [Header("Camera")]
-    public float driftAmount = 0.25f;
-    public float mouseLean = 0.5f;
-    public Vector3 lookTarget = new Vector3(0f, 1.6f, 0f);
-
-    private int selected = -1;
     private bool loading;
-    private Vector2 lastMouse;
-    private Vector3 cameraHome;
-    private Vector2 lean;
     private float messageTimer;
 
     private void Start()
@@ -39,79 +39,42 @@ public class MainMenuController : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         Time.timeScale = 1f;
-        if (menuCamera == null) menuCamera = Camera.main;
-        if (menuCamera != null) cameraHome = menuCamera.transform.position;
         if (message != null) message.text = "";
+
+        foreach (Entry e in entries)
+        {
+            Entry entry = e;
+            if (entry.button != null) entry.button.onClick.AddListener(() => Choose(entry));
+        }
+        // Select the first button so keys and gamepad work straight away.
+        if (entries.Length > 0 && entries[0].button != null && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(entries[0].button.gameObject);
+
         if (fade != null) StartCoroutine(Fade(1f, 0f));
     }
 
     private void Update()
     {
-        MoveCamera();
-        UpdateMessage();
-        if (loading || buttons == null || buttons.Length == 0) return;
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Quit();
 
-        Mouse mouse = Mouse.current;
-        Keyboard keyboard = Keyboard.current;
-        Gamepad pad = Gamepad.current;
-
-        if (mouse != null)
+        if (message != null && messageTimer > 0f)
         {
-            Vector2 p = mouse.position.ReadValue();
-            // Only take the hover from the mouse when it moves, so keys can still change the selection.
-            if ((p - lastMouse).sqrMagnitude > 1f)
-            {
-                lastMouse = p;
-                selected = Pick(p);
-            }
-            if (mouse.leftButton.wasPressedThisFrame)
-            {
-                int hit = Pick(p);
-                if (hit >= 0) Choose(hit);
-            }
+            messageTimer -= Time.deltaTime;
+            Color c = message.color;
+            c.a = Mathf.Clamp01(messageTimer / 0.5f);
+            message.color = c;
         }
-
-        bool left = false, right = false, go = false;
-        if (keyboard != null)
-        {
-            left |= keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame;
-            right |= keyboard.rightArrowKey.wasPressedThisFrame || keyboard.dKey.wasPressedThisFrame;
-            go |= keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame;
-            if (keyboard.escapeKey.wasPressedThisFrame) Quit();
-        }
-        if (pad != null)
-        {
-            left |= pad.dpad.left.wasPressedThisFrame;
-            right |= pad.dpad.right.wasPressedThisFrame;
-            go |= pad.buttonSouth.wasPressedThisFrame;
-        }
-
-        if (left) selected = selected <= 0 ? buttons.Length - 1 : selected - 1;
-        if (right) selected = selected < 0 || selected >= buttons.Length - 1 ? 0 : selected + 1;
-        if (go && selected >= 0) Choose(selected);
-
-        for (int i = 0; i < buttons.Length; i++)
-            if (buttons[i] != null) buttons[i].Hovered = i == selected;
     }
 
-    private int Pick(Vector2 screen)
+    private void Choose(Entry entry)
     {
-        if (menuCamera == null) return -1;
-        Ray ray = menuCamera.ScreenPointToRay(screen);
-        if (!Physics.Raycast(ray, out RaycastHit hit, 200f)) return -1;
-        MainMenuButton b = hit.collider.GetComponentInParent<MainMenuButton>();
-        return b == null ? -1 : System.Array.IndexOf(buttons, b);
-    }
-
-    private void Choose(int index)
-    {
-        MainMenuButton b = buttons[index];
-        if (string.IsNullOrEmpty(b.sceneName) || !Application.CanStreamedLevelBeLoaded(b.sceneName))
+        if (loading) return;
+        if (string.IsNullOrEmpty(entry.sceneName) || !Application.CanStreamedLevelBeLoaded(entry.sceneName))
         {
-            ShowMessage(b.unavailableMessage);
+            ShowMessage(entry.unavailableMessage);
             return;
         }
-        StartCoroutine(Load(b.sceneName));
+        StartCoroutine(Load(entry.sceneName));
     }
 
     private IEnumerator Load(string sceneName)
@@ -144,34 +107,10 @@ public class MainMenuController : MonoBehaviour
     {
         if (message == null) return;
         message.text = text;
-        messageTimer = messageTime;
-    }
-
-    private void UpdateMessage()
-    {
-        if (message == null || messageTimer <= 0f) return;
-        messageTimer -= Time.deltaTime;
         Color c = message.color;
-        c.a = Mathf.Clamp01(messageTimer / 0.5f);
+        c.a = 1f;
         message.color = c;
-    }
-
-    private void MoveCamera()
-    {
-        if (menuCamera == null) return;
-        Vector2 target = Vector2.zero;
-        if (Mouse.current != null && Screen.width > 0 && Screen.height > 0)
-        {
-            Vector2 p = Mouse.current.position.ReadValue();
-            target = new Vector2(p.x / Screen.width - 0.5f, p.y / Screen.height - 0.5f) * 2f;
-        }
-        lean = Vector2.Lerp(lean, target, Time.deltaTime * 2f);
-
-        float t = Time.time;
-        Vector3 drift = new Vector3(Mathf.Sin(t * 0.13f), Mathf.Sin(t * 0.21f) * 0.5f, Mathf.Sin(t * 0.17f) * 0.5f) * driftAmount;
-        Transform cam = menuCamera.transform;
-        cam.position = cameraHome + drift + new Vector3(lean.x, lean.y * 0.5f, 0f) * mouseLean;
-        cam.rotation = Quaternion.LookRotation(lookTarget - cam.position, Vector3.up);
+        messageTimer = messageTime;
     }
 
     private void Quit()
