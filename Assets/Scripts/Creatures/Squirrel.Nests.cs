@@ -19,7 +19,7 @@ public sealed partial class Squirrel
     }
     private readonly List<NestMemory> homes = new List<NestMemory>();
     private GameObject nestPrefab;
-    private SquirrelManager nestManager;
+    private SquirrelSystemManager nestManager;
     private bool rebuildingMissingNest;
     private Vector3 buildAnchor, buildGround;
     private float buildProgress, discoveryTimer;
@@ -27,7 +27,7 @@ public sealed partial class Squirrel
     public int KnownNestCount => homes.Count;
     public bool ActiveNestKnownMissing => MemoryFor(nest)?.Missing ?? false;
 
-    public void ConfigureNestBuilding(GameObject prefab, SquirrelManager manager = null)
+    public void ConfigureNestBuilding(GameObject prefab, SquirrelSystemManager manager = null)
     { nestPrefab = prefab; nestManager = manager; }
 
     private NestMemory MemoryFor(SquirrelNest home) => homes.Find(memory => memory.Nest == home);
@@ -137,6 +137,8 @@ public sealed partial class Squirrel
                 carried.RemoveAt(carried.Count - 1);
                 material.Release(this);
                 material.Die();
+                // Spent materials leave physics immediately; Destroy is deferred until frame end.
+                material.gameObject.SetActive(false);
                 Destroy(material.gameObject);
             }
             nest = home;
@@ -158,10 +160,12 @@ public sealed partial class Squirrel
         { target.Release(this); target = null; }
         if (target == null)
         {
-            if (Time.time < nextSearch) return true;
-            nextSearch = Time.time + searchInterval;
-            target = foodManager.ReserveBuildingFood(this, migrationSearchRadius);
-            if (target == null) return true;
+            if (Time.time >= nextSearch)
+            {
+                nextSearch = Time.time + searchInterval;
+                target = foodManager.ReserveBuildingFood(this, migrationSearchRadius);
+            }
+            if (target == null) { TickIdlePatrol(deltaTime); return true; }
         }
         if (!MoveTo(target.transform.position, target.GetComponent<Collider>(), true)) return true;
         target.HideInside(this);

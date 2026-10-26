@@ -300,7 +300,7 @@ public sealed class ErosionTestDriver : MonoBehaviour
             foreach (ErosiveFluidDroplet droplet in fluid.Droplets)
             {
                 int id = droplet.GetInstanceID(); Vector3 p = droplet.Position;
-                if (droplet.Age > Time.fixedDeltaTime * 2f && previous.TryGetValue(id, out Vector3 old) && old.z < 2f && p.z >= 2f)
+                if (droplet.Elapsed > Time.fixedDeltaTime * 2f && previous.TryGetValue(id, out Vector3 old) && old.z < 2f && p.z >= 2f)
                 {
                     float t = (2f - old.z) / (p.z - old.z); Vector3 crossing = Vector3.Lerp(old, p, t);
                     stats.count++; stats.x += crossing.x; stats.y += crossing.y;

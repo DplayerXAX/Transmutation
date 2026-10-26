@@ -3050,120 +3050,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2100000300
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2100000301}
-  - component: {fileID: 2100000302}
-  m_Layer: 0
-  m_Name: Food Manager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2100000301
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2100000300}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2100000302
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2100000300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4dc609ca1b8c45728450166362b584c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::FoodManager
-  foodPrefab: {fileID: 2935333217659554997, guid: e074c5cfe37a44e85976920a38e90ec1, type: 3}
-  foods: []
-  initialFoodCount: 15
-  spawnRadius: 6
-  minimumTreeDistance: 1.5
-  replenishFood: 1
-  respawnInterval: 15
-  foodPerCycle: 3
-  maxUnstoredFood: 24
---- !u!1 &2100000310
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2100000311}
-  - component: {fileID: 2100000312}
-  m_Layer: 0
-  m_Name: Squirrel Manager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2100000311
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2100000310}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2100000312
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2100000310}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 63d60eaea07e4f6f810ac30abe02136c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SquirrelManager
-  foodManager: {fileID: 2100000302}
-  squirrelPrefab: {fileID: 2224693188947993226, guid: 6bfee320e35194fc99b2c55d1bd38eaa, type: 3}
-  nestPrefab: {fileID: 7812910053619368809, guid: 606358e6904854f61985a28041ab5963, type: 3}
-  squirrels: []
-  nests: []
-  trees: []
-  sizeRange: {x: 0.7, y: 1.4}
-  baseCapacity: 3
-  population: 3
-  spawnRadius: 2
-  territoryRadius: 12
-  nestTreeDistance: 1.8
-  enableFights: 1
-  fightDistance: 2.5
-  fightDuration: 1.4
-  fightCooldown: 6
-  sizeAdvantage: 2
 --- !u!1001 &2100000400
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3383,6 +3269,81 @@ MonoBehaviour:
   wallRunActiveHint: '[Space]  Wall jump    [Shift] / [Ctrl]  Up / Down'
   ledgeHint: '[Space]  Jump    [WASD]  Let go'
   handClimbHint: '[WASD]  Climb    [Space]  Push off'
+--- !u!1001 &2100000500
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 77149edcf0c144bbb96b12309d7acb0b, type: 3}
+--- !u!4 &2100000501 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 400000, guid: 77149edcf0c144bbb96b12309d7acb0b, type: 3}
+  m_PrefabInstance: {fileID: 2100000500}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2100000600
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2100000601}
+  - component: {fileID: 2100000602}
+  m_Layer: 0
+  m_Name: Glow Bee Colonies
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2100000601
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000600}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2100000602
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2100000600}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 293e9b2225ba437daa16cc6bae2173b1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::GlowBeeColony
+  nestCount: 3
+  beesPerNest: 4
+  flowersPerNest: 5
+  seed: 814
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  sceneryLayers:
+    serializedVersion: 2
+    m_Bits: 129
+  nestSeparation: 9
+  spiderPrefab: {fileID: 679280126970363634, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+  spawnSpider: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3413,7 +3374,7 @@ SceneRoots:
   - {fileID: 2100000204}
   - {fileID: 2100000214}
   - {fileID: 2100000224}
-  - {fileID: 2100000301}
-  - {fileID: 2100000311}
   - {fileID: 2100000400}
   - {fileID: 2100000411}
+  - {fileID: 2100000501}
+  - {fileID: 2100000601}

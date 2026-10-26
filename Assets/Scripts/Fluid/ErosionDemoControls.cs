@@ -29,13 +29,17 @@ public sealed class ErosionDemoControls : MonoBehaviour
     private void OnGUI()
     {
         if (fluid == null || fluid.World == null) return;
-        GUILayout.BeginArea(new Rect(12, 12, 390, menu ? 350 : 155), GUI.skin.box);
+        GUILayout.BeginArea(new Rect(12, 12, 390, menu ? 400 : 175), GUI.skin.box);
         GUILayout.Label("EROSIVE FLUID PROTOTYPE  |  Tab: controls");
         GUILayout.Label($"Water {fluid.ActiveCount}/{fluid.Capacity}  |  Edited samples {fluid.World.ModifiedSampleCount}");
         GUILayout.Label($"Budget {fluid.World.DensityBudgetPerSecond:F1} density/s  |  Removed {fluid.World.TotalDensityRemoved:F1}");
         GUILayout.Label($"Pending {fluid.World.PendingSampleCount}  Workers {fluid.World.ActiveWorkers}  Stale rejected {fluid.World.StaleResultsRejected}");
         GUILayout.Label($"Upload {fluid.World.LastUploadMilliseconds:F2} ms  Bake {fluid.World.LastBakeMilliseconds:F2} ms  Commit {fluid.World.LastCommitMilliseconds:F2} ms");
         if (fluid.World.LastUpdateError != null) GUILayout.Label("Terrain update failed. F4 retries from the initial terrain.");
+        ErosiveRain rain = fluid.Rain;
+        if (rain != null)
+            GUILayout.Label(rain.Raining ? $"Rain at ({rain.StormCentre.x:F0}, {rain.StormCentre.z:F0})  {rain.Intensity:P0}  ends in {rain.TimeRemaining:F0}s"
+                : $"Rain clear  |  next storm in {rain.TimeRemaining:F0}s");
         GUILayout.Label("F1 Water   F2 Fixed dig   F3 Clear drops   F4 Reset");
         if (menu)
         {
@@ -43,6 +47,8 @@ public sealed class ErosionDemoControls : MonoBehaviour
             if (GUILayout.Button(digging ? "Stop fixed dig" : "Dig fixed test point")) digging = !digging;
             if (GUILayout.Button("Clear droplets")) fluid.ClearDroplets();
             if (GUILayout.Button("Reset terrain erosion")) Reset();
+            if (rain != null && player != null && GUILayout.Button("Rain near me"))
+                rain.StartStorm(player.Body.position + player.transform.forward * 6f);
             if (GUILayout.Button("Go to water source"))
             {
                 var source = fluid.GetComponentInChildren<ErosiveFluidSource>();

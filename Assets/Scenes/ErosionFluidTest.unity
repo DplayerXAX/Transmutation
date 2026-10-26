@@ -476,11 +476,13 @@ MonoBehaviour:
   dropletRadius: 0.25
   spread: 0.12
   initialVelocity: {x: 0, y: 0, z: 0.5}
-  erosionRate: 0.5
+  erosionRate: 20
   erosionRadius: 1
   stationaryMultiplier: 0.15
   movingMultiplier: 2
   fullFlowSpeed: 4
+  evaporationHeat: 3
+  heatLossPerSecond: 0.5
 --- !u!1 &663193734
 GameObject:
   m_ObjectHideFlags: 0
@@ -537,6 +539,8 @@ MonoBehaviour:
   stationaryMultiplier: 0.15
   movingMultiplier: 2
   fullFlowSpeed: 4
+  evaporationHeat: 3
+  heatLossPerSecond: 0.5
 --- !u!1 &1241980192
 GameObject:
   m_ObjectHideFlags: 0
@@ -733,6 +737,8 @@ MonoBehaviour:
   stationaryMultiplier: 0.15
   movingMultiplier: 2
   fullFlowSpeed: 4
+  evaporationHeat: 3
+  heatLossPerSecond: 0.5
 --- !u!1 &1660135319
 GameObject:
   m_ObjectHideFlags: 0
@@ -793,7 +799,7 @@ MonoBehaviour:
   respawnFallingPlayer: 1
   erosionTestCourse: 1
   erodibility: 1
-  densityBudgetPerSecond: 8
+  densityBudgetPerSecond: 24
   erosionInterval: 0.1
   erosionMeshesPerFrame: 2
   workerCount: 2
@@ -870,12 +876,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Unnamed Creature
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   bodyRadius: 0.35
   hoverHeight: 0.9
   bobAmplitude: 0.08
@@ -921,6 +934,7 @@ MonoBehaviour:
   gripping: 0
   canClimbUp: 0
   canHang: 0
+  backScale: 0.32
 --- !u!54 &1876917218
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1036,6 +1050,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: carryInput
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: allowUngroundedJump
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: whatIsGround.m_Bits
       value: 384
@@ -1083,12 +1105,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Unnamed Creature
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
   heat: 0
   carryStrength: 45
   carryDamping: 12
   maximumCarryAcceleration: 60
   maximumCarryDistance: 8
+  affectionGain: 0.35
+  affectionFade: 0.05
   noticeRadius: 6
   loseRadius: 30
   spacing: 1.3
@@ -1102,6 +1131,8 @@ MonoBehaviour:
   groundLayers:
     serializedVersion: 2
     m_Bits: 385
+  petHopHeight: 0.4
+  petHopTime: 0.55
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12

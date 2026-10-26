@@ -116,7 +116,7 @@ public sealed class SquirrelMotor : MonoBehaviour
             }
         }
         Vector3 horizontal = Vector3.ProjectOnPlane(body.linearVelocity, Vector3.up);
-        horizontal = Vector3.MoveTowards(horizontal, velocity, acceleration * Time.fixedDeltaTime);
+        horizontal = Vector3.MoveTowards(horizontal, velocity, Mathf.Max(acceleration, squirrel.IsEscapingPlayer ? desiredVelocity.magnitude * 4f : acceleration) * Time.fixedDeltaTime);
         float vertical = body.linearVelocity.y;
         if (hopRequested > 0f && grounded && Time.time >= nextHop)
         {

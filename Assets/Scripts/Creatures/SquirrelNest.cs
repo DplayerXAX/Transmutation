@@ -42,7 +42,8 @@ public sealed class SquirrelNest : Creature
         if (player.CarriedCreature != null || player.PendingCreature != null) return;
         Vector3 direction = player.CarryCamera != null ? player.CarryCamera.transform.forward : player.transform.forward;
         Vector3 origin = player.CarryCamera != null ? player.CarryCamera.transform.position : player.transform.position + Vector3.up;
-        if (TryWithdraw(origin + direction * 1.5f, out var food)) player.TryCarryFromInteraction(food);
+        if (TryWithdraw(origin + direction * 1.5f, out var food) && player.TryCarryFromInteraction(food))
+            Owner?.WitnessNestAction(player, this, NestPlayerAction.Withdraw, food);
     }
     public bool TryPlayerDeposit(PlayerCreatureCarrier player, SquirrelFood food)
     {
@@ -51,6 +52,27 @@ public sealed class SquirrelNest : Creature
         player.Release();
         if (!food.EnterStorage(this)) return false;
         inventory.Add(food);
+        Owner?.WitnessNestAction(player, this, NestPlayerAction.Deposit, food);
+        return true;
+    }
+    protected override void OnCarryStarted()
+    {
+        Owner?.WitnessNestAction(Carrier, this, NestPlayerAction.Carry, null);
+    }
+    // Physical throws and the explicit deposit interaction share the same inventory accounting.
+    private void OnCollisionEnter(Collision collision)
+    {
+        var food = collision.collider.GetComponentInParent<SquirrelFood>();
+        if (food != null) TryAcceptThrownFood(food);
+    }
+    public bool TryAcceptThrownFood(SquirrelFood food)
+    {
+        if (food == null || !food.IsAvailable || food.LastPlayer == null || !food.WasRecentlyReleasedByPlayer ||
+            IsFull || IsMoving || IsCarried || IsDead || food.gameObject.scene != gameObject.scene) return false;
+        var player = food.LastPlayer;
+        if (!food.EnterStorage(this)) return false;
+        inventory.Add(food);
+        Owner?.WitnessNestAction(player, this, NestPlayerAction.Deposit, food);
         return true;
     }
     public bool TryWithdraw(Vector3 position, out SquirrelFood food)

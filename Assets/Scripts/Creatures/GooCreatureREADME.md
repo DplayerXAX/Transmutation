@@ -20,6 +20,24 @@ seconds. Between 20 and 30 seconds, both arms remain covered and the layer grows
 thicker. There is no separate HUD bar. The overlay follows each arm segment and
 preserves the underlying limb materials and existing surface restrictions.
 
+## Impacts and paint
+
+All creatures expose `ReceiveImpact(CreatureImpact)`. Scripted throws and the
+separate `CreatureImpactRelay` use the same minimum normal impact speed (15.6 m/s
+by default: 60% of the 26 m/s maximum throw speed, tunable on each creature). Resting contacts, gentle placement,
+triggers, and carried/captured receivers do not trigger it. Normals point from
+the other surface toward the receiver; relative velocity is receiver minus other.
+
+Goo handles this hook by coating an accepting Fuzz, or consuming itself to paint
+a non-creature solid. A falling object hitting resting Goo paints both the striker
+and the supporting ground, when present. Successful reactions log `goo explode`
+once. Full Fuzz and other creatures preserve the blob.
+
+Paint follows its supporting object. Its radius is approximately 1.98 metres,
+twice the former 1.4-metre patch's area; visible paint, grip collider, and climb
+coverage scale together. The oldest patches are removed beyond 24 active splats.
+The maximum charged throw speed is 26 m/s; minimum speed remains 4 m/s.
+
 ## Setup
 
 - `Tools > Creatures > Goo > Create Assets And Configure Player` creates missing
@@ -28,6 +46,9 @@ preserves the underlying limb materials and existing surface restrictions.
   blobs near an existing climbable wall. Repeating it preserves the placed group.
 
 ## Verification
+
+- In Play Mode, choose `Tools > Creatures > Goo > Validate Shared Impacts (Play Mode)`
+  to check filtering, Fuzz behavior, moving paint, and real falling-object contacts.
 
 - In Edit Mode, run `GooCreatureValidation.ValidateAssets()` through the Unity
   CLI to check prefab wiring, collider setup, and shader compilation.

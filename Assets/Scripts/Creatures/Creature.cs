@@ -57,6 +57,20 @@ public enum FoodTag
     [Tooltip("Editor-facing name used to identify this creature during development. It does not need to be shown to the player.")]
     [SerializeField] private string creatureName = "Unnamed Creature";
 
+    [Header("Impact")]
+    [Tooltip("Minimum closing speed into a solid surface that triggers ReceiveImpact (m/s).")]
+    [Min(0f)] [SerializeField] private float minimumImpactSpeed = 15.6f;
+    public float MinimumImpactSpeed => Mathf.Max(0f, minimumImpactSpeed);
+
+    internal bool CanReceiveImpact(CreatureImpact impact) => isActiveAndEnabled && !IsDead && !consumptionPending &&
+        !IsCarried && !IsBubbleCaptured && !BoneChild.IsCradled(this) &&
+        !(TryGetComponent<WebCapture>(out var web) && web.IsCaptured) &&
+        impact.OtherBodyId != 0 && !impact.IsTrigger && impact.OtherCreature != this &&
+        impact.NormalSpeed > 0f && impact.NormalSpeed >= MinimumImpactSpeed;
+
+    /// <summary>Reacts to a meaningful solid hit, whether thrown or struck by another body.</summary>
+    public virtual void ReceiveImpact(CreatureImpact impact) { }
+
     [Header("Health and Polarity")]
     [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
     [SerializeField] private CreaturePolarity initialPolarity = CreaturePolarity.Random;
@@ -70,6 +84,9 @@ public enum FoodTag
     public float Health => health;
     public CreaturePolarity Polarity => polarity;
     public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    /// <summary>Structural or unique creatures ignore incidental harm: projectile, melee and blast damage,
+    /// and water-contact ageing. Direct lifecycle calls (Die, SetRemainingAge, consumption) are unaffected.</summary>
+    public virtual bool Invulnerable => false;
     public CreatureDeathCause DeathCause => deathCause;
     public Vector3 AimPosition => aimPoint != null ? aimPoint.position :
         (TryGetComponent<Rigidbody>(out var body) ? body.worldCenterOfMass : transform.position);
@@ -96,7 +113,7 @@ public enum FoodTag
 
     public bool ApplyDamage(float amount, Creature source = null)
     {
-        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending) return false;
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
         if (Damaged != null)
@@ -309,6 +326,9 @@ public enum FoodTag
     /// <summary>Whether this creature can currently be picked up.</summary>
     public virtual bool CanBeCarried => true;
 
+    /// <summary>Held like an item: fixed in view at the right hand, kinematic, without pushing other bodies.</summary>
+    public virtual bool HeldInView => false;
+
     /// <summary>Left-click uses this creature before the cursor target while held.</summary>
     public virtual bool CanUseWhileCarried => false;
     /// <summary>Return true to own this frame's carried RMB input instead of shared putdown/throw.</summary>
@@ -452,6 +472,13 @@ public enum FoodTag
                 (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
         }
         InitializeCreature();
+        // Keep physics messages separate from subclass OnCollisionEnter methods.
+        if (Application.isPlaying)
+        {
+            if (!TryGetComponent<CreatureImpactRelay>(out var impactRelay))
+                impactRelay = gameObject.AddComponent<CreatureImpactRelay>();
+            impactRelay.Initialize(this);
+        }
         // Serialized death survives a script reload; initialization must not restore living physics.
         if (isDead)
         {

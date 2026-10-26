@@ -7,6 +7,9 @@ using UnityEngine.SceneManagement;
 public sealed class SquirrelFood : Creature
 {
     public Squirrel Owner { get; private set; }
+    public PlayerCreatureCarrier LastPlayer { get; private set; }
+    private float lastHeldAt = float.NegativeInfinity;
+    public bool WasRecentlyReleasedByPlayer => !IsCarried && Time.time - lastHeldAt <= 5f;
     public SquirrelNest StorageNest { get; private set; }
     public bool IsStored => StorageNest != null;
     public bool IsAvailable => !IsStored && Owner == null && !IsCarried && !IsDead && !IsConsumptionPending && isActiveAndEnabled;
@@ -21,9 +24,11 @@ public sealed class SquirrelFood : Creature
         SetFoodAndDiet(FoodTag.None, FoodTag.None);
         StopFoodPhysics();
     }
-    protected override void TickCreature(float deltaTime) { }
+    protected override void TickCreature(float deltaTime) { if (IsCarried) lastHeldAt = Time.time; }
     protected override void OnCarryStarted()
     {
+        LastPlayer = Carrier;
+        lastHeldAt = Time.time;
         var squirrel = Owner;
         Owner = null;
         squirrel?.ForgetFood(this);
@@ -131,6 +136,8 @@ public sealed class SquirrelFood : Creature
     {
         if (IsStored || IsCarried || IsDead || nest == null) return false;
         StopFoodPhysics();
+        LastPlayer = null;
+        lastHeldAt = float.NegativeInfinity;
         StorageNest = nest;
         Owner = null;
         transform.SetParent(nest.transform, false);

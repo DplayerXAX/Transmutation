@@ -12,22 +12,27 @@ public sealed class GooPaint : MonoBehaviour
 {
     private static readonly List<GooPaint> All = new List<GooPaint>();
     private const int MaxSplats = 24;
+    public const float DefaultRadius = 1.979899f; // 1.4 * sqrt(2): twice the previous area.
 
-    [Min(0.3f)] public float radius = 1.4f;
+    [Min(0.3f)] public float radius = DefaultRadius;
 
-    private Vector3 normal;
+    // The local -Z axis is the painted surface normal, including after its attachment moves.
+    public Vector3 Normal => Vector3.Cross(transform.TransformVector(Vector3.up), transform.TransformVector(Vector3.right)).normalized;
+    private Mesh paintMesh;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => All.Clear();
 
     /// <summary>Leaves a splat at a surface point. The material is the goo blob's own.</summary>
-    public static GooPaint Splat(Vector3 point, Vector3 surfaceNormal, Material material, float size = 1.4f)
+    public static GooPaint Splat(Vector3 point, Vector3 surfaceNormal, Material material,
+        float size = DefaultRadius, Transform surface = null)
     {
         var go = new GameObject("Goo Paint") { layer = 7 };
+        if (surface != null) UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, surface.gameObject.scene);
         go.transform.SetPositionAndRotation(point + surfaceNormal * 0.02f, Quaternion.LookRotation(-surfaceNormal, Mathf.Abs(surfaceNormal.y) < 0.9f ? Vector3.up : Vector3.forward));
+        if (surface != null) go.transform.SetParent(surface, true);
         var paint = go.AddComponent<GooPaint>();
         paint.radius = size;
-        paint.normal = surfaceNormal.normalized;
         paint.Build(material);
         All.Add(paint);
         while (All.Count > MaxSplats)
@@ -44,11 +49,14 @@ public sealed class GooPaint : MonoBehaviour
     {
         foreach (GooPaint paint in All)
         {
-            if (paint == null) continue;
+            if (paint == null || !paint.isActiveAndEnabled) continue;
             Vector3 offset = point - paint.transform.position;
-            float off = Vector3.Dot(offset, paint.normal);
+            float off = Vector3.Dot(offset, paint.Normal);
             if (Mathf.Abs(off) > 0.45f) continue;
-            if ((offset - paint.normal * off).magnitude <= paint.radius + margin) return true;
+            Vector3 local = paint.transform.InverseTransformPoint(point - paint.Normal * off);
+            float scale = Mathf.Max(0.001f, Mathf.Min(paint.transform.TransformVector(Vector3.right).magnitude,
+                paint.transform.TransformVector(Vector3.up).magnitude));
+            if (new Vector2(local.x, local.y).magnitude <= paint.radius + margin / scale) return true;
         }
         return false;
     }
@@ -57,7 +65,12 @@ public sealed class GooPaint : MonoBehaviour
     public static bool Near(Vector3 point, float reach)
     {
         foreach (GooPaint paint in All)
-            if (paint != null && (paint.transform.position - point).magnitude <= reach + paint.radius) return true;
+            if (paint != null && paint.isActiveAndEnabled)
+            {
+                float scale = Mathf.Max(paint.transform.TransformVector(Vector3.right).magnitude,
+                    paint.transform.TransformVector(Vector3.up).magnitude);
+                if ((paint.transform.position - point).magnitude <= reach + paint.radius * scale) return true;
+            }
         return false;
     }
 
@@ -81,7 +94,7 @@ public sealed class GooPaint : MonoBehaviour
             triangles.Add(1 + i);
         }
         // Drips running down a wall.
-        if (Mathf.Abs(normal.y) < 0.6f)
+        if (Mathf.Abs(Normal.y) < 0.6f)
         {
             Vector3 down = transform.InverseTransformDirection(Vector3.down);
             Vector3 across = Vector3.Cross(down, Vector3.forward).normalized;
@@ -91,13 +104,14 @@ public sealed class GooPaint : MonoBehaviour
                 float length = radius * Mathf.Lerp(0.6f, 1.3f, (float)random.NextDouble());
                 Vector3 start = across * x + down * radius * 0.5f;
                 int b = vertices.Count;
-                vertices.Add(start - across * 0.09f);
-                vertices.Add(start + across * 0.09f);
+                vertices.Add(start - across * (0.09f * radius / 1.4f));
+                vertices.Add(start + across * (0.09f * radius / 1.4f));
                 vertices.Add(start + down * length);
                 triangles.Add(b); triangles.Add(b + 2); triangles.Add(b + 1);
             }
         }
         var mesh = new Mesh { name = "Goo Paint" };
+        paintMesh = mesh;
         mesh.SetVertices(vertices);
         mesh.SetTriangles(triangles, 0);
         mesh.RecalculateNormals();
@@ -113,5 +127,9 @@ public sealed class GooPaint : MonoBehaviour
         grip.center = new Vector3(0f, 0f, 0.03f);
     }
 
-    private void OnDestroy() => All.Remove(this);
+    private void OnDestroy()
+    {
+        All.Remove(this);
+        if (paintMesh != null) Destroy(paintMesh);
+    }
 }
