@@ -26,6 +26,9 @@ This README describes the code contract; the wiki describes behavior and player-
 - **Consumption:** `Consume(consumer)` is an overridable effects hook with an empty base implementation.
   It does not call `Die()` or destroy anything. `TryConsumeFood(food)` checks diet and claims
   food once, calls its consumption hook, then separately calls death and removes the original.
+- **Invulnerable:** override to `true` for structural or unique creatures. `ApplyDamage` then refuses all
+  damage before the `Damaged` event, and erosive water does not age them. Direct `Die()`, `SetRemainingAge`
+  and consumption still work.
 - **Heat:** a shared float. `AddHeat`, `SetHeat`, `SpendHeat` (returns the amount actually removed),
   and the `OnHeatChanged()` hook.
 - **Diet:** inherited food tags, accepted diet tags, and a same-type eating option.
@@ -154,6 +157,13 @@ The flower's shape comes from `MarchingCubes/DensityShapeOverlay` objects inject
 `MarchingCubesVolume` (see `Scripts/MarchingCubes/README.md`).
 
 ## Other creatures
+
+**Ore Colossus** is a huge, peaceful creature on four long legs that roams the procedural map with a geode
+shrine on its back, after Elden Ring's Walking Mausoleum. Its stomps fling the player. Only erosive water
+wears away the crystal heart hanging under its belly (an `ErosionTarget`). Once the heart breaks, it kneels
+for good: its tail becomes a ramp, its body becomes walkable and climbable static remains, and the geode
+releases one **Geode Larva**. Carried, the larva's left click gives its stored life (Age) to the creature
+under the crosshair, and it recharges near any colossus. See [OreColossusREADME.md](OreColossusREADME.md).
 
 **Corrupt Seed** is passive Plant food that infects its consumer through a separate
 component. Host death produces 3-5 seeds alongside normal remains, accumulating seed

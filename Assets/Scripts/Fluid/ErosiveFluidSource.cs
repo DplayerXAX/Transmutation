@@ -15,19 +15,34 @@ public sealed class ErosiveFluidSource : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float stationaryMultiplier = 0.15f;
     [Min(1f)] [SerializeField] private float movingMultiplier = 2f;
     [Min(0.01f)] [SerializeField] private float fullFlowSpeed = 4f;
+    [Tooltip("Heat at which a droplet from this source evaporates.")]
+    [Min(0.01f)] [SerializeField] private float evaporationHeat = 3f;
+    [Tooltip("Heat a droplet loses per second, so only sustained heating evaporates it.")]
+    [Min(0f)] [SerializeField] private float heatLossPerSecond = 0.5f;
     private float accumulator;
+    private bool driven;
     public bool Emitting => emitting;
     public ErosiveFluidSystem Fluid => fluid;
     public float Lifetime => lifetime;
     public float Radius => dropletRadius;
     public float ErosionRadius => erosionRadius;
     public float Rate => erosionRate;
+    public float EvaporationHeat => evaporationHeat;
+    public float HeatLossPerSecond => heatLossPerSecond;
     public void SetEmitting(bool value) { emitting = value; accumulator = 0f; }
     public void SetFluid(ErosiveFluidSystem value) => fluid = value;
+    /// <summary>A driven source only supplies droplet settings; its owner (e.g. rain) spawns the drops.</summary>
+    internal void SetDriven(bool value) => driven = value;
+    /// <summary>Small, short-lived, gentler drops so rain shares the pool with ground sources.</summary>
+    internal void ConfigureForRain()
+    {
+        emitting = true; lifetime = 5f; dropletRadius = 0.12f; spread = 0f;
+        erosionRate = 0.3f; erosionRadius = 0.6f;
+    }
     public float MotionMultiplier(float tangentialSpeed) => Mathf.Lerp(stationaryMultiplier, movingMultiplier, Mathf.Clamp01(tangentialSpeed / fullFlowSpeed));
     internal void Emit(float dt)
     {
-        if (!isActiveAndEnabled || !emitting || fluid == null || fluid.World == null ||
+        if (driven || !isActiveAndEnabled || !emitting || fluid == null || fluid.World == null ||
             !fluid.World.IsRegionReady(transform.position, dropletRadius + 0.5f)) { accumulator = 0f; return; }
         accumulator += dropletsPerSecond * dt;
         int count = Mathf.Min(16, Mathf.FloorToInt(accumulator));
