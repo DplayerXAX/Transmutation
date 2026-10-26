@@ -16,6 +16,7 @@ public sealed class SquirrelMotor : MonoBehaviour
     private Squirrel squirrel;
     private Vector3 desiredVelocity;
     private Collider destinationCollider;
+    private Vector3? navigationGoal;
     private Vector3 bypassPoint;
     private bool hasBypassPoint;
     private float hopRequested;
@@ -44,11 +45,14 @@ public sealed class SquirrelMotor : MonoBehaviour
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
     }
 
-    public void SetIntent(Vector3 velocity, float hopSpeed = 0f, Collider destination = null)
+    public void SetIntent(Vector3 velocity, float hopSpeed = 0f, Collider destination = null, Vector3? goal = null)
     {
         desiredVelocity = Vector3.ProjectOnPlane(velocity, Vector3.up);
         if (destinationCollider != destination) hasBypassPoint = false;
+        if (goal.HasValue && navigationGoal.HasValue && (goal.Value - navigationGoal.Value).sqrMagnitude > 1f)
+            hasBypassPoint = false;
         destinationCollider = destination;
+        navigationGoal = goal;
         hopRequested = Mathf.Max(hopRequested, hopSpeed);
     }
 
@@ -59,6 +63,7 @@ public sealed class SquirrelMotor : MonoBehaviour
         Stop();
         hasBypassPoint = false;
         destinationCollider = null;
+        navigationGoal = null;
     }
 
     private void FixedUpdate()
@@ -100,8 +105,8 @@ public sealed class SquirrelMotor : MonoBehaviour
             {
                 // Keep a concrete waypoint around the obstacle instead of picking a
                 // tangent anew each step (which oscillates at corners and tree trunks).
-                if (!hasBypassPoint && destinationCollider != null)
-                    ChooseBypass(hit.collider, destinationCollider.bounds.center);
+                if (!hasBypassPoint && (navigationGoal.HasValue || destinationCollider != null))
+                    ChooseBypass(hit.collider, navigationGoal ?? destinationCollider.bounds.center);
                 Vector3 tangent = hasBypassPoint
                     ? Vector3.ProjectOnPlane(bypassPoint - body.position, Vector3.up).normalized
                     : Vector3.Cross(Vector3.up, hit.normal).normalized;
@@ -111,7 +116,7 @@ public sealed class SquirrelMotor : MonoBehaviour
             }
         }
         Vector3 horizontal = Vector3.ProjectOnPlane(body.linearVelocity, Vector3.up);
-        horizontal = Vector3.MoveTowards(horizontal, velocity, acceleration * Time.fixedDeltaTime);
+        horizontal = Vector3.MoveTowards(horizontal, velocity, Mathf.Max(acceleration, squirrel.IsEscapingPlayer ? desiredVelocity.magnitude * 4f : acceleration) * Time.fixedDeltaTime);
         float vertical = body.linearVelocity.y;
         if (hopRequested > 0f && grounded && Time.time >= nextHop)
         {

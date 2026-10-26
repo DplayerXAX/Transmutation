@@ -1,24 +1,18 @@
 using UnityEngine;
+using System.Collections.Generic;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Attach to the player. Holds any Creature at an anchor without disabling its
-/// simulation, colliders, animation, or heat reactions. Hold right click to carry,
-/// or click right (or press a key) once to pick up and again to drop.
-/// A tentacle creature is not held out in front: it shrinks and sits on the right hand.
+/// simulation, colliders, animation, or heat reactions. Click right to pick up;
+/// tap right to put down, or hold and release right to throw.
+/// A tentacle creature shrinks onto the player's back while carried.
 /// </summary>
 [DisallowMultipleComponent]
 [DefaultExecutionOrder(1000)]
 public sealed class PlayerCreatureCarrier : MonoBehaviour
 {
-    public enum CarryInput
-    {
-        HoldRightMouse,
-        ToggleKey,
-        ToggleRightMouse
-    }
-
     [SerializeField] private Camera carryCamera;
     [Tooltip("Empty transform in front of the camera. Created automatically if unassigned.")]
     [SerializeField] private Transform carryPoint;
@@ -26,16 +20,15 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [SerializeField] private LayerMask pickupLayers = ~0;
 
     [Header("Input")]
-    [SerializeField] private CarryInput carryInput = CarryInput.HoldRightMouse;
-    [Tooltip("Pick up / drop key used by the Toggle Key mode.")]
-    [SerializeField] private Key toggleKey = Key.E;
-    [Tooltip("Forward speed given to a physics creature when it is dropped in Toggle Key mode.")]
+    [Tooltip("On: hold right click to charge a throw, release to throw (a tap puts down). A tentacle creature is never " +
+             "thrown: right click only puts it down, so its stuck arms are not thrown about by a long press. Off: right click only puts down.")]
+    [SerializeField] private bool chargedThrow = true;
+    [Tooltip("Hold this many seconds before releasing RMB becomes a throw instead of a putdown.")]
+    [Min(0.01f)] [SerializeField] private float throwHoldThreshold = 0.2f;
+    [Tooltip("Total RMB hold time needed to reach maximum throw speed.")]
+    [Min(0.02f)] [SerializeField] private float fullThrowHoldTime = 1.2f;
+    [Tooltip("Forward speed given to a free physics creature when it is put down.")]
     [Min(0f)] [SerializeField] private float dropForwardSpeed = 1.5f;
-
-    [Header("Grip")]
-    [Tooltip("Lock the held creature to the hand every frame instead of pulling it there with a spring. " +
-             "Feels solid and has no lag, but the held creature can pass through walls.")]
-    [SerializeField] private bool firmGrip;
 
     [Header("Big Creatures")]
     [Tooltip("Creatures larger than this (metres, largest side) cannot be picked up.")]
@@ -45,18 +38,16 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
 
-    [Header("Held In View")]
-    [Tooltip("Camera-space spot where item-like creatures (Creature.HeldInView) are held. Far and low enough " +
-             "that looking 45-60 degrees down from standing eye height presses the creature into the ground.")]
-    [SerializeField] private Vector3 heldInViewPosition = new Vector3(0.35f, -0.5f, 1.6f);
-    [Tooltip("Surfaces an item-like creature rests against instead of passing through.")]
-    [SerializeField] private LayerMask heldInViewBlockers = (1 << 7) | (1 << 8) | (1 << 9);
-    [Tooltip("Fraction of its radius an item-like creature presses into a blocking surface, so it keeps touching it.")]
-    [Range(0f, 0.9f)] [SerializeField] private float heldInViewPress = 0.3f;
-    [Tooltip("How far in front of the eyes an item-like creature is put down, unless a surface is closer.")]
-    [Min(0.3f)] [SerializeField] private float heldInViewDropDistance = 1f;
-
     public Creature CarriedCreature { get; private set; }
+    public Camera CarryCamera => carryCamera;
+    public bool TryCarryFromInteraction(Creature creature)
+    {
+        if (CarriedCreature != null || pendingCreature != null || creature == null ||
+            creature.gameObject.scene != gameObject.scene) return false;
+        BeginCarry(creature);
+        return CarriedCreature == creature;
+    }
+    public Creature PendingCreature => pendingCreature;
 
     /// <summary>The player's right hand (set by FirstPersonBody); tentacle creatures ride on it.</summary>
     public Transform HandAnchor { get; set; }
@@ -69,12 +60,19 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Tooltip("Seconds from the click until the reaching hand closes on the creature and it is picked up.")]
     [Min(0f)] [SerializeField] private float grabReachTime = 0.22f;
     [Tooltip("How fast a picked-up creature is brought from where it was taken to where it is held (m/s).")]
-    [Min(0.1f)] [SerializeField] private float bringInSpeed = 4f;
+    [Min(0.1f)] [SerializeField] private float bringInSpeed = 12f;
     private Creature pendingCreature;
     private float pendingAt;
     private Vector3 carryTargetLocal;
     private bool bringingIn;
-    private bool pickupActionConsumed;
+    private Creature rightMouseCreature;
+    private float rightMouseHeldTime;
+    private CreatureThrower thrower;
+
+    /// <summary>True when a held right click can throw (see chargedThrow).</summary>
+    public bool ThrowEnabled => chargedThrow && !CarriesTentacle;
+    public bool IsChargingThrow => ThrowEnabled && rightMouseCreature != null && rightMouseCreature == CarriedCreature && rightMouseHeldTime >= throwHoldThreshold;
+    public float ThrowCharge01 => IsChargingThrow ? Mathf.InverseLerp(throwHoldThreshold, fullThrowHoldTime, rightMouseHeldTime) : 0f;
 
     private Vector3 carryPointHome;
 
@@ -83,12 +81,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     private Rigidbody heldBody;
     private RigidbodyInterpolation heldInterpolation;
     private Quaternion heldYawOffset;
-    private bool heldInView;
-    private bool heldDetectCollisions;
-    private float heldRadius;
-    private bool Firm => firmGrip || heldInView;
-    public CarryInput InputMode => carryInput;
-    public Key ToggleKeyBinding => toggleKey;
+    private struct DroppedCollision { public Collider creature, player; public float restoreAt; }
+    private readonly List<DroppedCollision> droppedCollisions = new List<DroppedCollision>();
 
     /// <summary>The player's Rigidbody, so carried creatures can help it move.</summary>
     public Rigidbody PlayerBody { get; private set; }
@@ -98,6 +92,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Awake()
     {
+        thrower = GetComponent<CreatureThrower>();
+        if (thrower == null) thrower = gameObject.AddComponent<CreatureThrower>();
         PlayerBody = GetComponentInParent<Rigidbody>();
         PlayerController = GetComponentInParent<SmoothFirstPersonController>();
         playerColliders = transform.root.GetComponentsInChildren<Collider>(true);
@@ -113,35 +109,75 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) return;
         if (!Application.isFocused && !Application.isBatchMode)
         {
-            Release();
+            CancelRightMouse();
+            // A tentacle creature stays on the back (dropping it would end its stuck arms' rig by surprise).
+            if (!CarriesTentacle) Release();
             return;
         }
 
-        if (carryInput == CarryInput.HoldRightMouse)
-            UpdateHoldRightMouse();
-        else
-            UpdateToggle(carryInput == CarryInput.ToggleRightMouse);
-        UpdatePendingGrab();
+        if (BoneRide.HandleInput(this)) { rideInputGuard = true; CancelRightMouse(); return; }
+        // Releasing the mounting click must not become a putdown or throw.
+        if (rideInputGuard)
+        {
+            if (Mouse.current == null || !Mouse.current.rightButton.wasPressedThisFrame) return;
+            rideInputGuard = false;
+        }
 
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             ReleaseCarriedCreature();
+        Mouse mouse = Mouse.current;
+        if (mouse == null) { CancelRightMouse(); return; }
+        UpdateRightMouse(mouse.rightButton.wasPressedThisFrame, mouse.rightButton.isPressed,
+            mouse.rightButton.wasReleasedThisFrame, Time.deltaTime);
+        UpdatePendingGrab();
     }
 
-    private void UpdateToggle(bool rightMouse)
+    private void OnValidate()
     {
-        bool pressed;
-        if (rightMouse) pressed = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
-        else pressed = Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame;
-        if (!pressed) return;
+        throwHoldThreshold = Mathf.Max(0.01f, throwHoldThreshold);
+        fullThrowHoldTime = Mathf.Max(throwHoldThreshold + 0.01f, fullThrowHoldTime);
+    }
 
-        if (CarriedCreature != null)
+    // One owner resolves every RMB gesture. A pickup press never arms a release gesture.
+    private void UpdateRightMouse(bool pressed, bool held, bool released, float deltaTime)
+    {
+        if (rightMouseCreature != CarriedCreature) CancelRightMouse();
+        if (CarriedCreature != null && CarriedCreature.TryHandleCarriedRightMouse(this, pressed, held, released))
         {
-            Drop();
+            CancelRightMouse();
             return;
         }
-        if (pendingCreature != null) return;
+        if (Time.timeScale <= 0f)
+        {
+            // Releases during a pause are consumed, never deferred until resuming.
+            if (released || !held) CancelRightMouse();
+            return;
+        }
+        if (CarriedCreature != null)
+        {
+            if (pressed)
+            {
+                rightMouseCreature = CarriedCreature;
+                rightMouseHeldTime = 0f;
+            }
+            else if (rightMouseCreature != null && (held || released))
+                rightMouseHeldTime += Mathf.Max(0f, deltaTime);
+
+            if (released && rightMouseCreature != null)
+            {
+                bool shouldThrow = IsChargingThrow;
+                float charge = ThrowCharge01;
+                CancelRightMouse();
+                if (shouldThrow) thrower.Throw(charge);
+                else Drop();
+            }
+            else if (!held) CancelRightMouse();
+            return;
+        }
+        if (!pressed || pendingCreature != null) return;
 
         Creature creature = FindCreature();
         if (creature != null && !string.IsNullOrEmpty(creature.PickupActionPrompt))
@@ -156,6 +192,12 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         // The creature is taken only when the hand gets there, not at the moment of the click.
         pendingCreature = creature;
         pendingAt = Time.time + grabReachTime;
+    }
+
+    private void CancelRightMouse()
+    {
+        rightMouseCreature = null;
+        rightMouseHeldTime = 0f;
     }
 
     private void UpdatePendingGrab()
@@ -181,26 +223,6 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (!bringingIn || carryPoint == null) return;
         carryPoint.localPosition = Vector3.MoveTowards(carryPoint.localPosition, carryTargetLocal, bringInSpeed * deltaTime);
         if ((carryPoint.localPosition - carryTargetLocal).sqrMagnitude < 1e-4f) bringingIn = false;
-    }
-
-    private void UpdateHoldRightMouse()
-    {
-        Mouse mouse = Mouse.current;
-        if (mouse == null)
-        {
-            Release();
-            return;
-        }
-
-        // Keep trying while held so a moving Bubble can enter the pickup ray
-        // after the initial click.
-        if (mouse.rightButton.isPressed && CarriedCreature == null && !pickupActionConsumed)
-        {
-            Creature creature = FindCreature();
-            if (creature != null) BeginCarry(creature);
-        }
-
-        if (!mouse.rightButton.isPressed) { pickupActionConsumed = false; Release(); }
     }
 
     /// <summary>The Creature the pickup input would grab now, or null.</summary>
@@ -271,22 +293,20 @@ private void FitCarryPoint(Creature creature)
         if (!string.IsNullOrEmpty(creature.PickupActionPrompt))
         {
             creature.ReceivePickupAttempt(this);
-            pickupActionConsumed = true;
             return;
         }
         if (!creature.CanBeCarried) return;
         if (carryPoint == null) return;
         if (creature.TryGetComponent<CompostAbsorption>(out var absorption)) absorption.CancelForPickup();
-        heldInView = creature.HeldInView;
-        if (heldInView) carryPoint.localPosition = heldInViewPosition;
-        else FitCarryPoint(creature);
+        FitCarryPoint(creature);
         if (!creature.TryBeginCarry(this, carryPoint))
         {
             carryPoint.localPosition = carryPointHome;
-            heldInView = false;
             return;
         }
         CarriedCreature = creature;
+        CancelRightMouse();
+        if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
         carryPoint.position = creature.transform.position;
@@ -295,44 +315,31 @@ private void FitCarryPoint(Creature creature)
         carriedColliders = creature.GetComponentsInChildren<Collider>();
         SetPlayerCollision(carriedColliders, ignore: true);
 
-        if (Firm)
+        heldBody = creature.GetComponent<Rigidbody>();
+        if (heldBody != null)
         {
-            heldBody = creature.GetComponent<Rigidbody>();
-            if (heldBody != null)
-            {
-                heldInterpolation = heldBody.interpolation;
-                heldBody.interpolation = RigidbodyInterpolation.None;
-                // Kinematic bodies only support speculative CCD. EndCarry restores both settings.
-                heldBody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-                heldBody.isKinematic = true;
-                if (heldInView)
-                {
-                    // An item in hand must not shove other bodies or catch on walls.
-                    heldDetectCollisions = heldBody.detectCollisions;
-                    heldBody.detectCollisions = false;
-                }
-            }
-            if (heldInView) heldRadius = MeasureCreature(creature, out _, out _) * 0.5f;
-            heldYawOffset = Quaternion.Inverse(HoldFrame()) * creature.transform.rotation;
-            SnapHeld();
+            heldInterpolation = heldBody.interpolation;
+            heldBody.interpolation = RigidbodyInterpolation.None;
+            heldBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            heldBody.isKinematic = true; // EndCarry restores the creature's own setting.
         }
+        heldYawOffset = Quaternion.Inverse(CarryYaw()) * creature.transform.rotation;
+        SnapHeld();
     }
 
     private void FixedUpdate()
     {
-        if (CarriedCreature == null || Firm) return;
-        if (!CarriesTentacle) BringIn(Time.fixedDeltaTime);
-        FollowHand(Time.fixedDeltaTime);
-        if (carryPoint == null || !CarriedCreature.PullTowards(this, carryPoint)) Release();
+        BoneRide.StepApproach(Time.fixedDeltaTime);
+        RestoreDroppedCollisions();
     }
 
     // After the camera has moved this frame, so the held creature never trails behind the view.
     private void LateUpdate()
     {
         if (CarriedCreature == null) return;
-        if (Firm && !CarriesTentacle) BringIn(Time.deltaTime);
+        if (!CarriesTentacle) BringIn(Time.deltaTime);
         FollowHand(Time.deltaTime);
-        if (Firm) SnapHeld();
+        SnapHeld();
     }
 
     /// <summary>A tentacle creature clings to the player's back (between the shoulder blades), out of view.</summary>
@@ -357,42 +364,14 @@ private void FitCarryPoint(Creature creature)
     public bool CarriesTentacle => CarriedCreature is TentacleCreature && !CarriedCreature.IsDead;
 
     /// <summary>The attached creature stays on the rider while the mouse buttons pull the reins.</summary>
-    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Mount != null;
+    private bool rideInputGuard;
+    public bool TentacleLockedForRide => CarriesTentacle && BoneRide.Busy;
 
     private void SnapHeld()
     {
         if (carryPoint == null) return;
-        Vector3 point = heldInView ? RestAgainstSurfaces(carryPoint.position) : carryPoint.position;
-        CarriedCreature.transform.SetPositionAndRotation(point, HoldFrame() * heldYawOffset);
-        if (heldBody != null) heldBody.position = point;
-    }
-
-    // Terrain colliders are one-sided: a creature pushed fully through stops registering contact.
-    private Vector3 RestAgainstSurfaces(Vector3 point)
-    {
-        if (carryCamera == null || heldRadius <= 0f) return point;
-        Vector3 eye = carryCamera.transform.position;
-        Vector3 toPoint = point - eye;
-        float distance = toPoint.magnitude;
-        if (distance < 1e-4f || !gameObject.scene.GetPhysicsScene().SphereCast(eye, heldRadius, toPoint / distance, out RaycastHit hit,
-                distance, heldInViewBlockers, QueryTriggerInteraction.Ignore)) return point;
-        return eye + toPoint / distance * Mathf.Min(distance, hit.distance + heldRadius * heldInViewPress);
-    }
-
-    // Item-like creatures turn with the full view, like an item in hand; others only turn with yaw.
-    private Quaternion HoldFrame() => heldInView && carryCamera != null ? carryCamera.transform.rotation : CarryYaw();
-
-    /// <summary>Sets an item-like creature down in front of the eyes, clear of the player.</summary>
-    private void PutDownHeldInView(Creature creature)
-    {
-        if (carryCamera == null) return;
-        Transform eye = carryCamera.transform;
-        float distance = heldInViewDropDistance;
-        if (gameObject.scene.GetPhysicsScene().Raycast(eye.position, eye.forward, out RaycastHit hit, distance, pickupLayers, QueryTriggerInteraction.Ignore))
-            distance = Mathf.Max(0.3f, hit.distance - 0.3f);
-        Vector3 point = eye.position + eye.forward * distance;
-        creature.transform.position = point;
-        if (heldBody != null) heldBody.position = point;
+        CarriedCreature.transform.SetPositionAndRotation(carryPoint.position, CarryYaw() * heldYawOffset);
+        if (heldBody != null) heldBody.position = carryPoint.position;
     }
 
     private Quaternion CarryYaw()
@@ -417,26 +396,35 @@ private void FitCarryPoint(Creature creature)
 
     public void Release()
     {
+        CancelRightMouse();
+        pendingCreature = null;
         if (TentacleLockedForRide) return;
         ReleaseCarriedCreature();
     }
 
     private void ReleaseCarriedCreature()
     {
-        if (CarriedCreature != null && heldInView) PutDownHeldInView(CarriedCreature);
+        CancelRightMouse();
+        pendingCreature = null;
+        Creature dropped = CarriedCreature;
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
         bringingIn = false;
-        if (heldBody != null)
-        {
-            heldBody.interpolation = heldInterpolation;
-            if (heldInView) heldBody.detectCollisions = heldDetectCollisions;
-        }
+        if (heldBody != null) heldBody.interpolation = heldInterpolation;
         heldBody = null;
-        heldInView = false;
-        SetPlayerCollision(carriedColliders, ignore: false);
+        if (dropped is TentacleCreature && carriedColliders != null && playerColliders != null)
+        {
+            // A back-carried octopus grows to full size after release. Do not enable overlapping collision pairs.
+            QueueDroppedCollisions(carriedColliders);
+        }
+        else SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
         if (carryPoint != null) carryPoint.localPosition = carryPointHome;
+        if (dropped is TentacleCreature tentacle)
+        {
+            tentacle.PrepareForDrop();
+            if (TryGetComponent<TentacleTether>(out var tether)) tether.PlaceDroppedCreature(tentacle);
+        }
     }
 
     private void SetPlayerCollision(Collider[] colliders, bool ignore)
@@ -450,6 +438,61 @@ private void FitCarryPoint(Creature creature)
         }
     }
 
-    private void OnDisable() => ReleaseCarriedCreature();
-    private void OnApplicationFocus(bool focused) { if (!focused) Release(); }
+    private void RestoreDroppedCollisions()
+    {
+        for (int i = droppedCollisions.Count - 1; i >= 0; i--)
+        {
+            DroppedCollision pair = droppedCollisions[i];
+            if (pair.creature == null || pair.player == null) { droppedCollisions.RemoveAt(i); continue; }
+            TentacleCreature creature = pair.creature.GetComponentInParent<TentacleCreature>();
+            // Carry and the hanging rig now own these pairs; their release paths will restore them later.
+            if (creature != null && (creature.IsCarried || creature.Suspended)) { droppedCollisions.RemoveAt(i); continue; }
+            if (Time.time < pair.restoreAt) continue;
+            if (CollidersPenetrate(pair.creature, pair.player)) continue;
+            Physics.IgnoreCollision(pair.creature, pair.player, false);
+            droppedCollisions.RemoveAt(i);
+        }
+    }
+
+    public void DeferTentacleCollisionRestore(TentacleCreature creature)
+    {
+        Collider[] colliders = creature.GetComponentsInChildren<Collider>();
+        SetPlayerCollision(colliders, true);
+        QueueDroppedCollisions(colliders);
+    }
+
+    private void QueueDroppedCollisions(Collider[] colliders)
+    {
+        if (playerColliders == null) return;
+        foreach (Collider creatureCollider in colliders)
+            foreach (Collider playerCollider in playerColliders)
+                if (creatureCollider != null && playerCollider != null)
+                    droppedCollisions.Add(new DroppedCollision { creature = creatureCollider, player = playerCollider, restoreAt = Time.time + 0.5f });
+    }
+
+    public static bool CollidersPenetrate(Collider a, Collider b)
+    {
+        CollisionPose(a, out Vector3 pa, out Quaternion qa);
+        CollisionPose(b, out Vector3 pb, out Quaternion qb);
+        return Physics.ComputePenetration(a, pa, qa, b, pb, qb, out _, out float depth) && depth > 0.005f;
+    }
+
+    private static void CollisionPose(Collider collider, out Vector3 position, out Quaternion rotation)
+    {
+        position = collider.transform.position; rotation = collider.transform.rotation;
+        Rigidbody body = collider.attachedRigidbody;
+        if (body == null) return;
+        // During FixedUpdate the rendered/interpolated transform can still show the previous physics pose.
+        Quaternion delta = body.rotation * Quaternion.Inverse(body.transform.rotation);
+        position = body.position + delta * (position - body.transform.position);
+        rotation = delta * rotation;
+    }
+
+    private void OnDisable() { BoneRide.CancelApproach(); ReleaseCarriedCreature(); }
+    private void OnApplicationFocus(bool focused)
+    {
+        if (focused) return;
+        if (BoneRide.Approaching) { BoneRide.CancelApproach(); rideInputGuard = true; }
+        else if (!CarriesTentacle) Release();
+    }
 }

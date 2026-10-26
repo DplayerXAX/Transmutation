@@ -148,7 +148,7 @@ FireSource --heat--> FireFlower --blooms--> FireBubble --falls, lies still--> ne
 
 | Script | What it does |
 | --- | --- |
-| `FireSource` | Stores Heat and radiates it each physics step to every creature inside its trigger sphere, less with distance. The trigger radius follows the remaining Heat. |
+| `FireSource` | Stores Heat and radiates it each physics step to every creature inside its trigger sphere, less with distance. The trigger radius follows the remaining Heat. Carried, left click shoots a fire bubble along the view (`shotHeat` 20 from its own Heat, `shotSpeed` 4, it keeps that heading). |
 | `FireFlower` | States: Closed, Heating, Blooming, Recovering. Heat spreads its linked `DensityShapeOverlay`s outward and grows its body cylinder. At `bloomHeatThreshold` (70) it blooms, spawns one `FireBubble` per shape (sharing leftover Heat), then pulls the shapes back in. |
 | `FireBubble` | Floats on one heading with sway, then falls (lifetime or `fallStartWorldY`). After lying still for a delay it turns into a `fireFlowerPrefab`. Its shader flow speed follows Heat. |
 | `FireEater` | Wanders on the ground (aligns to the surface normal, slides along walls, unsticks itself). Seeks fallen bubbles within `detectionRadius`, flees the player inside `playerAwarenessRadius` unless eating, digests, then plants a Fire Flower. |
@@ -224,25 +224,116 @@ prompts and carry work.
 
 `Scripts/Animation/SkinnedMeshAnimator` ping-pongs blend shapes on SkinnedMeshRenderers (for modelled creatures).
 
-## Squirrels: food growth and migration
+## Squirrels: food, real nest inventory and construction
 
-`Scene_Ariia` uses `AriiaSquirrelSetup` to register its tree trunks and connect the authored managers.
-`SquirrelManager` instantiates the Squirrel and Nest prefabs; `FoodManager` instantiates the Food prefab.
+Drag `Assets/Prefabs/Systems/SquirrelSystemManager.prefab` into a scene to add the complete system.
+`Scene_Ariia` already contains an instance. Its single `SquirrelSystemManager` component owns population,
+nests, food spawning/refresh and food fights, with all three creature prefab references assigned.
+At startup it discovers scene-local `SquirrelTree` anchors and authored squirrel/food/nest components.
+Trees named `Tree`, `Tree (...)` or `Environment Trunk ...` are also recognized automatically.
+Disable Auto Discover Scene and assign the Trees list to use explicit anchors instead.
+The source is split into main, Food and Discovery partial files, all belonging to the same component.
+The previous `FoodManager`, `SquirrelManager` and Ariia-only bootstrap have been removed.
+Food and Nest prefabs now include Creature-derived components and rigidbodies for the player's existing
+carry system. Their combat polarity and diet tags are None; nests cannot be consumed.
 
-- Food grows around tree anchors every **15 seconds**, **3 per cycle**, up to **24 unstored items**
-  (including items being carried). These settings are on Food Manager. Stored objects are recycled;
-  the nest keeps its cumulative `StoredFoodCount`. Growth uses scaled time and pauses with the game.
-- A squirrel searches within its **12 m territory**. After **30 seconds** continuously finding no local
-  food, it looks for available food outside its territory within **45 m** of its home.
-- Migration states are `PackingNest` then `Migrating`: the squirrel returns home, visibly carries its
-  existing nest at **70% walking speed**, and places it on clear, supported ground near the new food.
-  It then moves its territory centre to the new nest and resumes foraging. Owner and stored food survive.
-- Migration settings are on the Squirrel prefab's Squirrel component, or on runtime Squirrel instances
-  when the source prefab only contains the model. There is a **90 second** timeout for blocked moves.
-  No available food or safe destination means the squirrel waits and checks again. Migrating squirrels
-  cannot start food fights. Creature simulation pause/capture pauses migration; death or disabling the
-  squirrel detaches its nest, restores collisions and preserves its stored-food count.
-- Play Mode checks: **Tools > Creatures > Validate Squirrel Physics** and **Validate Squirrel Ecology**.
-  Ecology validation uses a disposable local physics scene and checks growth limits, recycling, shortage
-  timing, pause, actual movement beyond the old territory, nest ownership/stores, post-move foraging and
-  death cleanup.
+### Player controls
+
+- Right mouse picks up world food or a nest using the player's configured carry mode.
+- Empty-handed left click on a nest withdraws **one original stored food instance** into the hand.
+  This interaction pickup stays held until right click drops it.
+- With food in hand, left click at a nest deposits that same item if there is room.
+- The nest prompt displays current stock/capacity. Empty nests cannot create food; full nests reject
+  deposits without deleting the held item. Stock stays with the nest while the player moves it.
+
+### Food and inventory
+
+Food grows near trees every **15 seconds**, **3 per cycle**, up to **24 unstored items** including held
+and squirrel-carried food. Stored items remain inside their nest and are **never recycled by food growth**.
+Each nest holds **12 real items** by default (`foodCapacity` on Nest.prefab); its displayed count comes
+from the actual inventory. Withdrawing and redepositing does not duplicate items or preserve a historical count.
+
+### Multiple homes and building
+
+A full home selects another known non-full owned nest, or starts gathering **3 food items** to build one.
+Construction consumes those exact collected items after reaching and validating a site, then takes **2 seconds**.
+The full nest and its stock remain intact. New overflow nests are at most **10 m** from that home,
+at least **3.5 m** from another owned nest, within **6 m** of a registered tree, and at least **6 m**
+from other squirrels' nests. The site must have clear, supported Ground-layer terrain.
+No materials or valid site means waiting and retrying, rather than creating a free nest.
+
+The owner navigates to remembered home coordinates. An unseen player pickup does not send it the nest's new position.
+Only after reaching the former site does it discover an unseen loss and prioritize gathering materials for a replacement.
+Replacement sites can be searched within **45 m**. On later journeys, a missing old nest can be rediscovered
+within **6 m** with line of sight. An owner still rebuilding can reuse a non-full recovered home;
+a stocked old home found later is worth carrying back beside the present home when a valid site exists.
+Otherwise the recovered home is retained as known spare storage.
+
+### Shortage migration and validation
+
+After **30 seconds** finding no local food, a squirrel searches **45 m** for new food and carries its existing
+nest there at **70% speed**, retaining owner and inventory. Migration has a **90 second** timeout.
+Construction and migration do not start food fights and pause with creature control. Death/disable releases
+carried items and detaches a squirrel-carried nest.
+
+**Tools > Creatures > Validate Squirrel System Prefab (Play Mode)** checks the prefab in an isolated
+scene and runs ecology, inventory/building and physics regressions.
+Other Play Mode checks under **Tools > Creatures**: **Validate Squirrel Physics**, **Validate Squirrel Ecology**,
+**Validate Squirrel Squeeze**, and **Validate Squirrel Nest Inventory And Building**. The latter verifies real
+player transfer, empty/full behavior, no remote knowledge, paid rebuilding, nearby overflow storage and old-home recovery.
+**Configure Squirrel Food And Nest Prefabs** is an edit-mode utility for upgrading model-only prefab assets.
+
+### Witnessed player actions
+
+`Squirrel.prefab` now contains the squirrel and motor components. Its **green +Z face is the front**;
+the **blue -Z face is the back**. The nest owner reacts only when it sees the player at the moment
+of a successful action: within **18 m**, inside its **120 degree forward cone**, and with unobstructed
+line of sight. Back-facing or occluded actions retain the normal remembered-home behavior.
+
+- A real deposit starts one physical orbit around the player (radius **2.5 m**). Dropped/thrown food
+  colliding with a nest can also enter storage within **5 seconds** of being held; full nests reject it.
+- A witnessed withdrawal starts a jumping pursuit of that exact held item. The player must still hold
+  the item and the squirrel must reach it while rising; success releases the hand and returns the item home.
+- A witnessed nest pickup starts following. Behind cover, it searches the last seen player position.
+  After the nest is dropped, it retrieves the same nest and carries it back to its remembered position.
+- At placement, a player within **6 m** who maintains mutual facing triggers a warning. **Warning Clip**
+  on the squirrel prefab is an optional spatial `AudioClip` slot, currently empty. The red marker above
+  the squirrel flashes and Console logs **Squirrel warning triggered**, so the branch works without audio.
+- Looking away or leaving allows placement. Continuing to face each other for the **2 second warning**
+  plus **2 further seconds** triggers escape. Default escape speed is **80 m/s**, raised above measured
+  player speed when needed. The same nest and contents move to clear Ground near a registered tree,
+  at least **12 m** from the player, with spacing from other nests. If no valid site exists, it retains
+  the nest and continues searching instead of placing it at an invalid point.
+
+Reaction settings and the empty audio slot are on **Squirrel.prefab > Squirrel**. Social reactions take
+priority over foraging and food fights; creature carrying/capture still pauses autonomous movement.
+**Tools > Creatures > Validate Squirrel Player Reactions (Play Mode)** exercises facing, occlusion,
+real inventory, full orbit, jumping retrieval, following, return, silent warning, broken eye contact,
+escalation and physics-based escape placement in isolated scenes.
+**Configure Squirrel Reaction Prefab** can reapply the prefab components and visual markers in edit mode.
+
+### Museum display prefab
+
+Drag **Assets/Prefabs/Systems/SquirrelMuseumDisplay.prefab** into a museum/display level with an
+existing player. This is a **variant of SquirrelSystemManager.prefab**, retaining the same creature,
+food, nest and player-reaction behavior. The original system prefab is unchanged.
+
+The exhibit includes a **32 x 22 m Ground-layer platform** and **two simple tree anchors**. Keep the
+root upright at scale one; place its origin at the desired floor height. It starts with **two equal-size
+squirrels and two owned nests**, each with an **8 m territory**. Only its explicitly assigned child
+trees are used; scene-wide discovery is disabled, so other trees and squirrels are not added to the exhibit.
+Population is fixed at two initial squirrels; food replenishment never creates more squirrels.
+
+There are **six initial food items**, then **one new item every 12 seconds**, capped at **eight unstored
+items**. Normal gathering, nest storage/expansion, missing-home rebuilding, migration and witnessed
+player reactions remain available. Forage and building begin around the included trees, but witnessed
+player pursuit can leave the platform; this is an interactive habitat, not a sealed enclosure.
+
+Adjust **Population**, **Size Range**, **Territory Radius** and food settings on the variant's manager
+if a different exhibit size is needed. Keep **Auto Discover Scene** off and the **Trees** list bound to
+this exhibit's child anchors. Add suitable ground around it if players should be able to lead squirrels
+farther away. A player/camera is supplied by the museum level, not by this prefab.
+
+**Tools > Creatures > Validate Squirrel Museum Display (Play Mode)** verifies variant inheritance,
+relocated placement, the two-squirrel population, local anchor isolation and capped periodic food.
+**Create Squirrel Museum Display Prefab** rebuilds a missing asset without overwriting an existing one.

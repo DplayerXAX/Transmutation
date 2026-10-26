@@ -27,8 +27,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Header("Feature Toggles")]
     [SerializeField] private bool allowCrouch;
     [SerializeField] private bool allowDoubleJump;
-    [Tooltip("When enabled, jump ignores the grounded check (can jump while airborne, still respects jump cooldown).")]
-    [SerializeField] private bool allowUngroundedJump;
+    [Tooltip("Jump again in mid-air (every jump cooldown). Off: only from the ground, plus a short moment after walking off an edge. " +
+             "Renamed from Allow Ungrounded Jump, so the old setting saved in every scene (on) no longer applies.")]
+    [SerializeField] private bool allowAirJump;
     [SerializeField] private bool allowSliding;
     [SerializeField] private bool enableCameraFovAndTilt;
 
@@ -49,6 +50,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [SerializeField] private float jumpForce = 12f;
     [SerializeField] private float jumpCooldown = 0.25f;
     [SerializeField] private float airMultiplier = 0.4f;
+
+    [Header("View")]
+    [Tooltip("Vertical field of view of the player's camera, set at start (60 = the old narrow view; 72 is about 103 degrees across on a wide screen). 0 leaves the camera as it is.")]
+    [Range(0f, 110f)] [SerializeField] private float fieldOfView = 72f;
 
     [Header("Feel")]
     [Tooltip("How fast walking reaches full speed (m/s gained per second). Set to 0 for the old force-and-drag movement.")]
@@ -139,7 +144,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private BubbleCapture bubbleCapture;
     private bool bubbleMovementLocked;
     private int suppressedJumpFrame = -1;
-    public bool BubbleMovementBlocked => bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
+    public bool BubbleMovementBlocked => BoneRide.Busy || bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
         (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
 
     public bool IsContainingBubble(Collider collider) => bubbleCapture != null && bubbleCapture.IsCaptured &&
@@ -230,6 +235,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        if (playerCamera != null && fieldOfView > 0f) playerCamera.fieldOfView = fieldOfView;
     }
 
     private void Update()
@@ -338,7 +344,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         jumpHeld = keyboard[jumpKey].isPressed;
         if (grounded) lastGroundedAt = Time.time;
         bool wantsJump = Time.time - jumpPressedAt <= Mathf.Max(jumpBuffer, 0.0001f);
-        bool canJump = grounded || allowUngroundedJump || (Time.time - lastGroundedAt <= coyoteTime && !ownJumpRising);
+        bool canJump = grounded || allowAirJump || (Time.time - lastGroundedAt <= coyoteTime && !ownJumpRising);
         if (wantsJump && readyToJump && canJump)
         {
             readyToJump = false;

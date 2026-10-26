@@ -137,6 +137,7 @@ public sealed class RestSpotSystem : MonoBehaviour
     private void Update()
     {
         if (!FindPlayer()) return;
+        if (BoneRide.Busy) { near = null; return; }
         AddDefaultSpots();
         Keyboard keyboard = Keyboard.current;
         bool meditating = meditation != null && meditation.IsMeditating;

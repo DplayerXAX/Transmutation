@@ -317,23 +317,20 @@ public enum FoodTag
 
     /// <summary>Left-click uses this creature before the cursor target while held.</summary>
     public virtual bool CanUseWhileCarried => false;
+    /// <summary>Return true to own this frame's carried RMB input instead of shared putdown/throw.</summary>
+    public virtual bool TryHandleCarriedRightMouse(PlayerCreatureCarrier carrier, bool pressed, bool held, bool released) => false;
+    /// <summary>Release species-specific attachments before throw flight takes movement ownership.</summary>
+    public virtual void PrepareForThrow(PlayerCreatureCarrier carrier) { }
     /// <summary>Alternate pickup action, such as popping instead of carrying.</summary>
     public virtual string PickupActionPrompt => null;
     public virtual void ReceivePickupAttempt(PlayerCreatureCarrier carrier) { }
     public bool IsBubbleCaptured => TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured;
-
-    [Header("Carry Physics")]
-    [Min(0f)] [SerializeField] private float carryStrength = 45f;
-    [Min(0f)] [SerializeField] private float carryDamping = 12f;
-    [Min(0f)] [SerializeField] private float maximumCarryAcceleration = 60f;
-    [Min(0.1f)] [SerializeField] private float maximumCarryDistance = 8f;
 
     private Rigidbody movementBody;
     private bool releaseKinematic;
     private bool releaseGravity;
     private RigidbodyConstraints releaseConstraints;
     private CollisionDetectionMode releaseCollisionMode;
-    private Quaternion carryRotationOffset;
 
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
@@ -342,10 +339,18 @@ public enum FoodTag
         CreatureThrower.ReleaseFlight(this);
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
+        if (this is LeashBubble balloon) balloon.ReleaseLeash();
+        if (this is TentacleCreature tentacle)
+        {
+            // Release the suspended rig before carry records the creature's normal physics.
+            if (TentacleTether.Instance != null) TentacleTether.Instance.DetachForPickup(tentacle);
+            else { if (tentacle.Suspended) tentacle.Suspend(false); tentacle.UnpinTerrainArms(); }
+            tentacle.ClearGroundHolds();
+        }
         movementBody = GetComponent<Rigidbody>();
         if (movementBody == null)
         {
-            // Previously stationary creatures (such as flowers) need a body to be pulled.
+            // Previously stationary creatures (such as flowers) need a body for carry ownership.
             movementBody = gameObject.AddComponent<Rigidbody>();
             movementBody.isKinematic = true;
             movementBody.useGravity = false;
@@ -355,32 +360,11 @@ public enum FoodTag
         releaseConstraints = movementBody.constraints;
         releaseCollisionMode = movementBody.collisionDetectionMode;
         Carrier = carrier;
-        carryRotationOffset = Quaternion.Inverse(target.rotation) * movementBody.rotation;
-        movementBody.isKinematic = false;
+        movementBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+        movementBody.isKinematic = true;
         movementBody.useGravity = false;
         movementBody.constraints &= ~RigidbodyConstraints.FreezePosition;
-        movementBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        movementBody.WakeUp();
         OnCarryStarted();
-        return true;
-    }
-
-    /// <summary>Called by the carrier once per physics step. Never teleports the body.</summary>
-    public bool PullTowards(PlayerCreatureCarrier carrier, Transform target)
-    {
-        if (Carrier != carrier || !isActiveAndEnabled || movementBody == null || target == null) return false;
-        Vector3 error = target.position - movementBody.position;
-        if (error.sqrMagnitude > maximumCarryDistance * maximumCarryDistance) return false;
-        Vector3 acceleration = error * carryStrength - movementBody.linearVelocity * carryDamping;
-        movementBody.AddForce(Vector3.ClampMagnitude(acceleration, maximumCarryAcceleration), ForceMode.Acceleration);
-
-        // Gentle yaw following; preserve upright constraints and let contact resist rotation.
-        Vector3 desiredForward = target.rotation * carryRotationOffset * Vector3.forward;
-        Vector3 currentForward = movementBody.rotation * Vector3.forward;
-        float yawError = Vector3.SignedAngle(Vector3.ProjectOnPlane(currentForward, Vector3.up),
-            Vector3.ProjectOnPlane(desiredForward, Vector3.up), Vector3.up) * Mathf.Deg2Rad;
-        float yawAcceleration = Mathf.Clamp(yawError * 20f - movementBody.angularVelocity.y * 8f, -30f, 30f);
-        movementBody.AddTorque(Vector3.up * yawAcceleration, ForceMode.Acceleration);
         return true;
     }
 
@@ -388,7 +372,13 @@ public enum FoodTag
     {
         if (Carrier != carrier) return;
         Carrier = null;
+        if (this is TentacleCreature tentacle && carrier.TryGetComponent<TentacleTether>(out var tether)) tether.ParkBalloons(tentacle);
         if (movementBody == null) return;
+        if (this is TentacleCreature && !movementBody.isKinematic)
+        {
+            movementBody.linearVelocity = Vector3.zero;
+            movementBody.angularVelocity = Vector3.zero;
+        }
         // Change collision mode before returning a body to kinematic operation.
         movementBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
         movementBody.isKinematic = releaseKinematic;

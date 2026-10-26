@@ -100,14 +100,25 @@ Creatures, carried things and loose bodies are ignored. Added by
 
 **PlayerCreatureCarrier**
 
-- `carryInput`: **Hold Right Mouse** (default) or **Toggle Key** (`E` by default).
+- Click **RMB** to pick up. Tap **RMB** while carrying to put down; hold and release to throw.
+- `throwHoldThreshold` (0.2 s) distinguishes a tap from a throw. `fullThrowHoldTime` (1.2 s total)
+  reaches maximum strength; longer holds stay capped. The pickup click never arms a throw.
 - Finds a `Creature` by a ray from the camera within `pickupRange` (5 m). Creatures larger than
   `maxCarrySize` (2.2 m) can't be picked up.
-- The creature keeps simulating while held. It is pulled to a carry point by a spring
-  (`Creature.PullTowards`), or locked to it with `firmGrip`. Big creatures are kept below and right of the
+- The creature keeps simulating while held, with its body locked to the carry point. Big creatures are kept below and right of the
   crosshair so they don't block the view.
 - Exposes `PlayerBody` and `PlayerController` so a held creature can move the player
   (the `TentacleCreature` climb assist uses this).
+- `Creature.TryHandleCarriedRightMouse` can consume RMB for a species-specific ability; the tentacle
+  uses this while riding. `Creature.PrepareForThrow` clears species-specific attachments before flight.
+
+**CreatureThrower**
+
+RMB charge scales launch speed from `minimumThrowSpeed` (4 m/s) to `throwSpeed` (13 m/s).
+`Throw(float charge01)` accepts clamped normalized charge; `Throw()` remains a maximum-strength launch.
+Usable creatures retain LMB abilities. Throwing the tentacle retracts anchors; tapping still places its bridge.
+`debugShowThrowTrajectory` is off by default and skips preview creation and calculation until enabled.
+The HUD shows charge percentage through `IsChargingThrow` and `ThrowCharge01` on the carrier.
 
 **PlayerCreatureInteractor**
 

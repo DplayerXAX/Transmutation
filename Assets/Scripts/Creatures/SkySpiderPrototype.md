@@ -30,7 +30,10 @@ Repeated setup runs preserve existing prefab and material edits.
   Edit these on the web prefab referenced by the spider.
 - Web geometry stays at its starting world position and uses two combined meshes:
   open D12 cages (12 pentagonal faces, 20 corners, 30 edges), joined by strands,
-  and sparse transparent pentagonal patches. The thin strands use six-sided tubes
+  and sparse transparent pentagonal patches.
+  With **Walkable** on (default), every grown strand also gets a capsule collider (at least
+  **Walk Radius**, 0.1 m) on the Ground layer, so the player can walk on and hand-climb the web.
+  The building spider ignores these colliders. The thin strands use six-sided tubes
   for thickness; the cells themselves are dodecahedrons. No rope or cloth
   physics is simulated. Meshes update when a strand is added and stay static when
   complete. The first cell exists immediately so the spider has a patrol volume.

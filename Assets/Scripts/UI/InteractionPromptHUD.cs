@@ -27,15 +27,14 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     [Header("Text")]
     [SerializeField] private bool showCreatureName = true;
-    [SerializeField] private string carryHint = "[Hold RMB]  Carry";
-    [SerializeField] private string releaseHint = "[Release RMB]  Drop";
-    [Tooltip("Used when the carrier is in Toggle Key mode. {0} is the key name.")]
-    [SerializeField] private string pickUpKeyHintFormat = "[{0}]  Pick up";
-    [SerializeField] private string dropKeyHintFormat = "[{0}]  Drop";
+    [SerializeField] private string pickUpHint = "[RMB] Pick up";
+    [SerializeField] private string putDownThrowHint = "Tap RMB: Put down · Hold RMB: Throw";
+    [SerializeField] private string throwChargeHintFormat = "Throw {0}% · Release RMB to throw";
     [SerializeField] private string interactHintFormat = "[LMB]  {0}";
     [SerializeField] private string petHint = "[Hold LMB]  Pet";
     [SerializeField] private string pettingHint = "Petting...";
     private PlayerCreaturePetter petter;
+    private BoneKiln rideMother;
     [SerializeField] private string climbHint = "[Hold W]  Climb";
     [SerializeField] private string climbJumpHint = "[Space]  Jump off wall";
     [SerializeField] private string wallRunHint = "[Hold W]  Wall run";
@@ -59,6 +58,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private void Update()
     {
+        if (BoneAwakeningCutscene.Playing) { group.alpha = 0f; return; }
         string title = null;
         string hint = null;
         ChoosePrompt(ref title, ref hint);
@@ -91,13 +91,60 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             }
             return;
         }
+        if (BoneRide.Mount != null)
+        {
+            title = BoneRide.Mount is BoneKiln ? "BONE MOTHER" : "BONE CHILD";
+            Creature inHand = carrier != null ? carrier.CarriedCreature : null;
+            hint = inHand != null && (inHand is TentacleCreature || inHand.CanUseWhileCarried) ? "[RMB] Dismount" : "[LMB / RMB] Dismount";
+            if (carrier != null && carrier.CarriesTentacle)
+            {
+                hint += "    [W/S] Up / Down    [A/D] Left / Right    [Space / Ctrl] Forward / Back";
+                hint += TentacleTether.Instance != null && TentacleTether.Instance.AimingAtBone
+                    ? "\n[Release LMB] Transfer to bone" : "\n[LMB] Aim / release to pull to wall    [W] Catch and climb";
+                PlayerGooCoating goo = carrier.GetComponentInParent<PlayerGooCoating>();
+                if (goo == null || !goo.CanClimb) hint += "\nApply goo before transferring to a climbing wall";
+            }
+            else if (inHand is FireSource) hint += "\n[LMB] Shoot fire bubbles ahead to lure it";
+            else hint += "    Carry a tentacle to steer, or a fire source to lure it";
+            if (BoneRide.Mount is BoneChild mountedChild) hint += $"\nFire reserve: {mountedChild.StoredBubbleCount}/{mountedChild.bubbleCapacity}";
+            if (BoneRide.Mount is BoneKiln mountedMother && !mountedMother.Awake)
+                hint += $"\nFire bubbles: {mountedMother.AttachedFireCount}/{mountedMother.RequiredFireBubbles}";
+            return;
+        }
+        if (BoneRide.Approaching)
+        {
+            title = "BOARDING";
+            hint = "Pulling onto back    [RMB / C / R] Cancel";
+            return;
+        }
+        if (TentacleTether.Instance != null && TentacleTether.Instance.AimingAtBone)
+        {
+            title = "BONE GRAPPLE";
+            hint = "[Release LMB] Pull to bone and ride";
+            return;
+        }
+        string rideHint = null;
+        if (BoneRide.TryNearby(out Component nearbyBone, out _))
+        {
+            rideMother = nearbyBone as BoneKiln;
+            rideHint = nearbyBone is BoneKiln ? "[LMB] Ride bone mother" : "[LMB] Ride bone child";
+        }
+        if (rideHint != null)
+        {
+            title = rideHint.Contains("mother") ? "BONE MOTHER" : "BONE CHILD";
+            hint = rideHint;
+            if (rideMother != null && !rideMother.Awake && title == "BONE MOTHER")
+                hint += $"\nFire bubbles: {rideMother.AttachedFireCount}/{rideMother.RequiredFireBubbles}";
+            if (carrier == null || !carrier.CarriesTentacle) hint += "    Carry a tentacle to steer";
+            return;
+        }
         if (carrier != null && carrier.CarriedCreature != null)
         {
             title = NameOf(carrier.CarriedCreature);
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
-            if (!carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
+            if (!carrier.CarriesTentacle && !carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
             {
                 Creature target = interactor.FindCreature();
                 if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))
@@ -110,7 +157,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         if (petter != null && petter.IsPetting)
         {
             title = NameOf(petter.Petted);
-            hint = pettingHint;
+            hint = petter.Petted is TentacleCreature spring && spring.Suspended
+                ? "[Hold LMB + walk back] Draw slingshot    [Release LMB] Launch    [Scroll] Distance"
+                : petter.Petted is TentacleCreature ? "[Hold LMB] Drag    [Scroll] Distance    [Release LMB] Let go" : pettingHint;
             return;
         }
 
@@ -137,7 +186,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         {
             Creature shown = carryTarget != null ? carryTarget : interactTarget != null ? interactTarget : petTarget;
             title = NameOf(shown);
-            string petLine = petTarget == shown ? petHint : null;
+            string petLine = petTarget == shown ? (petTarget is TentacleCreature spring && spring.Suspended
+                ? "[Hold LMB] Pull body back / release to launch"
+                : petTarget is TentacleCreature ? "[Hold LMB] Drag    [Scroll] Distance" : petHint) : null;
             if (carryTarget == null && interactTarget == null)
             {
                 hint = petLine;
@@ -168,21 +219,13 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         }
     }
 
-    private bool UsesToggleKey => carrier != null && carrier.InputMode != PlayerCreatureCarrier.CarryInput.HoldRightMouse;
-
-    // Click right to pick up and again to drop, or a key in Toggle Key mode.
-    private string ToggleName =>
-        carrier.InputMode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse ? "RMB" : carrier.ToggleKeyBinding.ToString();
-
-    private string PickUpHint() =>
-        UsesToggleKey ? string.Format(pickUpKeyHintFormat, ToggleName) : carryHint;
-
     private string PickupTargetHint(Creature target) => string.IsNullOrEmpty(target.PickupActionPrompt)
-        ? PickUpHint() : "[" + (UsesToggleKey ? ToggleName : "RMB") + "] " + target.PickupActionPrompt;
+        ? pickUpHint : "[RMB] " + target.PickupActionPrompt;
 
     private string DropHint() =>
         carrier != null && carrier.TentacleLockedForRide ? "Dismount before dropping the tentacle" :
-        UsesToggleKey ? string.Format(dropKeyHintFormat, ToggleName) : releaseHint;
+        carrier != null && carrier.IsChargingThrow ? "[Release RMB] Throw"
+        : carrier != null && !carrier.ThrowEnabled ? "[RMB] Put down" : putDownThrowHint;
 
     private string NameOf(Creature creature)
     {

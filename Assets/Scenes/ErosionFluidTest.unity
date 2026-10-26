@@ -905,14 +905,14 @@ MonoBehaviour:
   membraneRings: 22
   membraneSides: 10
   exposedBoneChance: 0.6
-  tentacleCount: 6
+  tentacleCount: 7
   jointsPerTentacle: 7
   reach: 2.4
   stepDistance: 1.1
   stepDuration: 0.22
   stepHeight: 0.45
-  jointRadius: 0.09
-  tipRadius: 0.045
+  jointRadius: 0.0765
+  tipRadius: 0.03825
   surfaceLayers:
     serializedVersion: 2
     m_Bits: 385

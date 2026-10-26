@@ -8,9 +8,12 @@ Pick up Bubble Flower with the existing pickup control. **Left-click shoots** wh
 when looking at another interactive creature. The same priority lets a held BounceShroom expand and
 place itself. Creatures that do not opt into `CanUseWhileCarried` keep normal cursor interactions.
 
-On the ground, flowers emit every **3–6 seconds**. Bubbles rise along Unity's **Y axis** at **0.5 m/s**
+On the ground, flowers emit every **3–6 seconds**. Bubbles rise along Unity's **Y axis** at **0.25 m/s**
 for **12–20 seconds**, then hover. They expire **45–60 seconds after spawning**. Manual shots start
-at **8 m/s**, with exponential launch decay of **0.35 seconds**. Horizontal sway is small.
+at **13 m/s**, with exponential launch decay of **0.85 seconds**. The Y component of launch velocity
+is scaled by **0.5**, while horizontal launch speed is preserved. Horizontal sway is small.
+Clicks during the pickup reach are kept until the hand closes; clicks up to **0.18 seconds** before
+the firing cooldown ends are buffered. The spawn position is swept against scenery to avoid spawning inside walls.
 
 An empty bubble captures one eligible creature or player on contact. Bounds are measured from enabled
 model renderers, excluding effects and nested creatures, with solid colliders as the fallback. Player
@@ -47,9 +50,28 @@ Tune motion, lifetime, size limit, escape height, immunity and the toggle on
 `Assets/Prefabs/Creatures/TrappingBubble.prefab`. Tune firing intervals, cooldown, aim distance, launch
 speed and muzzle on `Assets/Prefabs/Creatures/BubbleFlower.prefab`.
 
+While carrying a tentacle, **hold LMB to aim at an ordinary bubble or Fire Bubble, then release to attach a sucker**.
+The bubble floats on a slack leash and follows when the leash becomes taut, like a balloon. **Hold R**
+to bring the newest attached bubble closer; **tap R** to let all arms go. Balloon arms move the bubble
+instead of pulling the player. Two bubbles can be led at once; a third shot replaces the oldest arm.
+Occupied bubbles can also be led. The sucker follows the shell as it grows. While leashed, scenery
+blocks the bubble without popping it. Connected bubbles pause their lifetime and ageing and cannot be popped,
+killed or eaten. Occupants can still escape, leaving the protected shell intact. Releasing the sucker restores
+normal lifetime and popping. Fire Bubbles also pause falling/flower conversion while connected; delivering
+one to a bone detaches the sucker and transfers it into the bone's finite fuel reserve.
+Putting down the tentacle keeps its balloons attached to its body; picking it back up restores hand control.
+Other octopuses can keep their own balloons while the player carries a different creature. A persistently
+obstructed or overstretched leash lets go.
+
 ## Validation
 
 Run **Tools > Creatures > Validate Bubble Flower Assets** in Edit Mode, then
 **Validate Bubble Flower Runtime (Play Mode)** in Play Mode. Runtime checks create an unsaved local
 physics scene and write a report under `Temp/BubbleFlowerValidation`, without changing authored scenes.
 Check the playable scene for firing, popping, the trapped HUD, Space escape, and both toggle settings.
+
+## Riding bubbles
+
+Inside a bubble, WASD nudges it relative to the view (`playerSteerSpeed`, 1.2 m/s). Space bursts out upward
+(`escapeHeight`) and also pushes the player towards where they look (`escapeForward`, 3 m/s). While touching
+a bubble the player is pulled in as soon as their short immunity (0.25 s) ends.

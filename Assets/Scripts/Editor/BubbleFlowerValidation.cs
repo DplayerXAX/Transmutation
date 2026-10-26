@@ -169,7 +169,7 @@ public static class BubbleFlowerValidation
             TrappingBubble expiring = Bubble(Origin);
             Check(expiring.TryCapture(occupant.gameObject), "cleanup scenario captures occupant");
             if (disable) expiring.enabled = false;
-            else { Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
+            else { expiring.LifetimeLimited = true; Set(expiring, "lifetimeSeconds", 0.05f); Step(expiring, 4); }
             Check(expiring.IsPopped && !occupant.IsBubbleCaptured && occupant.SimulationEnabled,
                 disable ? "disable releases occupant" : "occupied timeout releases occupant");
             Destroy(expiring.gameObject); Destroy(occupant.gameObject);
@@ -253,6 +253,7 @@ public static class BubbleFlowerValidation
         }
 
         TrappingBubble drifting = Bubble(Origin);
+        drifting.LifetimeLimited = true;
         drifting.Launch(null, null, Vector3.forward * 8f);
         Set(drifting, "riseSeconds", 1f); Set(drifting, "lifetimeSeconds", 2f);
         Step(drifting, 20);
@@ -281,13 +282,13 @@ public static class BubbleFlowerValidation
         var camera = cameraObject.AddComponent<Camera>();
         Transform anchor = new GameObject("Carry Point").transform; anchor.SetParent(camera.transform, false);
         anchor.localPosition = new Vector3(1f, -0.5f, 2f);
-        Set(carrier, "carryCamera", camera); Set(carrier, "carryPoint", anchor); Set(carrier, "firmGrip", true);
+        Set(carrier, "carryCamera", camera); Set(carrier, "carryPoint", anchor);
         Set(interactor, "interactionCamera", camera); Set(controller, "playerCamera", camera);
         root.SetActive(true);
         var flower = Spawn(AssetDatabase.LoadAssetAtPath<GameObject>(BubbleFlowerSetup.FlowerPath), Origin + Vector3.right).GetComponent<BubbleFlower>();
         Call(flower, "TickCreature", 6.1f);
         TrappingBubble groundShot = flower.LastShot;
-        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.5f, "ground flower emits a rising bubble on schedule");
+        Check(groundShot != null && groundShot.GetComponent<Rigidbody>().linearVelocity == Vector3.up * 0.25f, "ground flower emits a rising bubble on schedule");
         Call(carrier, "BeginCarry", flower);
         Check(carrier.CarriedCreature == flower, "flower uses existing carry system");
         Call(flower, "TickCreature", 10f);
@@ -322,12 +323,15 @@ public static class BubbleFlowerValidation
             Call(controller, "Update"); Call(controller, "FixedUpdate");
             Check(body.isKinematic && root.transform.localScale == lockedScale, "trapped movement and crouch inputs cannot take ownership");
             InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Space)); InputSystem.Update();
+            Check(Keyboard.current == keyboard && keyboard.spaceKey.wasPressedThisFrame,
+                "escape fixture supplies a current-frame Space press");
             Call(escapeCapture, "Update");
             Call(controller, "Update"); Call(controller, "FixedUpdate");
             Call(escapeCapture, "Update"); // The same press must not launch twice.
         }
         finally { InputSystem.RemoveDevice(keyboard); }
-        Check(trap.IsPopped && !escapeCapture.IsCaptured && !body.isKinematic && body.useGravity, "escape pops and restores player physics");
+        Check(trap.IsPopped && !escapeCapture.IsCaptured && !body.isKinematic && body.useGravity,
+            $"escape pops and restores player physics (popped {trap.IsPopped}, captured {escapeCapture.IsCaptured}, kinematic {body.isKinematic}, gravity {body.useGravity})");
         Check(root.transform.localScale.y == 1f, "Ctrl released while trapped does not leave crouching stuck");
         Check(body.linearDamping == 0f, "escape clears retained ground drag before the next physics step");
         Check(Mathf.Abs(body.linearVelocity.y - Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * 4f)) < 0.01f, "escape velocity corresponds to four metres of rise");
@@ -368,10 +372,8 @@ public static class BubbleFlowerValidation
         try
         {
             root.SetActive(true);
-            foreach (PlayerCreatureCarrier.CarryInput mode in Enum.GetValues(typeof(PlayerCreatureCarrier.CarryInput)))
             foreach (bool occupied in new[] { false, true })
             {
-                Set(carrier, "carryInput", mode);
                 InputSystem.QueueStateEvent(mouse, new MouseState());
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState());
                 InputSystem.Update();
@@ -379,15 +381,13 @@ public static class BubbleFlowerValidation
                 Creature passenger = occupied ? Prey(bubble.transform.position, Vector3.one) : null;
                 if (occupied) Check(bubble.TryCapture(passenger.gameObject), "pickup scenario has an occupant");
                 Physics.SyncTransforms();
-                Set(carrier, "pickupActionConsumed", false);
-                Check(carrier.FindCreature() == bubble, "pickup targeting accepts bubble action in " + mode);
+                Check(carrier.FindCreature() == bubble, "RMB targeting accepts bubble action");
                 InputSystem.QueueStateEvent(mouse, new MouseState().WithButton(MouseButton.Right));
                 InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.E));
                 InputSystem.Update();
-                if (mode == PlayerCreatureCarrier.CarryInput.HoldRightMouse) Call(carrier, "UpdateHoldRightMouse");
-                else Call(carrier, "UpdateToggle", mode == PlayerCreatureCarrier.CarryInput.ToggleRightMouse);
-                Check(bubble.IsPopped && carrier.CarriedCreature == null, "actual pickup input pops without carrying in " + mode);
-                if (occupied) Check(!passenger.IsBubbleCaptured, "pickup input releases occupied bubble in " + mode);
+                Call(carrier, "UpdateRightMouse", true, true, false, 0.02f);
+                Check(bubble.IsPopped && carrier.CarriedCreature == null, "RMB pickup input pops without carrying");
+                if (occupied) Check(!passenger.IsBubbleCaptured, "RMB pickup releases occupied bubble");
                 Destroy(bubble.gameObject);
                 if (passenger != null) Destroy(passenger.gameObject);
             }

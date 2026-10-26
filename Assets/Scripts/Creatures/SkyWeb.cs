@@ -32,6 +32,12 @@ public sealed class SkyWeb : Creature
     [SerializeField] private Material strandMaterial;
     [SerializeField] private Material patchMaterial;
 
+    [Header("Walking")]
+    [Tooltip("Grown strands get solid colliders on the Ground layer: the player can walk on the web and climb it.")]
+    [SerializeField] private bool walkable = true;
+    [Tooltip("Smallest collider radius round a strand (metres); thin silk is thickened to this.")]
+    [Min(0.02f)] [SerializeField] private float walkRadius = 0.1f;
+
     [Header("Trapping")]
     [SerializeField] private LayerMask trappingLayers = ~0;
     [Tooltip("Extra contact tolerance around a strand. Objects are approximated by their collider bounds.")]
@@ -55,6 +61,8 @@ public sealed class SkyWeb : Creature
     private Mesh strandMesh;
     private Mesh patchMesh;
     private float growthTime;
+    private Transform walkRoot;
+    private readonly List<Collider> walkColliders = new List<Collider>();
     private Collider[] overlapBuffer = new Collider[96];
     private readonly List<WebCapture> captures = new List<WebCapture>();
     private System.Collections.ObjectModel.ReadOnlyCollection<WebCapture> readOnlyCaptures;
@@ -89,6 +97,42 @@ public sealed class SkyWeb : Creature
         strandMesh = CreateMesh("Sky Web Strands", strandMaterial);
         patchMesh = CreateMesh("Sky Web Patches", patchMaterial);
         geometry.Render(strandMesh, patchMesh, geometry.InitialStrandCount);
+        UpdateWalkColliders();
+    }
+
+    /// <summary>A capsule round every newly grown strand, so the web can be walked on and climbed.</summary>
+    private void UpdateWalkColliders()
+    {
+        if (!walkable || geometry == null) return;
+        if (walkRoot == null)
+        {
+            walkRoot = new GameObject("Sky Web Walk Colliders") { layer = 7 }.transform;
+            walkRoot.SetParent(transform, false);
+        }
+        for (int i = walkColliders.Count; i < geometry.RenderedStrandCount; i++)
+        {
+            SkyWebGeometry.Strand strand = geometry.GetStrand(i);
+            Vector3 span = strand.End - strand.Start;
+            float radius = Mathf.Max(strand.Radius, walkRadius);
+            var part = new GameObject("Strand " + i) { layer = 7 };
+            part.transform.SetParent(walkRoot, false);
+            part.transform.localPosition = (strand.Start + strand.End) * 0.5f;
+            if (span.sqrMagnitude > 1e-6f) part.transform.localRotation = Quaternion.FromToRotation(Vector3.up, span);
+            var capsule = part.AddComponent<CapsuleCollider>();
+            capsule.direction = 1;
+            capsule.radius = radius;
+            capsule.height = span.magnitude + radius * 2f;
+            walkColliders.Add(capsule);
+            IgnoreBuilder(capsule);
+        }
+    }
+
+    // The spider flies through its own cages.
+    private void IgnoreBuilder(Collider strand)
+    {
+        if (builder == null) return;
+        foreach (Collider own in builder.GetComponentsInChildren<Collider>())
+            Physics.IgnoreCollision(own, strand, true);
     }
 
     private Mesh CreateMesh(string meshName, Material material)
@@ -110,6 +154,7 @@ public sealed class SkyWeb : Creature
     public void SetBuilder(SkySpider spider)
     {
         builder = spider;
+        foreach (Collider strand in walkColliders) if (strand != null) IgnoreBuilder(strand);
     }
 
     protected override void TickCreature(float deltaTime)
@@ -127,6 +172,7 @@ public sealed class SkyWeb : Creature
         int visible = geometry.InitialStrandCount + Mathf.FloorToInt(
             (geometry.StrandCount - geometry.InitialStrandCount) * Mathf.Clamp01(growthTime / Mathf.Max(0.01f, growthDuration)));
         geometry.Render(strandMesh, patchMesh, visible);
+        UpdateWalkColliders();
     }
 
     public Vector3 SamplePatrolPoint()
@@ -204,7 +250,8 @@ public sealed class SkyWeb : Creature
             body.GetComponentInParent<AdvancedFirstPersonTraversal>() != null ||
             body.gameObject.layer == LayerMask.NameToLayer("Player")) return false;
         Creature creature = body.GetComponentInParent<Creature>();
-        if (creature != null && (creature.IsCarried || creature.IsBubbleCaptured || creature is TrappingBubble)) return false;
+        if (creature != null && (creature.IsCarried || creature.IsBubbleCaptured || creature is TrappingBubble
+            || (creature is LeashBubble balloon && balloon.IsLeashed))) return false;
         if (body.TryGetComponent<BubbleCapture>(out var bubbleCapture) && !bubbleCapture.CanCapture) return false;
         WebCapture capture = body.GetComponent<WebCapture>();
         return capture == null || capture.CanCapture;

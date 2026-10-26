@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -5,14 +6,20 @@ using UnityEngine.SceneManagement;
 /// <summary>Creature behavior for territorial foraging; SquirrelMotor owns physics movement.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SquirrelMotor))]
-public sealed class Squirrel : Creature
+public sealed partial class Squirrel : Creature
 {
-    public enum Activity { Searching, Collecting, Returning, Fighting, Retreating, PackingNest, Migrating }
+    public enum Activity { Searching, Collecting, Returning, Fighting, Retreating, PackingNest, Migrating, GatheringNestMaterials, BuildingNest, Celebrating, ReclaimingFood, FollowingNest, ReturningStolenNest, WarningPlayer, EscapingWithNest }
     [SerializeField, Min(0.01f)] private float moveSpeed = 2f;
     [SerializeField, Min(0.01f)] private float reachDistance = 0.65f;
     [SerializeField, Min(0.1f)] private float searchRadius = 100f;
     [SerializeField, Min(0.1f)] private float searchInterval = 0.5f;
     [SerializeField, Min(1)] private int capacity = 3;
+    [Header("Held squeeze")]
+    [SerializeField, Min(0.1f)] private float squeezeDuration = 0.25f;
+    [SerializeField, Min(0f)] private float spitSpeed = 3f;
+    private Coroutine squeeze;
+    private bool squeezeHeld;
+    private Vector3 unsqueezedScale;
     [SerializeField] private Activity activity;
     [Header("Territory")]
     [SerializeField] private Vector3 territoryCenter;
@@ -29,7 +36,7 @@ public sealed class Squirrel : Creature
     private SquirrelFood migrationFood;
     private readonly Collider[] nestPlacementHits = new Collider[32];
     private readonly List<SquirrelFood> carried = new List<SquirrelFood>();
-    private FoodManager foodManager;
+    private SquirrelSystemManager foodManager;
     private SquirrelNest nest;
     private SquirrelFood target;
     private float nextSearch;
@@ -42,12 +49,89 @@ public sealed class Squirrel : Creature
         !IsBubbleCaptured && !(TryGetComponent<WebCapture>(out var web) && web.IsCaptured);
     public int Capacity => capacity;
     public int CarriedCount => carried.Count;
+    public override bool CanUseWhileCarried => !IsDead;
+    public override string CarriedPrompt => carried.Count > 0
+        ? "[Hold LMB] Squeeze: keep spitting food (" + carried.Count + ")"
+        : "Mouth empty";
+
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!squeezeHeld || !IsCarried || !SimulationEnabled || IsConsumptionPending || squeeze != null) return;
+        carried.RemoveAll(food => food == null);
+        if (carried.Count == 0) return;
+        unsqueezedScale = transform.localScale;
+        squeeze = StartCoroutine(Squeeze(interaction.Direction));
+    }
+
+    public void SetSqueezeHeld(bool held, CreatureInteraction interaction)
+    {
+        squeezeHeld = held;
+        if (held) ReceiveInteraction(interaction);
+        else StopSqueeze();
+    }
+
+    private IEnumerator Squeeze(Vector3 direction)
+    {
+        direction = direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward;
+        while (squeezeHeld && IsCarried && SimulationEnabled && !IsConsumptionPending && carried.Count > 0)
+        {
+            bool released = false;
+            float duration = Mathf.Max(0.1f, squeezeDuration);
+            for (float elapsed = 0f; elapsed < duration; elapsed += Time.deltaTime)
+            {
+                if (!squeezeHeld || !IsCarried || !SimulationEnabled || IsConsumptionPending) break;
+                float pulse = Mathf.Sin(elapsed / duration * Mathf.PI);
+                transform.localScale = Vector3.Scale(unsqueezedScale,
+                    new Vector3(1f + pulse * 0.12f, 1f - pulse * 0.22f, 1f + pulse * 0.12f));
+                if (!released && elapsed >= duration * 0.4f)
+                {
+                    released = true;
+                    SpitOneFood(direction);
+                }
+                yield return null;
+            }
+            transform.localScale = unsqueezedScale;
+        }
+        transform.localScale = unsqueezedScale;
+        squeeze = null;
+    }
+
+    private void SpitOneFood(Vector3 direction)
+    {
+        if (carried.Count == 0) return;
+        int index = carried.Count - 1;
+        SquirrelFood food = carried[index];
+        carried.RemoveAt(index);
+        if (food == null) return;
+        Collider shape = GetComponent<Collider>();
+        Vector3 mouth = shape != null ? shape.bounds.center : transform.position;
+        float clearance = shape != null ? shape.bounds.extents.magnitude : 0.5f;
+        Collider foodShape = food.GetComponent<Collider>();
+        // Hidden food retains its world scale. Place its entire collider beyond the held body.
+        float foodRadius = foodShape is CapsuleCollider capsule
+            ? Mathf.Max(capsule.radius, capsule.height * 0.5f) * food.transform.lossyScale.magnitude
+            : food.transform.lossyScale.magnitude * 0.5f;
+        Vector3 position = mouth + direction * (clearance + foodRadius + 0.1f);
+        food.SpitOut(this, position, direction * spitSpeed + Vector3.up * 2f);
+        // Keep migration/fight ownership intact; ordinary foraging resumes after release.
+        if (activity == Activity.Returning && carried.Count == 0) activity = Activity.Searching;
+        nextSearch = Time.time + searchInterval;
+    }
+
+    private void StopSqueeze()
+    {
+        squeezeHeld = false;
+        if (squeeze == null) return;
+        StopCoroutine(squeeze);
+        transform.localScale = unsqueezedScale;
+        squeeze = null;
+    }
     public Activity CurrentActivity => activity;
     public SquirrelNest Nest => nest;
     public Vector3 TerritoryCenter => territoryCenter;
     public float TerritoryRadius => territoryRadius;
     public bool IsMigrating => activity == Activity.Migrating;
-    public bool AllowsMovementAt(Vector3 point) => IsMigrating || ContainsInTerritory(point);
+    public bool AllowsMovementAt(Vector3 point) => IsMigrating || IsNestWork || IsSocialReaction || ContainsInTerritory(point);
 
     public bool ContainsInTerritory(Vector3 point)
     {
@@ -66,7 +150,7 @@ public sealed class Squirrel : Creature
     }
     public bool CanFight => CanMoveAutonomously && foodManager != null && nest != null &&
         Time.time >= fightCooldownUntil && activity != Activity.Fighting && activity != Activity.Retreating &&
-        activity != Activity.PackingNest && !IsMigrating;
+        activity != Activity.PackingNest && !IsMigrating && !IsNestWork && !IsSocialReaction;
 
     public bool WantsToChallenge(Squirrel other) => other != null && other.CanBeAITargeted && ContainsInTerritory(other.transform.position) && carried.Count < capacity &&
         ((other.carried.Count > 0) || (target != null && (target == other.target || target.Owner == other)));
@@ -122,13 +206,14 @@ public sealed class Squirrel : Creature
         nextSearch = 0f;
     }
 
-    public void Initialize(FoodManager foods, SquirrelNest home, float size, int baseCapacity, float homeRadius = 12f)
+    public void Initialize(SquirrelSystemManager foods, SquirrelNest home, float size, int baseCapacity, float homeRadius = 12f)
     {
         CancelMigration();
         ReleaseFood();
         foodManager = foods;
         nest = home;
         territoryCenter = home.transform.position;
+        RememberNest(home);
         territoryRadius = Mathf.Max(1f, homeRadius);
         transform.localScale *= size;
         capacity = Mathf.Max(1, Mathf.RoundToInt(baseCapacity * size * size * size));
@@ -144,15 +229,19 @@ public sealed class Squirrel : Creature
         SetCreatureName("Squirrel");
         SetFoodAndDiet(FoodTag.Meat, FoodTag.Plant);
         SetMovementPhysics(false, true);
+        CreateFacingMarkers();
     }
 
     protected override void TickCreature(float deltaTime)
     {
         if (!CanMoveAutonomously) { motor.Stop(); return; }
         if (activity != Activity.Fighting) motor.Stop();
-        if (foodManager == null || nest == null || !nest.isActiveAndEnabled) return;
+        if (foodManager == null) return;
         carried.RemoveAll(food => food == null);
         if (activity == Activity.Fighting) return;
+        if (TickSocialReaction(deltaTime)) return;
+        if (TickNestTasks(deltaTime)) return;
+        if (nest == null) return;
         if (activity == Activity.PackingNest || IsMigrating)
         {
             TickMigration(deltaTime);
@@ -169,10 +258,7 @@ public sealed class Squirrel : Creature
         }
         if (activity == Activity.Returning)
         {
-            if (!MoveTo(nest.transform.position, nest.GetComponent<Collider>())) return;
-            foreach (var food in carried) nest.Deposit(this, food);
-            carried.Clear();
-            activity = Activity.Searching;
+            ReturnToRememberedNest();
             return;
         }
         if (target != null && (!target.isActiveAndEnabled || target.IsStored || !ContainsInTerritory(target.transform.position)))
@@ -183,16 +269,20 @@ public sealed class Squirrel : Creature
         if (target == null)
         {
             if (carried.Count == 0) foodShortageTime += deltaTime;
-            if (Time.time < nextSearch) return;
-            nextSearch = Time.time + searchInterval;
-            target = foodManager.ReserveNearest(this, searchRadius);
-            activity = target != null ? Activity.Collecting :
-                carried.Count > 0 ? Activity.Returning : Activity.Searching;
+            if (Time.time >= nextSearch)
+            {
+                nextSearch = Time.time + searchInterval;
+                target = foodManager.ReserveNearest(this, searchRadius);
+                activity = target != null ? Activity.Collecting :
+                    carried.Count > 0 ? Activity.Returning : Activity.Searching;
+            }
             if (target == null)
             {
                 if (carried.Count == 0 && foodShortageTime >= foodShortageDelay) TryPlanMigration();
+                if (activity == Activity.Searching) TickIdlePatrol(deltaTime);
                 return;
             }
+            hasPatrolPoint = false;
             foodShortageTime = 0f;
         }
         if (!MoveTo(target.transform.position, target.GetComponent<Collider>())) return;
@@ -220,7 +310,7 @@ public sealed class Squirrel : Creature
         // The destination remains solid, but steering must not circle around the
         // very food or nest we are trying to approach.
         motor.SetIntent(offset.normalized * moveSpeed * (migrating ? migrationSpeedScale : 1f),
-            destination: destinationCollider);
+            destination: destinationCollider, goal: destination);
         return false;
     }
 
@@ -260,7 +350,7 @@ public sealed class Squirrel : Creature
         for (int i = 0; i < count; i++)
         {
             Collider other = nestPlacementHits[i];
-            if (other == hit.collider || other.transform.IsChildOf(nest.transform) ||
+            if (other == hit.collider || (nest != null && other.transform.IsChildOf(nest.transform)) ||
                 other.GetComponentInParent<Squirrel>() == this) continue;
             return false;
         }
@@ -277,7 +367,8 @@ public sealed class Squirrel : Creature
         }
         if (activity == Activity.PackingNest)
         {
-            if (!MoveTo(nest.transform.position, nest.GetComponent<Collider>())) return;
+            if (!ApproachRememberedNest()) return;
+            if (!NestStillAtRememberedPlace()) { DiscoverMissingNest(); return; }
             // Recheck before lifting: another squirrel may have occupied the destination.
             if (!TryNestGround(migrationGround, out migrationGround) || !nest.BeginMove(this))
             {
@@ -295,6 +386,7 @@ public sealed class Squirrel : Creature
         }
         nest.EndMove(ground);
         territoryCenter = nest.transform.position;
+        RememberNest(nest);
         FinishMigration();
     }
 
@@ -308,6 +400,7 @@ public sealed class Squirrel : Creature
                     out var hit, 200f, 1 << 7, QueryTriggerInteraction.Ignore)) point = hit.point;
             nest.EndMove(point);
             territoryCenter = nest.transform.position;
+            RememberNest(nest);
         }
         if (activity == Activity.PackingNest || IsMigrating) FinishMigration();
     }
@@ -332,6 +425,8 @@ public sealed class Squirrel : Creature
     public override void Die()
     {
         if (IsDead) return;
+        StopSqueeze();
+        CancelSocialReaction();
         CancelMigration();
         ReleaseFood();
         motor.Stop();
@@ -340,6 +435,8 @@ public sealed class Squirrel : Creature
 
     protected override void OnDisable()
     {
+        StopSqueeze();
+        CancelSocialReaction();
         base.OnDisable();
         CancelMigration();
         ReleaseFood();

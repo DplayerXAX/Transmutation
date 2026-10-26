@@ -30,7 +30,7 @@ public static class SquirrelEcologyValidation
             nest.AssignOwner(squirrel);
             var managerObject = new GameObject("Test Food Manager");
             SceneManager.MoveGameObjectToScene(managerObject, scene);
-            var foods = managerObject.AddComponent<FoodManager>();
+            var foods = managerObject.AddComponent<SquirrelSystemManager>();
             Set(foods, "foodPrefab", AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Food.prefab"));
             Set(foods, "initialFoodCount", 0);
             Set(foods, "respawnInterval", 1f);
@@ -55,8 +55,8 @@ public static class SquirrelEcologyValidation
             var stored = foods.Foods[0];
             Check(stored.Reserve(squirrel) && nest.Deposit(squirrel, stored), "seed a stored item");
             Invoke(foods, "TickFoodGrowth", 1f);
-            Check(foods.UnstoredFoodCount == 3 && foods.Foods.Count == 3 && nest.StoredFoodCount == 1,
-                "stored instances are recycled without losing the nest's accumulated stores");
+            Check(foods.UnstoredFoodCount == 3 && foods.Foods.Count == 4 && nest.StoredFoodCount == 1,
+                "refresh creates a distinct food instance and leaves the stored item in the nest");
             Set(squirrel, "foodShortageDelay", 1f);
             Set(squirrel, "migrationSearchRadius", 45f);
             var originalNest = squirrel.Nest;
@@ -99,7 +99,7 @@ public static class SquirrelEcologyValidation
             Check(!nest.IsMoving && nest.transform.parent != squirrel.transform && nest.Owner == squirrel &&
                 nest.GetComponent<Collider>().enabled && nest.StoredFoodCount > 0,
                 "death detaches and restores the nest without deleting stores");
-            Debug.Log("Squirrel Ecology validation passed: periodic growth, cap, pooling, shortage delay, pause, complete migration, stores, resumed foraging and death cleanup.");
+            Debug.Log("Squirrel Ecology validation passed: periodic growth, cap, real inventory, shortage delay, pause, complete migration, stores, resumed foraging and death cleanup.");
         }
         finally
         {

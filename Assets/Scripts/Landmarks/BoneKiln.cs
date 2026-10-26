@@ -53,10 +53,17 @@ public sealed class BoneKiln : MonoBehaviour
     [Range(0.1f, 0.9f)] [SerializeField] private float waveOpenShare = 0.25f;
     [Tooltip("Heat (summed over creatures in the kiln heart) that warms the bones fully.")]
     [Min(1f)] [SerializeField] private float heatToWarm = 25f;
+    [Tooltip("Full fire bubbles attached to the body needed to warm the entire mother.")]
+    [Min(2)] [SerializeField] private int bubblesToWarm = 15;
+    [Min(0f)] [SerializeField] private float flightHeatPerSecond = 3.6f;
+    [Min(0f)] [SerializeField] private float climbHeatPerMetre = 1.05f;
+    [Tooltip("Heat lost per second while resting, even before enough fire has accumulated to wake.")]
+    [Min(0f)] [SerializeField] private float restingHeatPerSecond = 0.225f;
 
     [Header("Waking")]
     [Tooltip("Seconds fully warm before it wakes.")]
     [Min(0f)] [SerializeField] private float wakeAfter = 2.5f;
+    [Min(6f)] [SerializeField] private float emergenceDuration = 14f;
     [Tooltip("Degrees each metre of spine is turned further round (the helix of the ribcage), asleep and awake.")]
     [Range(0f, 30f)] [SerializeField] private float helixTwist = 9f;
     [Tooltip("Awake: how fast the helix rolls along the body, degrees per second.")]
@@ -73,9 +80,17 @@ public sealed class BoneKiln : MonoBehaviour
     [Range(0, 6)] [SerializeField] private int children = 3;
 
     [Header("Nearby Tentacles")]
-    [Tooltip("Creature settings to copy for the tentacles wandering near the children and bubble nests.")]
+    [Tooltip("Settings copied for normal-sized tentacles near the mother's visible sides and her children.")]
     [SerializeField] private TentacleCreature tentacleTemplate;
     [Range(0, 6)] [SerializeField] private int nearbyTentacles = 3;
+    private readonly List<TentacleCreature> spawnedTentacles = new List<TentacleCreature>();
+    private readonly HashSet<int> tentacleSpawnedSlots = new HashSet<int>();
+    private Vector3 tentacleSpawnHeading;
+    private float tentacleSpawnRadius, nextTentacleSpawn;
+    private Transform tentacleSpawnRoot;
+    private readonly HashSet<int> practiceSites = new HashSet<int>();
+    private float nextPracticeSite;
+    public int SpawnedTentacleCount => spawnedTentacles.Count;
 
     [Header("Rewards")]
     [SerializeField] private string seedId = "kiln_seed";
@@ -92,19 +107,27 @@ public sealed class BoneKiln : MonoBehaviour
     {
         public float s;
         public Transform transform;
+        public float flightRadius;
+        public Vector3 frameUp;
     }
 
     private Transform root;
     private readonly List<Station> stations = new List<Station>();
     private readonly List<BoneRib> ribs = new List<BoneRib>();
     private readonly List<Renderer> boneRenderers = new List<Renderer>();
+    private readonly Dictionary<Renderer, float> heatStages = new Dictionary<Renderer, float>();
+    private readonly List<FireBubble> attachedFire = new List<FireBubble>();
+    private readonly List<BoneFireContact> fireContacts = new List<BoneFireContact>();
     private Transform skull;
+    private Transform rideSeat;
     private Material floraMaterial;
     private Material ribMaterial;
     private MaterialPropertyBlock glowBlock;
     private Vector3 heartPoint;
+    private KilnBubbleNest heartNest;
     private float heatTarget, nextHeatCheck, warmTimer;
     private readonly Collider[] heatHits = new Collider[32];
+    private readonly RaycastHit[] floorHits = new RaycastHit[32];
     private readonly HashSet<Creature> heatCounted = new HashSet<Creature>();
     private const int GroundMask = 1 << 7;
 
@@ -116,12 +139,22 @@ public sealed class BoneKiln : MonoBehaviour
     private Vector3 head, headDir, waypoint, mouth;
     private float awakeBlend, modeTimer, wakeTime;
     private bool emerging;
+    private Vector3 backOutDirection;
+    private float backOutDistance;
+    private float emergenceElapsed, emergenceLift;
+    private Vector3 emergenceStart;
+    private float flightRoll;
+    public bool Emerging => emerging;
+    public int RequiredFireBubbles => Mathf.Max(2, bubblesToWarm);
+    public Vector3 ExitDirection => backOutDirection.sqrMagnitude > 0.1f ? backOutDirection : root != null ? root.forward : transform.forward;
 
     /// <summary>0..1: how warm the bones are.</summary>
     public float Warmth => warmth;
     public bool Awake => awake;
     public bool Flying => flying;
-    public Vector3 Head => awake ? head : (skull != null ? skull.position : transform.position);
+    public int AttachedFireCount => attachedFire.Count;
+    public float FlightStrength => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.1f, 0.95f, warmth));
+    public Vector3 Head => awake && !emerging ? head : (skull != null ? skull.position : transform.position);
     /// <summary>World position of the kiln heart (where heat is measured).</summary>
     public Vector3 HeartPoint => heartPoint;
     /// <summary>Average lift of the ribs (0 all down .. 1 all up), and how many are up right now.</summary>
@@ -136,6 +169,19 @@ public sealed class BoneKiln : MonoBehaviour
     }
     public Transform Root => root;
     public IReadOnlyList<BoneRib> Ribs => ribs;
+    public Bounds AwakeningFrame()
+    {
+        var frame = new Bounds(mouth + Vector3.up * 5f, Vector3.one * 12f);
+        bool found = false;
+        foreach (Station station in stations)
+            if (station.transform != null && station.transform.position.y >= mouth.y - 3f)
+            {
+                var visible = new Bounds(station.transform.position, Vector3.one * 8f);
+                if (!found) { frame = visible; found = true; } else frame.Encapsulate(visible);
+            }
+        if (skull != null && skull.position.y >= mouth.y - 3f) frame.Encapsulate(new Bounds(skull.position, Vector3.one * 12f));
+        return frame;
+    }
 
     private void Update()
     {
@@ -151,14 +197,23 @@ public sealed class BoneKiln : MonoBehaviour
             return;
         }
         if (root == null) return;
+        if (heartNest != null && heartNest.Placed)
+        {
+            heartPoint = heartNest.transform.position + Vector3.up * 0.8f;
+            heartNest.keepFrom = heartPoint;
+        }
+        if (spawnedTentacles.Count < nearbyTentacles && tentacleSpawnHeading.sqrMagnitude > 0f && Time.time >= nextTentacleSpawn)
+            TrySpawnNearbyTentacles();
+        if (practiceSites.Count < 2 && tentacleSpawnHeading.sqrMagnitude > 0f && Time.time >= nextPracticeSite)
+        {
+            nextPracticeSite = Time.time + 2f;
+            for (int i = 0; i < 2; i++)
+                if (!practiceSites.Contains(i) && TentaclePracticeSite.TryBuild(world, mouth, tentacleSpawnHeading,
+                        tentacleSpawnRadius, i, tentacleTemplate, seed * 71)) practiceSites.Add(i);
+        }
         UpdateHeat();
 
-        if (!awake)
-        {
-            warmTimer = warmth > 0.97f ? warmTimer + Time.deltaTime : 0f;
-            if (warmTimer > wakeAfter) Wake();
-        }
-
+        UpdateWake(Time.deltaTime);
         // One smooth ripple runs along the ribcage: every rib follows the one before it a little later, like
         // a centipede's legs. Awake, it runs faster and fuller (legs while crawling, fins while flying).
         int count = ribs.Count;
@@ -171,18 +226,22 @@ public sealed class BoneKiln : MonoBehaviour
             float side = (i % 2) * (awake && !flying ? Mathf.PI : 0.6f);
             float wave = 0.5f + 0.5f * Mathf.Sin(time - pair * Mathf.PI * 2f / waveLength - side);
             float target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - share * 1.4f, 1f, wave));
-            ribs[i].Drive(awake ? target : Mathf.Max(target, warmth), Time.deltaTime);
+            if (emerging) ribs[i].FoldForEmergence(Time.deltaTime);
+            else ribs[i].Drive(awake ? target * Mathf.Lerp(0.2f, 1f, FlightStrength) : Mathf.Max(target, warmth), Time.deltaTime);
         }
 
         if (awake)
         {
-            // Ridden: [C] by the skull climbs on (and off). With tentacle reins in her spine she goes where the rider looks.
-            if (Ridden) { if (BoneRide.CanToggle && BoneRide.PressedC()) { BoneRide.GetOff(); PickWaypoint(); } }
-            else if (BoneRide.Mount == null && BoneRide.CanToggle && skull != null && BoneRide.Near(skull.position, 6f, root) && BoneRide.PressedC())
-                BoneRide.GetOn(this, root, skull, ReinPoints());
+            // The rider follows the selected back/skull seat; reins turn independently of looking around.
             MoveHead(Time.deltaTime);
             PlaceBody();
-            if (Ridden && skull != null) BoneRide.Seat(skull.position + skull.up * 2.6f);
+            if (!emerging) foreach (BoneRib rib in ribs) rib.AvoidTerrainAfterMove();
+        }
+        if (Ridden && rideSeat != null)
+        {
+            Renderer seatRenderer = rideSeat.GetComponent<Renderer>();
+            float top = seatRenderer != null ? seatRenderer.bounds.max.y : rideSeat.position.y + 2f;
+            BoneRide.Seat(new Vector3(rideSeat.position.x, top + 0.08f, rideSeat.position.z));
         }
     }
 
@@ -190,12 +249,58 @@ public sealed class BoneKiln : MonoBehaviour
     public bool Ridden => BoneRide.Mount == (object)this;
     public bool Reined => BoneRide.Reins(root) >= 2;
     public Transform Skull => skull;
+    public Transform RideRoot => root;
+    public Vector3 RideForward => awake ? (emerging ? -headDir : headDir) : root != null ? -root.forward : transform.forward;
+
+    public bool TryGetRideSeat(out Transform seat)
+    {
+        seat = null;
+        if (root == null || !isActiveAndEnabled || emerging || BoneAwakeningCutscene.Playing) return false;
+        float nearest = float.PositiveInfinity;
+        if (skull != null && BoneRide.Near(skull.position, 10f, root))
+        { seat = skull; nearest = BoneRide.PlayerDistance(skull.position); }
+        foreach (Station station in stations)
+        {
+            float distance = BoneRide.PlayerDistance(station.transform.position);
+            if (distance >= nearest || !BoneRide.Near(station.transform.position, 6f, root)) continue;
+            nearest = distance; seat = station.transform;
+        }
+        return seat != null;
+    }
+
+    public bool TryGrappleSeat(Vector3 hit, out Transform seat)
+    {
+        seat = null;
+        if (root == null || !isActiveAndEnabled || emerging || BoneAwakeningCutscene.Playing) return false;
+        float nearest = skull != null ? (skull.position - hit).sqrMagnitude : float.PositiveInfinity;
+        seat = skull;
+        foreach (Station station in stations)
+            if (station.transform != null && (station.transform.position - hit).sqrMagnitude < nearest)
+            { seat = station.transform; nearest = (seat.position - hit).sqrMagnitude; }
+        return seat != null;
+    }
+
+    public Vector3 RiderPosition(Transform seat)
+    {
+        Renderer skin = seat.GetComponent<Renderer>();
+        float top = skin != null ? skin.bounds.max.y : seat.position.y + 2f;
+        return new Vector3(seat.position.x, top + 1.08f, seat.position.z);
+    }
+
+    public bool MountAt(Transform seat)
+    {
+        if (seat == null || root == null || !seat.IsChildOf(root) || !isActiveAndEnabled || emerging || BoneAwakeningCutscene.Playing) return false;
+        rideSeat = seat;
+        BoneRide.GetOn(this, root, seat, ReinPoints());
+        return Ridden;
+    }
 
     /// <summary>Two vertebrae just behind the skull, for the reins.</summary>
     private IEnumerable<Transform> ReinPoints()
     {
         var near = new List<Station>(stations);
-        near.Sort((x, y) => Vector3.Distance(x.transform.position, skull.position).CompareTo(Vector3.Distance(y.transform.position, skull.position)));
+        Vector3 centre = rideSeat != null ? rideSeat.position : skull != null ? skull.position : root.position;
+        near.Sort((x, y) => Vector3.Distance(x.transform.position, centre).CompareTo(Vector3.Distance(y.transform.position, centre)));
         if (near.Count > 1) yield return near[1].transform;
         if (near.Count > 3) yield return near[3].transform;
     }
@@ -319,7 +424,11 @@ public sealed class BoneKiln : MonoBehaviour
             vertebra.transform.localPosition = At(s);
             vertebra.transform.localRotation = frame;
             boneRenderers.Add(vertebra.GetComponent<Renderer>());
-            stations.Add(new Station { s = s, transform = vertebra.transform });
+            heatStages[vertebra.GetComponent<Renderer>()] = 0f;
+            Bounds stationBounds = vertebra.GetComponent<MeshFilter>().sharedMesh.bounds;
+            stations.Add(new Station { s = s, transform = vertebra.transform,
+                frameUp = root.TransformDirection(PlainUp(tangent, Vector3.forward)),
+                flightRadius = Mathf.Max(stationBounds.extents.x, Mathf.Max(stationBounds.extents.y, stationBounds.extents.z)) + 0.1f });
 
             // Flowers on the back, now and then a vine wound round the bone.
             var flora = new BoneFlora(seed * 977 + v);
@@ -357,13 +466,15 @@ public sealed class BoneKiln : MonoBehaviour
             flora.Attach(skull, floraMaterial);
         }
 
-        // ---- Kiln heart: a bowl of fused bone on the ground beside the tail ----
+        // The old heart used exactly the same bone bowl as the emitters. Make it an actual,
+        // visually distinct fire source too; its delayed placement cannot bury it in a cliff.
         Vector3 heartLocal = new Vector3(10f, 0f, R + 14f);
         heartLocal.y = LocalGround(heartLocal);
-        GameObject heart = Part("Kiln Heart", root, BoneShapes.Kiln(1.8f, (float)random.NextDouble()), boneMaterial, layer: 0, convex: false);
-        heart.transform.localPosition = heartLocal;
-        boneRenderers.Add(heart.GetComponent<Renderer>());
         heartPoint = root.TransformPoint(heartLocal + Vector3.up * 0.8f);
+        Vector3 heartGather = mouth - heading * (R + 9f);
+        heartGather.y = GroundHeight(heartGather);
+        heartNest = KilnBubbleNest.Build(root, root.TransformPoint(heartLocal), boneMaterial, seed * 17 + 97, heartGather, heartPoint);
+        heartNest.name = "Kiln Heart Fire Source";
 
         // ---- Rewards: the glyph inside the cage at the lip of the hole, the seed below the skull ----
         if (!string.IsNullOrEmpty(glyphId))
@@ -429,11 +540,16 @@ public sealed class BoneKiln : MonoBehaviour
             }
 
         SpawnNearbyTentacles(heading, R);
+        foreach (Renderer renderer in boneRenderers)
+        {
+            BoneFireContact contact = renderer.gameObject.AddComponent<BoneFireContact>();
+            contact.Setup(this, renderer);
+            fireContacts.Add(contact);
+        }
 
         // Bones become climbable ground only now, so the ground probes above never hit them.
         foreach (Station station in stations) station.transform.gameObject.layer = 7;
         skull.gameObject.layer = 7;
-        heart.layer = 7;
         Debug.Log($"Bone Kiln built over sinkhole {sinkholeIndex} at {mouth} with {stations.Count} vertebrae and {ribs.Count} ribs.");
     }
 
@@ -506,6 +622,7 @@ public sealed class BoneKiln : MonoBehaviour
             if (ribMaterial != null) segment.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
             segment.transform.localPosition = k == 0 ? Vector3.zero : joints[k] - joints[k - 1];
             boneRenderers.Add(segment.GetComponent<Renderer>());
+            heatStages[segment.GetComponent<Renderer>()] = k / 2f; // spine attachment first, then outward to the tips
             rib.segments[k] = segment.transform;
             parent = segment.transform;
             rest.Add(root.TransformPoint(attach + frame * ((from + to) * 0.5f)));
@@ -548,41 +665,60 @@ public sealed class BoneKiln : MonoBehaviour
 
     // ---------------- Waking and roaming ----------------
 
-    /// <summary>Wakes the colossus: from now on its head leads it out of the cave and all over the map.</summary>
+    private void UpdateWake(float deltaTime)
+    {
+        if (awake) return;
+        // Count actual attached bubbles: an ambient fire at the heart cannot bypass the offering.
+        // Allow the small resting loss accumulated while gathering all fifteen bubbles.
+        warmTimer = attachedFire.Count >= RequiredFireBubbles && warmth >= 0.9f ? warmTimer + Mathf.Max(0f, deltaTime) : 0f;
+        if (warmTimer > wakeAfter) Wake();
+    }
+
+    /// <summary>Wakes tail first, backing along its sleeping spine before the head leads normal roaming.</summary>
     public void Wake()
     {
         if (awake || root == null) return;
         awake = true;
         emerging = true;
+        flying = true;
         wakeTime = Time.time;
-        // The sleeping spine is the trail it has already "walked": the head (skull end) is its newest point.
+        // During emergence the tail leads. Preserve the sleeping curve so the skull retraces the neck out of the shaft.
         trail.Clear();
-        for (int i = path.Count - 1; i >= 0; i--) trail.Add(root.TransformPoint(path[i]));
+        pathLength = 0f;
+        for (int i = 0; i < path.Count; i++)
+        {
+            trail.Add(root.TransformPoint(path[i]));
+            if (i > 0) pathLength += Vector3.Distance(trail[i - 1], trail[i]);
+        }
         head = trail[trail.Count - 1];
-        headDir = (root.TransformPoint(path[0]) - root.TransformPoint(path[2])).normalized;
-        waypoint = mouth + Vector3.up * 12f;
+        backOutDirection = Vector3.ProjectOnPlane(head - mouth, Vector3.up).normalized;
+        if (backOutDirection.sqrMagnitude < 0.01f) backOutDirection = Vector3.ProjectOnPlane(root.forward, Vector3.up).normalized;
+        headDir = backOutDirection;
+        backOutDistance = 0f;
+        emergenceElapsed = 0f;
+        flightRoll = 0f;
+        emergenceStart = head;
+        emergenceLift = 16f;
+        if (world != null)
+            for (float distance = 0f; distance <= pathLength + 8f; distance += 6f)
+                emergenceLift = Mathf.Max(emergenceLift, GroundHeight(head + backOutDirection * distance) + 16f - head.y);
         modeTimer = Random.Range(modeTime.x, modeTime.y);
         // It no longer bars the way, and nothing should be swept along by it.
-        foreach (Collider c in root.GetComponentsInChildren<Collider>())
-            if (!c.isTrigger && c.gameObject.name != "Kiln Heart") c.enabled = false;
+        // Contact triggers still accept fuel in flight, without pushing the rider or disabling the children.
+        foreach (BoneFireContact contact in fireContacts) if (contact != null) contact.SetFlying();
         foreach (BoneRib rib in ribs) rib.free = true;
+        if (Application.isPlaying) BoneAwakeningCutscene.Play(this);
         Debug.Log("Bone Kiln: the colossus wakes.");
     }
 
     private void MoveHead(float deltaTime)
     {
         awakeBlend = Mathf.Clamp01((Time.time - wakeTime) / 6f);
+        if (emerging) { BackOut(deltaTime); return; }
         float t = Time.time;
         Vector3 desired;
         float speed;
-        if (emerging)
-        {
-            // Up out of the shaft, slowly, then off over the ground.
-            desired = (waypoint - head).normalized;
-            speed = crawlSpeed * 0.7f;
-            if ((waypoint - head).magnitude < 3f) { emerging = false; PickWaypoint(); }
-        }
-        else if (Ridden && Reined)
+        if (Ridden && Reined)
         {
             desired = BoneRide.Steer(deltaTime);
             speed = flySpeed;
@@ -596,6 +732,7 @@ public sealed class BoneKiln : MonoBehaviour
                 flying = !flying;
                 modeTimer = Random.Range(modeTime.x, modeTime.y);
             }
+            if (warmth > 0.97f) flying = true;
             Vector3 flat = waypoint - head;
             flat.y = 0f;
             if (flat.magnitude < 12f) { PickWaypoint(); flat = waypoint - head; flat.y = 0f; }
@@ -605,18 +742,31 @@ public sealed class BoneKiln : MonoBehaviour
             desired.Normalize();
             speed = flying ? flySpeed : crawlSpeed;
         }
-        headDir = Vector3.RotateTowards(headDir, desired, (emerging ? 1.6f : 0.9f) * deltaTime, 0f).normalized;
+        float strength = FlightStrength;
+        if (warmth < 0.35f) flying = false;
+        desired.y = Mathf.Min(desired.y, 0f) + Mathf.Max(0f, desired.y) * strength;
+        desired += Vector3.down * ((1f - strength) * 1.5f);
+        if (!(Ridden && Reined)) desired.Normalize();
+        speed *= Mathf.Lerp(0.35f, 1f, strength);
+        if (desired.sqrMagnitude > 0.0001f)
+            headDir = Vector3.RotateTowards(headDir, desired.normalized, (emerging ? 1.6f : 0.9f) * deltaTime, 0f).normalized;
         // Serpentine: sideways weave on the ground, up-and-down swells in the air.
         Vector3 weaveAxis = flying ? Vector3.Cross(headDir, Vector3.up) : Vector3.up;
         if (weaveAxis.sqrMagnitude < 0.25f) weaveAxis = Vector3.right;
         Vector3 move = Quaternion.AngleAxis((flying ? 14f : 24f) * Mathf.Sin(t * (flying ? 0.9f : 1.6f)), weaveAxis.normalized) * headDir;
-        head += move * (speed * deltaTime);
-        // Never through the ground while crawling.
-        if (!emerging && !flying)
-        {
-            float floor = GroundHeight(head) + 1.5f;
-            if (head.y < floor) head.y = Mathf.Lerp(head.y, floor, 1f - Mathf.Exp(-6f * deltaTime));
-        }
+        if (Ridden && Reined) move = Vector3.ClampMagnitude(desired, 1f);
+        float previousY = head.y;
+        move.y -= (1f - strength) * 0.5f;
+        Vector3 intended = move * (speed * deltaTime);
+        Vector3 nose = head + headDir * 4f;
+        Vector3 safeNose = MoveSkull(nose, nose + intended, headDir);
+        head += safeNose - nose;
+        if ((safeNose - nose).sqrMagnitude < intended.sqrMagnitude * 0.25f)
+            headDir = Vector3.RotateTowards(headDir, (Vector3.up + headDir * 0.25f).normalized, deltaTime, 0f);
+        // During a fuel-starved emergence, settle onto the inner floor rather than snapping to the surface.
+        float floor = GroundBelowHead() + 1.5f;
+        if (head.y < floor) head.y = Mathf.Lerp(head.y, floor, 1f - Mathf.Exp(-6f * deltaTime));
+        StepAirborneHeat(deltaTime, previousY);
 
         if ((head - trail[trail.Count - 1]).sqrMagnitude > 0.16f) trail.Add(head);
         // Forget the trail beyond the tail.
@@ -626,6 +776,55 @@ public sealed class BoneKiln : MonoBehaviour
             kept += Vector3.Distance(trail[i], trail[i - 1]);
             if (kept > pathLength + 6f) { trail.RemoveRange(0, i - 1); break; }
         }
+    }
+
+    private void BackOut(float deltaTime)
+    {
+        emergenceElapsed += Mathf.Max(0f, deltaTime);
+        float progress = Mathf.Clamp01((emergenceElapsed - 2f) / Mathf.Max(6f, emergenceDuration));
+        float eased = progress * progress * progress * (progress * (progress * 6f - 15f) + 10f);
+        float wanted = (pathLength + 8f) * eased;
+        float lift = emergenceLift * Mathf.SmoothStep(0f, 1f, wanted / 24f);
+        Vector3 goal = emergenceStart + backOutDirection * wanted + Vector3.up * lift;
+        Vector3 step = Vector3.ClampMagnitude(goal - head,
+            Mathf.Max(flySpeed * 2f, (pathLength + 8f) / Mathf.Max(6f, emergenceDuration) * 2.5f) * Mathf.Max(0f, deltaTime));
+        Vector3 oldHead = head;
+        head = BoneFlightCollision.Move(head, head + step, 0.7f, root, false);
+        step = head - oldHead;
+        if (step.sqrMagnitude > 0.000001f) headDir = Vector3.Slerp(headDir, step.normalized, 1f - Mathf.Exp(-2f * deltaTime)).normalized;
+        backOutDistance += Mathf.Max(0f, Vector3.Dot(step, backOutDirection));
+        SpendFlightHeat(deltaTime, Mathf.Max(0f, step.y));
+        if ((head - trail[trail.Count - 1]).sqrMagnitude > 0.16f) trail.Add(head);
+        // Wait until the entire original spine, including the skull, has cleared the entrance.
+        if (progress >= 1f && backOutDistance >= pathLength + 7.9f) FinishBackingOut();
+    }
+
+    private Vector3 PointBehind(float distance)
+    {
+        Vector3 previous = head;
+        for (int i = trail.Count - 1; i >= 0; i--)
+        {
+            float length = Vector3.Distance(previous, trail[i]);
+            if (distance <= length && length > 0.0001f) return Vector3.Lerp(previous, trail[i], distance / length);
+            distance -= length;
+            previous = trail[i];
+        }
+        return previous;
+    }
+
+    private void FinishBackingOut()
+    {
+        var reversed = new List<Vector3>();
+        for (float distance = 0f; distance < pathLength; distance += 0.5f) reversed.Add(PointBehind(distance));
+        reversed.Add(PointBehind(pathLength));
+        trail.Clear();
+        trail.AddRange(reversed);
+        head = trail[trail.Count - 1];
+        headDir = (head - trail[Mathf.Max(0, trail.Count - 2)]).normalized;
+        emerging = false;
+        awakeBlend = 0f;
+        wakeTime = Time.time; // Ease into roaming from the final emergence pose.
+        PickWaypoint();
     }
 
     private void PickWaypoint()
@@ -641,7 +840,9 @@ public sealed class BoneKiln : MonoBehaviour
     }
 
     /// <summary>Lays every vertebra along the head's trail, wrung into a rolling helix.</summary>
-    private void PlaceBody()
+    private void PlaceBody() => PlaceBodyStep(Time.deltaTime);
+
+    private void PlaceBodyStep(float deltaTime)
     {
         // Distances back from the head along the trail.
         trailDistance.Clear();
@@ -665,28 +866,57 @@ public sealed class BoneKiln : MonoBehaviour
             return trail[0];
         }
 
-        float roll = Time.time * helixRoll;
-        float follow = awakeBlend < 1f ? 1f - Mathf.Exp(-4f * Time.deltaTime) : 1f;
+        // Integrate a local phase. Multiplying global Time.time by a growing blend spun the
+        // entire skeleton many revolutions during activation, especially late in a play session.
+        if (!emerging) flightRoll += helixRoll * deltaTime * awakeBlend;
+        float roll = flightRoll;
+        float follow = 1f - Mathf.Exp(-4f * deltaTime);
         foreach (Station station in stations)
         {
-            Vector3 p = Behind(station.s);
-            Vector3 tangent = Behind(station.s + 0.6f) - Behind(station.s - 0.6f);
+            float distance = emerging ? pathLength - station.s : station.s;
+            Vector3 p = Behind(distance);
+            Vector3 tangent = Behind(distance + 0.6f) - Behind(distance - 0.6f);
+            if (emerging) tangent = -tangent;
             if (tangent.sqrMagnitude < 1e-6f) continue;
             tangent.Normalize();
-            Vector3 plainUp = PlainUp(tangent, station.transform.up);
+            // Parallel transport an untwisted frame; feeding the already twisted transform.up
+            // back into this calculation accumulates a new rotation every frame on vertical bones.
+            Vector3 plainUp = Vector3.ProjectOnPlane(station.frameUp, tangent);
+            if (plainUp.sqrMagnitude < 0.0001f) plainUp = PlainUp(tangent, root.forward);
+            plainUp.Normalize();
+            station.frameUp = plainUp;
             // Awake, the helix also rolls slowly along the body.
             Vector3 up = Quaternion.AngleAxis(Twist(station.s) + roll * awakeBlend, tangent) * plainUp;
             Quaternion target = Quaternion.LookRotation(tangent, up);
             // Ease into the new pose over the first seconds, so waking is a stir, not a snap.
-            station.transform.SetPositionAndRotation(Vector3.Lerp(station.transform.position, p, follow), Quaternion.Slerp(station.transform.rotation, target, follow));
+            Vector3 destination = Vector3.Lerp(station.transform.position, p, follow);
+            destination = BoneFlightCollision.Move(station.transform.position, destination, Mathf.Max(0.4f, station.flightRadius), root, !emerging);
+            station.transform.SetPositionAndRotation(destination, Quaternion.Slerp(station.transform.rotation, target, follow));
         }
         if (skull != null)
         {
-            Quaternion look = Quaternion.LookRotation(headDir, Mathf.Abs(headDir.y) > 0.95f ? Vector3.forward : Vector3.up);
-            Vector3 at = head + headDir * 4f;
-            float ease = 1f - Mathf.Exp(-3f * Time.deltaTime);
-            skull.SetPositionAndRotation(Vector3.Lerp(skull.position, at, ease), Quaternion.Slerp(skull.rotation, look, ease));
+            Vector3 facing = emerging ? Behind(pathLength + 0.6f) - Behind(pathLength - 0.6f) : headDir;
+            if (facing.sqrMagnitude < 0.0001f) facing = -headDir;
+            facing.Normalize();
+            Quaternion look = Quaternion.LookRotation(facing, Mathf.Abs(facing.y) > 0.95f ? Vector3.forward : Vector3.up);
+            Vector3 at = (emerging ? Behind(pathLength) : head) + facing * 4f;
+            float ease = 1f - Mathf.Exp(-3f * deltaTime);
+            Vector3 destination = MoveSkull(skull.position, Vector3.Lerp(skull.position, at, ease), facing);
+            skull.SetPositionAndRotation(destination, Quaternion.Slerp(skull.rotation, look, ease));
         }
+    }
+
+    private Vector3 MoveSkull(Vector3 from, Vector3 to, Vector3 facing)
+    {
+        // The skull is much longer than it is wide. Cover its front, centre and rear instead of just its pivot.
+        Vector3 destination = to;
+        for (int pass = 0; pass < 2; pass++)
+            for (int sample = -1; sample <= 1; sample++)
+            {
+                Vector3 offset = facing.normalized * (sample * 2.8f);
+                destination = BoneFlightCollision.Move(from + offset, destination + offset, 4.7f, root, !emerging) - offset;
+            }
+        return destination;
     }
 
     // ---------------- Placement ----------------
@@ -768,10 +998,33 @@ public sealed class BoneKiln : MonoBehaviour
         return Physics.Raycast(from, Vector3.down, out RaycastHit hit, 260f, GroundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : surface;
     }
 
+    private float GroundBelowHead()
+    {
+        world.ColumnHeights(head, out float surface, out _, out float innerGround);
+        float fallback = head.y < surface - 2f ? innerGround : surface;
+        int count = Physics.RaycastNonAlloc(head + Vector3.up * 2f, Vector3.down, floorHits, 600f, GroundMask, QueryTriggerInteraction.Ignore);
+        RaycastHit[] results = floorHits;
+        if (count == floorHits.Length)
+        {
+            results = Physics.RaycastAll(head + Vector3.up * 2f, Vector3.down, 600f, GroundMask, QueryTriggerInteraction.Ignore);
+            count = results.Length;
+        }
+        float highest = float.NegativeInfinity;
+        for (int i = 0; i < count; i++)
+            if (!results[i].collider.transform.IsChildOf(root)) highest = Mathf.Max(highest, results[i].point.y);
+        return float.IsNegativeInfinity(highest) ? fallback : highest;
+    }
+
     // ---------------- Heat ----------------
 
     private void UpdateHeat()
     {
+        StepHeat(Time.deltaTime);
+    }
+
+    private void StepHeat(float deltaTime)
+    {
+        if (!awake) SpendAttachedHeat(Mathf.Max(0f, deltaTime) * restingHeatPerSecond);
         if (Time.time >= nextHeatCheck)
         {
             nextHeatCheck = Time.time + 0.5f;
@@ -781,55 +1034,160 @@ public sealed class BoneKiln : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 Creature creature = heatHits[i].GetComponentInParent<Creature>();
-                if (creature != null && heatCounted.Add(creature)) heat += Mathf.Max(0f, creature.Heat);
+                if (creature != null && !(creature is FireBubble fire && fire.IsBoundToBone)
+                    && heatCounted.Add(creature)) heat += Mathf.Max(0f, creature.Heat);
             }
             heatTarget = Mathf.Clamp01(heat / heatToWarm);
         }
+        float fireWarmth = 0f;
+        for (int i = attachedFire.Count - 1; i >= 0; i--)
+        {
+            FireBubble fire = attachedFire[i];
+            if (fire == null || fire.IsDead || !fire.isActiveAndEnabled) { attachedFire.RemoveAt(i); continue; }
+            fireWarmth += fire.BoneFuelFraction / Mathf.Max(2, bubblesToWarm);
+        }
         // Warms over a few seconds; cools slowly, so there is time to get through.
-        warmth = Mathf.MoveTowards(warmth, heatTarget, Time.deltaTime * (heatTarget > warmth ? 0.25f : 0.04f));
+        float target = Mathf.Clamp01(heatTarget + fireWarmth);
+        warmth = Mathf.MoveTowards(warmth, target, Mathf.Max(0f, deltaTime) * (target > warmth ? 0.25f : 0.08f));
 
-        if (boneMaterial == null || !boneMaterial.HasProperty("_GlowColor")) return;
         if (glowBlock == null) glowBlock = new MaterialPropertyBlock();
-        Color cool = boneMaterial.GetColor("_GlowColor");
-        float strength = boneMaterial.GetFloat("_GlowStrength");
-        float glow = awake ? 0.5f : warmth;
-        glowBlock.SetColor("_GlowColor", Color.Lerp(cool, new Color(1f, 0.42f, 0.12f), glow));
-        glowBlock.SetFloat("_GlowStrength", strength * (1f + 4f * glow));
-        foreach (Renderer r in boneRenderers) if (r != null) r.SetPropertyBlock(glowBlock);
+        foreach (Renderer renderer in boneRenderers)
+        {
+            if (renderer == null) continue;
+            float stage = heatStages.TryGetValue(renderer, out float value) ? value : 1f;
+            BoneChild.ApplyWarmColors(renderer, SurfaceWarmth(stage), glowBlock);
+        }
+    }
+
+    private float SurfaceWarmth(float stage) => Mathf.Clamp01(warmth * 2f - Mathf.Clamp01(stage));
+
+    public bool Catch(FireBubble bubble, Collider surface, Vector3 point, Vector3 normal)
+    {
+        if (bubble == null || surface == null || root == null || !isActiveAndEnabled || bubble.IsDead ||
+            bubble.IsBoundToBone || !surface.transform.IsChildOf(root) || surface.GetComponentInParent<BoneChild>() != null) return false;
+        BoneFireContact contact = surface.GetComponent<BoneFireContact>();
+        if (contact == null || contact.Owner != this) return false;
+        float radius = bubble.TryGetComponent<SphereCollider>(out var sphere) ? sphere.radius * Mathf.Max(
+            bubble.transform.lossyScale.x, Mathf.Max(bubble.transform.lossyScale.y, bubble.transform.lossyScale.z)) : 0.35f;
+        if (!bubble.BindToBone(this, surface.transform)) return false;
+        bubble.transform.position = point + (normal.sqrMagnitude > 0f ? normal.normalized : Vector3.up) * (radius * 0.6f);
+        if (bubble.TryGetComponent<Rigidbody>(out var body)) body.position = bubble.transform.position;
+        attachedFire.Add(bubble);
+        nextHeatCheck = 0f;
+        return true;
+    }
+
+    private void SpendFlightHeat(float deltaTime, float climbedMetres)
+    {
+        float remaining = Mathf.Max(0f, deltaTime) * flightHeatPerSecond + Mathf.Max(0f, climbedMetres) * climbHeatPerMetre;
+        SpendAttachedHeat(remaining);
+    }
+
+    private void StepAirborneHeat(float deltaTime, float previousY)
+    {
+        // Lift has a continuous cost even when the head is level, descending or blocked by rock.
+        float clearance = head.y - GroundBelowHead();
+        if (flying || clearance > travelHeights.x + 0.15f || head.y > previousY + 0.001f)
+            SpendFlightHeat(deltaTime, Mathf.Max(0f, head.y - previousY));
+    }
+
+    private void SpendAttachedHeat(float remaining)
+    {
+        foreach (FireBubble fire in attachedFire)
+        {
+            if (fire == null || fire.IsDead) continue;
+            remaining -= fire.BurnBoneHeat(remaining);
+            if (remaining <= 0f) break;
+        }
     }
 
     // ---------------- Helpers ----------------
 
     private void SpawnNearbyTentacles(Vector3 heading, float radius)
     {
+        tentacleSpawnHeading = heading.normalized;
+        tentacleSpawnRadius = radius;
+        TrySpawnNearbyTentacles();
+    }
+
+    private void TrySpawnNearbyTentacles()
+    {
+        nextTentacleSpawn = Time.time + 0.5f;
         if (nearbyTentacles <= 0) return;
         if (tentacleTemplate == null)
             foreach (TentacleCreature creature in FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None))
                 if (!creature.IsCarried && !creature.IsDead && creature.GetComponent<SpireCrawler>() == null)
                 { tentacleTemplate = creature; break; }
-        if (tentacleTemplate == null) return;
-
-        string settings = JsonUtility.ToJson(tentacleTemplate);
+        string settings = tentacleTemplate != null ? JsonUtility.ToJson(tentacleTemplate) : null;
         for (int i = 0; i < nearbyTentacles; i++)
         {
-            float angle = nearbyTentacles == 1 ? 180f : Mathf.Lerp(105f, 255f, i / (float)(nearbyTentacles - 1));
-            Vector3 spot = mouth + Quaternion.Euler(0f, angle, 0f) * heading * (radius + 21f);
-            spot.y = GroundHeight(spot) + 1f;
+            if (tentacleSpawnedSlots.Contains(i)) continue;
+            if (!TryNearbyTentacleSpot(i, out Vector3 spot)) continue; // Retry each slot independently as local terrain loads.
+            if (tentacleSpawnRoot == null)
+            {
+                tentacleSpawnRoot = new GameObject("Nearby Tentacles").transform;
+                tentacleSpawnRoot.SetParent(root, false);
+            }
             // Activate only after placement/settings, so it builds its own body and wanders around this spot.
-            var go = new GameObject($"Kiln Tentacle {i + 1}") { layer = tentacleTemplate.gameObject.layer };
+            var go = new GameObject($"Kiln Tentacle {i + 1}") { layer = tentacleTemplate != null ? tentacleTemplate.gameObject.layer : 0 };
             go.SetActive(false);
-            go.transform.SetParent(root, false);
+            go.transform.SetParent(tentacleSpawnRoot, false);
             go.transform.position = spot;
-            go.transform.localScale = tentacleTemplate.transform.localScale;
+            go.transform.localScale = tentacleTemplate != null ? tentacleTemplate.UncarriedScale : Vector3.one;
             var collider = go.AddComponent<SphereCollider>();
-            SphereCollider sourceCollider = tentacleTemplate.GetComponent<SphereCollider>();
+            SphereCollider sourceCollider = tentacleTemplate != null ? tentacleTemplate.GetComponent<SphereCollider>() : null;
             collider.radius = sourceCollider != null ? sourceCollider.radius : 0.45f;
             collider.center = sourceCollider != null ? sourceCollider.center : Vector3.zero;
             var copy = go.AddComponent<TentacleCreature>();
-            JsonUtility.FromJsonOverwrite(settings, copy);
-            JsonUtility.FromJsonOverwrite($"{{\"seed\":{seed * 53 + i},\"wanderRadius\":3,\"simulationEnabled\":true}}", copy);
+            if (settings != null) JsonUtility.FromJsonOverwrite(settings, copy);
+            JsonUtility.FromJsonOverwrite($"{{\"seed\":{seed * 53 + i},\"wanderRadius\":2.5,\"huntRadius\":3,\"simulationEnabled\":true}}", copy);
+            copy.enabled = true;
             go.SetActive(true);
+            spawnedTentacles.Add(copy);
+            tentacleSpawnedSlots.Add(i);
         }
+    }
+
+    private bool TryNearbyTentacleSpot(int index, out Vector3 spot)
+    {
+        // Two on the visible sides of the mother's back, then the children's side of the entrance.
+        float angle = index == 0 ? 40f : index == 1 ? -40f : 140f + (index - 2) * 40f;
+        for (int attempt = 0; attempt < 21; attempt++)
+        {
+            int turn = attempt % 7;
+            float offset = turn == 0 ? 0f : ((turn + 1) / 2) * 12f * (turn % 2 == 1 ? 1f : -1f);
+            Vector3 candidate = mouth + Quaternion.Euler(0f, angle + offset, 0f) * tentacleSpawnHeading * (tentacleSpawnRadius + 9f + attempt / 7 * 3f);
+            if (!InsideMap(candidate, 0.95f) || !TryTentacleGround(candidate, out RaycastHit ground)) continue;
+            bool safe = ground.normal.y >= 0.7f;
+            // Its small wander patch must already have ground too, with no abrupt drop into the shaft.
+            for (int side = 0; safe && side < 4; side++)
+            {
+                Vector3 around = candidate + Quaternion.Euler(0f, side * 90f, 0f) * Vector3.forward * 4f;
+                safe = TryTentacleGround(around, out RaycastHit under) && under.normal.y >= 0.6f
+                    && Mathf.Abs(under.point.y - ground.point.y) <= 2.5f;
+            }
+            if (!safe) continue;
+            candidate.y = ground.point.y + 1f;
+            foreach (Collider obstacle in Physics.OverlapSphere(candidate, 0.8f, ~0, QueryTriggerInteraction.Ignore))
+                if (!world.OwnsCollider(obstacle)) { safe = false; break; }
+            if (!safe) continue;
+            spot = candidate;
+            return true;
+        }
+        spot = default;
+        return false;
+    }
+
+    private bool TryTentacleGround(Vector3 at, out RaycastHit ground)
+    {
+        world.ColumnHeights(at, out float surface, out _, out _);
+        Vector3 from = new Vector3(at.x, surface + 40f, at.z);
+        float nearest = float.PositiveInfinity;
+        ground = default;
+        foreach (RaycastHit hit in Physics.RaycastAll(from, Vector3.down, 55f, 1 << world.TerrainLayer, QueryTriggerInteraction.Ignore))
+            if (world.OwnsCollider(hit.collider) && hit.normal.y > 0f && hit.distance < nearest)
+            { ground = hit; nearest = hit.distance; }
+        return nearest < float.PositiveInfinity;
     }
 
     private LandmarkPickup Pickup(string name, Vector3 position, LandmarkPickup.Kind kind)
@@ -868,4 +1226,85 @@ public sealed class BoneKiln : MonoBehaviour
     }
 
     public void SetTentacleTemplate(TentacleCreature template) => tentacleTemplate = template;
+}
+
+/// <summary>Swept movement for animated bone bodies; triggers, riders and the owner's own skeleton never block it.</summary>
+internal static class BoneFlightCollision
+{
+    private static readonly RaycastHit[] castHits = new RaycastHit[128];
+    private static readonly Collider[] overlaps = new Collider[128];
+    private static SphereCollider probe;
+
+    private static bool Solid(Collider collider, Transform owner) => collider != null && !collider.isTrigger
+        && (owner == null || !collider.transform.IsChildOf(owner))
+        && collider.GetComponentInParent<Creature>() == null
+        && collider.GetComponentInParent<BoneChild>() == null
+        && collider.GetComponentInParent<SmoothFirstPersonController>() == null;
+
+    public static Vector3 Move(Vector3 from, Vector3 to, float radius, Transform owner, bool recover = true)
+    {
+        radius = Mathf.Max(0.05f, radius);
+        Vector3 at = recover ? Recover(from, radius, owner) : from;
+        Vector3 remaining = to - from;
+        for (int pass = 0; pass < 3 && remaining.sqrMagnitude > 0.000001f; pass++)
+        {
+            float distance = remaining.magnitude;
+            int count = Physics.SphereCastNonAlloc(at, radius, remaining / distance, castHits, distance + 0.03f, ~0, QueryTriggerInteraction.Ignore);
+            RaycastHit[] results = count == castHits.Length
+                ? Physics.SphereCastAll(at, radius, remaining / distance, distance + 0.03f, ~0, QueryTriggerInteraction.Ignore) : castHits;
+            if (results != castHits) count = results.Length;
+            float nearest = distance + 0.03f;
+            RaycastHit obstacle = default;
+            for (int i = 0; i < count; i++)
+            {
+                if (!Solid(results[i].collider, owner) || results[i].distance >= nearest) continue;
+                if (Vector3.Dot(remaining, results[i].normal) >= 0f) continue;
+                nearest = results[i].distance; obstacle = results[i];
+            }
+            if (obstacle.collider == null) { at += remaining; break; }
+            Vector3 step = remaining.normalized * Mathf.Clamp(nearest - 0.03f, 0f, distance);
+            at += step;
+            remaining = Vector3.ProjectOnPlane(remaining - step, obstacle.normal);
+        }
+        return recover ? Recover(at, radius, owner) : at;
+    }
+
+    private static Vector3 Recover(Vector3 at, float radius, Transform owner)
+    {
+        for (int pass = 0; pass < 2; pass++)
+        {
+            int count = Physics.OverlapSphereNonAlloc(at, radius, overlaps, ~0, QueryTriggerInteraction.Ignore);
+            Collider[] results = count == overlaps.Length ? Physics.OverlapSphere(at, radius, ~0, QueryTriggerInteraction.Ignore) : overlaps;
+            if (results != overlaps) count = results.Length;
+            bool moved = false;
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = results[i];
+                if (!Solid(collider, owner)) continue;
+                if (probe == null)
+                {
+                    var go = new GameObject("Bone flight collision probe") { hideFlags = HideFlags.HideAndDontSave };
+                    go.transform.position = Vector3.down * 10000f;
+                    probe = go.AddComponent<SphereCollider>(); probe.isTrigger = true;
+                }
+                probe.radius = radius;
+                if (!Physics.ComputePenetration(probe, at, Quaternion.identity, collider, collider.transform.position,
+                    collider.transform.rotation, out Vector3 direction, out float depth)) continue;
+                at += direction * (depth + 0.03f); moved = true;
+            }
+            if (!moved) break;
+        }
+        return at;
+    }
+
+    public static bool ClearSegment(Vector3 a, Vector3 b, float radius, Transform owner)
+    {
+        int count = Physics.OverlapSphereNonAlloc(a, radius, overlaps, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++) if (Solid(overlaps[i], owner)) return false;
+        Vector3 delta = b - a;
+        if (delta.sqrMagnitude < 0.000001f) return true;
+        count = Physics.SphereCastNonAlloc(a, radius, delta.normalized, castHits, delta.magnitude, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++) if (Solid(castHits[i].collider, owner)) return false;
+        return true;
+    }
 }

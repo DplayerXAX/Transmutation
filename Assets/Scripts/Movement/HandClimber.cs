@@ -121,6 +121,8 @@ public sealed class HandClimber : MonoBehaviour
         public bool moving;
         public Vector3 from, to, toNormal;
         public float t;
+        public TentacleGripSurface surface;
+        public float surfaceParameter;
     }
 
     private struct Foot
@@ -168,7 +170,13 @@ public sealed class HandClimber : MonoBehaviour
     public bool IsClimbing => climbing;
     public bool Controls(SmoothFirstPersonController player) => controller == player;
     public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
+    /// <summary>A new mount-to-wall transfer can catch immediately without an old regrab cooldown.</summary>
+    public void PrepareForTraversalTransfer() { regrabTimer = 0f; lungeTimer = Mathf.Max(lungeTimer, 0.35f); }
     public bool IsMantling => mantling;
+    // A pull-up over a lip within arm's reach, allowed without goo (only full climbing needs goo).
+    private bool lipOnly;
+    [Tooltip("Without goo the hands can still pull the body over a lip this far above the body's centre (m).")]
+    [Min(0f)] [SerializeField] private float lipReach = 1.5f;
     /// <summary>0..1, how hard the arms are pulling the body right now (for the hands to tense up).</summary>
     public float PullStrain => climbing ? Mathf.Clamp01((mantling ? mantleVelocity : bodyVelocity).magnitude / 1.2f) : 0f;
     public bool CanStartClimb => GooAllowsClimbing && canStartClimb;
@@ -183,9 +191,30 @@ public sealed class HandClimber : MonoBehaviour
                 gooCoating = controller.GetComponent<PlayerGooCoating>();
                 if (gooCoating != null) gooCoating.RegisterClimber(this);
             }
-            return gooCoating != null && gooCoating.CanClimb;
+            return (gooCoating != null && gooCoating.CanClimb) || OnGooPaint;
         }
     }
+
+    /// <summary>
+    /// Hands on a goo splat (GooPaint) climb without goo of their own and use none. Not climbing yet: a splat
+    /// within reach of the hands counts, so the climb can start there.
+    /// </summary>
+    public bool OnGooPaint
+    {
+        get
+        {
+            if (body == null) return false;
+            if (climbing) return GooPaint.Covers(HandPosition(0)) || GooPaint.Covers(HandPosition(1));
+            return GooPaint.Near(body.position + Vector3.up * handHeight, 1.2f);
+        }
+    }
+
+    [Tooltip("Goo used per second while fast climbing (Shift), as a multiple of normal climbing.")]
+    [Min(1f)] [SerializeField] private float fastGooDrain = 2f;
+    /// <summary>How fast the hands use goo right now: more while fast climbing.</summary>
+    public float GooDrainRate => Mathf.Lerp(1f, fastGooDrain, fastBlend);
+    // Goo-coated hands stick: smooth surfaces (SlipperySurface) do not slide them down.
+    private bool GooCoated => gooCoating != null && gooCoating.CanClimb;
 
     public void StopForGooDepletion()
     {
@@ -206,6 +235,7 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>World grip point for a hand (0 = left, 1 = right). False when the hand is free.</summary>
     public bool GetHand(int index, out Vector3 hold, out Vector3 normal, out bool gripping)
     {
+        RefreshGrip(index);
         hold = default;
         normal = Vector3.up;
         gripping = false;
@@ -287,7 +317,12 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
-        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
+        if (!GooAllowsClimbing && !lipOnly)
+        {
+            StopForGooDepletion();
+            TryLipPull();
+            return;
+        }
         if (BoneRide.Mount != null) { canStartClimb = false; return; }
         if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
@@ -351,6 +386,8 @@ public sealed class HandClimber : MonoBehaviour
             return;
         }
 
+        RefreshGrip(0);
+        RefreshGrip(1);
         AdvanceHands(deltaTime);
         SlideOnSlippery(deltaTime);
         if (vertical > 0f)
@@ -385,7 +422,7 @@ public sealed class HandClimber : MonoBehaviour
     private void FixedUpdate()
     {
 
-        if (!GooAllowsClimbing) { StopForGooDepletion(); return; }
+        if (!GooAllowsClimbing && !lipOnly) { StopForGooDepletion(); return; }
         if (BoneRide.Mount != null || !climbing || mantling || body == null) return;
         // Eased pull: the body speeds up and settles instead of sliding at a constant speed.
         float scale = SpeedScale();
@@ -431,10 +468,10 @@ public sealed class HandClimber : MonoBehaviour
 
     // ---------------- Starting ----------------
 
-    private bool FindWall(out RaycastHit hit)
+    private bool FindWall(out RaycastHit hit, bool withoutGoo = false)
     {
         hit = default;
-        if (!GooAllowsClimbing) return false;
+        if (!GooAllowsClimbing && !withoutGoo) return false;
         Vector3 origin = controller.transform.position + Vector3.up * 0.3f;
         if (!Physics.SphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
             return false;
@@ -466,10 +503,12 @@ public sealed class HandClimber : MonoBehaviour
             Vector3 guess = controller.transform.position + WallUp() * handHeight + WallRight() * (handSpread * side);
             // On bumpy terrain one hand can miss; let it grab where the wall was found instead.
             Vector3 point = wall.point + WallRight() * (handSpread * side * 0.5f), normal = wall.normal;
+            Collider surface = wall.collider;
             if (ProbeWall(guess, out RaycastHit grip))
             {
                 point = grip.point;
                 normal = grip.normal;
+                surface = grip.collider;
             }
             // Getting onto the wall: both hands come up from the chest and take hold one after the other,
             // while the body lines up with the wall.
@@ -479,6 +518,7 @@ public sealed class HandClimber : MonoBehaviour
                 hold = point, normal = normal, moving = true, from = chest, to = point, toNormal = normal,
                 t = i == 0 ? 0f : -enterStagger,
             };
+            AttachGrip(i, surface, point);
         }
         leadHand = 1;
 
@@ -503,6 +543,23 @@ public sealed class HandClimber : MonoBehaviour
     }
 
     // ---------------- Reaching ----------------
+
+    private void AttachGrip(int index, Collider collider, Vector3 point)
+    {
+        hands[index].surface = collider != null ? collider.GetComponent<TentacleGripSurface>() : null;
+        if (hands[index].surface != null) hands[index].surfaceParameter = hands[index].surface.Capture(point);
+    }
+
+    private void RefreshGrip(int index)
+    {
+        Hand hand = hands[index];
+        if (hand.surface == null) return;
+        Vector3 normal = hand.moving ? hand.toNormal : hand.normal;
+        if (!hand.surface.Resolve(hand.surfaceParameter, normal, out Vector3 point))
+        { hands[index].surface = null; return; }
+        if (hand.moving) hands[index].to = point;
+        else hands[index].hold = point;
+    }
 
     private void AdvanceHands(float deltaTime)
     {
@@ -655,6 +712,7 @@ public sealed class HandClimber : MonoBehaviour
         hands[index].from = hands[index].hold;
         hands[index].to = best.point;
         hands[index].toNormal = best.normal;
+        AttachGrip(index, best.collider, best.point);
         stuckTimer = 0f;
         return true;
     }
@@ -755,7 +813,7 @@ public sealed class HandClimber : MonoBehaviour
         // Any hand on (or reaching for) the smooth surface drags the whole grip down with it.
         bool sliding = false;
         SlipperySurface surface = null;
-        if (!StickyHands)
+        if (!StickyHands && !GooCoated)
             for (int i = 0; i < 2 && !sliding; i++)
             {
                 sliding = hands[i].moving ? OnSlippery(hands[i].to, hands[i].toNormal, out _) : OnSlippery(hands[i].hold, hands[i].normal, out _);
@@ -986,6 +1044,43 @@ public sealed class HandClimber : MonoBehaviour
 
     // ---------------- Over the top ----------------
 
+    /// <summary>
+    /// No goo: walking (or jumping) forward into an edge whose top is within arm's reach plants both hands on it
+    /// and pulls the body over, like the end of a climb. Nothing higher can be climbed.
+    /// </summary>
+    private void TryLipPull()
+    {
+        if (climbing || mantling || controller == null || body == null || controller.BubbleMovementBlocked || BoneRide.Mount != null) return;
+        Keyboard keyboard = Keyboard.current;
+        float vertical = ScriptedInput?.y ?? (keyboard != null && keyboard[upKey].isPressed ? 1f : 0f);
+        regrabTimer = Mathf.Max(0f, regrabTimer - Time.deltaTime);
+        if (vertical <= 0f || regrabTimer > 0f || !FindWall(out RaycastHit wall, withoutGoo: true)) return;
+        wallNormal = wall.normal;
+        Vector3 anchor = body.position + Vector3.up * handHeight;
+        if (!FindLedgeTop(anchor, true, out Vector3 top)) return;
+        float feetY = body.position.y - halfHeight;
+        if (top.y > body.position.y + lipReach || top.y < feetY + 0.45f) return;
+
+        // Same start as a climb, then straight into the pull-up.
+        for (int i = 0; i < 2; i++)
+        {
+            float side = i == 0 ? -1f : 1f;
+            Vector3 chest = controller.transform.position + Vector3.up * 0.1f + WallRight() * (0.25f * side) + wall.normal * 0.15f;
+            hands[i] = new Hand { hold = chest, normal = wall.normal, from = chest, to = chest, toNormal = wall.normal };
+            Vector3 foot = body.position + Vector3.down * halfHeight * 0.85f;
+            footholds[i] = new Foot { hold = foot };
+            feet[i] = foot;
+        }
+        climbing = true;
+        lipOnly = true;
+        bodyVelocity = Vector3.zero;
+        body.linearVelocity = Vector3.zero;
+        body.isKinematic = true;
+        controller.SetRestricted(true);
+        controller.SetClimbing(true);
+        StartMantle(anchor, top, "Pulled up over a lip (no goo)");
+    }
+
     private void StartMantle(Vector3 anchor, Vector3 top, string note)
     {
         Vector3 inward = FlatInward();
@@ -1135,6 +1230,7 @@ public sealed class HandClimber : MonoBehaviour
     {
         climbing = false;
         mantling = false;
+        lipOnly = false;
         regrabTimer = regrabDelay;
         if (body != null)
         {

@@ -357,6 +357,7 @@ GameObject:
   - component: {fileID: 8888969591394796978}
   - component: {fileID: 5322836975175712463}
   - component: {fileID: 8471188044157651221}
+  - component: {fileID: 4423835645187831772}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -640,15 +641,14 @@ MonoBehaviour:
   pickupLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  carryInput: 0
-  toggleKey: 19
+  throwHoldThreshold: 0.2
+  fullThrowHoldTime: 1.2
   dropForwardSpeed: 1.5
-  firmGrip: 0
   maxCarrySize: 2.2
   clearBelowCrosshair: 8
   clearRightOfCrosshair: 6
   grabReachTime: 0.22
-  bringInSpeed: 4
+  bringInSpeed: 12
 --- !u!114 &5322836975175712463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -686,6 +686,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerGooCoating
   secondsPerCreature: 20
   capacityMultiplier: 1.5
+--- !u!114 &4423835645187831772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4143822023010584049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e28ecbf6082b3eb4cb03cd5dd2032840, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureThrower
+  throwSpeed: 13
+  minimumThrowSpeed: 4
+  throwGravity: 14
+  maxFlightTime: 4
+  debugShowThrowTrajectory: 0
 --- !u!1 &6924890591384260322
 GameObject:
   m_ObjectHideFlags: 0
