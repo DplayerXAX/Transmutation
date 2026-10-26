@@ -7,10 +7,10 @@ game's black / white / gray look with a saturated accent colour on hover.
 
 **Tools > Capstone > Main Menu > Create Main Menu Scene** (`Editor/MainMenuSetup.cs`) builds and saves
 `Assets/Scenes/Scene_MainMenu.unity` and puts it first in Build Settings, then `Scene_Daniel`,
-`Scene_Basin` and `Scene_Museum` (if it exists). Scenes already in Build Settings are kept after these.
+`Scene_Basin` and `Scene_Exhibition` (if it exists). Scenes already in Build Settings are kept after these.
 
 **Tools > Capstone > Main Menu > Add Menu And Game Scenes To Build Settings** only does the Build Settings part
-(run it again after adding a museum scene).
+(run it again after creating the exhibition scene).
 
 ## Buttons
 
@@ -18,10 +18,10 @@ game's black / white / gray look with a saturated accent colour on hover.
 | --- | --- | --- |
 | MAP | `Scene_Daniel` | Orange red |
 | TEST LEVEL | `Scene_Basin` | Cyan |
-| MUSEUM | `Scene_Museum` (placeholder) | Violet |
+| EXHIBITION | `Scene_Exhibition` | Violet |
 
 If a button's scene is not in Build Settings, clicking it shows its `unavailableMessage` instead
-(the museum says it is not open yet). To point a button somewhere else, change its `sceneName` in the
+(the exhibition asks you to run its setup first). To point a button somewhere else, change its `sceneName` in the
 `entries` list on `MainMenuController` (on Menu Canvas) and add that scene to Build Settings.
 
 ## MainMenuController

@@ -10,20 +10,20 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Builds Scene_MainMenu: a plain UI menu (title and three buttons: Map, Test Level, Museum) over a
+/// Builds Scene_MainMenu: a plain UI menu (title and three buttons: Map, Test Level, Exhibition) over a
 /// calm gray background, and puts the menu first in Build Settings, followed by the game scenes.
 /// </summary>
 public static class MainMenuSetup
 {
     private const string ScenePath = "Assets/Scenes/Scene_MainMenu.unity";
-    private const string MuseumScene = "Scene_Museum";
+    private const string ExhibitionScene = "Scene_Exhibition";
 
     // Scenes added to Build Settings right after the menu (if they exist).
     private static readonly string[] GameScenes =
     {
         "Assets/Scenes/Scene_Daniel.unity",
         "Assets/Scenes/Scene_Basin.unity",
-        "Assets/Scenes/" + MuseumScene + ".unity",
+        "Assets/Scenes/" + ExhibitionScene + ".unity",
     };
 
     private static readonly Color Background = new Color(0.86f, 0.86f, 0.85f);
@@ -97,7 +97,7 @@ public static class MainMenuSetup
         {
             MakeEntry(root, font, "MAP", "Scene_Daniel", "", new Color(1f, 0.32f, 0.12f), 60f),
             MakeEntry(root, font, "TEST LEVEL", "Scene_Basin", "", new Color(0.1f, 0.7f, 1f), -50f),
-            MakeEntry(root, font, "MUSEUM", MuseumScene, "The museum is not open yet.", new Color(0.75f, 0.2f, 1f), -160f),
+            MakeEntry(root, font, "EXHIBITION", ExhibitionScene, "Run Tools > Capstone > Exhibition first.", new Color(0.75f, 0.2f, 1f), -160f),
         };
 
         // Wrap keyboard / gamepad navigation from the last button back to the first.

@@ -11,7 +11,8 @@ One README per game system. Start here.
 | Meditation | [Meditation/README.md](Meditation/README.md) | M key meditation, reflection space, drawing on steles, creature journal and casts |
 | Landmarks | [Landmarks/README.md](Landmarks/README.md) | Hanging Spire, seeds, inscriptions, glyphs on steles |
 | Basin test level | [BasinLevel/README.md](BasinLevel/README.md) | Small basin, two towers, three creature routes, creature regrowth |
-| Main menu | [MainMenu/README.md](MainMenu/README.md) | `Scene_MainMenu`, UI buttons for Map, Test Level and Museum, Build Settings order |
+| Main menu | [MainMenu/README.md](MainMenu/README.md) | `Scene_MainMenu`, UI buttons for Map, Test Level and Exhibition, Build Settings order |
+| Exhibition | [Exhibition/README.md](Exhibition/README.md) | `Scene_Exhibition`, one stall and sign per creature and feature |
 | Audio | [Audio/README.md](Audio/README.md) | `AudioManager`, adaptive music layers, Wwise and Unity backends, footsteps |
 | Grass | [../Grass/README.md](../Grass/README.md) | GPU compute grass on Unity Terrain |
 
@@ -28,8 +29,9 @@ One README per game system. Start here.
 | Landmarks > Reset Landmark Progress (Seeds And Glyphs) | Clears collected seeds and glyphs |
 | Basin Level > Create Basin Test Scene / Set Up Open Scene As Basin Level | Scene_Basin: basin world, two towers, creatures (Scene_Daniel unchanged) |
 | Basin Level > Add Basin Creatures Round The Spire (Open Scene) | Goo pool + compost, bubble flowers, spider, birds round the spire's stage towers |
-| Main Menu > Create Main Menu Scene | Scene_MainMenu with Map / Test Level / Museum buttons, menu first in Build Settings |
-| Main Menu > Add Menu And Game Scenes To Build Settings | Menu, Scene_Daniel, Scene_Basin, Scene_Museum (if present) first in Build Settings |
+| Main Menu > Create Main Menu Scene | Scene_MainMenu with Map / Test Level / Exhibition buttons, menu first in Build Settings |
+| Main Menu > Add Menu And Game Scenes To Build Settings | Menu, Scene_Daniel, Scene_Basin, Scene_Exhibition (if present) first in Build Settings |
+| Exhibition > Create Exhibition Scene (Copy Of Scene_Daniel) | Scene_Exhibition: flat hall, a stall per creature / feature (Scene_Daniel unchanged) |
 | Audio > Set Up Adaptive Music In Open Scene | Event bank, AudioManager, landmark / cave channels, footsteps |
 | Audio > Add Music Zone At Scene View | Box zone with a `MusicChannel` |
 | Audio > Relink Clips By File Name | Fills Unity clips in the bank from `Assets/Audio` |
