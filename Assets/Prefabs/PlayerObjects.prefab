@@ -288,6 +288,8 @@ MonoBehaviour:
   canStartClimb: 0
   lastEvent: 
   drawDebug: 0
+  lipReach: 1.5
+  fastGooDrain: 2
 --- !u!114 &6302391524333744001
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,6 +319,9 @@ MonoBehaviour:
   upperArmLength: 0.36
   forearmLength: 0.34
   handFollow: 18
+  armSwingScale: 1.43
+  showTorso: 1
+  eyeHeight: 0.75
   hipHeight: -0.05
   hipWidth: 0.14
   thighLength: 0.5
@@ -404,7 +409,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SmoothFirstPersonController
   allowCrouch: 1
   allowDoubleJump: 0
-  allowUngroundedJump: 0
+  allowAirJump: 0
   allowSliding: 1
   enableCameraFovAndTilt: 1
   walkSpeed: 7
@@ -420,6 +425,7 @@ MonoBehaviour:
   jumpForce: 12
   jumpCooldown: 0.25
   airMultiplier: 0.4
+  fieldOfView: 72
   groundAcceleration: 60
   groundDeceleration: 80
   airAcceleration: 22
@@ -440,9 +446,9 @@ MonoBehaviour:
   whatIsGround:
     serializedVersion: 2
     m_Bits: 640
-  groundCheckDistance: 0.2
+  groundCheckDistance: 0.5
   groundCheckHalfExtents: {x: 0.35, y: 0.05, z: 0.35}
-  groundCheckOriginYOffset: 0
+  groundCheckOriginYOffset: 0.2
   maxSlopeAngle: 80
   orientation: {fileID: 4734288860246865075}
   cameraPosition: {fileID: 338630813493779751}
@@ -641,6 +647,7 @@ MonoBehaviour:
   pickupLayers:
     serializedVersion: 2
     m_Bits: 4294967295
+  chargedThrow: 1
   throwHoldThreshold: 0.2
   fullThrowHoldTime: 1.2
   dropForwardSpeed: 1.5
@@ -696,7 +703,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e28ecbf6082b3eb4cb03cd5dd2032840, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureThrower
   throwSpeed: 26
   minimumThrowSpeed: 4

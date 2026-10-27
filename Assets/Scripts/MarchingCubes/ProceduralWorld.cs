@@ -78,6 +78,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Tooltip("Chunks within this distance of the spawn are generated before the first frame.")]
     [Min(0f)] [SerializeField] private float blockingRadius = 40f;
     [Range(1, 32)] [SerializeField] private int meshesPerFrame = 6;
+    [Tooltip("Move the player onto the top surface at startup. Disable for an authored underground spawn.")]
+    [SerializeField] private bool placePlayerOnSurface = true;
     [Tooltip("Teleport the player back to spawn if they fall out of the world.")]
     [SerializeField] private bool respawnFallingPlayer = true;
 
