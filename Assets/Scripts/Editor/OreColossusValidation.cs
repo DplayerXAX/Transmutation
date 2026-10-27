@@ -284,6 +284,20 @@ public static class OreColossusValidation
             Call(larva, "TickCreature", 1f);
             Check(Mathf.Abs(larva.Reserve - 11.5f) < 1e-3f, "far from any colossus it does not refill");
 
+            // ---- Stillness aura ----
+            var still = Probe(scene, origin + new Vector3(120f + larva.AuraRadius * 0.5f, 1f, 0f));
+            var outside = Probe(scene, origin + new Vector3(120f + larva.AuraRadius * 2f, 1f, 0f));
+            Set(still, "ageRate", 1f); Set(outside, "ageRate", 1f);
+            Call(still, "SetRemainingAge", 30f); Call(outside, "SetRemainingAge", 30f);
+            Physics.SyncTransforms();
+            Call(still, "AdvanceAge", 1f); Call(outside, "AdvanceAge", 1f);
+            Check(larva.StillnessActive && still.Age == 30f && Mathf.Abs(outside.Age - 29f) < 1e-3f, "creatures inside a free larva's aura do not age");
+            Call(still, "SetRemainingAge", 40f);
+            Check(still.Age == 40f, "life can still be given inside the aura");
+            Call(witness.carrier, "BeginCarry", larva);
+            Check(larva.IsCarried && !larva.StillnessActive, "carried, the larva's aura is down");
+            witness.carrier.Release();
+
             // ---- Meditation journal ----
             CreatureCast cast = CreatureCast.Capture(colossus, 2.5f);
             int vertices = 0;

@@ -517,6 +517,8 @@ public enum FoodTag
     protected void AdvanceAge(float deltaTime)
     {
         if (!simulationEnabled || isDead || consumptionPending || deltaTime <= 0f) return;
+        // Time stands still inside a Geode Larva's aura.
+        if (StillnessField.Holds(this)) return;
         SetRemainingAge(age - Mathf.Max(0f, ageRate) * deltaTime);
     }
 
