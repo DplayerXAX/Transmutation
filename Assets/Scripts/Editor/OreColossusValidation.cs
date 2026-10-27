@@ -193,6 +193,16 @@ public static class OreColossusValidation
             float again = (float)Call(heart.Target, "Splash", heart.transform.position, 12f);
             Check(splash > 0.5f && again == 0f, "thrown bursts count and are throttled");
             Check(Mathf.Abs(heart.Integrity - (before - first - second - splash)) < 1e-3f, "erosion wears the heart's integrity");
+            Check(heart.Carved > 0f, "erosion carves the ore's density volume");
+            Vector3[] shapeBefore = heart.SurfaceMesh.vertices;
+            int lowest = 0;
+            for (int v = 1; v < shapeBefore.Length; v++) if (shapeBefore[v].y < shapeBefore[lowest].y) lowest = v;
+            Vector3 underside = heart.transform.TransformPoint(shapeBefore[lowest]);
+            Call(heart, "Carve", underside, 2f);
+            Call(heart, "Rebuild");
+            Vector3[] shapeAfter = heart.SurfaceMesh.vertices;
+            Check(shapeAfter.Length != shapeBefore.Length || !System.Linq.Enumerable.SequenceEqual(shapeAfter, shapeBefore),
+                "water carves the ore where it touches, and the surface remeshes");
             Advance(colossus, 1);
             Check(colossus.CurrentPhase == OreColossus.Phase.Staggering, "cracking past a quarter makes it stagger");
 
