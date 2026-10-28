@@ -4,28 +4,67 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>Integrates existing prefabs and the existing bee colony into the saved YoYo scene.</summary>
-public static class YoYoLightEcologySetup
+/// <summary>Builds one standalone scene for the complete luminous ecosystem.</summary>
+public static class LightEcologySceneSetup
 {
-    public const string ScenePath = "Assets/Scenes/Scene_Yoyo.unity";
+    public const string ScenePath = "Assets/Scenes/Scene_LightEcology.unity";
     public const string HabitatName = "Luminous Habitat";
 
     public static void IntegrateInBatch()
     {
         if (!Application.dataPath.Replace('\\', '/').Contains("/.utmp/GlowBeeChecks/UnityProject/Assets"))
             throw new InvalidOperationException("Batch authoring is restricted to the isolated project copy.");
-        EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-        Integrate();
+        EditorSceneManager.OpenScene("Assets/Scenes/Scene_Yoyo.unity", OpenSceneMode.Single);
+        CreateScene();
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
     }
 
-    [MenuItem("Tools/Creatures/Light Ecology/Integrate Into Open YoYo Scene")]
-    public static void Integrate()
+    [MenuItem("Tools/Creatures/Light Ecology/Create Standalone Scene")]
+    public static void CreateScene()
     {
-        Scene scene = SceneManager.GetActiveScene();
-        if (EditorApplication.isPlayingOrWillChangePlaymode || scene.path != ScenePath)
-            throw new InvalidOperationException("Open Scene_Yoyo in Edit Mode first.");
-        foreach (GameObject root in scene.GetRootGameObjects()) if (root.name == HabitatName) return;
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode first.");
+        if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
+        {
+            if (!SceneManager.GetSceneByPath(ScenePath).isLoaded) EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            SceneManager.SetActiveScene(SceneManager.GetSceneByPath(ScenePath));
+            return;
+        }
+        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(scene);
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.12f, 0.14f, 0.18f);
+        var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        floor.name = "Ground"; floor.layer = 7;
+        floor.transform.position = new Vector3(0f, -0.5f, 0f);
+        floor.transform.localScale = new Vector3(32f, 1f, 32f);
+        floor.GetComponent<Renderer>().sharedMaterial = LightEcologySetup.Material("HabitatStone", new Color(0.12f, 0.18f, 0.21f));
+        var sun = new GameObject("Daylight").AddComponent<Light>();
+        sun.type = LightType.Directional; sun.intensity = 0.5f;
+        sun.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var playerRoot = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
+        playerRoot.transform.position = new Vector3(0f, 1.5f, -6f);
+        new GameObject("Interaction Prompts").AddComponent<InteractionPromptHUD>();
+        var colonyRoot = new GameObject("Glow Bee Colony");
+        var newColony = colonyRoot.AddComponent<GlowBeeColony>();
+        var anchorRoot = new GameObject("Nest Anchor"); anchorRoot.transform.SetParent(colonyRoot.transform, false);
+        using (var settings = new SerializedObject(newColony))
+        {
+            settings.FindProperty("nestCount").intValue = 1;
+            settings.FindProperty("beesPerNest").intValue = 4;
+            settings.FindProperty("flowersPerNest").intValue = 5;
+            settings.FindProperty("spawnSpider").boolValue = false;
+            settings.FindProperty("sceneryLayers").intValue = LuminosityQuery.DefaultObstructionMask;
+            var anchors = settings.FindProperty("nestAnchors"); anchors.arraySize = 1;
+            anchors.GetArrayElementAtIndex(0).objectReferenceValue = anchorRoot.transform;
+            settings.ApplyModifiedPropertiesWithoutUndo();
+        }
+        Populate(scene);
+        EditorSceneManager.SaveScene(scene, ScenePath);
+    }
+
+    private static void Populate(Scene scene)
+    {
         FlashBloomSetup.CreatePrefab(); LightEcologySetup.CreateMoth(); LightEcologySetup.CreatePod();
         SmoothFirstPersonController player = null;
         GlowBeeColony colony = null;
@@ -34,7 +73,7 @@ public static class YoYoLightEcologySetup
             if (player == null) player = root.GetComponentInChildren<SmoothFirstPersonController>();
             if (colony == null) colony = root.GetComponentInChildren<GlowBeeColony>();
         }
-        if (player == null || colony == null) throw new InvalidOperationException("YoYo needs its existing player and bee colony.");
+        if (player == null || colony == null) throw new InvalidOperationException("The scene needs a player and bee colony.");
         if (player.GetComponent<PlayerCreatureStats>() == null) Undo.AddComponent<PlayerCreatureStats>(player.gameObject);
         if (player.GetComponent<PlayerLuminosityVisuals>() == null) Undo.AddComponent<PlayerLuminosityVisuals>(player.gameObject);
         Transform orientation = player.transform.Find("Orientation");

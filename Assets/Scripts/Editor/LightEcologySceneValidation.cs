@@ -8,18 +8,18 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-public static class YoYoLightEcologyValidation
+public static class LightEcologySceneValidation
 {
     public static IEnumerator Run()
     {
         Action<bool, string> check = FlashBloomValidation.Check;
-        EditorSceneManager.LoadSceneInPlayMode("Assets/YoYoLightEcologyValidation.unity", new LoadSceneParameters(LoadSceneMode.Single));
+        EditorSceneManager.LoadSceneInPlayMode("Assets/LightEcologySceneValidation.unity", new LoadSceneParameters(LoadSceneMode.Single));
         yield return null;
         var habitat = Object.FindFirstObjectByType<LightHabitat>();
-        check(habitat != null, "YoYo contains the authored luminous habitat.");
+        check(habitat != null, "The dedicated scene contains the authored luminous habitat.");
         check(habitat.GetComponentsInChildren<FlashBloom>().Length == 2 &&
             habitat.GetComponentsInChildren<LightMoth>().Length == 6 && habitat.GetComponentsInChildren<AfterglowPod>().Length == 2,
-            "All three species are authored together in the existing scene.");
+            "All three species are authored together in the dedicated scene.");
         var colony = Object.FindFirstObjectByType<GlowBeeColony>();
         float until = Time.time + 3f;
         while (colony.Nests.Count == 0 && Time.time < until) yield return null;
@@ -30,7 +30,7 @@ public static class YoYoLightEcologyValidation
         check(nest.HoneyCount > 0, "The real bee nest ferments nectar into honey.");
         var carrier = Object.FindFirstObjectByType<PlayerCreatureCarrier>();
         var honey = nest.GetComponentsInChildren<GlowHoney>().First(h => !h.IsDead);
-        check(carrier.TryCarryFromInteraction(honey) && honey.TryUse(GlowHoney.Use.Coat), "Bee-produced honey coats the actual YoYo player.");
+        check(carrier.TryCarryFromInteraction(honey) && honey.TryUse(GlowHoney.Use.Coat), "Bee-produced honey coats the actual scene player.");
         var stats = carrier.GetComponentInParent<PlayerCreatureStats>();
         var visuals = stats.GetComponent<PlayerLuminosityVisuals>();
         visuals.Refresh();

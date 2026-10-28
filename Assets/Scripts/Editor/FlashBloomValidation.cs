@@ -28,11 +28,11 @@ public static class FlashBloomValidation
         FlashBloomSetup.CreatePrefab();
         LightEcologySetup.CreateMoth();
         LightEcologySetup.CreatePod();
-        YoYoLightEcologySetup.IntegrateInBatch();
+        LightEcologySceneSetup.IntegrateInBatch();
         // Remove native audio only from the disposable runtime fixture, after the real scene is saved.
         foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
             if (behaviour != null && behaviour.GetType().Name.StartsWith("Ak", StringComparison.Ordinal)) Object.DestroyImmediate(behaviour);
-        EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/YoYoLightEcologyValidation.unity", true);
+        EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/LightEcologySceneValidation.unity", true);
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         SessionState.SetBool(Key, true);
         EditorApplication.isPlaying = true;
@@ -217,7 +217,7 @@ public static class FlashBloomValidation
         while (mothChecks.MoveNext()) yield return mothChecks.Current;
         var podChecks = AfterglowPodValidation.Run();
         while (podChecks.MoveNext()) yield return podChecks.Current;
-        var integrationChecks = YoYoLightEcologyValidation.Run();
+        var integrationChecks = LightEcologySceneValidation.Run();
         while (integrationChecks.MoveNext()) yield return integrationChecks.Current;
     }
 }
