@@ -44,7 +44,7 @@ public static class FlashBloomSetup
             using (var fields = new SerializedObject(bloom))
             {
                 fields.FindProperty("creatureName").stringValue = "Flash Bloom";
-                fields.FindProperty("minimumImpactSpeed").floatValue = 4f;
+                fields.FindProperty("minimumImpactSpeed").floatValue = 1f;
                 fields.FindProperty("luminosity").floatValue = 3f;
                 fields.ApplyModifiedPropertiesWithoutUndo();
             }

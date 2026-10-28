@@ -109,7 +109,7 @@ public static class LightEcologySceneSetup
             Place(FlashBloomSetup.PrefabPath, new Vector3(-1f + i * 2f, 0.4f, -2.8f));
             Place(LightEcologySetup.PodPath, new Vector3(-2f + i * 4f, 0.35f, 0f));
         }
-        for (int i = 0; i < 6; i++) Place(LightEcologySetup.MothPath, new Vector3((i % 3 - 1) * 1.1f, 1.5f + i * 0.08f, -1.1f + i / 3 * 0.8f));
+        for (int i = 0; i < 6; i++) Place(LightEcologySetup.MothPath, new Vector3((i % 3 - 1) * 1.1f, 0.85f + i * 0.04f, -1.1f + i / 3 * 0.8f));
         Transform anchor = colony.transform.Find("Nest Anchor");
         if (anchor == null) throw new InvalidOperationException("Existing colony is missing its nest anchor.");
         Undo.RecordObject(anchor, "Move existing hive into habitat");

@@ -25,6 +25,15 @@ public static class LightEcologySceneValidation
         while (colony.Nests.Count == 0 && Time.time < until) yield return null;
         check(colony.Nests.Count == 1, "The existing colony builds a nest inside the shelter.");
         var nest = colony.Nests[0];
+        check(nest.transform.position.y < habitat.transform.position.y + 1f,
+            "Authored hive projects onto the floor below the canopy, never its roof.");
+        check(colony.Flowers.All(f => f.transform.position.y < habitat.transform.position.y + 0.2f),
+            "Nectar flowers grow at ground level instead of on the canopy.");
+        var bees = Object.FindObjectsByType<GlowBee>(FindObjectsSortMode.None);
+        check(bees.All(b => b.transform.position.y < habitat.transform.position.y + 1.8f),
+            "All bees start within reach below the canopy.");
+        check(habitat.GetComponentsInChildren<LightMoth>().All(m => m.transform.position.y < habitat.transform.position.y + 1.3f),
+            "All authored moths start low enough for ground-level interaction.");
         check(nest.TryStoreNectar(nest.NectarPerHoney), "The existing nest accepts real gathered nectar.");
         typeof(GlowBeeNest).GetMethod("TickCreature", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(nest, new object[] { 15f });
         check(nest.HoneyCount > 0, "The real bee nest ferments nectar into honey.");
@@ -57,9 +66,9 @@ public static class LightEcologySceneValidation
         until = Time.time + 0.15f;
         while (Time.time < until) yield return null;
         moth.Sense();
-        check(moth.TargetRoot == stats.transform, "Under the real shelter, the honey-coated player attracts a nearby moth.");
+        check(moth.TargetRoot == stats.transform, $"Under the real shelter, the honey-coated player attracts a nearby moth. State={moth.State}, background={moth.BackgroundBrightness}, contrast={moth.TargetContrast}, target={moth.TargetRoot}, player distance={Vector3.Distance(moth.AimPosition, stats.EmissionPosition)}, flashing={habitat.GetComponentsInChildren<FlashBloom>().Count(b => b.IsFlashing)}");
         habitat.ToggleLight(); moth.Sense();
-        check(habitat.habitatLight.enabled && moth.TargetRoot == null, "The integrated lamp removes attraction by reducing contrast.");
+        check(habitat.habitatLight.enabled && moth.TargetRoot == null, $"The integrated lamp removes attraction by reducing contrast. Lamp={habitat.habitatLight.enabled}, background={moth.BackgroundBrightness}, contrast={moth.TargetContrast}, target={moth.TargetRoot}, moth={moth.AimPosition}, lamp={habitat.habitatLight.transform.position}");
         habitat.ToggleLight(); moth.Sense();
         check(moth.TargetRoot == stats.transform, "Turning the integrated lamp off restores attraction.");
         stats.GetComponent<HoneyLuminosityEffect>().AdvanceTime(61f); visuals.Refresh();

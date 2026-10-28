@@ -37,8 +37,7 @@ public static class AmbientLuminosity
         // Shelters must also reduce sky/ambient light, otherwise a roof only blocks the directional lamp.
         int openSky = 0;
         foreach (Vector3 direction in skyDirections)
-            if (!observer.gameObject.scene.GetPhysicsScene().Raycast(observer.AimPosition, direction, out _,
-                20f, LuminosityQuery.DefaultObstructionMask, QueryTriggerInteraction.Ignore)) openSky++;
+            if (!Blocked(observer, observer.AimPosition + direction * 20f)) openSky++;
         float background = ambient * LuminosityLighting.ReferenceLuminosity * Mathf.Lerp(0.02f, 1f, openSky / 5f);
         if (Time.time >= refreshAt)
         {
@@ -71,9 +70,30 @@ public static class AmbientLuminosity
                 endpoint = light.transform.position;
             }
             else continue;
-            if (!CreatureSpatialQuery.FirstSolid(observer.gameObject.scene, observer.AimPosition, endpoint,
-                observer, light.gameObject, ref hits, out _)) background += illumination;
+            if (!Blocked(observer, endpoint)) background += illumination;
         }
         return Mathf.Max(0f, background);
+    }
+
+    private static bool Blocked(Creature observer, Vector3 endpoint)
+    {
+        Vector3 delta = endpoint - observer.AimPosition;
+        float distance = delta.magnitude;
+        if (distance < 0.001f) return false;
+        int count;
+        var physics = observer.gameObject.scene.GetPhysicsScene();
+        while ((count = physics.Raycast(observer.AimPosition, delta / distance, hits, distance,
+            LuminosityQuery.DefaultObstructionMask, QueryTriggerInteraction.Ignore)) == hits.Length)
+            System.Array.Resize(ref hits, hits.Length * 2);
+        for (int i = 0; i < count; i++)
+        {
+            Collider collider = hits[i].collider;
+            // Background light is blocked by architecture, not by a tiny insect or the nearby player's capsule.
+            if (collider.GetComponentInParent<Creature>() != null ||
+                collider.GetComponentInParent<PlayerCreatureStats>() != null ||
+                collider.GetComponentInParent<SmoothFirstPersonController>() != null) continue;
+            return true;
+        }
+        return false;
     }
 }

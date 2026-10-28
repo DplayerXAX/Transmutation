@@ -7,8 +7,9 @@ public sealed class FlashBloom : Creature
 {
     [Header("Defensive flash")]
     [SerializeField, Min(0f)] private float restingLuminosity = 3f;
-    [SerializeField, Min(0f)] private float flashLuminosity = 1800f;
-    [SerializeField, Min(0.05f)] private float flashSeconds = 0.8f;
+    [SerializeField, Min(0f)] private float flashLuminosity = 6000f;
+    [SerializeField, Min(0.05f)] private float flashSeconds = 1.5f;
+    [SerializeField, Min(0f)] private float peakHoldSeconds = 0.2f;
     [SerializeField, Min(0f)] private float cooldownSeconds = 8f;
     [SerializeField, Min(0f)] private float blindRadius = 10f;
     [SerializeField, Min(0f)] private float blindSeconds = 3.5f;
@@ -20,6 +21,7 @@ public sealed class FlashBloom : Creature
     public bool IsFlashing => flashRemaining > 0f;
     public float CooldownRemaining => cooldownRemaining;
     public int LastBlindedCount { get; private set; }
+    public float FlashAge => IsFlashing ? Mathf.Max(0f, flashSeconds - flashRemaining) : float.PositiveInfinity;
 
     protected override void InitializeCreature()
     {
@@ -33,7 +35,8 @@ public sealed class FlashBloom : Creature
         Transform sac = transform.Find("Glow sac");
         if (sac != null && !sac.TryGetComponent<GlowBeeLight>(out _))
             sac.gameObject.AddComponent<GlowBeeLight>().Configure(sac.GetComponent<Renderer>(),
-                new Color(0.65f, 0.9f, 1f), 10f);
+                new Color(0.85f, 0.95f, 1f), 16f);
+        if (!TryGetComponent<FlashBloomVisuals>(out _)) gameObject.AddComponent<FlashBloomVisuals>();
         Damaged += OnDamaged;
     }
 
@@ -44,12 +47,22 @@ public sealed class FlashBloom : Creature
         if (CanReceiveImpact(impact)) TryFlash();
     }
 
-    public bool TryFlash()
+    public override void ReceiveThrownImpact(CreatureImpact impact)
     {
-        if (!SimulationEnabled || !IsAvailableForPerception || cooldownRemaining > 0f || IsFlashing) return false;
+        // A throw touching any solid body is intentional use, including glancing insect hits and repeat throws.
+        if (!IsCarried && !IsBubbleCaptured && impact.OtherCollider != null && !impact.OtherCollider.isTrigger)
+            BeginFlash(true);
+    }
+
+    public bool TryFlash() => BeginFlash(false);
+
+    private bool BeginFlash(bool thrown)
+    {
+        if (!SimulationEnabled || !IsAvailableForPerception || (!thrown && (cooldownRemaining > 0f || IsFlashing))) return false;
         flashRemaining = Mathf.Max(0.05f, flashSeconds);
         cooldownRemaining = flashRemaining + cooldownSeconds;
         SetLuminosity(flashLuminosity);
+        GetComponentInChildren<GlowBeeLight>()?.Refresh();
         LastBlindedCount = 0;
         // Take a fresh registry snapshot: a newly spawned creature must see the same flash as an older one.
         CreatureRegistry.SnapshotCombat(gameObject.scene, candidates, positions);
@@ -76,7 +89,8 @@ public sealed class FlashBloom : Creature
         float dt = Mathf.Max(0f, seconds);
         cooldownRemaining = Mathf.Max(0f, cooldownRemaining - dt);
         flashRemaining = Mathf.Max(0f, flashRemaining - dt);
-        float fraction = flashRemaining / Mathf.Max(0.05f, flashSeconds);
+        float fadeDuration = Mathf.Max(0.05f, flashSeconds - peakHoldSeconds);
+        float fraction = Mathf.Clamp01(flashRemaining / fadeDuration);
         SetLuminosity(Mathf.Lerp(restingLuminosity, flashLuminosity, fraction * fraction));
     }
 

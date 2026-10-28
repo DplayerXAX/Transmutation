@@ -71,6 +71,9 @@ public enum FoodTag
     /// <summary>Reacts to a meaningful solid hit, whether thrown or struck by another body.</summary>
     public virtual void ReceiveImpact(CreatureImpact impact) { }
 
+    /// <summary>A scripted throw hit a surface; movement ownership has already been restored.</summary>
+    public virtual void ReceiveThrownImpact(CreatureImpact impact) => CreatureImpactRelay.Dispatch(this, impact);
+
     [Header("Health and Polarity")]
     [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
     [SerializeField] private CreaturePolarity initialPolarity = CreaturePolarity.Random;

@@ -48,13 +48,17 @@ public sealed class LightMoth : Creature
         BackgroundBrightness = AmbientLuminosity.Sample(this);
         LuminosityQuery.Nearby(gameObject.scene, AimPosition, detectionRadius, 0f, transform,
             LuminosityQuery.DefaultObstructionMask, readings);
-        float total = 0f;
-        foreach (var reading in readings) total += reading.PerceivedBrightness;
+        float brightest = 0f, secondBrightest = 0f;
+        foreach (var reading in readings)
+        {
+            if (reading.PerceivedBrightness >= brightest) { secondBrightest = brightest; brightest = reading.PerceivedBrightness; }
+            else secondBrightest = Mathf.Max(secondBrightest, reading.PerceivedBrightness);
+        }
         float best = 0f;
         foreach (var reading in readings)
         {
             float contrast = reading.PerceivedBrightness / Mathf.Max(backgroundFloor,
-                BackgroundBrightness + total - reading.PerceivedBrightness);
+                BackgroundBrightness + (reading.PerceivedBrightness >= brightest ? secondBrightest : brightest));
             if (reading.PerceivedBrightness < minimumBrightness || contrast < requiredContrast || reading.PerceivedBrightness <= best) continue;
             target = reading.Source;
             best = reading.PerceivedBrightness;
@@ -78,7 +82,8 @@ public sealed class LightMoth : Creature
         {
             State = Activity.Wandering;
             wanderAt = Time.time + 2f;
-            destination = home + Random.insideUnitSphere * 2f;
+            Vector2 offset = Random.insideUnitCircle * 2f;
+            destination = home + new Vector3(offset.x, Random.Range(-0.2f, 0.2f), offset.y);
         }
         AnimateWing("Left wing", -1f); AnimateWing("Right wing", 1f);
     }

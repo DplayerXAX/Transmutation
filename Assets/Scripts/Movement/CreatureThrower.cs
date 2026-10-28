@@ -197,7 +197,8 @@ public sealed class CreatureThrower : MonoBehaviour
                 // Return movement ownership before user callbacks can consume, destroy, or capture either body.
                 flights.Remove(f);
                 Land(f, next, caught: false);
-                CreatureImpactRelay.Dispatch(thrown, outgoing);
+                try { thrown.ReceiveThrownImpact(outgoing); }
+                catch (System.Exception exception) { Debug.LogException(exception, thrown); }
                 CreatureImpactRelay.Dispatch(struck, incoming);
                 continue;
             }

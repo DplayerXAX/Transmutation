@@ -98,9 +98,9 @@ public static class FlashBloomValidation
         Check(lamp != null && Mathf.Abs(lamp.intensity - LuminosityLighting.PointIntensity(3f)) < 0.001f,
             "Idle light uses the shared luminosity conversion.");
         var contact = wall.GetComponent<Collider>();
-        bloom.ReceiveImpact(new CreatureImpact(contact, bloom.transform.position, Vector3.up, Vector3.down, Vector3.down));
+        bloom.ReceiveImpact(new CreatureImpact(contact, bloom.transform.position, Vector3.up, Vector3.down * 0.2f, Vector3.down * 0.2f));
         Check(!bloom.IsFlashing, "Gentle contacts do not flash.");
-        Check(bloom.TryFlash() && bloom.Luminosity == 1800f, "Danger creates a strong shared light source.");
+        Check(bloom.TryFlash() && bloom.Luminosity == 6000f, "Danger creates a stronger shared light source.");
         Check(FlashBlindness.IsBlinded(exposed), "Exposed nearby observer is blinded.");
         Check(!FlashBlindness.IsBlinded(hidden), "Wall blocks blindness.");
         Check(!FlashBlindness.IsBlinded(far), "Distant observer is unaffected.");
@@ -167,7 +167,7 @@ public static class FlashBloomValidation
         bird.GetComponent<FlashBlindness>().Advance(4f);
         Check(((Vector3)foodDirection.Invoke(bird, foodArgs)).sqrMagnitude > 0f, "Bird resumes food seeking after recovery.");
         Object.Destroy(birdObject);
-        bloom.AdvanceFlash(1f);
+        bloom.AdvanceFlash(2f);
         Check(!bloom.IsFlashing && Mathf.Approximately(bloom.Luminosity, 3f), "Flash fades to idle.");
         Check(!bloom.TryFlash(), "Cooldown continues after the visual flash.");
         bloom.AdvanceFlash(9f);
@@ -211,6 +211,45 @@ public static class FlashBloomValidation
         Check(bloom.IsFlashing && thrower.LastHit != null, "Actual charged player throw triggers a flash on landing.");
         Check(bloom.SimulationEnabled && !bloom.GetComponent<Rigidbody>().isKinematic,
             "Landing returns movement ownership before the flash reaction.");
+        // Reuse this same specimen while its defense is still cooling down.
+        foreach (float charge in new[] { 0f, 0.2f, 1f })
+        {
+            bloom.AdvanceFlash(2f);
+            Check(bloom.CooldownRemaining > 0f, "Repeat-throw fixture is inside the ordinary defense cooldown.");
+            camera.transform.rotation = Quaternion.Euler(55f, 0f, 0f);
+            Check(carrier.TryCarryFromInteraction(bloom), "A previously flashed specimen remains carryable.");
+            thrower.Throw(charge);
+            until = Time.time + 4f;
+            while (!bloom.IsFlashing && Time.time < until) yield return null;
+            Check(bloom.IsFlashing && bloom.Luminosity > 5000f, "Even a minimum-charge repeat throw flashes at full brightness.");
+        }
+        bloom.AdvanceFlash(2f);
+        // A tiny flying body stops the throw too: it must receive the same guaranteed reaction as terrain.
+        camera.transform.rotation = Quaternion.identity;
+        var insect = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(LightEcologySetup.MothPath),
+            camera.transform.position + Vector3.forward * 2.5f, Quaternion.identity).GetComponent<LightMoth>();
+        insect.SetSimulationEnabled(false); insect.GetComponent<Rigidbody>().isKinematic = true;
+        Check(carrier.TryCarryFromInteraction(bloom), "Can pick up again for an insect hit.");
+        // Put the projectile exactly on the horizontal test path before launching.
+        bloom.transform.position = camera.transform.position + Vector3.forward * 0.8f;
+        insect.transform.position = bloom.transform.position + Vector3.forward * 1.3f + Vector3.down * 0.5f;
+        Physics.SyncTransforms(); thrower.Throw(0f);
+        until = Time.time + 2f;
+        while (thrower.LastHit == null && Time.time < until) yield return null;
+        Check(thrower.LastHit != null && thrower.LastHit.Contains("LightMoth") && bloom.IsFlashing,
+            "An actual throw hitting a tiny insect flashes instead of merely dropping.");
+        var grazing = new CreatureImpact(insect.GetComponent<Collider>(), bloom.transform.position, Vector3.up,
+            Vector3.right * 4f, Vector3.right * 4f);
+        bloom.AdvanceFlash(2f); bloom.ReceiveThrownImpact(grazing);
+        Check(bloom.IsFlashing && bloom.Luminosity == 6000f, "Zero-normal-speed grazing throw contact still flashes.");
+        bloom.AdvanceFlash(0.15f);
+        Check(bloom.Luminosity == 6000f, "The peak is held long enough to be visibly registered.");
+        var testCamera = new GameObject("Flash glare verification camera").AddComponent<Camera>();
+        testCamera.transform.position = bloom.EmissionPosition + Vector3.right * 3f;
+        testCamera.transform.LookAt(bloom.EmissionPosition);
+        Check(bloom.GetComponent<FlashBloomVisuals>().GlareFor(testCamera) > 0.4f,
+            "Nearby visible flash produces a strong glare even without point-light support.");
+        Object.Destroy(testCamera.gameObject); Object.Destroy(insect.gameObject);
         Object.Destroy(player); Object.Destroy(floor); Object.Destroy(bloom.gameObject);
         yield return null;
         var mothChecks = LightMothValidation.Run();
@@ -219,5 +258,7 @@ public static class FlashBloomValidation
         while (podChecks.MoveNext()) yield return podChecks.Current;
         var integrationChecks = LightEcologySceneValidation.Run();
         while (integrationChecks.MoveNext()) yield return integrationChecks.Current;
+        var renderingChecks = FlashBloomRenderingValidation.Run();
+        while (renderingChecks.MoveNext()) yield return renderingChecks.Current;
     }
 }

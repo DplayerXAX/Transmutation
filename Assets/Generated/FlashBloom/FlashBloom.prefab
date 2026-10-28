@@ -104,7 +104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FlashBloom
   creatureName: Flash Bloom
-  minimumImpactSpeed: 4
+  minimumImpactSpeed: 1
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -126,8 +126,9 @@ MonoBehaviour:
   affectionGain: 0.35
   affectionFade: 0.05
   restingLuminosity: 3
-  flashLuminosity: 1800
-  flashSeconds: 0.8
+  flashLuminosity: 6000
+  flashSeconds: 1.5
+  peakHoldSeconds: 0.2
   cooldownSeconds: 8
   blindRadius: 10
   blindSeconds: 3.5

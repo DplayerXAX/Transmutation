@@ -102,7 +102,7 @@ public sealed class GlowBee : Creature
             State = Activity.CirclingPlayer;
             float angle = Time.time * 1.6f + Mathf.Abs(GetInstanceID() % 100) * 0.63f;
             destination = player.transform.position + new Vector3(Mathf.Cos(angle) * 1.8f,
-                1.25f + Mathf.Sin(angle * 1.7f) * 0.3f, Mathf.Sin(angle) * 1.8f);
+                0.55f + Mathf.Sin(angle * 1.7f) * 0.2f, Mathf.Sin(angle) * 1.8f);
             nextOrbit = orbitUntil + 8f;
             return;
         }

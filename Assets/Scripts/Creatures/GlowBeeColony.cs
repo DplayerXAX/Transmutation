@@ -65,7 +65,7 @@ public sealed class GlowBeeColony : MonoBehaviour
         {
             if (sites.Count >= nestCount) break;
             if (anchor == null || anchor.gameObject.scene != gameObject.scene ||
-                !TryGround(anchor.position, out Vector3 ground)) continue;
+                !TryGround(anchor.position, out Vector3 ground, 1.25f)) continue;
             if (gameObject.scene.GetPhysicsScene().OverlapSphere(ground + Vector3.up * 0.55f, 0.52f,
                 anchorClearance, sceneryLayers, QueryTriggerInteraction.Ignore) > 0)
             { Debug.LogWarning("Glow bees: nest anchor is obstructed: " + anchor.name, anchor); continue; }
@@ -131,11 +131,11 @@ public sealed class GlowBeeColony : MonoBehaviour
         }
     }
 
-    private bool TryGround(Vector3 near, out Vector3 point)
+    private bool TryGround(Vector3 near, out Vector3 point, float height = 30f)
     {
         point = default;
-        if (!gameObject.scene.GetPhysicsScene().Raycast(near + Vector3.up * 30f, Vector3.down,
-                out RaycastHit hit, 65f, groundLayers, QueryTriggerInteraction.Ignore) || hit.normal.y < 0.8f) return false;
+        if (!gameObject.scene.GetPhysicsScene().Raycast(near + Vector3.up * height, Vector3.down,
+                out RaycastHit hit, height + 35f, groundLayers, QueryTriggerInteraction.Ignore) || hit.normal.y < 0.8f) return false;
         point = hit.point;
         return true;
     }
@@ -186,7 +186,7 @@ public sealed class GlowBeeColony : MonoBehaviour
         {
             float angle = Range(0f, Mathf.PI * 2f);
             Vector3 near = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Range(3f, 7f);
-            if (!TryGround(near, out Vector3 point) || Physics.CheckSphere(point + Vector3.up * 0.5f,
+            if (!TryGround(near, out Vector3 point, nestAnchors.Length > 0 ? 1.25f : 30f) || Physics.CheckSphere(point + Vector3.up * 0.5f,
                     0.42f, sceneryLayers, QueryTriggerInteraction.Ignore)) continue;
             bool crowded = false;
             foreach (NectarFlower other in flowers)
