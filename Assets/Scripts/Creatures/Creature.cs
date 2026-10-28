@@ -37,7 +37,7 @@ public readonly struct CreatureInteraction
 /// or separate components rather than being added to this base class.
 /// </summary>
 [DisallowMultipleComponent]
-public abstract class Creature : MonoBehaviour
+public abstract class Creature : MonoBehaviour, ICreatureStats
 {
     /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
     public static event System.Action<Creature> Activated;
@@ -179,6 +179,22 @@ public enum FoodTag
     [Tooltip("Heat currently stored by this creature. Kept as a float so small changes over time are not lost.")]
     [Min(0f)]
     [SerializeField] private float heat;
+
+    [Tooltip("Current emitted brightness. Effects change this number directly.")]
+    [Min(0f)] [SerializeField] private float luminosity;
+    [Tooltip("Optional light-emission point. Otherwise uses the creature's physical aim position.")]
+    [SerializeField] private Transform emissionOrigin;
+
+    public Transform StatRoot => transform;
+    public Vector3 EmissionPosition => emissionOrigin != null ? emissionOrigin.position : AimPosition;
+    public bool IsAvailableForPerception => isActiveAndEnabled && !IsDead && !IsConsumptionPending;
+    public float Luminosity => luminosity;
+    public void SetLuminosity(float value)
+    {
+        if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
+            throw new System.ArgumentOutOfRangeException(nameof(value));
+        luminosity = value;
+    }
 
     /// <summary>Editor-facing name of this creature.</summary>
     public string CreatureName => creatureName;
@@ -453,6 +469,7 @@ public enum FoodTag
     protected virtual void OnDisable()
     {
         CreatureRegistry.Unregister(this);
+        LuminosityQuery.Unregister(this);
         if (IsCarried) Carrier.Release();
         if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
@@ -489,7 +506,11 @@ public enum FoodTag
 
     protected virtual void OnEnable()
     {
-        if (Application.isPlaying) CreatureRegistry.Register(this);
+        if (Application.isPlaying)
+        {
+            CreatureRegistry.Register(this);
+            LuminosityQuery.Register(this);
+        }
         Activated?.Invoke(this);
     }
 

@@ -11,6 +11,7 @@ public sealed class GlowHoney : Creature
     {
         SetCreatureName("Glow Honey");
         SetFoodAndDiet(FoodTag.Plant, FoodTag.None);
+        if (Luminosity <= 0f) SetLuminosity(50f);
         GetComponent<SphereCollider>().radius = 0.18f;
         GetComponent<Rigidbody>().mass = 0.2f;
     }

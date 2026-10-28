@@ -22,10 +22,13 @@ public sealed class GlowBee : Creature
     public float CarriedNectar => nectar;
     public GlowBeeNest Nest => nest;
 
+    private void Reset() => SetLuminosity(50f);
+
     protected override void InitializeCreature()
     {
         SetCreatureName("Glow Bee");
         SetFoodAndDiet(FoodTag.Meat, FoodTag.None);
+        if (Luminosity <= 0f) SetLuminosity(50f);
         body = GetComponent<Rigidbody>();
         body.useGravity = false;
         body.isKinematic = false;
