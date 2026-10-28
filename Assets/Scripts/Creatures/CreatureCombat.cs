@@ -45,7 +45,8 @@ public sealed class CreatureCombat : MonoBehaviour
 
     public void Tick(float deltaTime)
     {
-        if (owner == null || !owner.SimulationEnabled || owner.IsConsumptionPending || attack == null) { Cancel(); return; }
+        if (owner == null || !owner.SimulationEnabled || owner.IsConsumptionPending || attack == null ||
+            FlashBlindness.IsBlinded(owner)) { Cancel(); return; }
         if (Target != null && !Eligible(Target, retentionRange)) Cancel();
         if (Target == null && Time.time >= nextSearch)
         {
