@@ -199,11 +199,15 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
 
         block ??= new MaterialPropertyBlock();
+        var luminosity = controller != null ? controller.GetComponent<PlayerCreatureStats>() : null;
+        Color emission = LuminosityLighting.Emission(PlayerLuminosityVisuals.Tint,
+            luminosity != null && luminosity.IsAvailableForPerception && controller.enabled ? luminosity.Luminosity : 0f);
         foreach (Renderer part in renderers)
         {
             part.GetPropertyBlock(block);
             block.SetVector("_Center", view.position);
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
+            block.SetColor("_EmissionColor", emission);
             part.SetPropertyBlock(block);
         }
         UpdateGooCoating();

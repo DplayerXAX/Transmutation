@@ -25,8 +25,14 @@ public static class FlashBloomValidation
     {
         if (!Application.dataPath.Replace('\\', '/').Contains("/.utmp/GlowBeeChecks/UnityProject/Assets"))
             throw new InvalidOperationException("Run batch validation in the disposable project copy.");
-        FlashBloomSetup.CreateDemo(true);
-        LightEcologySetup.CreateDemo(true);
+        FlashBloomSetup.CreatePrefab();
+        LightEcologySetup.CreateMoth();
+        LightEcologySetup.CreatePod();
+        YoYoLightEcologySetup.IntegrateInBatch();
+        // Remove native audio only from the disposable runtime fixture, after the real scene is saved.
+        foreach (MonoBehaviour behaviour in Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+            if (behaviour != null && behaviour.GetType().Name.StartsWith("Ak", StringComparison.Ordinal)) Object.DestroyImmediate(behaviour);
+        EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/YoYoLightEcologyValidation.unity", true);
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         SessionState.SetBool(Key, true);
         EditorApplication.isPlaying = true;
@@ -205,9 +211,13 @@ public static class FlashBloomValidation
         Check(bloom.IsFlashing && thrower.LastHit != null, "Actual charged player throw triggers a flash on landing.");
         Check(bloom.SimulationEnabled && !bloom.GetComponent<Rigidbody>().isKinematic,
             "Landing returns movement ownership before the flash reaction.");
+        Object.Destroy(player); Object.Destroy(floor); Object.Destroy(bloom.gameObject);
+        yield return null;
         var mothChecks = LightMothValidation.Run();
         while (mothChecks.MoveNext()) yield return mothChecks.Current;
         var podChecks = AfterglowPodValidation.Run();
         while (podChecks.MoveNext()) yield return podChecks.Current;
+        var integrationChecks = YoYoLightEcologyValidation.Run();
+        while (integrationChecks.MoveNext()) yield return integrationChecks.Current;
     }
 }

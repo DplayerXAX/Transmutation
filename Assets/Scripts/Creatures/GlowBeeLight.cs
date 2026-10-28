@@ -5,28 +5,37 @@ public sealed class GlowBeeLight : MonoBehaviour
 {
     private Renderer glow;
     private Light lamp;
-    private Creature creature;
+    private ICreatureStats source;
     private MaterialPropertyBlock properties;
     private Color tint;
     public void Configure(Renderer renderer, Color color, float range)
     {
         glow = renderer;
         tint = color;
-        creature = GetComponentInParent<Creature>();
+        source = GetComponentInParent<Creature>();
+        if (source == null) source = GetComponentInParent<PlayerCreatureStats>();
         properties = new MaterialPropertyBlock();
-        lamp = gameObject.AddComponent<Light>();
+        lamp = GetComponent<Light>();
+        if (lamp == null) lamp = gameObject.AddComponent<Light>();
         lamp.type = LightType.Point;
         lamp.color = color;
         lamp.range = range;
         lamp.shadows = LightShadows.None;
+        Refresh();
     }
-    private void Update()
+    private void Update() => Refresh();
+    public void Refresh()
     {
-        if (lamp == null || glow == null) return;
-        float emitted = creature != null && creature.IsAvailableForPerception ? creature.Luminosity : 0f;
-        glow.GetPropertyBlock(properties);
-        properties.SetColor("_EmissionColor", LuminosityLighting.Emission(tint, emitted));
-        glow.SetPropertyBlock(properties);
+        if (lamp == null) return;
+        bool available = source is Object owner && owner != null && source.IsAvailableForPerception;
+        var controller = GetComponentInParent<SmoothFirstPersonController>();
+        float emitted = available && (controller == null || controller.enabled) ? source.Luminosity : 0f;
+        if (glow != null)
+        {
+            glow.GetPropertyBlock(properties);
+            properties.SetColor("_EmissionColor", LuminosityLighting.Emission(tint, emitted));
+            glow.SetPropertyBlock(properties);
+        }
         lamp.intensity = LuminosityLighting.PointIntensity(emitted);
         lamp.enabled = lamp.intensity > 0.02f;
     }

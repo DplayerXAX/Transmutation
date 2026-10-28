@@ -9,6 +9,9 @@ public static class AmbientLuminosity
     private static float refreshAt = float.NegativeInfinity;
     private static readonly Vector3[] directions = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
     private static readonly Color[] samples = new Color[6];
+    private static readonly Vector3[] skyDirections = { Vector3.up, (Vector3.up + Vector3.right).normalized,
+        (Vector3.up + Vector3.left).normalized, (Vector3.up + Vector3.forward).normalized,
+        (Vector3.up + Vector3.back).normalized };
     private static RaycastHit[] hits = new RaycastHit[16];
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -31,7 +34,12 @@ public static class AmbientLuminosity
             foreach (Color sample in samples) ambient += Brightness(sample) / samples.Length;
             ambient *= RenderSettings.ambientIntensity;
         }
-        float background = ambient * LuminosityLighting.ReferenceLuminosity;
+        // Shelters must also reduce sky/ambient light, otherwise a roof only blocks the directional lamp.
+        int openSky = 0;
+        foreach (Vector3 direction in skyDirections)
+            if (!observer.gameObject.scene.GetPhysicsScene().Raycast(observer.AimPosition, direction, out _,
+                20f, LuminosityQuery.DefaultObstructionMask, QueryTriggerInteraction.Ignore)) openSky++;
+        float background = ambient * LuminosityLighting.ReferenceLuminosity * Mathf.Lerp(0.02f, 1f, openSky / 5f);
         if (Time.time >= refreshAt)
         {
             lights = Object.FindObjectsByType<Light>(FindObjectsSortMode.None);

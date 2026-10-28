@@ -10,7 +10,6 @@ public static class LightEcologySetup
     public const string Folder = "Assets/Generated/LightEcology";
     public const string MothPath = Folder + "/LightMoth.prefab";
     public const string PodPath = Folder + "/AfterglowPod.prefab";
-    public const string DemoPath = "Assets/Scenes/Scene_LightEcologyTest.unity";
 
     internal static Material Material(string name, Color color, bool glow = false)
     {
@@ -62,48 +61,6 @@ public static class LightEcologySetup
             AssetDatabase.SaveAssets();
         }
         finally { Object.DestroyImmediate(root); }
-    }
-
-    [MenuItem("Tools/Creatures/Light Ecology/Create Playground")]
-    public static void CreatePlayground() => CreateDemo(false);
-
-    public static void CreateDemo(bool rebuild)
-    {
-        CreateMoth();
-        CreatePod();
-        if (!rebuild && AssetDatabase.LoadAssetAtPath<SceneAsset>(DemoPath) != null)
-        { Selection.activeObject = AssetDatabase.LoadAssetAtPath<SceneAsset>(DemoPath); return; }
-        var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-        UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
-        RenderSettings.ambientMode = AmbientMode.Flat;
-        RenderSettings.ambientLight = new Color(0.003f, 0.004f, 0.008f);
-        var ground = GameObject.CreatePrimitive(PrimitiveType.Cube); ground.layer = 7; ground.name = "Ground";
-        ground.transform.position = new Vector3(0f, -0.5f, 0f); ground.transform.localScale = new Vector3(36f, 1f, 36f);
-        ground.GetComponent<Renderer>().sharedMaterial = Material("EcologyFloor", new Color(0.12f, 0.15f, 0.2f));
-        var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab"), scene);
-        player.transform.position = new Vector3(0f, 1.5f, -4f);
-        var lamp = new GameObject("Room light — L to toggle").AddComponent<Light>();
-        lamp.type = LightType.Point; lamp.range = 25f; lamp.intensity = 20f;
-        lamp.transform.position = new Vector3(0f, 4f, 2f); lamp.enabled = false;
-        var demo = new GameObject("Playground controls").AddComponent<LightEcologyDemo>(); demo.roomLight = lamp;
-        for (int i = 0; i < 6; i++)
-        {
-            var moth = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(MothPath), scene);
-            moth.transform.position = new Vector3((i % 3 - 1) * 2f, 1.7f + i * 0.1f, 1f + i / 3);
-        }
-        var bloomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(FlashBloomSetup.PrefabPath);
-        if (bloomPrefab != null)
-        {
-            var bloom = (GameObject)PrefabUtility.InstantiatePrefab(bloomPrefab, scene);
-            bloom.transform.position = new Vector3(2f, 0.4f, -2f);
-        }
-        for (int i = 0; i < 2; i++)
-        {
-            var pod = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(PodPath), scene);
-            pod.transform.position = new Vector3(-2.5f + i * 5f, 0.35f, 0f);
-        }
-        EditorSceneManager.SaveScene(scene, DemoPath);
-        EditorSceneManager.CloseScene(scene, true);
     }
 
     [MenuItem("Tools/Creatures/Light Ecology/Create Afterglow Pod Prefab")]

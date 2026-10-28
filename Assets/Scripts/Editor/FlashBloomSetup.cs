@@ -10,7 +10,6 @@ public static class FlashBloomSetup
 {
     public const string Folder = "Assets/Generated/FlashBloom";
     public const string PrefabPath = Folder + "/FlashBloom.prefab";
-    public const string DemoPath = "Assets/Scenes/Scene_FlashBloomTest.unity";
 
     private static Material Material(string name, Color color, bool glow = false)
     {
@@ -89,44 +88,4 @@ public static class FlashBloomSetup
         EditorSceneManager.MarkSceneDirty(player.gameObject.scene);
     }
 
-    // Called only by isolated batch validation. Open the finished scene directly to try it.
-    public static void CreateDemo(bool rebuild = false)
-    {
-        CreatePrefab();
-        if (!rebuild && AssetDatabase.LoadAssetAtPath<SceneAsset>(DemoPath) != null) return;
-        Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-        RenderSettings.ambientLight = new Color(0.045f, 0.055f, 0.08f);
-        var sun = new GameObject("Soft moonlight").AddComponent<Light>();
-        sun.type = LightType.Directional; sun.intensity = 0.25f;
-        sun.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
-        var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        floor.name = "Ground"; floor.layer = 7;
-        floor.transform.position = new Vector3(0f, -0.5f, 4f);
-        floor.transform.localScale = new Vector3(30f, 1f, 30f);
-        floor.GetComponent<Renderer>().sharedMaterial = Material("TestGround", new Color(0.16f, 0.19f, 0.24f));
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
-        if (playerPrefab == null) throw new InvalidOperationException("Missing PlayerObjects prefab.");
-        var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
-        player.transform.position = new Vector3(0f, 1.5f, -4f);
-        for (int i = 0; i < 2; i++)
-        {
-            var bloom = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath), scene);
-            bloom.transform.position = new Vector3(i * 1.5f, 0.4f, -1.5f);
-        }
-        var targetPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Asura/MeleeAsura.prefab");
-        if (targetPrefab != null)
-            for (int i = 0; i < 2; i++)
-            {
-                var target = (GameObject)PrefabUtility.InstantiatePrefab(targetPrefab, scene);
-                target.transform.position = new Vector3(i == 0 ? -3f : 3f, 1f, 5f);
-                var fields = new SerializedObject(target.GetComponent<Creature>());
-                fields.FindProperty("initialPolarity").enumValueIndex = (int)(i == 0 ? CreaturePolarity.Light : CreaturePolarity.Dark);
-                fields.ApplyModifiedPropertiesWithoutUndo();
-            }
-        var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        wall.name = "Flash occlusion test wall"; wall.layer = 7;
-        wall.transform.position = new Vector3(3f, 1.5f, 2.5f);
-        wall.transform.localScale = new Vector3(3f, 3f, 0.4f);
-        EditorSceneManager.SaveScene(scene, DemoPath);
-    }
 }

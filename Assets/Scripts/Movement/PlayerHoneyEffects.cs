@@ -1,9 +1,8 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-/// <summary>Session-local honey effects. Owns only its lights, volume and scent visuals.</summary>
+/// <summary>Session-local honey effects. Owns honey duration and personal night vision; luminosity visuals are shared.</summary>
 [DisallowMultipleComponent]
 public sealed class PlayerHoneyEffects : MonoBehaviour
 {
@@ -18,12 +17,9 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     private PlayerCreatureStats stats;
     private GlowBeeColony colony;
     private GlowBeeNest nearbyNest;
-    private Light sightLight, bodyLight;
+    private Light sightLight;
     private Volume sightVolume;
     private VolumeProfile profile;
-    private Transform scentRoot;
-    private readonly List<Transform> motes = new List<Transform>();
-    private Material scentMaterial;
     private GUIStyle panelStyle;
     public bool HasHoneySight => isActiveAndEnabled && sightRemaining > 0f;
     public bool IsScented => isActiveAndEnabled && coating != null && coating.IsActive;
@@ -45,6 +41,7 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         effects.carrier = playerCarrier;
         effects.stats = owner.GetComponent<PlayerCreatureStats>();
         if (effects.stats == null) effects.stats = owner.AddComponent<PlayerCreatureStats>();
+        if (owner.GetComponent<PlayerLuminosityVisuals>() == null) owner.AddComponent<PlayerLuminosityVisuals>();
         return effects;
     }
 
@@ -167,65 +164,12 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         adjustment.postExposure.Override(1.25f);
         adjustment.colorFilter.Override(new Color(0.78f, 1f, 0.83f));
 
-        var coat = new GameObject("Honey glow and sweet scent");
-        coat.transform.SetParent(transform, false);
-        coat.transform.localPosition = Vector3.up * 0.5f;
-        scentRoot = coat.transform;
-        bodyLight = coat.AddComponent<Light>();
-        bodyLight.type = LightType.Point;
-        bodyLight.color = new Color(0.75f, 1f, 0.22f);
-        bodyLight.range = 5f;
-        bodyLight.shadows = LightShadows.None;
-        scentMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        scentMaterial.SetColor("_BaseColor", new Color(0.75f, 1.8f, 0.2f));
-        for (int i = 0; i < 12; i++)
-        {
-            var mote = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            mote.name = "Sweet scent mote";
-            mote.transform.SetParent(scentRoot, false);
-            mote.transform.localScale = Vector3.one * 0.035f;
-            var collider = mote.GetComponent<Collider>();
-            collider.enabled = false;
-            Destroy(collider);
-            mote.GetComponent<Renderer>().sharedMaterial = scentMaterial;
-            motes.Add(mote.transform);
-        }
-        // Small visible beads follow the hands, so the coating is visible in first person too.
-        if (carrier != null)
-        {
-            foreach (Transform hand in new[] { carrier.HandAnchor, carrier.LeftHandAnchor })
-            {
-                if (hand == null) continue;
-                var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                bead.name = "Honey on hand";
-                bead.transform.SetParent(scentRoot, false);
-                bead.transform.localScale = Vector3.one * 0.07f;
-                var collider = bead.GetComponent<Collider>();
-                collider.enabled = false;
-                Destroy(collider);
-                bead.GetComponent<Renderer>().sharedMaterial = scentMaterial;
-                var follow = bead.AddComponent<HoneyHandGlow>();
-                follow.Target = hand;
-            }
-        }
     }
 
     private void RefreshVisuals()
     {
-        bool world = carrier == null || carrier.PlayerController == null || carrier.PlayerController.enabled;
         HideSight();
-        bool coated = IsScented && world && stats != null && stats.isActiveAndEnabled;
-        if (scentRoot == null) return;
-        scentRoot.gameObject.SetActive(coated);
-        float brightness = stats != null ? stats.Luminosity : 0f;
-        bodyLight.intensity = LuminosityLighting.PointIntensity(brightness);
-        scentMaterial.SetColor("_BaseColor", new Color(0.75f, 1.8f, 0.2f) * (brightness / LuminosityLighting.ReferenceLuminosity));
-        for (int i = 0; i < motes.Count; i++)
-        {
-            float phase = Time.time * 0.55f + i * 0.53f;
-            motes[i].localPosition = new Vector3(Mathf.Cos(phase) * 0.48f,
-                Mathf.Repeat(Time.time * 0.32f + i * 0.13f, 1.5f) - 0.75f, Mathf.Sin(phase) * 0.48f);
-        }
+        GetComponent<PlayerLuminosityVisuals>()?.Refresh();
     }
 
     private void OnGUI()
@@ -257,6 +201,5 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
             foreach (var component in profile.components) Destroy(component);
             Destroy(profile);
         }
-        if (scentMaterial != null) Destroy(scentMaterial);
     }
 }

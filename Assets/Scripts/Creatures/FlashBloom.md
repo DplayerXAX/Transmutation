@@ -4,7 +4,7 @@
 
 ## 试玩
 
-打开 `Assets/Scenes/Scene_FlashBloomTest.unity` 进入 Play Mode。面前有两个闪光囊，前方有两个不同极性的 Asura 和一面遮挡墙。右键拾取，长按右键蓄力，松开投掷；将生物投向前方地面，观察强光及 Asura 的短暂失去目标。墙体会遮挡效果，投掷落点会改变哪些对象暴露在闪光下。
+打开 `Assets/Scenes/Scene_Yoyo.unity` 进入 Play Mode。玩家起点前方偏右的 `Luminous Habitat` 遮光棚内放有两个闪光囊，以及趋光飞蛾、余辉荚和现有蜂巢。右键拾取，长按右键蓄力，松开投掷；将生物投向地面，观察强光、视觉失能及余辉荚蓄光。墙体会遮挡效果，投掷落点会改变哪些对象暴露在闪光下。
 
 在其他已有玩家的场景中，可用 `Tools > Creatures > Flash Bloom > Place Near Player` 放置一个实例；也可直接拖入 `Assets/Generated/FlashBloom/FlashBloom.prefab`。
 
@@ -29,4 +29,4 @@
 
 ## 验证
 
-`FlashBloomValidation.RunBatch` 仅允许在 `.utmp/GlowBeeChecks/UnityProject` 隔离副本中执行，避免更改已打开的工作场景。它生成独立试玩场景，并在 Play Mode 检查遮挡、视觉恢复、实际 AI、物理落地及完整玩家搬运投掷流程。结果写入隔离目录的 `flash-bloom-results.txt`。
+`FlashBloomValidation.RunBatch` 仅允许在 `.utmp/GlowBeeChecks/UnityProject` 隔离副本中执行，避免更改已打开的工作场景。它检查遮挡、视觉恢复、实际 AI、物理落地、玩家搬运投掷流程和 Yoyo 场景整合。结果写入隔离目录的 `flash-bloom-results.txt`。

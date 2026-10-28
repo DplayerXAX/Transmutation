@@ -4,16 +4,16 @@
 
 ## 试玩
 
-打开 `Assets/Scenes/Scene_LightEcologyTest.unity`，进入 Play Mode。
+打开 `Assets/Scenes/Scene_Yoyo.unity`，进入 Play Mode。在玩家起点前方偏右的 `Luminous Habitat` 遮光棚内体验全部生物；原有蜂巢也已移入棚内。
 
-1. 面前的黄色物体是蜂蜜。右键拾取，按 F 涂身，让玩家发光。
+1. 蜂巢会将萤光蜂采集的花蜜发酵成蜂蜜。收取并拿着蜂蜜，按 F 涂身，让玩家发光。
 2. 暗处，附近紫色翅膀的小飞蛾会飞向玩家并盘旋。
 3. 按 L 开灯，同样的玩家荧光不足以形成明显对比，飞蛾会失去兴趣；再按 L 关灯，恢复吸引。
 4. 拿起蓝白色闪光囊，长按右键蓄力，松开投向绿壳余辉荚附近。
 5. 撞击会爆闪并暂时使附近生物失去视觉。余辉荚吸收强光，延迟 1.2 秒后发出持续 18 秒的柔光。
 6. 飞蛾视力恢复后，会被暗处的余辉荚吸引。余辉荚可再次拾取、搬运或投掷，作为移动照明和诱饵。
 
-单独测试闪光与战斗 AI，可以打开 `Assets/Scenes/Scene_FlashBloomTest.unity`。
+两个旧的独立测试场景已删除。场景内有 2 个闪光囊、6 只趋光飞蛾、2 个余辉荚，以及现有蜂群和蜂巢。
 
 ## 资产
 
@@ -23,7 +23,9 @@
 | 趋光飞蛾 | `Assets/Generated/LightEcology/LightMoth.prefab` | `LightMoth.cs` |
 | 余辉荚 | `Assets/Generated/LightEcology/AfterglowPod.prefab` | `AfterglowPod.cs` |
 
-可将这些 Prefab 直接拖进已有场景。现有 Yoyo 场景、玩家 Prefab 和构建列表不需要更改。
+这些 Prefab 已放入 Yoyo 场景，也可以直接拖进其他场景。编辑器菜单 `Tools > Creatures > Light Ecology > Integrate Into Open YoYo Scene` 可在尚未整合的 Yoyo 场景中添加该区域，已有区域时不会重复创建。
+
+蜂蜜涂身使用原有 `HoneyLuminosityEffect` 增加公共亮度，并通过 `PlayerLuminosityVisuals` 接入萤光蜂同一个 `GlowBeeLight` 驱动。第一人称肢体材质也读取相同亮度产生自发光；旧的漂浮气味小球与手部光珠已移除。涂身默认仍为亮度 50、持续 60 秒，饮用的个人夜视独立保留。
 
 ## 行为与调参
 
@@ -37,6 +39,6 @@
 
 ## 验证
 
-`FlashBloomValidation.RunBatch` 是隔离项目批处理入口，依次运行闪光、飞蛾、余辉荚检查。仅允许在 `.utmp/GlowBeeChecks/UnityProject` 中运行，结果位于 `.utmp/GlowBeeChecks/flash-bloom-results.txt`。
+`FlashBloomValidation.RunBatch` 是隔离项目批处理入口，依次运行闪光、飞蛾、余辉荚和 Yoyo 场景整合检查。仅允许在 `.utmp/GlowBeeChecks/UnityProject` 中运行，结果位于 `.utmp/GlowBeeChecks/flash-bloom-results.txt`。运行时检查场景仅存在于隔离副本，不会重新生成项目中已删除的测试场景。
 
-54 项 Play Mode 检查覆盖：实际 Rigidbody 落地、玩家搬运和蓄力投掷、强光及灯光数值、墙体遮挡、冷却与生命周期、Asura 攻击中断和恢复、鸟类视觉觅食恢复、明暗对比、真实飞近玩家、蜂蜜过期、余辉储光与三个生物的完整互动链。
+68 项 Play Mode 检查覆盖：实际 Rigidbody 落地、玩家搬运和蓄力投掷、墙体遮挡、冷却与生命周期、Asura 和鸟类视觉恢复、明暗趋光、蜂蜜过期、余辉储光及三个生物的完整互动链；另外验证 Yoyo 中实际蜂巢产蜜、玩家涂身、公共灯光驱动、真实肢体自发光，以及棚内灯光对趋光的影响。

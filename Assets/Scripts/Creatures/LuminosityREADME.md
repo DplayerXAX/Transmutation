@@ -22,7 +22,7 @@ Membership is scene-local. Spawn/enable/disable changes invalidate a shared snap
 
 Honey coating attaches `HoneyLuminosityEffect`, which adds 50 directly to the player's number for 60 seconds, subtracts its 50 on expiry, and destroys itself. A player at 0 goes to 50 then back to 0; one at 10 goes to 60 then back to 10. Refreshing honey refreshes that component without stacking it. Disabling or destroying the component removes its addition once. Meditation pauses its timer and temporarily removes the addition. Hold honey and press F to coat; left click drinks it. Drinking gives 45 seconds of personal night vision without changing luminosity. Its light and exposure volume are active only inside the owning camera's render callbacks.
 
-Glow Bees and physical honey start at **50 luminosity**. Their visual driver only reads the number; it does not add pulses or rewrite it. `LuminosityLighting` maps 50 luminosity to point-light intensity 1.2 and emission strength 3. Honey coating uses the same conversion. Bees keep their existing scent/social/foraging behaviours; luminosity does not add attraction by itself.
+Glow Bees and physical honey start at **50 luminosity**. Their visual driver only reads the number; it does not add pulses or rewrite it. `LuminosityLighting` maps 50 luminosity to point-light intensity 1.2 and emission strength 3. `PlayerLuminosityVisuals` uses the same `GlowBeeLight` driver for the player; the first-person body receives matching emission through material property blocks. Honey no longer creates floating scent motes or hand beads. Bees keep their existing scent/social/foraging behaviours; Light Moths add contrast-dependent attraction through the shared query.
 
 ## YoYo placement
 
