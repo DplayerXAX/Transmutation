@@ -49,7 +49,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
         bool ridingReined = BoneRide.Mount != null &&
-                            (BoneRide.MountRoot == null || BoneRide.Reins(BoneRide.MountRoot) >= 2 || !HeldHasOwnUse());
+                            (BoneRide.MountRoot == null || BoneRide.Reins(BoneRide.MountRoot) >= 1 || !HeldHasOwnUse());
         if (BoneAwakeningCutscene.Playing ||
             ridingReined ||
             !Application.isFocused)

@@ -27,6 +27,10 @@ public sealed class TentacleTether : MonoBehaviour
              "hold W on arrival to grab the wall, and the arm lets go once the hands hold); press both buttons together " +
              "to let every arm go; a quick right click puts the creature down. This key still works too: tap = let go, hold = reel.")]
     [SerializeField] private Key reelKey = Key.R;
+    [Tooltip("Off: the tentacle uses only the two mouse buttons. On: the key above also lets go (tap) and reels (hold).")]
+    [SerializeField] private bool useReelKey = false;
+    [Tooltip("Off: no written message when a shot cannot stick (the crosshair turns red instead).")]
+    [SerializeField] private bool showProblemText = false;
     [Min(1f)] [SerializeField] private float reelSpeed = 9f;
     [Min(1f)] [SerializeField] private float reelAcceleration = 30f;
     [Tooltip("How hard a stuck arm pulls the player back once they walk further than it was shot (acceleration per metre).")]
@@ -263,7 +267,8 @@ public sealed class TentacleTether : MonoBehaviour
         }
         aiming = pressed;
         // Tap R: let go. Hold R: reel in on the newest stuck arm.
-        bool reelHeld = ScriptedReel ?? (keyboard != null && keyboard[reelKey].isPressed);
+        // Mouse only now (hold right to reel, both buttons to let go); the old key only when switched back on.
+        bool reelHeld = ScriptedReel ?? (useReelKey && keyboard != null && keyboard[reelKey].isPressed);
         if (reelHeld) reelHeldTime += Time.deltaTime;
         else if (reelHeldTime > 0f)
         {
@@ -806,8 +811,20 @@ public sealed class TentacleTether : MonoBehaviour
             reeledArm = -1;
             return; // A balloon moves towards the player; it never reels the player into the air.
         }
-        if (playerBody == null || playerBody.isKinematic) return;
+        if (playerBody == null) return;
         if (!creature.ArmPin(arm, out Vector3 pin)) return;
+        // Trapped in a bubble: the arm drags the whole bubble towards where it stuck (onto a bird, a wall...).
+        BubbleCapture capture = playerBody.GetComponentInParent<BubbleCapture>() ?? playerBody.GetComponentInChildren<BubbleCapture>();
+        if (capture != null && capture.IsCaptured && capture.OwningBubble != null)
+        {
+            Vector3 toPin = pin - capture.OwningBubble.transform.position;
+            float gap = toPin.magnitude;
+            if (gap > 1.2f) capture.OwningBubble.Tug(toPin / gap * Mathf.Min(reelSpeed, gap * 3f));
+            reeledArm = -1;
+            ReelSteps++;
+            return;
+        }
+        if (playerBody.isKinematic) return;
         if (reeledArm != arm)
         {
             // Hauled to just in front of where it stuck, the hands about level with it: close enough to grab.
@@ -1054,7 +1071,7 @@ public sealed class TentacleTether : MonoBehaviour
     private void OnGUI()
     {
         string message = Problem;
-        if (message == null || carrier == null || !carrier.CarriesTentacle) return;
+        if (!showProblemText || message == null || carrier == null || !carrier.CarriesTentacle) return;
         if (problemStyle == null)
         {
             problemStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 17 };

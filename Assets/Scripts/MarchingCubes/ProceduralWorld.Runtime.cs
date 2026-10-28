@@ -76,7 +76,7 @@ public sealed partial class ProceduralWorld
     public bool UpdatesPending => batch != null || pending.Count > 0 || incoming.Count > 0;
     public int SinkholeCount => sinkholes == null ? 0 : sinkholes.Length;
     /// <summary>Size of the world on x and z (metres), centred on this transform.</summary>
-    public Vector2 WorldSize => worldSize;
+    public Vector2 WorldSize => field != null ? field.worldSize : worldSize;
     public int ModifiedSampleCount => modifications.Count;
     public int PendingSampleCount => pending.Count + incoming.Count;
     public int ActiveWorkers => workers.Count;
@@ -115,9 +115,11 @@ public sealed partial class ProceduralWorld
     {
         Vector3 local = worldPoint - transform.position;
         float h = SurfaceHeight(local.x, local.z);
+        float c = CeilingHeight(h), g = InnerGroundHeight(local.x, local.z, h);
+        if (sculptColumns.Count > 0) SculptedColumn(local, ref h, ref c, ref g);
         surface = transform.position.y + h;
-        ceiling = transform.position.y + CeilingHeight(h);
-        innerGround = transform.position.y + InnerGroundHeight(local.x, local.z, h);
+        ceiling = transform.position.y + c;
+        innerGround = transform.position.y + g;
     }
     private void Start()
     {
@@ -173,6 +175,7 @@ public sealed partial class ProceduralWorld
             float h = field.SurfaceHeight(p.x, p.z);
             float d = field.Density(p, h, field.CeilingHeight(h), field.InnerGroundHeight(p.x, p.z, h));
             if (includeErosion && modifications.TryGetValue(key, out float delta)) d += delta;
+            if (sculpt.TryGetValue(key, out float carved)) d += carved;
             value += d * (x == 0 ? 1f - f.x : f.x) * (y == 0 ? 1f - f.y : f.y) * (z == 0 ? 1f - f.z : f.z);
         }
         return value;
@@ -363,10 +366,17 @@ public sealed partial class ProceduralWorld
     private Dictionary<Vector3Int, float> CopyModifications(Vector3Int coord)
     {
         var copy = new Dictionary<Vector3Int, float>();
+        bool sculpted = sculptChunks.Contains(coord);
+        if (modifications.Count == 0 && !sculpted) return copy;
         Vector3Int lo = coord * GridChunkCells - Vector3Int.one, hi = (coord + Vector3Int.one) * GridChunkCells + Vector3Int.one;
         // Copy a bounded region, rather than scanning every historical terrain edit.
         for (int y = lo.y; y <= hi.y; y++) for (int z = lo.z; z <= hi.z; z++) for (int x = lo.x; x <= hi.x; x++)
-        { var key = new Vector3Int(x, y, z); if (modifications.TryGetValue(key, out float value)) copy[key] = value; }
+        {
+            var key = new Vector3Int(x, y, z);
+            modifications.TryGetValue(key, out float value);
+            if (sculpted && sculpt.TryGetValue(key, out float carved)) value += carved;
+            if (value != 0f) copy[key] = value;
+        }
         return copy;
     }
     private Mesh MakeMesh(ChunkResult result)
@@ -408,6 +418,7 @@ public sealed partial class ProceduralWorld
         state.mesh = result.mesh;
         if (!state.complete) { state.complete = true; chunksBuilt++; }
         if (old != null && old != result.mesh) DestroySafe(old);
+        if (muteChunkEvents) { if (created) createdWhileMuted.Add(result.coord); return; }
         if (created) ChunkCreated?.Invoke(state.gameObject, result.mesh);
         else if (update && state.gameObject != null) ChunkUpdated?.Invoke(state.gameObject, result.mesh, changedBounds);
     }
@@ -436,8 +447,9 @@ public sealed partial class ProceduralWorld
     public void Generate(bool blockUntilDone)
     {
         Clear();
-        PrepareLayout();
-        field = new DensityField(this);
+        if (!UseSavedLayout()) { PrepareLayout(); field = new DensityField(this); }
+        PrepareGrid(SculptHeadroom);
+        LoadSculpt();
         string currentFingerprint = JsonUtility.ToJson(field);
         if (fingerprint != null && fingerprint != currentFingerprint) { modifications.Clear(); TotalDensityRemoved = 0f; }
         fingerprint = currentFingerprint;
@@ -457,11 +469,23 @@ public sealed partial class ProceduralWorld
         // Blocking startup also uses frozen data; it is the only unbudgeted loading phase.
         var snapshots = new Dictionary<Vector3Int, Dictionary<Vector3Int, float>>();
         foreach (Vector3Int coord in near) snapshots[coord] = CopyModifications(coord);
-        Parallel.ForEach(near, new ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, workerCount) },
+        // The edit mode preview may use every core; in Play Mode the worker budget applies.
+        int parallel = Application.isPlaying ? workerCount : SystemInfo.processorCount;
+        Parallel.ForEach(near, new ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, parallel) },
             coord => finished.Enqueue(BuildChunk(field, gridMin, coord, epoch, 0, snapshots[coord], cancellation.Token)));
+        var built = new List<ChunkResult>();
+        var meshes = new List<Mesh>();
         while (finished.TryDequeue(out ChunkResult result))
         {
-            if (result.vertices.Length > 0) { result.mesh = MakeMesh(result); Physics.BakeMesh(result.mesh.GetEntityId(), false, Cooking); }
+            if (result.vertices.Length > 0) { result.mesh = MakeMesh(result); meshes.Add(result.mesh); }
+            built.Add(result);
+        }
+        // Collision baking is thread safe; meshes are made on the main thread above.
+        var ids = meshes.ConvertAll(mesh => mesh.GetEntityId());
+        Parallel.For(0, ids.Count, new ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, parallel) },
+            i => Physics.BakeMesh(ids[i], false, Cooking));
+        foreach (ChunkResult result in built)
+        {
             result.baked = true;
             Apply(result, false, default);
         }
@@ -495,7 +519,7 @@ public sealed partial class ProceduralWorld
         for (int i = transform.childCount - 1; i >= 0; i--)
             if (transform.GetChild(i).name.StartsWith("World Chunk")) DestroySafe(transform.GetChild(i).gameObject);
         chunks.Clear(); initialJobs.Clear(); editJobs.Clear(); initialReady.Clear(); bakeQueue.Clear(); editBakeQueue.Clear(); scheduledEdits.Clear();
-        incoming.Clear(); pending.Clear(); batch = null;
+        incoming.Clear(); pending.Clear(); batch = null; baseCaches.Clear(); createdWhileMuted.Clear();
         while (finished.TryDequeue(out _)) { }
         field = null; chunksBuilt = 0; chunksTotal = 0; erosionTimer = 0f; generating = false; LastUpdateError = null;
     }

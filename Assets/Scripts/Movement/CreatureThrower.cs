@@ -13,7 +13,7 @@ using UnityEngine.Rendering;
 public sealed class CreatureThrower : MonoBehaviour
 {
     [Tooltip("Maximum launch speed (m/s); reached at full charge.")]
-    [Min(1f)] [SerializeField] private float throwSpeed = 13f;
+    [Min(1f)] [SerializeField] private float throwSpeed = 26f;
     [Tooltip("Launch speed (m/s) just after the hold becomes a throw.")]
     [Min(0f)] [SerializeField] private float minimumThrowSpeed = 4f;
     [Tooltip("Gravity on a thrown creature (m/s²), gentler than the world's so throws carry.")]
@@ -42,6 +42,7 @@ public sealed class CreatureThrower : MonoBehaviour
     private LineRenderer arc;
     private Transform marker;
     private readonly List<Flight> flights = new List<Flight>();
+    private readonly List<Flight> flightStep = new List<Flight>();
     private readonly List<Vector3> points = new List<Vector3>();
     private const int Solid = ~(1 << 2);
 
@@ -137,16 +138,23 @@ public sealed class CreatureThrower : MonoBehaviour
         }
     }
 
+    internal static bool IsFlying(Creature creature) => Instance != null && creature != null &&
+        Instance.flights.Exists(flight => flight.creature == creature);
+
     private void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
-        for (int i = flights.Count - 1; i >= 0; i--)
+        // Reactions and catches may reclaim any flight, including another item in this step.
+        flightStep.Clear();
+        flightStep.AddRange(flights);
+        for (int i = flightStep.Count - 1; i >= 0; i--)
         {
-            Flight f = flights[i];
-            if (f.creature == null) { flights.RemoveAt(i); continue; }
-            if (f.creature.IsConsumptionPending) { flights.RemoveAt(i); continue; }
+            Flight f = flightStep[i];
+            if (!flights.Contains(f)) continue;
+            if (f.creature == null) { flights.Remove(f); continue; }
+            if (f.creature.IsConsumptionPending) { flights.Remove(f); continue; }
             // Snatched out of the air by a bone child passing close: the child has it now.
-            if (BoneChild.IsCradled(f.creature)) { f.creature.SetSimulationEnabled(true); flights.RemoveAt(i); continue; }
+            if (BoneChild.IsCradled(f.creature)) { f.creature.SetSimulationEnabled(true); flights.Remove(f); continue; }
             f.time += dt;
             Vector3 next = f.position + f.velocity * dt + Vector3.down * (0.5f * throwGravity * dt * dt);
             f.velocity += Vector3.down * throwGravity * dt;
@@ -159,7 +167,7 @@ public sealed class CreatureThrower : MonoBehaviour
             {
                 LastHit = "Bone child caught the throw";
                 f.creature.SetSimulationEnabled(true);
-                flights.RemoveAt(i);
+                flights.Remove(f);
                 continue;
             }
             if (hitSolid)
@@ -167,27 +175,37 @@ public sealed class CreatureThrower : MonoBehaviour
                 next = hit.point + hit.normal * 0.3f;
                 landed = true;
                 LastHit = hit.collider.name + (hit.collider.transform.parent != null ? " in " + hit.collider.transform.parent.name : "");
-                // Goo thrown at a fuzzy coats it; at a wall or the ground it leaves a climbable splat.
-                if (f.creature is GooCreature goo && goo.SplatOn(hit)) { flights.RemoveAt(i); continue; }
                 // A fire bubble thrown at a bone child is caught in its ribs.
                 BoneChild child = hit.collider.GetComponentInParent<BoneChild>();
-                if (child != null && child.Catch(f.creature)) { Land(f, next, caught: true); flights.RemoveAt(i); continue; }
+                if (child != null && child.Catch(f.creature)) { flights.Remove(f); Land(f, next, caught: true); continue; }
                 if (child == null && f.creature is FireBubble fire)
                 {
                     BoneFireContact contact = hit.collider.GetComponent<BoneFireContact>();
                     if (contact != null && contact.Owner != null && contact.Owner.Catch(fire, hit.collider, hit.point, hit.normal))
                     {
                         // Catch set the attachment point already. Do not overwrite it with a free-flight landing.
-                        flights.RemoveAt(i);
+                        flights.Remove(f);
                         continue;
                     }
                 }
+                Creature thrown = f.creature;
+                Creature struck = CreatureSpatialQuery.Owner(hit.collider);
+                CreatureSpatialQuery.TryGetSolid(thrown, out Collider thrownCollider);
+                Vector3 struckVelocity = hit.rigidbody != null ? hit.rigidbody.GetPointVelocity(hit.point) : Vector3.zero;
+                var outgoing = new CreatureImpact(hit.collider, hit.point, hit.normal, f.velocity - struckVelocity, f.velocity);
+                var incoming = new CreatureImpact(thrownCollider, hit.point, -hit.normal, struckVelocity - f.velocity, struckVelocity);
+                // Return movement ownership before user callbacks can consume, destroy, or capture either body.
+                flights.Remove(f);
+                Land(f, next, caught: false);
+                CreatureImpactRelay.Dispatch(thrown, outgoing);
+                CreatureImpactRelay.Dispatch(struck, incoming);
+                continue;
             }
             f.position = next;
             f.creature.transform.position = next;
             var body = f.creature.GetComponent<Rigidbody>();
             if (body != null) body.position = next;
-            if (landed) { Land(f, next, caught: false); flights.RemoveAt(i); }
+            if (landed) { flights.Remove(f); Land(f, next, caught: false); }
         }
     }
 

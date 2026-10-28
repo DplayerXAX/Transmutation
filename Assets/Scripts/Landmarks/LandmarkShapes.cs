@@ -306,6 +306,14 @@ public sealed class SpireShape
 /// </summary>
 public static class LandmarkShapes
 {
+    /// <summary>Destroy at runtime, DestroyImmediate in edit mode (the Scene view preview builds landmarks too).</summary>
+    public static void Discard(Object target)
+    {
+        if (target == null) return;
+        if (Application.isPlaying) Object.Destroy(target);
+        else Object.DestroyImmediate(target);
+    }
+
     private sealed class Builder
     {
         public readonly List<Vector3> vertices = new List<Vector3>();

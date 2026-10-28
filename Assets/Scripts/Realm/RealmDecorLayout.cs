@@ -48,13 +48,15 @@ public static class RealmDecorLayout
         }
     }
 
-    public static Snapshot Capture(ProceduralWorld world)
+    public static Snapshot Capture(ProceduralWorld world) =>
+        Capture(world, Object.FindFirstObjectByType<HangingSpire>(), Object.FindFirstObjectByType<BoneKiln>());
+
+    /// <summary>Same, for given landmarks (the editor decor bake passes the Scene view previews).</summary>
+    public static Snapshot Capture(ProceduralWorld world, HangingSpire spire, BoneKiln kiln)
     {
         if (world == null) return default;
-        var spire = Object.FindFirstObjectByType<HangingSpire>();
         if (spire == null || !spire.Built) return default;
-        Vector3 centre = RealmSites.AreaCentre(world);
-        var kiln = Object.FindFirstObjectByType<BoneKiln>();
+        Vector3 centre = world.SinkholeCentre(spire.SinkholeIndex, world.transform.position.y, out _);
         Vector3 bone = kiln != null && kiln.Root != null ? kiln.Root.position : centre + Vector3.forward * 75f;
         Vector3 axis = Vector3.ProjectOnPlane(bone - centre, Vector3.up).normalized;
         if (axis.sqrMagnitude < 0.1f) axis = Vector3.forward;

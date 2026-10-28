@@ -16,7 +16,7 @@ For the exact hierarchy and reference wiring, see [QUICK_SETUP.md](QUICK_SETUP.m
 | `CameraWallGuard` | Keeps the camera out of walls and ceilings. |
 | `PlayerCreatureCarrier` | Picks up and carries a `Creature`. |
 | `PlayerCreatureInteractor` | Left-click interaction with a `Creature`. |
-| `UI/InteractionPromptHUD` | Control hints under the crosshair. |
+| `UI/InteractionPromptHUD` | Mouse icon under the crosshair (left/right button lit when usable); text hints optional. |
 
 ## How they connect
 
@@ -96,11 +96,35 @@ of any hit, then eases back out (`releaseSpeed`). Also sets a short near clip (0
 Creatures, carried things and loose bodies are ignored. Added by
 **Tools > Capstone > Apply World Look And Camera Guard To Open Scene**.
 
+## Creature controls: left and right mouse only
+
+Every creature action is on the two mouse buttons. There are no written hints: a small mouse icon under the
+crosshair lights its left or right button when that button does something right now (and brightens while held).
+`InteractionPromptHUD` still works out the old hints and reads which buttons they mention; tick **Show Text**
+on it to see the words again (for debugging).
+
+| Situation | Left button | Right button |
+|---|---|---|
+| Looking at a creature | use it / hold to pet (drag a tentacle creature) | pick it up |
+| Holding a creature | its own use (bubble flower shoots, squirrel...) | tap: put down, hold and release: throw (`chargedThrow`) |
+| Tentacle creature on the back | hold: aim, release: shoot an arm | tap: put down (it hangs or waits on its stuck arms), hold: reel in on the newest arm |
+| Tentacle, both buttons together | | every stuck arm lets go |
+| Next to a bone child / the mother | climb on | |
+| Pulling onto a bone creature | | cancel |
+| Riding | aim / release to transfer (with a tentacle) | get off |
+| By a rest spot, hands empty | | sit down / stand up (C also works) |
+
+Movement keys (WASD, Space, Shift, Ctrl) are unchanged, including steering a ridden bone creature and the
+tentacle climb assist (Space / Ctrl). The tentacle's old R key is off (`TentacleTether.useReelKey`), C and R no
+longer cancel boarding. Not creature controls, so unchanged: M meditate, E in the reflection space, F6-F8 rest
+spot recording. A tentacle shot that cannot stick flashes the crosshair red (its text is off: `showProblemText`).
+
 ## Carry and interaction
 
 **PlayerCreatureCarrier**
 
-- Click **RMB** to pick up. Tap **RMB** while carrying to put down; hold and release to throw.
+- Click **RMB** to pick up. Tap **RMB** while carrying to put down; hold and release to throw (`chargedThrow`,
+  on by default; a tentacle creature is never thrown, right click only puts it down).
 - `throwHoldThreshold` (0.2 s) distinguishes a tap from a throw. `fullThrowHoldTime` (1.2 s total)
   reaches maximum strength; longer holds stay capped. The pickup click never arms a throw.
 - Finds a `Creature` by a ray from the camera within `pickupRange` (5 m). Creatures larger than
