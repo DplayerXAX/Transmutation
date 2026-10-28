@@ -10,7 +10,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     [SerializeField] private Material dropletMaterial;
     [SerializeField] private Material debrisMaterial;
     [SerializeField] private Material rippleMaterial;
-    [Range(16, 1024)] [SerializeField] private int maximumDroplets = 256;
+    [Range(16, 1024)] [SerializeField] private int maximumDroplets = 1024;
     [Min(1f)] [SerializeField] private float maximumSpeed = 12f;
     [Min(0.01f)] [SerializeField] private float sampleInterval = 0.1f;
     [Min(1f)] [SerializeField] private float visualDistance = 60f;
