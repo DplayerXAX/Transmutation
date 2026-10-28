@@ -10,7 +10,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     [SerializeField] private Material dropletMaterial;
     [SerializeField] private Material debrisMaterial;
     [SerializeField] private Material rippleMaterial;
-    [Range(16, 1024)] [SerializeField] private int maximumDroplets = 256;
+    [Range(16, 1024)] [SerializeField] private int maximumDroplets = 1024;
     [Min(1f)] [SerializeField] private float maximumSpeed = 12f;
     [Min(0.01f)] [SerializeField] private float sampleInterval = 0.1f;
     [Min(1f)] [SerializeField] private float visualDistance = 60f;
@@ -217,7 +217,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
             // Natural ageing already spends AgeRate; water adds the remainder of the multiplied rate,
             // at least the floor. Paused creatures (captured, disabled) keep their lifespan frozen.
             float extra = Mathf.Max(creature.AgeRate * contactAgeMultiplier, contactAgeFloor) - creature.AgeRate;
-            if (!creature.SimulationEnabled || creature.IsConsumptionPending || extra <= 0f) continue;
+            if (!creature.SimulationEnabled || creature.IsConsumptionPending || extra <= 0f || StillnessField.Holds(creature)) continue;
             creature.SetRemainingAge(creature.Age - extra * dt);
             // Amber dust rises from the contact only while lifespan is actually being drained.
             state.dust += dt * 6f;

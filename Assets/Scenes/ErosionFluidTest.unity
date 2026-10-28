@@ -168,7 +168,7 @@ MonoBehaviour:
   dropletMaterial: {fileID: 2100000, guid: 808c68ff1e5363a4495b84e04f07e9fb, type: 2}
   debrisMaterial: {fileID: 2100000, guid: b57a0de6f49684b47b3bc655e010ee6a, type: 2}
   rippleMaterial: {fileID: 2100000, guid: 11ac512d560ba5c4d94b09c0e38d38d9, type: 2}
-  maximumDroplets: 256
+  maximumDroplets: 1024
   maximumSpeed: 12
   sampleInterval: 0.1
   visualDistance: 60
@@ -472,7 +472,7 @@ MonoBehaviour:
   fluid: {fileID: 61389146}
   emitting: 1
   dropletsPerSecond: 8
-  lifetime: 15
+  lifetime: 30
   dropletRadius: 0.25
   spread: 0.12
   initialVelocity: {x: 0, y: 0, z: 0.5}
@@ -530,7 +530,7 @@ MonoBehaviour:
   fluid: {fileID: 61389146}
   emitting: 0
   dropletsPerSecond: 8
-  lifetime: 15
+  lifetime: 30
   dropletRadius: 0.25
   spread: 0.12
   initialVelocity: {x: 0, y: 0, z: 0.5}
@@ -728,7 +728,7 @@ MonoBehaviour:
   fluid: {fileID: 61389146}
   emitting: 0
   dropletsPerSecond: 8
-  lifetime: 15
+  lifetime: 30
   dropletRadius: 0.25
   spread: 0.12
   initialVelocity: {x: 0, y: 0, z: 0.5}

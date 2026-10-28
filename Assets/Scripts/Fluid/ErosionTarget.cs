@@ -5,7 +5,7 @@ using UnityEngine;
 /// A solid that erosive water wears away without being terrain, such as a creature's weak point.
 /// Its colliders stay solid to droplets even under a Creature (water passes through other creature
 /// colliders), and touching, held and thrown water all deliver erosion to it through Eroded.
-/// Colliders must be primitives or convex meshes: held water measures overlap by penetration.
+/// Held water measures overlap by penetration, which handles primitives and convex or concave meshes.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class ErosionTarget : MonoBehaviour
