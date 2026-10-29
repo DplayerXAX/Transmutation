@@ -829,7 +829,11 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 if (!carrier.CarriesTentacle) yield return Carry();
                 tether.LetGoAll();
                 yield return StandAtWall();
-                body.position += -cliff.inward * 8f + Vector3.up * 1.5f;
+                body.position += -cliff.inward * 8f + Vector3.up * 5f; // in open air, so the bubble touches nothing
+                // Fuzzy creatures following the player would touch the bubble and pop it: send them off.
+                foreach (Creature other in FindObjectsByType<Creature>(FindObjectsSortMode.None))
+                    if (other != tentacle && !(other is TrappingBubble) && Vector3.Distance(other.transform.position, body.position) < 15f)
+                    { other.transform.position += Vector3.right * 60f; var ob = other.GetComponent<Rigidbody>(); if (ob != null) ob.position = other.transform.position; }
                 Physics.SyncTransforms();
                 yield return null;
                 TrappingBubble bubble = Instantiate(prefab, body.position, Quaternion.identity);
@@ -840,9 +844,10 @@ public sealed class ClimbTestDriver : MonoBehaviour
                 Log($"    before trapping: can capture {capture.CanCapture} (captured {capture.IsCaptured}, enabled {capture.isActiveAndEnabled}), player measures {CreatureBounds.LargestSide(measured):0.0} m");
                 bool trapped = capture.IsCaptured || bubble.TryCapture(controller.gameObject);
                 if (capture.IsCaptured && capture.OwningBubble != null) bubble = capture.OwningBubble;
+                if (bubble == null) { Log("    the bubble popped before the test could use it"); yield break; }
                 yield return new WaitForSeconds(0.5f);
                 Vector3 target = cliff.feet + Vector3.up * 3f;
-                if (Physics.Raycast(bubble.transform.position, (target - bubble.transform.position).normalized, out RaycastHit wallHit, 30f, 1 << 7, QueryTriggerInteraction.Ignore))
+                if (bubble != null && Physics.Raycast(bubble.transform.position, (target - bubble.transform.position).normalized, out RaycastHit wallHit, 30f, 1 << 7, QueryTriggerInteraction.Ignore))
                 {
                     tether.FireAt(wallHit.point + wallHit.normal * 0.05f, wallHit.collider.transform);
                     Vector3 start = bubble.transform.position;
