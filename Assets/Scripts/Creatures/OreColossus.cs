@@ -22,6 +22,9 @@ public sealed class OreColossus : Creature
     [Tooltip("Wait for this scene's ProceduralWorld and place itself on it. Off, or with no world: roam around where it stands.")]
     [SerializeField] private bool placeInWorld = true;
     [SerializeField] private ProceduralWorld world;
+    [Tooltip("Optional authored home. Keeps the existing world-aware feet and erosion behavior.")]
+    [SerializeField] private Transform roamingAnchor;
+    [Min(5f)] [SerializeField] private float authoredRoamRadius = 24f;
     [Tooltip("Preferred distance of the starting spot from the world's spawn (its origin).")]
     [Min(10f)] [SerializeField] private float preferredDistance = 70f;
     [Tooltip("Without a world: wander within this distance of the authored position.")]
@@ -257,6 +260,14 @@ public sealed class OreColossus : Creature
         if (!world.LayoutReady) return;
         if (!spotChosen)
         {
+            if (roamingAnchor != null)
+            {
+                pendingSpot = roamingAnchor.position;
+                pendingHeading = roamingAnchor.forward;
+                spotChosen = true;
+            }
+            else
+            {
             Vector3 centre = world.transform.position;
             if (!gameObject.scene.GetPhysicsScene().Raycast(centre + Vector3.up * 200f, Vector3.down, out _, 600f, 1 << world.TerrainLayer, QueryTriggerInteraction.Ignore)) return;
             if (!PickSpot(out pendingSpot, out pendingHeading))
@@ -266,6 +277,7 @@ public sealed class OreColossus : Creature
                 pendingHeading = Vector3.forward;
             }
             spotChosen = true;
+            }
             placeWait = 0f;
         }
         placeWait += 0.5f;
@@ -565,7 +577,15 @@ public sealed class OreColossus : Creature
         {
             bool last = i == 23;
             Vector3 p;
-            if (world != null)
+            if (roamingAnchor != null)
+            {
+                float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                float distance = Mathf.Sqrt((float)random.NextDouble()) * authoredRoamRadius;
+                Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+                p = roamingAnchor.position + new Vector3(offset.x, 0f, offset.y);
+                if (!last && Flat2(p - position) < 8f) continue;
+            }
+            else if (world != null)
             {
                 Vector2 half = world.WorldSize * 0.5f * 0.62f;
                 p = world.transform.position + new Vector3(Mathf.Lerp(-half.x, half.x, (float)random.NextDouble()), 0f, Mathf.Lerp(-half.y, half.y, (float)random.NextDouble()));

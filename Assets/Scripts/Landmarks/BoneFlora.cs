@@ -252,7 +252,7 @@ public sealed class BoneFlora
     private int Add(Vector3 p, Color c, Vector2 uv)
     {
         vertices.Add(p);
-        colours.Add(c);
+        colours.Add(CreatureArtPalette.Rotate(c));
         uvs.Add(uv);
         return vertices.Count - 1;
     }

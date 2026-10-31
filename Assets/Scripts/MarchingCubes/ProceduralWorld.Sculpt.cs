@@ -332,6 +332,55 @@ public sealed partial class ProceduralWorld
         return true;
     }
 
+    /// <summary>
+    /// Authors a bounded density shape into the saved terrain. The modifier receives a world point and
+    /// its current density (positive is rock), and returns the desired density. Existing edits outside
+    /// the bounds are preserved. Call Generate(true) before editor authoring after a domain reload.
+    /// </summary>
+    public bool SculptDensity(Bounds worldBounds, System.Func<Vector3, float, float> modifier)
+    {
+        if (!CanSculpt || modifier == null || worldBounds.size.sqrMagnitude <= 0f) return false;
+        Bounds localBounds = new Bounds(transform.InverseTransformPoint(worldBounds.center), Vector3.zero);
+        for (int corner = 0; corner < 8; corner++)
+        {
+            Vector3 point = worldBounds.center + Vector3.Scale(worldBounds.extents,
+                new Vector3((corner & 1) == 0 ? -1 : 1, (corner & 2) == 0 ? -1 : 1, (corner & 4) == 0 ? -1 : 1));
+            localBounds.Encapsulate(transform.InverseTransformPoint(point));
+        }
+        float cell = CellSize;
+        Vector3Int min = Vector3Int.Max(Vector3Int.FloorToInt((localBounds.min - gridMin) / cell), Vector3Int.zero);
+        Vector3Int max = Vector3Int.Min(Vector3Int.CeilToInt((localBounds.max - gridMin) / cell), chunkCount * GridChunkCells);
+        var affected = new HashSet<Vector3Int>();
+        bool changed = false;
+        for (int z = min.z; z <= max.z; z++) for (int x = min.x; x <= max.x; x++)
+        {
+            Vector3 column = gridMin + new Vector3(x, 0, z) * cell;
+            float height = field.SurfaceHeight(column.x, column.z);
+            float ceiling = field.CeilingHeight(height), floor = field.InnerGroundHeight(column.x, column.z, height);
+            for (int y = min.y; y <= max.y; y++)
+            {
+                var key = new Vector3Int(x, y, z);
+                Vector3 point = gridMin + (Vector3)key * cell;
+                Vector3 worldPoint = transform.TransformPoint(point);
+                if (!worldBounds.Contains(worldPoint)) continue;
+                float baseline = field.Density(point, height, ceiling, floor);
+                sculpt.TryGetValue(key, out float previous);
+                float next = modifier(worldPoint, baseline + previous);
+                if (float.IsNaN(next) || float.IsInfinity(next)) continue;
+                float delta = next - baseline;
+                if (Mathf.Abs(delta - previous) < 1e-4f) continue;
+                if (Mathf.Abs(delta) < 1e-4f) sculpt.Remove(key); else sculpt[key] = delta;
+                sculptData.SetEdit(key, delta);
+                IndexSculptSample(key);
+                SampleOwners(key, affected);
+                changed = true;
+            }
+        }
+        appliedRevision = sculptData.Revision;
+        if (changed) RebuildNow(affected, worldBounds);
+        return changed;
+    }
+
     /// <summary>Re-reads the sculpt asset (after undo, redo or a clear) and rebuilds only the chunks that differ.</summary>
     public void SyncSculptFromData()
     {

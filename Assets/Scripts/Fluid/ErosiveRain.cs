@@ -9,6 +9,9 @@ using UnityEngine;
 [RequireComponent(typeof(ErosiveFluidSource))]
 public sealed class ErosiveRain : MonoBehaviour
 {
+    [Tooltip("Optional authored storm region. Empty preserves camera-relative storms.")]
+    [SerializeField] private Transform region;
+    [Min(1f)] [SerializeField] private float regionRadius = 30f;
     [Tooltip("Storms pick spots within this distance of the main camera; 0 picks anywhere in the world.")]
     [Min(0f)] [SerializeField] private float roamRadius = 35f;
     [Min(0.5f)] [SerializeField] private float stormRadius = 6f;
@@ -43,6 +46,7 @@ public sealed class ErosiveRain : MonoBehaviour
     /// <summary>Starts a storm over the given ground point now, replacing any current storm.</summary>
     public bool StartStorm(Vector3 groundPoint)
     {
+        if (region != null && Vector3.ProjectOnPlane(groundPoint - region.position, Vector3.up).magnitude > regionRadius - stormRadius) return false;
         ErosiveFluidSystem fluid = source.Fluid;
         if (fluid == null || fluid.World == null || !fluid.World.LayoutReady || !source.Emitting || !CloudHeight(fluid.World, groundPoint, out float y)) return false;
         Begin(new Vector3(groundPoint.x, y, groundPoint.z));
@@ -76,6 +80,15 @@ public sealed class ErosiveRain : MonoBehaviour
         float ramp = Mathf.Min(2f, stormLength * 0.25f);
         Intensity = Mathf.Clamp01(Mathf.Min(stormLength - timer, timer) / ramp);
         centre += wind * dt;
+        if (region != null)
+        {
+            Vector3 delta = Vector3.ProjectOnPlane(centre - region.position, Vector3.up);
+            if (delta.magnitude > Mathf.Max(0f, regionRadius - stormRadius))
+            {
+                Vector3 bounded = region.position + Vector3.ClampMagnitude(delta, Mathf.Max(0f, regionRadius - stormRadius));
+                centre.x = bounded.x; centre.z = bounded.z; wind = Vector3.zero;
+            }
+        }
         // Drifting over higher ground lifts the cloud, so drops never start inside a hill.
         heightTimer -= dt;
         if (heightTimer <= 0f)
@@ -109,7 +122,12 @@ public sealed class ErosiveRain : MonoBehaviour
         for (int attempt = 0; attempt < 12; attempt++)
         {
             Vector3 point;
-            if (roamRadius > 0f && view != null)
+            if (region != null)
+            {
+                Vector2 offset = Random.insideUnitCircle * Mathf.Max(0f, regionRadius - stormRadius);
+                point = region.position + new Vector3(offset.x, 0f, offset.y);
+            }
+            else if (roamRadius > 0f && view != null)
             {
                 Vector2 offset = Random.insideUnitCircle * roamRadius;
                 point = view.transform.position + new Vector3(offset.x, 0f, offset.y);

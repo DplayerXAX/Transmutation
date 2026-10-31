@@ -33,6 +33,7 @@ Material:
     - _AlphaCutoff: 0.05
     - _AlphaFromRamp: 1
     - _BaseAlpha: 0.85
+    - _Contrast: 1.45
     - _Cull: 2
     - _FresnelBias: 0.12
     - _FresnelPower: 2.2
@@ -41,8 +42,6 @@ Material:
     - _GrainScale: 95
     - _GrainSpeed: 32
     - _HDRIntensity: 1.5
-    - _Saturation: 1.75
-    - _Contrast: 1.45
     - _HeatContrast: 1.6
     - _NoiseScale: 1.6
     - _NoiseWeight: 0.68
@@ -51,16 +50,17 @@ Material:
     - _RampStop3: 0.402
     - _RampStop4: 0.497
     - _RampStop5: 0.833
+    - _Saturation: 1.75
     - _UseRampTex: 0
     - _WarpStrength: 0.7
     m_Colors:
-    - _Color0: {r: 0.15, g: 0, b: 0.35, a: 0}
-    - _Color1: {r: 0.05, g: 0.35, b: 2.5, a: 0.35}
-    - _Color2: {r: 0, g: 3.5, b: 3.5, a: 0.55}
-    - _Color3: {r: 0.2, g: 3.2, b: 0.35, a: 0.7}
-    - _Color4: {r: 3.5, g: 3.2, b: 0.15, a: 0.85}
-    - _Color5: {r: 4.5, g: 1.5, b: 0, a: 0.92}
-    - _Color6: {r: 5, g: 0.15, b: 0.05, a: 1}
+    - _Color0: {r: 0.025, g: 0.035, b: 0.09, a: 1}
+    - _Color1: {r: 0.04, g: 0.09, b: 0.3, a: 1}
+    - _Color2: {r: 0.05, g: 0.18, b: 0.65, a: 1}
+    - _Color3: {r: 0.08, g: 0.3, b: 1, a: 1}
+    - _Color4: {r: 0.15, g: 0.55, b: 2, a: 1}
+    - _Color5: {r: 0.4, g: 1, b: 3, a: 1}
+    - _Color6: {r: 1.2, g: 2.4, b: 4, a: 1}
     - _NoiseSpeed: {r: 0.08, g: 0.05, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

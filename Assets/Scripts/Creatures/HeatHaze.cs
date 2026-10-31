@@ -150,9 +150,9 @@ public sealed class HeatHaze : MonoBehaviour
         float midRadius = Mathf.Lerp(inner, end, 0.5f);
         float gap = Mathf.Sqrt(4f * Mathf.PI * midRadius * midRadius / dotsPerShell);
 
-        block.SetColor(HeatColorId, heatColor);
-        block.SetColor(DeepColorId, troughColor);
-        block.SetColor(CrestColorId, crestColor);
+        block.SetColor(HeatColorId, CreatureArtPalette.Rotate(heatColor));
+        block.SetColor(DeepColorId, CreatureArtPalette.Rotate(troughColor));
+        block.SetColor(CrestColorId, CreatureArtPalette.Rotate(crestColor));
         block.SetColor(CyanId, cyanColor);
         block.SetColor(MagentaId, magentaColor);
         block.SetFloat(InnerId, inner);

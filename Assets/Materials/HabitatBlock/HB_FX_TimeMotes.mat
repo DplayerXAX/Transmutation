@@ -26,6 +26,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _Count: 0
+    - _DstBlend: 1
+    - _Dust: 1
     - _Fill: 0
     - _Intensity: 0.8
     - _Mode: 3
@@ -33,8 +35,9 @@ Material:
     - _Seed: 6
     - _Size: 0.08
     - _Speed: 0.25
+    - _SrcBlend: 1
     m_Colors:
-    - _Color: {r: 0.4, g: 1.8, b: 2, a: 2}
-    - _Color2: {r: 1.7, g: 2, b: 2, a: 2}
+    - _Color: {r: 1.8, g: 2, b: 0.4, a: 2}
+    - _Color2: {r: 2, g: 2, b: 1.7, a: 2}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

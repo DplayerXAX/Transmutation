@@ -34,7 +34,7 @@ public sealed class GeodeLarva : Creature, StillnessField.ISource
     [Min(0.5f)] [SerializeField] private float auraRadius = 6f;
     [Tooltip("Seconds between pulses rippling out to the edge of the aura.")]
     [Min(0.2f)] [SerializeField] private float auraPulseInterval = 2.4f;
-    [ColorUsage(false, true)] [SerializeField] private Color auraColor = new Color(0.45f, 1.3f, 1.05f);
+    [ColorUsage(false, true)] [SerializeField] private Color auraColor = new Color(0.26f, 1.3f, 0.43f);
 
     [Header("Look")]
     [SerializeField] private Material glowMaterial;

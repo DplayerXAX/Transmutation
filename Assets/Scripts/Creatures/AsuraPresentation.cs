@@ -4,8 +4,8 @@ using UnityEngine;
 public sealed class AsuraPresentation : MonoBehaviour
 {
     [SerializeField] private Transform visual;
-    [SerializeField] private Color lightColor = new Color(0.96f, 0.78f, 0.3f);
-    [SerializeField] private Color darkColor = new Color(0.33f, 0.12f, 0.65f);
+    [SerializeField] private Color lightColor = new Color(1f, 0.68f, 0.8f);
+    [SerializeField] private Color darkColor = new Color(0.13f, 0.035f, 0.22f);
     private Creature creature;
     private CreatureCombat combat;
     private ProjectileCreature projectile;
@@ -14,6 +14,14 @@ public sealed class AsuraPresentation : MonoBehaviour
     private Vector3 baseScale;
     private float flash;
     private CreatureCombatState state;
+    private int launcherShots;
+
+    public void BindVisual(Transform target, Renderer[] targets)
+    {
+        visual = target;
+        baseScale = target.localScale;
+        renderers = targets;
+    }
 
     private void Awake()
     {
@@ -44,10 +52,16 @@ public sealed class AsuraPresentation : MonoBehaviour
     private void OnFlight(ProjectileFlightState next) { flash = 0.12f; }
     private void Update()
     {
+        if (creature is BlastCore core && core.ShotsFired != launcherShots)
+        {
+            launcherShots = core.ShotsFired;
+            flash = 0.15f;
+        }
         flash = Mathf.Max(0f, flash - Time.deltaTime);
         bool spent = projectile != null && projectile.FlightState == ProjectileFlightState.Spent;
-        Color color = creature.Polarity == CreaturePolarity.Dark ? darkColor :
-            creature.Polarity == CreaturePolarity.Light ? lightColor : new Color(1f, 0.4f, 0.08f);
+        // Projectile gameplay polarity remains None; appearance follows its emitter.
+        CreaturePolarity shown = projectile != null && projectile.Emitter != null ? projectile.Emitter.Polarity : creature.Polarity;
+        Color color = shown == CreaturePolarity.Dark ? darkColor : lightColor;
         if (creature.IsDead || spent) color = Color.Lerp(color, Color.gray, 0.7f);
         if (flash > 0f) color = Color.Lerp(color, Color.white, flash / 0.15f);
         properties.SetColor("_BaseColor", color);

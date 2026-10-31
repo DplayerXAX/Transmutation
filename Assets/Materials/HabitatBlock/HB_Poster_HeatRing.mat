@@ -35,9 +35,9 @@ Material:
     - _Seed: 6
     - _ShadowTint: 0.62
     m_Colors:
-    - _ColorA: {r: 0.78, g: 0.1, b: 0.12, a: 1}
-    - _ColorB: {r: 0.04, g: 0.04, b: 0.05, a: 1}
-    - _ColorC: {r: 0.94, g: 0.68, b: 0.12, a: 1}
-    - _InkColor: {r: 0.03, g: 0.03, b: 0.04, a: 1}
+    - _ColorA: {r: 0.09999997, g: 0.11999995, b: 0.78, a: 1}
+    - _ColorB: {r: 0.04, g: 0.049999982, b: 0.04, a: 1}
+    - _ColorC: {r: 0.68, g: 0.11999995, b: 0.94, a: 1}
+    - _InkColor: {r: 0.03, g: 0.04, b: 0.03, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

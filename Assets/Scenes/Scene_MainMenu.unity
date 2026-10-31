@@ -325,7 +325,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: MAP
+  m_Text: Open World
 --- !u!222 &624854145
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -686,7 +686,7 @@ GameObject:
   - component: {fileID: 1005064907}
   - component: {fileID: 1005064906}
   m_Layer: 0
-  m_Name: EXHIBITION Button
+  m_Name: Exhibition Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -807,7 +807,7 @@ GameObject:
   - component: {fileID: 1023932902}
   - component: {fileID: 1023932901}
   m_Layer: 0
-  m_Name: MAP Button
+  m_Name: Open World Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -985,7 +985,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: TEST LEVEL
+  m_Text: Climb
 --- !u!222 &1174586810
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1007,7 +1007,7 @@ GameObject:
   - component: {fileID: 1204380024}
   - component: {fileID: 1204380023}
   m_Layer: 0
-  m_Name: TEST LEVEL Button
+  m_Name: Climb Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1260,7 +1260,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: EXHIBITION
+  m_Text: Exhibition
 --- !u!222 &1790854132
 CanvasRenderer:
   m_ObjectHideFlags: 0

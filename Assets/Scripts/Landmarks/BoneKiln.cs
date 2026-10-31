@@ -354,6 +354,9 @@ public sealed class BoneKiln : MonoBehaviour
         floraMaterial = MakeFloraMaterial();
         Shader comb = Shader.Find("Capstone/Landmarks/BoneComb");
         ribMaterial = comb != null ? new Material(comb) { name = "Bone Kiln Ribs (runtime)" } : null;
+        if (ribMaterial != null)
+            foreach (string property in new[] { "_Body", "_Rim", "_Core", "_GlowColor" })
+                ribMaterial.SetColor(property, CreatureArtPalette.Rotate(ribMaterial.GetColor(property)));
 
         // ---- Spine: a smooth curve through key points (local space, y = 0 at the rim, +z towards the tail) ----
         Vector3 Shaft(float y)

@@ -37,7 +37,7 @@ Material:
     - _Speed: 0.3
     - _SrcBlend: 1
     m_Colors:
-    - _Color: {r: 0.45, g: 1, b: 0.05, a: 1}
-    - _Color2: {r: 0.85, g: 1, b: 0.2, a: 1}
+    - _Color: {r: 1, g: 0.05, b: 0.45, a: 1}
+    - _Color2: {r: 1, g: 0.2, b: 0.85, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

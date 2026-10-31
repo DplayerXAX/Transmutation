@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Builds Scene_MainMenu: a plain UI menu (title and three buttons: Map, Test Level, Exhibition) over a
+/// Builds Scene_MainMenu: a plain UI menu (title and three buttons: Open World, Climb, Exhibition) over a
 /// calm gray background, and puts the menu first in Build Settings, followed by the game scenes.
 /// </summary>
 public static class MainMenuSetup
@@ -95,9 +95,9 @@ public static class MainMenuSetup
 
         var entries = new[]
         {
-            MakeEntry(root, font, "MAP", "Scene_Daniel", "", new Color(1f, 0.32f, 0.12f), 60f),
-            MakeEntry(root, font, "TEST LEVEL", "Scene_Basin", "", new Color(0.1f, 0.7f, 1f), -50f),
-            MakeEntry(root, font, "EXHIBITION", ExhibitionScene, "Run Tools > Capstone > Exhibition first.", new Color(0.75f, 0.2f, 1f), -160f),
+            MakeEntry(root, font, "Open World", "Scene_Daniel", "", new Color(1f, 0.32f, 0.12f), 60f),
+            MakeEntry(root, font, "Climb", "Scene_Basin", "", new Color(0.1f, 0.7f, 1f), -50f),
+            MakeEntry(root, font, "Exhibition", ExhibitionScene, "Run Tools > Capstone > Exhibition first.", new Color(0.75f, 0.2f, 1f), -160f),
         };
 
         // Wrap keyboard / gamepad navigation from the last button back to the first.

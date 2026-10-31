@@ -231,7 +231,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         drainTokens -= 1f;
         var emit = new ParticleSystem.EmitParams { position = point + Random.insideUnitSphere * 0.08f,
             velocity = Vector3.up * Random.Range(0.4f, 0.9f) + Random.insideUnitSphere * 0.15f,
-            startColor = new Color(1f, 0.75f, 0.32f, 0.9f), startSize = 0.06f, startLifetime = 0.9f };
+            startColor = new Color(0.26f, 0.85f, 0.43f, 0.9f), startSize = 0.06f, startLifetime = 0.9f };
         debris.Emit(emit, 1);
     }
     internal bool InBounds(Vector3 point)

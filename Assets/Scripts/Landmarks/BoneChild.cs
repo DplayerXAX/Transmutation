@@ -558,7 +558,7 @@ public sealed class BoneChild : MonoBehaviour
         {
             string property = WarmProperties[i];
             if (!material.HasProperty(property)) continue;
-            Color cool = material.GetColor(property), warm = WarmColors[i];
+            Color cool = material.GetColor(property), warm = CreatureArtPalette.Rotate(WarmColors[i]);
             warm.a = cool.a; // Keep the skin transparent.
             block.SetColor(property, Color.Lerp(cool, warm, warmth));
         }

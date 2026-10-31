@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 3812285128688880371}
   - component: {fileID: 8690092371565945328}
   - component: {fileID: 4882063852043378540}
+  - component: {fileID: 4568192037017485838}
   m_Layer: 0
   m_Name: BasicProjectile
   m_TagString: Untagged
@@ -99,6 +100,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicProjectile
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
   maxHealth: 5
   initialPolarity: 0
   health: 0
@@ -115,10 +117,8 @@ MonoBehaviour:
   ageRate: 1
   isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
 --- !u!114 &3812285128688880371
@@ -158,8 +158,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AsuraPresentation
   visual: {fileID: 0}
-  lightColor: {r: 0.96, g: 0.78, b: 0.3, a: 1}
-  darkColor: {r: 0.33, g: 0.12, b: 0.65, a: 1}
+  lightColor: {r: 1, g: 0.65, b: 0.79, a: 1}
+  darkColor: {r: 0.13, g: 0.035, b: 0.22, a: 1}
+--- !u!114 &4568192037017485838
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 117072950579971384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42fdcefba44004e41ac57349ae7aa1e3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AsuraRingVisual
 --- !u!1 &3764844114069439504
 GameObject:
   m_ObjectHideFlags: 0

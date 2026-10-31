@@ -42,12 +42,12 @@ public sealed class GlowBeeColony : MonoBehaviour
         foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
             if (light.gameObject.scene == gameObject.scene && light.type == LightType.Directional && light.isActiveAndEnabled)
             { sun = light; break; }
-        shell = MakeMaterial("Glow bee amber shell", new Color(0.36f, 0.22f, 0.065f));
+        shell = MakeMaterial("Glow bee carmine shell", CreatureArtPalette.Organic);
         dark = MakeMaterial("Glow bee dark bands", new Color(0.055f, 0.08f, 0.065f));
-        wing = MakeMaterial("Glow bee pearl wings", new Color(0.65f, 0.86f, 0.75f));
-        glow = MakeMaterial("Glow bee luminous nectar", new Color(0.55f, 1f, 0.23f), true);
-        petal = MakeMaterial("Nectar flower violet petals", new Color(0.57f, 0.29f, 0.72f));
-        stem = MakeMaterial("Nectar flower stem", new Color(0.1f, 0.22f, 0.12f));
+        wing = MakeMaterial("Glow bee pearl wings", CreatureArtPalette.Pearl);
+        glow = MakeMaterial("Glow bee luminous nectar", new Color(0.86f, 0.91f, 1f), true);
+        petal = MakeMaterial("Nectar flower coral petals", CreatureArtPalette.OrganicLight);
+        stem = MakeMaterial("Nectar flower stem", CreatureArtPalette.Organic * 0.45f);
         Physics.SyncTransforms();
         if (nestAnchors.Length > 0) FindAnchoredSites();
         else FindConcealedSites();

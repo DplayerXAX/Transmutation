@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -52,8 +53,16 @@ public sealed class CrosshairHUD : MonoBehaviour
     private HandClimber climber;
     private MeditationController meditation;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AddToScene()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void Initialize()
+    {
+        // Run for the first scene and for gameplay entered through the main menu.
+        // Unsubscribe first so entering Play mode without a domain reload stays safe.
+        SceneManager.sceneLoaded -= AddToScene;
+        SceneManager.sceneLoaded += AddToScene;
+    }
+
+    private static void AddToScene(Scene scene, LoadSceneMode mode)
     {
         if (FindFirstObjectByType<PlayerCreatureCarrier>() == null || FindFirstObjectByType<CrosshairHUD>() != null) return;
         new GameObject("Crosshair HUD").AddComponent<CrosshairHUD>();
