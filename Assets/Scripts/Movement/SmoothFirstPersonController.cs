@@ -45,6 +45,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Range(0.2f, 2f)] [SerializeField] private float moveSpeedScale = 0.75f;
     [SerializeField] private float slopeIncreaseMultiplier = 2.5f;
     [SerializeField] private float groundDrag = 4f;
+    [Tooltip("Offer a pair of skate shoes beside the player's starting position.")]
+    [SerializeField] private bool spawnSkateShoes = true;
+    private PlayerSkateShoes skateShoes;
+    public bool WearingSkateShoes => skateShoes != null && skateShoes.Equipped;
 
     [Header("Jumping — FullMovement Values")]
     [SerializeField] private float jumpForce = 12f;
@@ -141,6 +145,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public MovementState State => state;
     public float CurrentVelocity => currentVelocity;
     public Camera PlayerCamera => playerCamera;
+    public LayerMask GroundLayers => whatIsGround;
     private BubbleCapture bubbleCapture;
     private bool bubbleMovementLocked;
     private int suppressedJumpFrame = -1;
@@ -236,6 +241,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         if (playerCamera != null && fieldOfView > 0f) playerCamera.fieldOfView = fieldOfView;
+        skateShoes = GetComponent<PlayerSkateShoes>();
+        if (spawnSkateShoes) SkateShoesPickup.OfferNear(this);
     }
 
     private void Update()
@@ -257,7 +264,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded && !Flung && groundAcceleration <= 0f ? groundDrag : 0f;
+        rb.linearDamping = grounded && !Flung && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -279,6 +286,13 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void GroundCheck()
     {
+        if (skateShoes != null && skateShoes.SuppressGrounding)
+        {
+            grounded = false;
+            rideSurface = null;
+            rideVelocity = Vector3.zero;
+            return;
+        }
         grounded = CastGround(out _);
         UpdateRideSupport();
     }
@@ -288,6 +302,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         rideSurface = null;
         rideVelocity = Vector3.zero;
         if (rb == null || rb.isKinematic || climbing || restricted || wallRunning || BubbleMovementBlocked ||
+            (skateShoes != null && skateShoes.SuppressGrounding) ||
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.
         // Use a raised support cast; only compost backs accept it, preserving ordinary ground rules.
@@ -314,6 +329,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private bool CastGround(out RaycastHit hit)
     {
+        if (WearingSkateShoes)
+        {
+            // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
+            return Physics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
+                Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore);
+        }
         return Physics.BoxCast(
             GetGroundCheckOrigin(),
             groundCheckHalfExtents,
@@ -531,6 +552,14 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
+        if (skateShoes == null) skateShoes = GetComponent<PlayerSkateShoes>();
+        if (skateShoes != null)
+        {
+            bool support = !skateShoes.SuppressGrounding && CastGround(out skateGround);
+            if (skateShoes.Move(moveDirection, moveSpeed, grounded && support && !exitingSlope && !ownJumpRising,
+                skateGround, rideVelocity, maxSlopeAngle, Time.fixedDeltaTime, !exitingSlope && !ownJumpRising)) return;
+        }
+
         if (groundAcceleration > 0f && !sliding && !wallRunning && !Flung)
         {
             SteerVelocity();
@@ -558,6 +587,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     }
 
     private float jumpPressedAt = float.MinValue, lastGroundedAt = float.MinValue;
+    private RaycastHit skateGround;
     private bool jumpHeld, ownJumpRising;
 
     /// <summary>
@@ -622,6 +652,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (rb.isKinematic)
             return;
         if (Flung) return;
+        if (skateShoes != null && skateShoes.CanDrive) return;
         // The walking limit applies relative to a moving back, including its turn at this contact point.
         if (rideSurface != null)
         {
@@ -736,6 +767,14 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public void SetWallRunning(bool value)
     {
         wallRunning = value;
+    }
+
+    internal void BeginSkateLaunch()
+    {
+        grounded = false;
+        rideSurface = null;
+        rideVelocity = Vector3.zero;
+        lastGroundedAt = float.MinValue;
     }
 
     public void SetClimbing(bool value)

@@ -77,6 +77,13 @@ public sealed class FirstPersonBody : MonoBehaviour
     private static readonly float[] FingerSpeed = { 9f, 7.5f, 6f, 5f };
 
     private Limb leftArm, rightArm, leftLeg, rightLeg;
+    public bool TryGetFootPose(bool right, out Vector3 position, out Quaternion rotation)
+    {
+        Transform foot = (right ? rightLeg : leftLeg)?.end;
+        position = foot != null ? foot.position : Vector3.zero;
+        rotation = foot != null ? foot.rotation : Quaternion.identity;
+        return foot != null;
+    }
     private Transform root;
     private Rigidbody body;
     private float walkPhase;
@@ -157,7 +164,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         float speed = new Vector2(velocity.x, velocity.z).magnitude;
         bool grounded = controller.Grounded;
         bool climbing = climber != null && climber.IsClimbing;
-        if (grounded && !climbing)
+        if (grounded && !climbing && !controller.WearingSkateShoes)
         {
             // Below walking speed steps slow down with the speed; above it the stride grows instead.
             float rate = speed < gaitSpeeds.x
@@ -515,6 +522,7 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private void UpdateLeg(Limb leg, float side, float speed, bool grounded, bool climbing, float deltaTime)
     {
+        leg.end.GetComponent<Renderer>().enabled = !controller.WearingSkateShoes;
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         Vector3 centre = controller.transform.position;
         Vector3 hip = centre + Vector3.up * hipHeight + orientation.right * (hipWidth * side);
@@ -524,6 +532,13 @@ public sealed class FirstPersonBody : MonoBehaviour
         if (climbing && climber.GetFoot(side > 0f ? 1 : 0, out Vector3 foothold))
         {
             target = foothold;
+        }
+        else if (grounded && controller.WearingSkateShoes)
+        {
+            // Plant both feet in a staggered skating stance instead of running in place.
+            target = hip + Vector3.down * (legLength * 0.91f) +
+                orientation.forward * (side * 0.12f) + orientation.right * (side * 0.08f);
+            target += Vector3.up * (0.12f * landing);
         }
         else if (grounded)
         {

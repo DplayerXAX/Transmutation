@@ -295,6 +295,14 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             out Ray ray
         );
 
+        SkateShoesPickup shoes = FindSkateShoes();
+        if (shoes != null)
+        {
+            var player = carrier != null ? carrier.PlayerController : GetComponentInParent<SmoothFirstPersonController>();
+            shoes.TryEquip(player);
+            return;
+        }
+
         if (creature == null)
             return;
 
@@ -315,6 +323,16 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     public Creature FindCreature()
     {
         return FindCreature(out _, out _);
+    }
+
+    public SkateShoesPickup FindSkateShoes()
+    {
+        if (interactionCamera == null || (carrier != null &&
+            (carrier.CarriedCreature != null || carrier.PendingCreature != null))) return null;
+        Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, interactionRange,
+            interactionLayers, carrier, out RaycastHit hit);
+        return hit.collider != null ? hit.collider.GetComponentInParent<SkateShoesPickup>() : null;
     }
 
     private Creature FindCreature(

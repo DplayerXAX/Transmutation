@@ -209,6 +209,14 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             if (traversal.IsClimbing && traversal.CanClimbJump) { hint = climbJumpHint; return; }
         }
 
+        SkateShoesPickup shoes = interactor != null && interactor.isActiveAndEnabled ? interactor.FindSkateShoes() : null;
+        if (shoes != null)
+        {
+            title = "SKATE SHOES";
+            hint = "[LMB] Put on    Glide downhill / use ramps to take off    [K] Switch shoes";
+            return;
+        }
+
         Creature carryTarget = carrier != null && carrier.isActiveAndEnabled ? carrier.FindCreature() : null;
         Creature interactTarget = interactor != null && interactor.isActiveAndEnabled ? interactor.FindCreature() : null;
         string interactVerb = interactTarget != null ? interactTarget.InteractionPrompt : null;
