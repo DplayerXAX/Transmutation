@@ -80,6 +80,9 @@ public sealed class BoneKiln : MonoBehaviour
     [Header("Children")]
     [Tooltip("Her young, curled up round the mouth of the hole (BoneChild). Warm one with fire to ride it.")]
     [Range(0, 6)] [SerializeField] private int children = 3;
+    [Tooltip("Optional fire-bubble fuel supplied once when each child is born. Empty preserves the usual cold start.")]
+    [SerializeField] private FireBubble childStartingFuel;
+    [Range(0, 3)] [SerializeField] private int childStartingBubbleCount;
 
     [Header("Nearby Tentacles")]
     [Tooltip("Settings copied for normal-sized tentacles near the mother's visible sides and her children.")]
@@ -176,7 +179,7 @@ public sealed class BoneKiln : MonoBehaviour
     /// <summary>Builds her now, in edit mode, for the Scene view preview (LandmarkScenePreview).</summary>
     public void BuildPreview(int spireHole)
     {
-        if (Application.isPlaying || built || world == null || !world.LayoutReady || world.SinkholeCount < 2) return;
+        if (Application.isPlaying || built || world == null || !world.LayoutReady || world.SinkholeCount < 1) return;
         Build(spireHole);
     }
     public IReadOnlyList<BoneRib> Ribs => ribs;
@@ -202,7 +205,7 @@ public sealed class BoneKiln : MonoBehaviour
             // Wait for the terrain itself, and for the spire to claim its sinkhole first.
             HangingSpire spire = FindFirstObjectByType<HangingSpire>();
             bool spireReady = spire == null || !spire.isActiveAndEnabled || spire.Built;
-            if (world != null && world.LayoutReady && world.SinkholeCount > 1 && spireReady &&
+            if (world != null && world.LayoutReady && world.SinkholeCount > 0 && spireReady &&
                 Physics.Raycast(world.transform.position + Vector3.up * 200f, Vector3.down, 600f, GroundMask, QueryTriggerInteraction.Ignore))
                 Build(spire != null ? spire.SinkholeIndex : -1);
             return;
@@ -537,7 +540,16 @@ public sealed class BoneKiln : MonoBehaviour
             Vector3 dir = Quaternion.Euler(0f, angle, 0f) * heading;
             Vector3 spot = mouth + dir * (R + 10f + (float)random.NextDouble() * 4f);
             spot.y = GroundHeight(spot);
-            BoneChild.Spawn(root, spot, Quaternion.LookRotation(-dir).eulerAngles.y, seed * 31 + c, boneMaterial, ribMaterial != null ? ribMaterial : boneMaterial, mouth);
+            BoneChild child = BoneChild.Spawn(root, spot, Quaternion.LookRotation(-dir).eulerAngles.y, seed * 31 + c, boneMaterial, ribMaterial != null ? ribMaterial : boneMaterial, mouth);
+            if (childStartingFuel != null && childStartingBubbleCount > 0)
+            {
+                child.hoverHeight = 7f + c * 3f;
+                for (int fuel = 0; fuel < Mathf.Min(childStartingBubbleCount, child.bubbleCapacity); fuel++)
+                {
+                    FireBubble bubble = Instantiate(childStartingFuel, child.Chest, Quaternion.identity);
+                    child.Cradle(bubble);
+                }
+            }
         }
         // Three little nests on the children's side that let fire bubbles float up; the bubbles drift over to her.
         if (children > 0)

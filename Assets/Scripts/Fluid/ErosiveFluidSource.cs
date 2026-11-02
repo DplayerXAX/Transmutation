@@ -6,7 +6,7 @@ public sealed class ErosiveFluidSource : MonoBehaviour
     [SerializeField] private ErosiveFluidSystem fluid;
     [SerializeField] private bool emitting = true;
     [Min(0f)] [SerializeField] private float dropletsPerSecond = 8f;
-    [Min(0.01f)] [SerializeField] private float lifetime = 15f;
+    [Min(0.01f)] [SerializeField] private float lifetime = 30f;
     [Min(0.05f)] [SerializeField] private float dropletRadius = 0.25f;
     [Min(0f)] [SerializeField] private float spread = 0.12f;
     [SerializeField] private Vector3 initialVelocity = new Vector3(0f, 0f, 0.5f);
@@ -36,7 +36,7 @@ public sealed class ErosiveFluidSource : MonoBehaviour
     /// <summary>Small, short-lived, gentler drops so rain shares the pool with ground sources.</summary>
     internal void ConfigureForRain()
     {
-        emitting = true; lifetime = 5f; dropletRadius = 0.12f; spread = 0f;
+        emitting = true; lifetime = 30f; dropletRadius = 0.12f; spread = 0f;
         erosionRate = 0.3f; erosionRadius = 0.6f;
     }
     public float MotionMultiplier(float tangentialSpeed) => Mathf.Lerp(stationaryMultiplier, movingMultiplier, Mathf.Clamp01(tangentialSpeed / fullFlowSpeed));

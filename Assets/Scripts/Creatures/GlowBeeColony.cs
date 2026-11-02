@@ -11,6 +11,8 @@ public sealed class GlowBeeColony : MonoBehaviour
     [Range(2, 12)] [SerializeField] private int flowersPerNest = 5;
     [SerializeField] private int seed = 814;
     [Header("Placement")]
+    [Tooltip("Optional authored ground positions. When nonempty, these replace rock/trunk discovery.")]
+    [SerializeField] private Transform[] nestAnchors = new Transform[0];
     [SerializeField] private LayerMask groundLayers = 1 << 7;
     [SerializeField] private LayerMask sceneryLayers = (1 << 0) | (1 << 7);
     [Min(2f)] [SerializeField] private float nestSeparation = 9f;
@@ -47,14 +49,39 @@ public sealed class GlowBeeColony : MonoBehaviour
         petal = MakeMaterial("Nectar flower violet petals", new Color(0.57f, 0.29f, 0.72f));
         stem = MakeMaterial("Nectar flower stem", new Color(0.1f, 0.22f, 0.12f));
         Physics.SyncTransforms();
-        FindConcealedSites();
+        if (nestAnchors.Length > 0) FindAnchoredSites();
+        else FindConcealedSites();
         foreach (Vector3 site in sites) BuildNest(site);
         if (nests.Count == 0)
-            Debug.LogWarning("Glow bees: no concealed, clear ground near rocks or trunks. Add scenery or check ground layers.", this);
+            Debug.LogWarning("Glow bees: no valid nest sites. Check anchors, ground layers, or rock/trunk cover.", this);
         if (spawnSpider && spiderPrefab != null && nests.Count > 0) SpawnPredator();
     }
 
     private float Range(float min, float max) => Mathf.Lerp(min, max, (float)random.NextDouble());
+
+    private void FindAnchoredSites()
+    {
+        foreach (Transform anchor in nestAnchors)
+        {
+            if (sites.Count >= nestCount) break;
+            if (anchor == null || anchor.gameObject.scene != gameObject.scene ||
+                !TryGround(anchor.position, out Vector3 ground)) continue;
+            if (gameObject.scene.GetPhysicsScene().OverlapSphere(ground + Vector3.up * 0.55f, 0.52f,
+                anchorClearance, sceneryLayers, QueryTriggerInteraction.Ignore) > 0)
+            { Debug.LogWarning("Glow bees: nest anchor is obstructed: " + anchor.name, anchor); continue; }
+            bool crowded = false;
+            foreach (Vector3 site in sites) if (Vector3.Distance(site, ground) < nestSeparation) { crowded = true; break; }
+            if (!crowded) sites.Add(ground);
+        }
+    }
+    private readonly Collider[] anchorClearance = new Collider[1];
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = new Color(0.7f, 1f, 0.25f);
+        foreach (Transform anchor in nestAnchors)
+            if (anchor != null) Gizmos.DrawWireSphere(anchor.position + Vector3.up * 0.5f, 0.5f);
+    }
 
     private void Update()
     {
@@ -149,7 +176,7 @@ public sealed class GlowBeeColony : MonoBehaviour
             Part(beeRoot.transform, "Head", new Vector3(0f, 0.02f, 0.17f), Vector3.one * 0.16f, dark);
             Part(beeRoot.transform, "Left wing", new Vector3(-0.16f, 0.08f, 0f), new Vector3(0.32f, 0.025f, 0.16f), wing);
             Part(beeRoot.transform, "Right wing", new Vector3(0.16f, 0.08f, 0f), new Vector3(0.32f, 0.025f, 0.16f), wing);
-            abdomen.gameObject.AddComponent<GlowBeeLight>().Configure(abdomen, new Color(0.6f, 1f, 0.25f), 1.5f, sceneryLayers, sun);
+            abdomen.gameObject.AddComponent<GlowBeeLight>().Configure(abdomen, new Color(0.6f, 1f, 0.25f), 1.5f);
         }
     }
 
@@ -242,7 +269,7 @@ public sealed class GlowBeeColony : MonoBehaviour
         body.useGravity = true;
         body.isKinematic = true;
         Renderer bead = Part(root.transform, "Luminous honey drop", Vector3.zero, new Vector3(0.32f, 0.38f, 0.32f), glow);
-        bead.gameObject.AddComponent<GlowBeeLight>().Configure(bead, new Color(0.7f, 1f, 0.24f), 2.5f, sceneryLayers, sun);
+        bead.gameObject.AddComponent<GlowBeeLight>().Configure(bead, new Color(0.7f, 1f, 0.24f), 2.5f);
         return honey;
     }
 

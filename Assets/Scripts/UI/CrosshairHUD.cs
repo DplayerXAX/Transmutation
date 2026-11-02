@@ -4,7 +4,7 @@ using UnityEngine.UI;
 /// <summary>
 /// A small ink-like crosshair that changes with what the player can do right now:
 ///   - nothing to do: a faint dot;
-///   - a creature in reach (pick up, pet, use): four short ticks close round the dot;
+///   - a creature in reach (pick up, pet, use): a thin circle round the dot;
 ///   - a wall in front that can be climbed: two hand marks either side;
 ///   - holding something to throw: a wide warm ring of ticks, which spreads while aiming;
 ///   - holding a bubble flower: a pale bubble ring;
@@ -30,6 +30,9 @@ public sealed class CrosshairHUD : MonoBehaviour
     private Image dotImage;
     private readonly Image[] tickImages = new Image[Ticks];
     private CanvasGroup group;
+    private UnityEngine.UI.Image targetRing;
+    private float targetRingAlpha;
+    private static Sprite targetRingSprite;
     // Throw power: a thin bar under the crosshair that fills while right click is held.
     private RectTransform chargeBack, chargeFill;
     private Image chargeBackImage, chargeFillImage;
@@ -72,6 +75,10 @@ public sealed class CrosshairHUD : MonoBehaviour
         group.blocksRaycasts = false;
         dot = Piece(canvasObject.transform, "Dot", out dotImage);
         for (int i = 0; i < Ticks; i++) ticks[i] = Piece(canvasObject.transform, "Tick", out tickImages[i]);
+        var ring = Piece(canvasObject.transform, "Available Action Ring", out targetRing);
+        ring.sizeDelta = Vector2.one * 26f;
+        targetRing.sprite = RingSprite();
+        targetRing.color = Color.clear;
         chargeBack = Piece(canvasObject.transform, "Throw Power Back", out chargeBackImage);
         chargeBack.sizeDelta = new Vector2(ChargeWidth + 2f, ChargeHeight + 2f);
         chargeBack.anchoredPosition = new Vector2(0f, -ChargeOffset);
@@ -92,6 +99,25 @@ public sealed class CrosshairHUD : MonoBehaviour
         image = go.GetComponent<Image>();
         image.raycastTarget = false;
         return rect;
+    }
+
+    private static Sprite RingSprite()
+    {
+        if (targetRingSprite != null) return targetRingSprite;
+        const int size = 96;
+        var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { name = "Action Ring", hideFlags = HideFlags.HideAndDontSave };
+        var pixels = new Color[size * size];
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), Vector2.one * (size * 0.5f));
+                pixels[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(2.8f - Mathf.Abs(distance - 43f)));
+            }
+        texture.SetPixels(pixels);
+        texture.Apply(false, true);
+        targetRingSprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), Vector2.one * 0.5f);
+        targetRingSprite.hideFlags = HideFlags.HideAndDontSave;
+        return targetRingSprite;
     }
 
     /// <summary>A plain image sitting in the middle of a scene canvas is the old crosshair: hide it.</summary>
@@ -122,7 +148,7 @@ public sealed class CrosshairHUD : MonoBehaviour
         switch (mode)
         {
             case Mode.Idle: count = 0f; size = 4f; a = 0.55f; break;
-            case Mode.Target: r = 9f; len = 6f; count = 4f; rot = 45f; size = 4f; break;
+            case Mode.Target: size = 4f; break;
             case Mode.Climb: r = 14f; len = 10f; count = 2f; rot = 0f; size = 3f; break;
             case Mode.Throw: r = active ? 20f : 13f; len = 5f; count = 8f; rot = 22.5f; size = 4f; c = warm; break;
             case Mode.Flower: r = active ? 15f : 11f; len = 4f; count = 8f; rot = 0f; size = 3f; c = bubble; break;
@@ -139,6 +165,8 @@ public sealed class CrosshairHUD : MonoBehaviour
         colour = Color.Lerp(colour, c, k);
         alpha = Mathf.Lerp(alpha, a, k);
         group.alpha = alpha;
+        targetRingAlpha = Mathf.Lerp(targetRingAlpha, mode == Mode.Target ? 1f : 0f, k);
+        targetRing.color = new Color(ink.r, ink.g, ink.b, ink.a * targetRingAlpha);
 
         dot.sizeDelta = Vector2.one * dotSize;
         dotImage.color = colour;

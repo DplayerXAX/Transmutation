@@ -9,9 +9,13 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
 {
     [Min(1f)] [SerializeField] private float sightDuration = 45f;
     [Min(1f)] [SerializeField] private float coatingDuration = 60f;
+    [Tooltip("Luminosity added by the temporary honey effect. Refreshing honey does not stack it.")]
+    [Min(0f)] [SerializeField] private float coatingLuminosity = 50f;
     [Min(1f)] [SerializeField] private float nestReadDistance = 5f;
-    private float sightRemaining, coatingRemaining, nextScan;
+    private float sightRemaining, nextScan;
+    private HoneyLuminosityEffect coating;
     private PlayerCreatureCarrier carrier;
+    private PlayerCreatureStats stats;
     private GlowBeeColony colony;
     private GlowBeeNest nearbyNest;
     private Light sightLight, bodyLight;
@@ -22,9 +26,9 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     private Material scentMaterial;
     private GUIStyle panelStyle;
     public bool HasHoneySight => isActiveAndEnabled && sightRemaining > 0f;
-    public bool IsScented => isActiveAndEnabled && coatingRemaining > 0f;
+    public bool IsScented => isActiveAndEnabled && coating != null && coating.IsActive;
     public float SightRemaining => sightRemaining;
-    public float CoatingRemaining => coatingRemaining;
+    public float CoatingRemaining => coating != null ? coating.Remaining : 0f;
     public GlowBeeNest NearbyNest => nearbyNest;
     public string NestReadout => nearbyNest == null ? null :
         $"GLOW BEE NEST\nHoney: {nearbyNest.HoneyCount}/{nearbyNest.HoneyCapacity}    Nectar: {nearbyNest.StoredNectar:0.#}\n" +
@@ -39,14 +43,42 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         var effects = owner.GetComponent<PlayerHoneyEffects>();
         if (effects == null) effects = owner.AddComponent<PlayerHoneyEffects>();
         effects.carrier = playerCarrier;
+        effects.stats = owner.GetComponent<PlayerCreatureStats>();
+        if (effects.stats == null) effects.stats = owner.AddComponent<PlayerCreatureStats>();
         return effects;
+    }
+
+    private void OnEnable()
+    {
+        RenderPipelineManager.beginCameraRendering += BeginCamera;
+        RenderPipelineManager.endCameraRendering += EndCamera;
+    }
+
+    private void BeginCamera(ScriptableRenderContext context, Camera camera)
+    {
+        bool visible = HasHoneySight && carrier != null && camera == carrier.CarryCamera &&
+            (carrier.PlayerController == null || carrier.PlayerController.enabled);
+        if (sightLight != null) sightLight.enabled = visible;
+        if (sightVolume != null) sightVolume.weight = visible ? 1f : 0f;
+    }
+
+    private void EndCamera(ScriptableRenderContext context, Camera camera) => HideSight();
+
+    private void HideSight()
+    {
+        if (sightLight != null) sightLight.enabled = false;
+        if (sightVolume != null) sightVolume.weight = 0f;
     }
 
     public bool TryApply(GlowHoney.Use use)
     {
         if (!isActiveAndEnabled) return false;
         if (use == GlowHoney.Use.Drink) sightRemaining = Mathf.Max(sightRemaining, sightDuration);
-        else if (use == GlowHoney.Use.Coat) coatingRemaining = Mathf.Max(coatingRemaining, coatingDuration);
+        else if (use == GlowHoney.Use.Coat)
+        {
+            if (stats == null || !stats.isActiveAndEnabled) return false;
+            coating = HoneyLuminosityEffect.Apply(stats, coatingLuminosity, coatingDuration);
+        }
         else return false;
         EnsureVisuals();
         RefreshTargets();
@@ -58,21 +90,27 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     {
         // Meditation temporarily disables the ordinary controller; its world should stay undisturbed.
         bool paused = carrier != null && carrier.PlayerController != null && !carrier.PlayerController.enabled;
-        if (!paused) AdvanceTime(Time.deltaTime);
+        if (!paused) AdvanceSightTime(Time.deltaTime);
+        RefreshVisuals();
         if (Time.time >= nextScan)
         {
             nextScan = Time.time + 0.5f;
             RefreshTargets();
         }
         RefreshNearbyNest();
-        RefreshVisuals();
     }
 
     internal void AdvanceTime(float seconds)
     {
+        AdvanceSightTime(seconds);
+        if (coating != null) coating.AdvanceTime(seconds);
+        RefreshVisuals();
+    }
+
+    private void AdvanceSightTime(float seconds)
+    {
         bool hadSight = HasHoneySight;
         sightRemaining = Mathf.Max(0f, sightRemaining - Mathf.Max(0f, seconds));
-        coatingRemaining = Mathf.Max(0f, coatingRemaining - Mathf.Max(0f, seconds));
         if (hadSight != HasHoneySight) RefreshTargets();
     }
 
@@ -118,9 +156,11 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         sightLight.range = 28f;
         sightLight.intensity = 1.6f;
         sightLight.shadows = LightShadows.None;
+        sightLight.enabled = false;
         sightVolume = sight.AddComponent<Volume>();
         sightVolume.isGlobal = true;
         sightVolume.priority = 100f;
+        sightVolume.weight = 0f;
         profile = ScriptableObject.CreateInstance<VolumeProfile>();
         sightVolume.sharedProfile = profile;
         var adjustment = profile.Add<ColorAdjustments>(true);
@@ -173,11 +213,13 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     private void RefreshVisuals()
     {
         bool world = carrier == null || carrier.PlayerController == null || carrier.PlayerController.enabled;
-        if (sightLight != null) sightLight.enabled = HasHoneySight && world;
-        if (sightVolume != null) sightVolume.weight = HasHoneySight && world ? 1f : 0f;
+        HideSight();
+        bool coated = IsScented && world && stats != null && stats.isActiveAndEnabled;
         if (scentRoot == null) return;
-        scentRoot.gameObject.SetActive(IsScented && world);
-        bodyLight.intensity = 1.2f + Mathf.Sin(Time.time * 2f) * 0.25f;
+        scentRoot.gameObject.SetActive(coated);
+        float brightness = stats != null ? stats.Luminosity : 0f;
+        bodyLight.intensity = LuminosityLighting.PointIntensity(brightness);
+        scentMaterial.SetColor("_BaseColor", new Color(0.75f, 1.8f, 0.2f) * (brightness / LuminosityLighting.ReferenceLuminosity));
         for (int i = 0; i < motes.Count; i++)
         {
             float phase = Time.time * 0.55f + i * 0.53f;
@@ -193,13 +235,16 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         { fontSize = 17, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 8, 8), wordWrap = true };
         if (nearbyNest != null) GUI.Box(new Rect(Screen.width * 0.5f - 210f, Screen.height * 0.67f, 420f, 88f), NestReadout, panelStyle);
         string status = HasHoneySight ? $"Honey sight  {Mathf.CeilToInt(sightRemaining)}s" : "";
-        if (IsScented) status += (status.Length > 0 ? "\n" : "") + $"Glowing + sweet scent  {Mathf.CeilToInt(coatingRemaining)}s";
+        if (IsScented) status += (status.Length > 0 ? "\n" : "") + $"Glowing + sweet scent  {Mathf.CeilToInt(CoatingRemaining)}s";
         if (status.Length > 0) GUI.Box(new Rect(20f, Screen.height - 95f, 295f, 72f), status, panelStyle);
     }
 
     private void OnDisable()
     {
-        sightRemaining = coatingRemaining = 0f;
+        RenderPipelineManager.beginCameraRendering -= BeginCamera;
+        RenderPipelineManager.endCameraRendering -= EndCamera;
+        if (coating != null) coating.Cancel();
+        sightRemaining = 0f;
         RefreshTargets();
         RefreshVisuals();
         nearbyNest = null;

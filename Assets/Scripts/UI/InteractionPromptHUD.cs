@@ -10,6 +10,16 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class InteractionPromptHUD : MonoBehaviour
 {
+    [Header("Visibility")]
+    [Tooltip("Show the interaction names, action hints and mouse diagram. The crosshair and gameplay remain active when off.")]
+    [SerializeField] private bool hintsVisible = true;
+    public bool HintsVisible => hintsVisible;
+
+    public void SetHintsVisible(bool visible)
+    {
+        hintsVisible = visible;
+    }
+
     [Header("Player References (found automatically when empty)")]
     [SerializeField] private PlayerCreatureCarrier carrier;
     [SerializeField] private PlayerCreatureInteractor interactor;
@@ -66,7 +76,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) { group.alpha = 0f; if (icon != null) icon.Show(false, false, false, false, 0.01f); return; }
+        if (!hintsVisible || BoneAwakeningCutscene.Playing)
+        {
+            group.alpha = 0f;
+            if (icon != null) icon.Show(false, false, false, false, fadeTime);
+            return;
+        }
         string title = null;
         string hint = null;
         ChoosePrompt(ref title, ref hint);

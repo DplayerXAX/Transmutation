@@ -13,6 +13,23 @@ public static class GlowBeeValidation
     private static IEnumerator routine;
     private static double deadline;
     private static int checks;
+    private static bool live;
+    public static bool IsRunning => routine != null;
+    public static string LastResult { get; private set; }
+
+    /// <summary>Runs the same integration checks in an already-playing Ariia scene without saving or exiting Unity.</summary>
+    public static void RunLive()
+    {
+        if (!Application.isPlaying || UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "Scene_Ariia" || IsRunning)
+            throw new InvalidOperationException("Enter Play in Scene_Ariia, then run the checks once.");
+        live = true;
+        checks = 0;
+        LastResult = null;
+        Time.timeScale = 4f;
+        deadline = EditorApplication.timeSinceStartup + 100;
+        routine = Run();
+        EditorApplication.update += Step;
+    }
 
     [InitializeOnLoadMethod]
     private static void Install() => EditorApplication.playModeStateChanged += OnPlayMode;
@@ -34,6 +51,8 @@ public static class GlowBeeValidation
 
     private static void OnPlayMode(PlayModeStateChange state)
     {
+        if (state == PlayModeStateChange.ExitingPlayMode && live && IsRunning)
+        { Finish(1, "Bee checks cancelled when Play Mode ended."); return; }
         if (state != PlayModeStateChange.EnteredPlayMode || !SessionState.GetBool(Key, false)) return;
         SessionState.SetBool(Key, false);
         checks = 0;
@@ -174,7 +193,12 @@ public static class GlowBeeValidation
             if (!candidate.IsDead && candidate.SimulationEnabled && candidate.CarriedNectar == 0f)
             { visitor = candidate; break; }
         Check(visitor != null, "free bee available for player orbit");
-        visitor.GetComponent<Rigidbody>().position = home.Entrance + Vector3.right * 2f;
+        // The visitor may belong to a different hive. Social visits deliberately stay within
+        // 24m of its own nest, so stage this assertion there instead of at the harvested hive.
+        playerBody.position = visitor.Nest.Entrance;
+        carrier.PlayerController.transform.position = visitor.Nest.Entrance;
+        visitor.GetComponent<Rigidbody>().position = visitor.Nest.Entrance + Vector3.right * 2f;
+        Physics.SyncTransforms();
         // Remove the predator for this isolated social-behavior assertion; it otherwise has priority.
         spider.gameObject.SetActive(false);
         end = Time.time + 12f;
@@ -193,7 +217,15 @@ public static class GlowBeeValidation
     private static void Finish(int code, string message)
     {
         EditorApplication.update -= Step;
+        routine = null;
         Time.timeScale = 1f;
+        if (live)
+        {
+            live = false;
+            LastResult = message;
+            Debug.Log(message);
+            return;
+        }
         Directory.CreateDirectory("../Results");
         File.WriteAllText("../Results/integration.txt", message);
         Debug.Log(message);

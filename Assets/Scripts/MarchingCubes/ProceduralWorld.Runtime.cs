@@ -127,7 +127,7 @@ public sealed partial class ProceduralWorld
             if (body.gameObject.scene == gameObject.scene && body.GetComponent<SmoothFirstPersonController>() != null) playerBody = body;
         if (playerBody != null) spawnPosition = playerBody.position;
         if (!LayoutReady) Generate(false);
-        PlacePlayerOnSurface();
+        if (placePlayerOnSurface) PlacePlayerOnSurface();
     }
     private void PlacePlayerOnSurface()
     {
@@ -400,7 +400,7 @@ public sealed partial class ProceduralWorld
         if (created)
         {
             state.gameObject = new GameObject("World Chunk " + result.coord, typeof(MeshCollider), typeof(MeshFilter), typeof(MeshRenderer), typeof(ProceduralWorldChunk))
-                { hideFlags = HideFlags.DontSave, layer = chunkLayer };
+                { hideFlags = HideFlags.DontSave, layer = chunkLayer, tag = gameObject.tag };
             state.gameObject.transform.SetParent(transform, false);
             state.gameObject.transform.localPosition = gridMin + (Vector3)(result.coord * GridChunkCells) * CellSize;
             state.gameObject.GetComponent<ProceduralWorldChunk>().Initialize(this, result.coord);

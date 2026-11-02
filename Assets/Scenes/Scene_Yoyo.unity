@@ -355,6 +355,37 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
   m_PrefabInstance: {fileID: 112865708}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &168543578
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 168543579}
+  m_Layer: 0
+  m_Name: Nest Anchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &168543579
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 168543578}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 4.6093273, y: -2.0131202, z: 3.8411064}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2015496645}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &311715796
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -567,6 +598,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  hintsVisible: 1
   carrier: {fileID: 0}
   interactor: {fileID: 0}
   traversal: {fileID: 0}
@@ -577,11 +609,13 @@ MonoBehaviour:
   titleColor: {r: 1, g: 1, b: 1, a: 0.55}
   hintColor: {r: 1, g: 1, b: 1, a: 0.92}
   fadeTime: 0.12
+  showText: 0
+  iconOffset: {x: 0, y: -38}
+  iconScale: 0.8
   showCreatureName: 1
-  carryHint: '[Hold RMB]  Carry'
-  releaseHint: '[Release RMB]  Drop'
-  pickUpKeyHintFormat: '[{0}]  Pick up'
-  dropKeyHintFormat: '[{0}]  Drop'
+  pickUpHint: '[RMB] Pick up'
+  putDownThrowHint: "Tap RMB: Put down \xB7 Hold RMB: Throw"
+  throwChargeHintFormat: "Throw {0}% \xB7 Release RMB to throw"
   interactHintFormat: '[LMB]  {0}'
   petHint: '[Hold LMB]  Pet'
   pettingHint: Petting...
@@ -860,6 +894,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 793194968}
     - targetCorrespondingSourceObject: {fileID: 1612156595183698087, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1948257014}
@@ -867,6 +904,25 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1948257013}
   m_SourcePrefab: {fileID: 100100000, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+--- !u!1 &793194967 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 793194966}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &793194968
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 793194967}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b6d487ce1545e54ea41055ac2f3528c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCreatureStats
+  luminosity: 0
+  emissionOffset: {x: 0, y: 0.5, z: 0}
 --- !u!1001 &794945112
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2552,6 +2608,66 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
   m_PrefabInstance: {fileID: 1986774124}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2015496643
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2015496645}
+  - component: {fileID: 2015496644}
+  m_Layer: 0
+  m_Name: "Glow Bee Colony \u2014 player test"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2015496644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015496643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 293e9b2225ba437daa16cc6bae2173b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlowBeeColony
+  nestCount: 1
+  beesPerNest: 4
+  flowersPerNest: 5
+  seed: 814
+  nestAnchors:
+  - {fileID: 168543579}
+  groundLayers:
+    serializedVersion: 2
+    m_Bits: 128
+  sceneryLayers:
+    serializedVersion: 2
+    m_Bits: 385
+  nestSeparation: 9
+  spiderPrefab: {fileID: 0}
+  spawnSpider: 0
+--- !u!4 &2015496645
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015496643}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 168543579}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2081416781
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2633,3 +2749,4 @@ SceneRoots:
   - {fileID: 1445908760}
   - {fileID: 311715796}
   - {fileID: 1452851169}
+  - {fileID: 2015496645}

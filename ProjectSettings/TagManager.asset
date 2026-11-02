@@ -8,6 +8,7 @@ TagManager:
   - Food
   - Nest
   - transparent
+  - Ground
   layers:
   - Default
   - TransparentFX

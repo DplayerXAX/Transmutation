@@ -6,8 +6,8 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Ore Colossus: a huge, slow, peaceful creature of rock and ore that roams the map on four long legs,
 /// carrying a geode shrine on its back (after Elden Ring's Walking Mausoleum). Its feet shove aside
-/// whatever they land beside. Under its belly a crystal heart (OreHeart) hangs on a chain; only erosive
-/// water wears it away. When the heart breaks the colossus kneels for good: its tail lowers into a ramp,
+/// whatever they land beside. Under its belly grows a giant ore mass (OreHeart); only erosive water wears
+/// it away, carving it wherever it touches. When the heart breaks the colossus kneels for good: its tail lowers into a ramp,
 /// its back and legs become ground and climbable rock (static "Remains" colliders), and the geode opens
 /// to release one Geode Larva. It ignores blasts, stomps and water ageing (Invulnerable) and is never an
 /// AI target (polarity None). It builds its body itself when placed, like the Bone Kiln.
@@ -42,7 +42,7 @@ public sealed class OreColossus : Creature
     [SerializeField] private Vector3 bodySize = new Vector3(6.5f, 3.6f, 9f);
     [Tooltip("Height of the body centre above the mean height of its feet while walking.")]
     [Min(4f)] [SerializeField] private float walkHeight = 9.8f;
-    [Tooltip("How far the body sinks while resting; the heart then lies on the ground.")]
+    [Tooltip("How far the body sinks while resting; the ore under the belly then nearly touches the ground.")]
     [Min(0f)] [SerializeField] private float restDrop = 2.6f;
 
     [Header("Legs")]
@@ -79,8 +79,10 @@ public sealed class OreColossus : Creature
     [Min(0f)] [SerializeField] private float stompDamage = 20f;
 
     [Header("Heart")]
-    [Min(1f)] [SerializeField] private float chainLength = 5.6f;
-    [Min(0.2f)] [SerializeField] private float heartRadius = 0.7f;
+    [Tooltip("Size of the ore mass under the belly (width, height down from the belly, length).")]
+    [SerializeField] private Vector3 heartSize = new Vector3(4.4f, 5.8f, 5.4f);
+    [Tooltip("Spacing of the ore's density grid; smaller is finer carving and costlier remeshing.")]
+    [Range(0.12f, 0.5f)] [SerializeField] private float heartCellSize = 0.25f;
     [Tooltip("Erosion the heart takes before it breaks.")]
     [Min(0.1f)] [SerializeField] private float heartIntegrity = 10f;
     [Tooltip("Multiplier on the erosion water does to the heart (capped at 1 per second).")]
@@ -358,7 +360,6 @@ public sealed class OreColossus : Creature
         PoseBody(0f, true);
         PoseLegs();
         PoseTail();
-        heart.Hang(heartAnchor.position, GroundY(heartAnchor.position));
         if (world != null && !subscribed) { world.TerrainChanged += OnWorldEroded; subscribed = true; }
         PickWaypoint(false);
         Begin(Phase.Walking, 0f);
@@ -453,7 +454,8 @@ public sealed class OreColossus : Creature
             geodeHinges.Add(hinge);
             geodeHalves.Add(half.GetComponent<MeshFilter>());
         }
-        heartAnchor = Node("Heart Anchor", bodyTransform, new Vector3(0f, -halfY, 0.3f));
+        // Slightly inside the hull, so the ore's top seam stays hidden.
+        heartAnchor = Node("Heart Anchor", bodyTransform, new Vector3(0f, -halfY + 0.35f, 0.3f));
         tailRoot = Node("Tail Root", bodyTransform, new Vector3(0f, halfY, -bodySize.z * 0.5f + 0.2f));
     }
 
@@ -513,14 +515,11 @@ public sealed class OreColossus : Creature
 
     private void BuildHeart()
     {
-        Transform chain = Node("Chain", transform, Vector3.zero);
-        var go = new GameObject("Heart");
+        var go = new GameObject("Heart Ore");
         go.SetActive(false);
-        go.transform.SetParent(transform, false);
+        go.transform.SetParent(heartAnchor, false);
         heart = go.AddComponent<OreHeart>();
-        Mesh link = Track(OreShapes.Limb(0.55f, 0.16f, 0.16f, 6, seed + 70, "Chain Link"));
-        heart.Initialize(this, chain, chainLength, heartRadius, heartIntegrity, heartSensitivity,
-            Track(OreShapes.HeartCrystal(heartRadius, seed + 71)), link, heartGlow, rock);
+        heart.Initialize(this, heartSize, heartCellSize, heartIntegrity, heartSensitivity, seed + 71, heartGlow);
         shardMesh = Track(OreShapes.ShardCluster(1, 0.9f, seed + 72, "Heart Shard"));
         go.SetActive(true);
     }
@@ -695,7 +694,6 @@ public sealed class OreColossus : Creature
         leg.plantedAt = clock;
         bob -= 0.12f;
         Shove(leg.to, stompRadius, stompFling, stompPush, stompDamage);
-        if (heart != null) heart.Kick(transform.right * (leg.side * -0.6f) + transform.forward * 0.2f);
         Stomped?.Invoke(leg.to);
     }
 
@@ -798,9 +796,7 @@ public sealed class OreColossus : Creature
 
     private void UpdateHeart(float deltaTime)
     {
-        if (heart == null || heart.Broken) return;
-        Vector3 anchor = heartAnchor.position;
-        heart.Simulate(deltaTime, anchor, GroundY(heart.transform.position));
+        if (heart != null && !heart.Broken) heart.Tick(deltaTime);
     }
 
     // ---------------- Heart, stagger and kneeling ----------------
@@ -831,7 +827,7 @@ public sealed class OreColossus : Creature
         settleReady = false;
         speed = 0f;
         Vector3 at = heart != null ? heart.transform.position : transform.position;
-        if (heart != null) heart.Shatter(shardMesh, heartGlow, heartAnchor);
+        if (heart != null) heart.Shatter(shardMesh, heartGlow);
         Shove(new Vector3(at.x, rootGroundY, at.z), 6f, stompFling * 0.8f, stompPush, 0f);
     }
 
