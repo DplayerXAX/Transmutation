@@ -89,9 +89,16 @@ public sealed class PlayerSkateShoes : MonoBehaviour
         }
         if (visuals == null)
         {
-            var root = new GameObject("Worn skate shoes");
-            root.transform.SetParent(transform, false);
-            visuals = root.AddComponent<SkateShoesVisuals>();
+            var library = GameplayPrefabLibrary.Load();
+            if (library != null && library.skateShoesVisual != null)
+                visuals = Instantiate(library.skateShoesVisual, transform);
+            else
+            {
+                var root = new GameObject("Worn skate shoes");
+                root.transform.SetParent(transform, false);
+                visuals = root.AddComponent<SkateShoesVisuals>();
+            }
+            visuals.name = "Worn skate shoes";
         }
         visuals.gameObject.SetActive(true);
     }

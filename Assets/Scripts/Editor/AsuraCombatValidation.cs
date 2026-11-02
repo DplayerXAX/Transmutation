@@ -298,7 +298,7 @@ public static class AsuraCombatValidation
             Check(reclaimed.IsCarried && reclaimed.SimulationEnabled && reclaimed.GetComponent<Rigidbody>().isKinematic,
                 "picking up a thrown spent projectile retires throw ownership");
             thrower.Throw();
-            var handoffAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TrappingBubble.prefab");
+            var handoffAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab");
             var handoffRoot = Object.Instantiate(handoffAsset, reclaimed.transform.position, Quaternion.identity, staging.transform);
             handoffRoot.transform.SetParent(null, true);
             Check(handoffRoot.GetComponent<TrappingBubble>().TryCapture(reclaimed.gameObject), "bubble can take ownership of thrown material");
@@ -318,7 +318,7 @@ public static class AsuraCombatValidation
             var projectile = Spawn<ExplosiveProjectile>("ExplosiveProjectile", new Vector3(0f, 4f, 0f));
             var source = Probe(new Vector3(10f, 4f, 0f));
             projectile.Launch(source, null, Vector3.forward, 60f, 4f, 12f);
-            var bubbleAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TrappingBubble.prefab");
+            var bubbleAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab");
             var bubbleRoot = Object.Instantiate(bubbleAsset, new Vector3(0f, 4f, -2f), Quaternion.identity, staging.transform);
             bubbleRoot.transform.SetParent(null, true); var bubble = bubbleRoot.GetComponent<TrappingBubble>();
             Check(bubble.TryCapture(projectile.gameObject) && projectile.FlightState == ProjectileFlightState.Spent && !projectile.SimulationEnabled,
@@ -331,7 +331,7 @@ public static class AsuraCombatValidation
             Object.DestroyImmediate(projectile.gameObject); Object.DestroyImmediate(bubbleRoot);
             projectile = Spawn<ExplosiveProjectile>("ExplosiveProjectile", new Vector3(0f, 4f, 0f));
             projectile.Launch(source, null, Vector3.forward, 60f, 4f, 12f);
-            var webAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/SkyWeb.prefab");
+            var webAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Spiders/SkyWeb.prefab");
             var webRoot = Object.Instantiate(webAsset, new Vector3(0f, 4f, 0f), Quaternion.identity, staging.transform);
             webRoot.transform.SetParent(null, true); var web = webRoot.GetComponent<SkyWeb>();
             Check(web.TryCapture(projectile.GetComponent<Rigidbody>(), projectile.transform.position) && projectile.FlightState == ProjectileFlightState.Spent,

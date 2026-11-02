@@ -47,8 +47,8 @@ capture. Unity's normal solid sphere/Rigidbody contact solver handles blocking, 
 collision detection for shots. Disable/destruction also releases the occupant and restores state.
 
 Tune motion, lifetime, size limit, escape height, immunity and the toggle on
-`Assets/Prefabs/Creatures/TrappingBubble.prefab`. Tune firing intervals, cooldown, aim distance, launch
-speed and muzzle on `Assets/Prefabs/Creatures/BubbleFlower.prefab`.
+`Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab`. Tune firing intervals, cooldown, aim distance, launch
+speed and muzzle on `Assets/Prefabs/Creatures/Bubbles/BubbleFlower.prefab`.
 
 While carrying a tentacle, **hold LMB to aim at an ordinary bubble or Fire Bubble, then release to attach a sucker**.
 The bubble floats on a slack leash and follows when the leash becomes taut, like a balloon. **Hold R**

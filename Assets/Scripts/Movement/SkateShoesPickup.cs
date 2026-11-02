@@ -12,11 +12,16 @@ public sealed class SkateShoesPickup : MonoBehaviour
     private void Awake()
     {
         var collider = GetComponent<BoxCollider>();
-        collider.size = new Vector3(0.75f, 0.42f, 0.6f);
-        collider.center = Vector3.up * 0.08f;
-        var model = new GameObject("Skate shoes display");
-        model.transform.SetParent(transform, false);
-        visuals = model.AddComponent<SkateShoesVisuals>();
+        collider.size = new Vector3(0.75f, 0.5f, 0.6f);
+        collider.center = Vector3.up * 0.21f;
+        visuals = GetComponentInChildren<SkateShoesVisuals>(true);
+        if (visuals == null)
+        {
+            var model = new GameObject("Skate shoes display");
+            model.transform.SetParent(transform, false);
+            model.transform.localPosition = Vector3.up * 0.13f;
+            visuals = model.AddComponent<SkateShoesVisuals>();
+        }
     }
 
     public bool TryEquip(SmoothFirstPersonController player)
@@ -37,10 +42,13 @@ public sealed class SkateShoesPickup : MonoBehaviour
         foreach (SkateShoesPickup existing in FindObjectsByType<SkateShoesPickup>(FindObjectsSortMode.None))
             if (existing.gameObject.scene == player.gameObject.scene) return;
         if (player.GetComponent<PlayerSkateShoes>() != null) return;
-        var root = new GameObject("Skate Shoes - starting equipment");
+        var library = GameplayPrefabLibrary.Load();
+        SkateShoesPickup pickup = library != null && library.skateShoes != null
+            ? Instantiate(library.skateShoes) : new GameObject("Skate Shoes - starting equipment").AddComponent<SkateShoesPickup>();
+        var root = pickup.gameObject;
+        root.name = "Skate Shoes - starting equipment";
         SceneManager.MoveGameObjectToScene(root, player.gameObject.scene);
         root.transform.position = player.transform.position;
-        var pickup = root.AddComponent<SkateShoesPickup>();
         pickup.StartCoroutine(pickup.PlaceNear(player));
     }
 
@@ -76,7 +84,7 @@ public sealed class SkateShoesPickup : MonoBehaviour
                     player.GroundLayers, QueryTriggerInteraction.Ignore) ||
                     Vector3.Angle(hit.normal, Vector3.up) > 35f ||
                     hit.collider.GetComponentInParent<SmoothFirstPersonController>() != null) continue;
-                transform.SetPositionAndRotation(hit.point + Vector3.up * 0.13f,
+                transform.SetPositionAndRotation(hit.point + Vector3.up * 0.01f,
                     Quaternion.LookRotation(Vector3.ProjectOnPlane(forward, hit.normal), hit.normal));
                 visuals.gameObject.SetActive(true);
                 collider.enabled = true;
@@ -91,6 +99,6 @@ public sealed class SkateShoesPickup : MonoBehaviour
     {
         Gizmos.color = new Color(0.1f, 0.9f, 0.8f);
         Gizmos.matrix = transform.localToWorldMatrix;
-        Gizmos.DrawWireCube(Vector3.up * 0.08f, new Vector3(0.75f, 0.42f, 0.6f));
+        Gizmos.DrawWireCube(Vector3.up * 0.21f, new Vector3(0.75f, 0.5f, 0.6f));
     }
 }

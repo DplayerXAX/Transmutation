@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 /// <summary>Creates missing prototype assets and places one compost creature without resetting tuning.</summary>
 public static class CompostCreatureSetup
 {
-    public const string PrefabPath = "Assets/Prefabs/Creatures/CompostCreature.prefab";
+    public const string PrefabPath = "Assets/Prefabs/Creatures/Compost/CompostCreature.prefab";
     public const string ScenePath = "Assets/Scenes/Scene_Yoyo.unity";
 
     [MenuItem("Tools/Creatures/Compost/Create Assets")]

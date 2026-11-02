@@ -14,6 +14,13 @@ public sealed class GlowHoney : Creature
         if (Luminosity <= 0f) SetLuminosity(50f);
         GetComponent<SphereCollider>().radius = 0.18f;
         GetComponent<Rigidbody>().mass = 0.2f;
+        Transform drop = transform.Find("Luminous honey drop");
+        if (drop != null)
+        {
+            var light = drop.GetComponent<GlowBeeLight>();
+            if (light == null) light = drop.gameObject.AddComponent<GlowBeeLight>();
+            light.Configure(drop.GetComponent<Renderer>(), new Color(0.7f, 1f, 0.24f), 2.5f);
+        }
     }
     public override string CarriedPrompt => "[LMB] Coat aimed creature / surface with glowing honey";
     public override string InteractionPrompt => !IsCarried && !IsDead ? "Eat honey    [Hold LMB] Coat yourself" : null;

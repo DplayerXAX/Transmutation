@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 public static class FlashBloomSetup
 {
     public const string Folder = "Assets/Generated/FlashBloom";
-    public const string PrefabPath = Folder + "/FlashBloom.prefab";
+    public const string PrefabPath = "Assets/Prefabs/Creatures/LightEcology/FlashBloom.prefab";
 
     private static Material Material(string name, Color color, bool glow = false)
     {

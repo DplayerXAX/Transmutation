@@ -8,8 +8,8 @@ using Object = UnityEngine.Object;
 /// <summary>Creates the seed assets without placing objects or overwriting existing art and tuning.</summary>
 public static class CorruptSeedSetup
 {
-    public const string SeedPath = "Assets/Prefabs/Creatures/CorruptSeed.prefab";
-    public const string DefinitionPath = "Assets/Prefabs/Creatures/CorruptSeedDefinition.asset";
+    public const string SeedPath = "Assets/Prefabs/Creatures/Seeds/CorruptSeed.prefab";
+    public const string DefinitionPath = "Assets/Prefabs/Creatures/Seeds/CorruptSeedDefinition.asset";
     public const string MaterialPath = "Assets/Materials/Creatures/CorruptSeed.mat";
 
     [MenuItem("Tools/Creatures/Create Corrupt Seed Assets")]

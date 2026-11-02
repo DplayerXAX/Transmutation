@@ -363,7 +363,7 @@ public static class CompostCreatureValidation
             a = Corpse(); Claim(compost, a); Object.DestroyImmediate(a.gameObject); Advance(compost, 5f);
             Check(compost.StoredCharges == 0 && compost.AbsorbingBodyCount == 0, "external removal releases stale claim without credit");
 
-            var bonesAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/BirdBones.prefab");
+            var bonesAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Birds/BirdBones.prefab");
             if (bonesAsset != null)
             {
                 var bones = Object.Instantiate(bonesAsset, stage.transform).GetComponent<BirdBones>();

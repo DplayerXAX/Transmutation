@@ -194,7 +194,7 @@ public static class FlashBloomValidation
         Object.Destroy(bloom.gameObject);
         yield return null;
 
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
         var player = Object.Instantiate(playerPrefab, new Vector3(0f, 2f, -5f), Quaternion.identity);
         yield return null;
         var carrier = player.GetComponentInChildren<PlayerCreatureCarrier>();

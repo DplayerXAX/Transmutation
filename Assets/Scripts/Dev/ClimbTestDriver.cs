@@ -1304,7 +1304,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
         yield return new WaitForSeconds(3f);
         Log($"Draft cold: warmth {spireLandmark.Warmth:0.00}, player {body.position.y - probe.y:0.0} m above the base");
         Creature warm = null;
-        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubble.prefab");
+        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/Bubble.prefab");
         if (bubblePrefab != null) warm = Instantiate(bubblePrefab, probe, Quaternion.identity).GetComponent<Creature>();
         if (warm == null) { Log("Draft: no creature to warm."); }
         else
@@ -1447,7 +1447,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
         }
         else Log("    fuzz wedge: no active FuzzCreature in the scene");
 
-        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubble.prefab");
+        var bubblePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/Bubble.prefab");
         if (bubblePrefab != null)
         {
             Creature warm = Instantiate(bubblePrefab, kiln.HeartPoint, Quaternion.identity).GetComponent<Creature>();

@@ -4,11 +4,17 @@ using UnityEngine.Rendering;
 /// <summary>Code-built sneakers with bright soles and compact heel/toe wheels; no physics colliders.</summary>
 public sealed class SkateShoesVisuals : MonoBehaviour
 {
-    private readonly Transform[] shoes = new Transform[2];
-    private Material upper, sole, rubber, accent;
+    [SerializeField] private Transform[] shoes = new Transform[2];
+    [SerializeField] private Material upper, sole, rubber, accent;
+    private bool ownsMaterials;
 
     private void Awake()
+        => BuildModel();
+
+    public void BuildModel()
     {
+        if (shoes.Length == 2 && shoes[0] != null && shoes[1] != null) return;
+        ownsMaterials = Application.isPlaying;
         Shader shader = Shader.Find("Universal Render Pipeline/Lit");
         if (shader == null) shader = Shader.Find("Standard");
         upper = MakeMaterial(shader, "Skate shoe teal", new Color(0.04f, 0.48f, 0.5f));
@@ -54,7 +60,8 @@ public sealed class SkateShoesVisuals : MonoBehaviour
         part.transform.localScale = scale;
         Collider collider = part.GetComponent<Collider>();
         collider.enabled = false;
-        Destroy(collider);
+        if (Application.isPlaying) Destroy(collider);
+        else DestroyImmediate(collider);
         var renderer = part.GetComponent<Renderer>();
         renderer.sharedMaterial = material;
         renderer.shadowCastingMode = ShadowCastingMode.Off;
@@ -68,6 +75,7 @@ public sealed class SkateShoesVisuals : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (!ownsMaterials) return;
         if (upper != null) Destroy(upper);
         if (sole != null) Destroy(sole);
         if (rubber != null) Destroy(rubber);

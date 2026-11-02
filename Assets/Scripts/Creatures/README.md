@@ -248,7 +248,7 @@ prompts and carry work.
 
 ## Squirrels: food, real nest inventory and construction
 
-Drag `Assets/Prefabs/Systems/SquirrelSystemManager.prefab` into a scene to add the complete system.
+Drag `Assets/Prefabs/Systems/Squirrels/SquirrelSystemManager.prefab` into a scene to add the complete system.
 `Scene_Ariia` already contains an instance. Its single `SquirrelSystemManager` component owns population,
 nests, food spawning/refresh and food fights, with all three creature prefab references assigned.
 At startup it discovers scene-local `SquirrelTree` anchors and authored squirrel/food/nest components.
@@ -336,7 +336,7 @@ escalation and physics-based escape placement in isolated scenes.
 
 ### Museum display prefab
 
-Drag **Assets/Prefabs/Systems/SquirrelMuseumDisplay.prefab** into a museum/display level with an
+Drag **Assets/Prefabs/Systems/Squirrels/SquirrelMuseumDisplay.prefab** into a museum/display level with an
 existing player. This is a **variant of SquirrelSystemManager.prefab**, retaining the same creature,
 food, nest and player-reaction behavior. The original system prefab is unchanged.
 

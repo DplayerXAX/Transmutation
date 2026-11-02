@@ -26,7 +26,7 @@ public static class BounceShroomSetup
     public static object Main()
     {
         if (EditorApplication.isPlaying) throw new System.Exception("Exit Play Mode before creating assets.");
-        const string prefabPath = "Assets/Prefabs/Creatures/BounceShroom.prefab";
+        const string prefabPath = "Assets/Prefabs/Creatures/Traversal/BounceShroom.prefab";
         const string materialPath = "Assets/Materials/Creatures/BounceShroom.mat";
         const string physicsPath = "Assets/Materials/Creatures/BouncySurface.physicMaterial";
         Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);

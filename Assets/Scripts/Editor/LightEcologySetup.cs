@@ -8,8 +8,8 @@ using Object = UnityEngine.Object;
 public static class LightEcologySetup
 {
     public const string Folder = "Assets/Generated/LightEcology";
-    public const string MothPath = Folder + "/LightMoth.prefab";
-    public const string PodPath = Folder + "/AfterglowPod.prefab";
+    public const string MothPath = "Assets/Prefabs/Creatures/LightEcology/LightMoth.prefab";
+    public const string PodPath = "Assets/Prefabs/Creatures/LightEcology/AfterglowPod.prefab";
 
     internal static Material Material(string name, Color color, bool glow = false)
     {

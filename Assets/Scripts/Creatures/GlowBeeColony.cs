@@ -262,6 +262,15 @@ public sealed class GlowBeeColony : MonoBehaviour
             if (free) break;
         }
         if (!free) return null;
+        var library = GameplayPrefabLibrary.Load();
+        if (library != null && library.glowHoney != null)
+        {
+            var product = Instantiate(library.glowHoney, nest.transform);
+            product.transform.localPosition = local;
+            product.transform.localRotation = Quaternion.identity;
+            product.GetComponent<Rigidbody>().isKinematic = true;
+            return product;
+        }
         GameObject root = Root("Glowing Honey", nest.transform.TransformPoint(local), nest.transform);
         var honey = root.AddComponent<GlowHoney>();
         var body = root.GetComponent<Rigidbody>();

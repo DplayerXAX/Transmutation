@@ -19,9 +19,9 @@
 
 | 生物 | Prefab | 主要脚本 |
 | --- | --- | --- |
-| 闪光囊 | `Assets/Generated/FlashBloom/FlashBloom.prefab` | `FlashBloom.cs` |
-| 趋光飞蛾 | `Assets/Generated/LightEcology/LightMoth.prefab` | `LightMoth.cs` |
-| 余辉荚 | `Assets/Generated/LightEcology/AfterglowPod.prefab` | `AfterglowPod.cs` |
+| 闪光囊 | `Assets/Prefabs/Creatures/LightEcology/FlashBloom.prefab` | `FlashBloom.cs` |
+| 趋光飞蛾 | `Assets/Prefabs/Creatures/LightEcology/LightMoth.prefab` | `LightMoth.cs` |
+| 余辉荚 | `Assets/Prefabs/Creatures/LightEcology/AfterglowPod.prefab` | `AfterglowPod.cs` |
 
 这些 Prefab 已放入独立场景，也可以直接拖进其他场景。编辑器菜单 `Tools > Creatures > Light Ecology > Create Standalone Scene` 可创建独立场景；场景已存在时打开现有场景。
 

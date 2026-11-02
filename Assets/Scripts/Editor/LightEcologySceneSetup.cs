@@ -41,7 +41,7 @@ public static class LightEcologySceneSetup
         var sun = new GameObject("Daylight").AddComponent<Light>();
         sun.type = LightType.Directional; sun.intensity = 0.5f;
         sun.transform.rotation = Quaternion.Euler(55f, -30f, 0f);
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
         var playerRoot = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
         playerRoot.transform.position = new Vector3(0f, 1.5f, -6f);
         new GameObject("Interaction Prompts").AddComponent<InteractionPromptHUD>();
