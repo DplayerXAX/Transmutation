@@ -30,6 +30,10 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     // Daniel: Delayed interaction after pickup
     private Creature pendingHeldUse;
     private float pendingHeldUseUntil;
+    [SerializeField, Min(0.1f)] private float honeyCoatHoldTime = 0.45f;
+    private GlowHoney pressedHoney;
+    private float honeyHeldTime;
+    private bool honeyGesture;
 
     private void Awake()
     {
@@ -55,6 +59,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !Application.isFocused)
         {
             pendingHeldUse = null;
+            CancelHoneyGesture();
             UpdateHeldSqueeze(false);
             return;
         }
@@ -67,6 +72,10 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         // Aria: A carried squirrel consumes left mouse input.
         if (UpdateHeldSqueeze(leftHeld))
+            return;
+
+        if (UpdateHoneyGesture(Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame,
+            leftHeld, Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame, Time.deltaTime))
             return;
 
         if (Mouse.current == null ||
@@ -137,6 +146,46 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         !carrier.CarriedCreature.IsDead &&
         carrier.CarriedCreature.CanUseWhileCarried;
 
+    // Delay ground honey's click until release so a long press never drinks first.
+    internal bool UpdateHoneyGesture(bool pressed, bool held, bool released, float deltaTime)
+    {
+        if (pressed && !honeyGesture && carrier != null && carrier.CarriedCreature == null &&
+            carrier.PendingCreature == null && !BoneRide.Busy &&
+            !BoneRide.TryNearby(out _, out _) && FindCreature() is GlowHoney honey && !honey.IsCarried)
+        {
+            pressedHoney = honey;
+            honeyHeldTime = 0f;
+            honeyGesture = true;
+        }
+        if (!honeyGesture) return false;
+        if (pressedHoney != null)
+        {
+            if (carrier == null || carrier.CarriedCreature != null || carrier.PendingCreature != null ||
+                pressedHoney.IsCarried || pressedHoney.IsDead || FindCreature() != pressedHoney)
+                pressedHoney = null;
+            else
+            {
+                honeyHeldTime += Mathf.Max(0f, deltaTime);
+                if (honeyHeldTime >= honeyCoatHoldTime)
+                {
+                    pressedHoney.TryUse(GlowHoney.Use.Coat, carrier);
+                    pressedHoney = null;
+                }
+                else if (released)
+                    pressedHoney.TryUse(GlowHoney.Use.Drink, carrier);
+            }
+        }
+        if (released || !held) CancelHoneyGesture();
+        return true;
+    }
+
+    private void CancelHoneyGesture()
+    {
+        pressedHoney = null;
+        honeyHeldTime = 0f;
+        honeyGesture = false;
+    }
+
     private void OnDisable()
     {
         if (squeezedSquirrel != null)
@@ -144,6 +193,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         squeezedSquirrel = null;
         pendingHeldUse = null;
+        CancelHoneyGesture();
     }
 
     /// <summary>
@@ -216,6 +266,18 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             Ray aim = interactionCamera.ViewportPointToRay(
                 new Vector3(0.5f, 0.5f, 0f)
             );
+
+            if (held is GlowHoney honey)
+            {
+                Creature target = FindCreature(out RaycastHit coatHit, out _);
+                if (coatHit.collider != null)
+                {
+                    GameObject owner = target != null ? target.gameObject
+                        : coatHit.rigidbody != null ? coatHit.rigidbody.gameObject : coatHit.collider.gameObject;
+                    honey.TryCoat(owner, coatHit.point + coatHit.normal * 0.05f);
+                }
+                return;
+            }
 
             held.ReceiveInteraction(
                 new CreatureInteraction(

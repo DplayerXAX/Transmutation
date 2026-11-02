@@ -15,15 +15,37 @@ public sealed class GlowHoney : Creature
         GetComponent<SphereCollider>().radius = 0.18f;
         GetComponent<Rigidbody>().mass = 0.2f;
     }
-    public override string CarriedPrompt => "[LMB] Drink: night vision    [F] Apply: glow and scent";
-    public override string InteractionPrompt => IsCarried && !IsDead ? "Drink honey" : null;
-    public override void ReceiveInteraction(CreatureInteraction interaction) => TryUse(Use.Drink);
+    public override string CarriedPrompt => "[LMB] Coat aimed creature / surface with glowing honey";
+    public override string InteractionPrompt => !IsCarried && !IsDead ? "Eat honey    [Hold LMB] Coat yourself" : null;
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!IsCarried && interaction.Source != null)
+            TryUse(Use.Drink, interaction.Source.GetComponentInParent<PlayerCreatureCarrier>());
+    }
     public bool TryUse(Use use)
+        => TryUse(use, Carrier);
+
+    public bool TryUse(Use use, PlayerCreatureCarrier player)
+    {
+        if (used || IsDead || IsConsumptionPending || !SimulationEnabled || player == null ||
+            (IsCarried && Carrier != player) ||
+            !isActiveAndEnabled || (use != Use.Drink && use != Use.Coat)) return false;
+        var effects = PlayerHoneyEffects.Ensure(player);
+        if (effects == null || !effects.TryApply(use)) return false;
+        return FinishUse();
+    }
+
+    public bool TryCoat(GameObject target, Vector3 point)
     {
         if (used || IsDead || IsConsumptionPending || !SimulationEnabled || !IsCarried ||
-            !isActiveAndEnabled || (use != Use.Drink && use != Use.Coat)) return false;
-        var effects = PlayerHoneyEffects.Ensure(Carrier);
-        if (effects == null || !effects.TryApply(use)) return false;
+            !isActiveAndEnabled || target == null || !target.activeInHierarchy ||
+            target.scene != gameObject.scene || target.transform.IsChildOf(transform)) return false;
+        HoneyLuminosityEffect.Apply(target, 50f, 60f, point);
+        return FinishUse();
+    }
+
+    private bool FinishUse()
+    {
         used = true;
         CompleteConsumption(null);
         return true;
@@ -33,10 +55,5 @@ public sealed class GlowHoney : Creature
         transform.SetParent(null, true);
         SetMovementPhysics(false, true);
     }
-    protected override void TickCreature(float deltaTime)
-    {
-        var keyboard = UnityEngine.InputSystem.Keyboard.current;
-        if (Application.isFocused && keyboard != null && keyboard.fKey.wasPressedThisFrame &&
-            !BoneAwakeningCutscene.Playing && BoneRide.Mount == null) TryUse(Use.Coat);
-    }
+    protected override void TickCreature(float deltaTime) { }
 }

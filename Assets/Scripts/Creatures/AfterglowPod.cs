@@ -62,7 +62,7 @@ public sealed class AfterglowPod : Creature
         dt -= waiting;
         if (delayRemaining <= 0f) glowRemaining = Mathf.Max(0f, glowRemaining - dt);
         float amount = IsReleasing ? storedLuminosity * Mathf.Lerp(0.2f, 1f, glowRemaining / Mathf.Max(0.1f, glowSeconds)) : restingLuminosity;
-        SetLuminosity(amount);
+        HoneyLuminosityEffect.SetNativeLuminosity(this, amount);
     }
 
     protected override void OnDeath()

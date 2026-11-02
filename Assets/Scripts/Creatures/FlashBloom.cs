@@ -61,7 +61,7 @@ public sealed class FlashBloom : Creature
         if (!SimulationEnabled || !IsAvailableForPerception || (!thrown && (cooldownRemaining > 0f || IsFlashing))) return false;
         flashRemaining = Mathf.Max(0.05f, flashSeconds);
         cooldownRemaining = flashRemaining + cooldownSeconds;
-        SetLuminosity(flashLuminosity);
+        HoneyLuminosityEffect.SetNativeLuminosity(this, flashLuminosity);
         GetComponentInChildren<GlowBeeLight>()?.Refresh();
         LastBlindedCount = 0;
         // Take a fresh registry snapshot: a newly spawned creature must see the same flash as an older one.
@@ -91,7 +91,7 @@ public sealed class FlashBloom : Creature
         flashRemaining = Mathf.Max(0f, flashRemaining - dt);
         float fadeDuration = Mathf.Max(0.05f, flashSeconds - peakHoldSeconds);
         float fraction = Mathf.Clamp01(flashRemaining / fadeDuration);
-        SetLuminosity(Mathf.Lerp(restingLuminosity, flashLuminosity, fraction * fraction));
+        HoneyLuminosityEffect.SetNativeLuminosity(this, Mathf.Lerp(restingLuminosity, flashLuminosity, fraction * fraction));
     }
 
     protected override void OnDeath()
