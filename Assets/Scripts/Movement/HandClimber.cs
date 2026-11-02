@@ -123,6 +123,9 @@ public sealed class HandClimber : MonoBehaviour
         public float t;
         public TentacleGripSurface surface;
         public float surfaceParameter;
+        // A grip on a MovingGripSurface rides along with the collider it holds.
+        public Transform anchor;
+        public Vector3 anchorPoint, anchorNormal;
     }
 
     private struct Foot
@@ -548,11 +551,24 @@ public sealed class HandClimber : MonoBehaviour
     {
         hands[index].surface = collider != null ? collider.GetComponent<TentacleGripSurface>() : null;
         if (hands[index].surface != null) hands[index].surfaceParameter = hands[index].surface.Capture(point);
+        hands[index].anchor = null;
+        if (hands[index].surface != null || collider == null || collider.GetComponentInParent<MovingGripSurface>() == null) return;
+        Transform anchor = collider.transform;
+        hands[index].anchor = anchor;
+        hands[index].anchorPoint = anchor.InverseTransformPoint(point);
+        hands[index].anchorNormal = anchor.InverseTransformDirection(hands[index].moving ? hands[index].toNormal : hands[index].normal);
     }
 
     private void RefreshGrip(int index)
     {
         Hand hand = hands[index];
+        if (hand.anchor != null)
+        {
+            Vector3 held = hand.anchor.TransformPoint(hand.anchorPoint), facing = hand.anchor.TransformDirection(hand.anchorNormal);
+            if (hand.moving) { hands[index].to = held; hands[index].toNormal = facing; }
+            else { hands[index].hold = held; hands[index].normal = facing; }
+            return;
+        }
         if (hand.surface == null) return;
         Vector3 normal = hand.moving ? hand.toNormal : hand.normal;
         if (!hand.surface.Resolve(hand.surfaceParameter, normal, out Vector3 point))

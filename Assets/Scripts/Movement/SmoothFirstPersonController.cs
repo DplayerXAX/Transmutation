@@ -203,7 +203,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private float xRotation;
     private float yRotation;
     private Coroutine speedLerpCoroutine;
-    private CompostRideSurface rideSurface;
+    private IRideSurface rideSurface;
     private RaycastHit rideGround;
     private Vector3 rideVelocity;
 
@@ -290,7 +290,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (rb == null || rb.isKinematic || climbing || restricted || wallRunning || BubbleMovementBlocked ||
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.
-        // Use a raised support cast; only compost backs accept it, preserving ordinary ground rules.
+        // Use a raised support cast; only ride surfaces (compost backs, the Ore Colossus) accept it, preserving ordinary ground rules.
         // Lift the whole footprint clear of a walkable ramp before casting. A thin cast
         // starting inside the uphill edge cannot report its supporting surface.
         float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
@@ -298,7 +298,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
             Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
             whatIsGround, QueryTriggerInteraction.Ignore)) return;
-        var surface = ground.collider.GetComponentInParent<CompostRideSurface>();
+        var surface = ground.collider.GetComponentInParent<IRideSurface>();
         if (surface == null || !surface.Supports(ground.collider) || Vector3.Angle(ground.normal, Vector3.up) > maxSlopeAngle) return;
         rideSurface = surface;
         rideGround = ground;

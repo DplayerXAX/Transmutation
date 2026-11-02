@@ -3,7 +3,7 @@ using UnityEngine;
 /// <summary>Planned fixed-step motion of a compost back, read by the player's relative movement.</summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
-public sealed class CompostRideSurface : MonoBehaviour
+public sealed class CompostRideSurface : MonoBehaviour, IRideSurface
 {
     [SerializeField] private BoxCollider back;
     [SerializeField] private Collider ramp;

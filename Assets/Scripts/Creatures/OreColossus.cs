@@ -6,10 +6,11 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Ore Colossus: a huge, slow, peaceful creature of rock and ore that roams the map on four long legs,
 /// carrying a geode shrine on its back (after Elden Ring's Walking Mausoleum). Its feet shove aside
-/// whatever they land beside. Under its belly grows a giant ore mass (OreHeart); only erosive water wears
-/// it away, carving it wherever it touches. When the heart breaks the colossus kneels for good: its tail lowers into a ramp,
-/// its back and legs become ground and climbable rock (static "Remains" colliders), and the geode opens
-/// to release one Geode Larva. It ignores blasts, stomps and water ageing (Invulnerable) and is never an
+/// whatever they land beside. A giant ore mass (OreHeart) grows on its back; only erosive water wears it
+/// away, carving it wherever it touches. When it rests it kneels and lowers its tail into a ramp, so the
+/// player can walk up onto its back, water in hand; the back carries whoever stands on it when it walks on. When the heart breaks the colossus kneels for good: its tail lowers into a ramp,
+/// its back and legs become ground and climbable rock (static "Remains" colliders), and the geode opens.
+/// The shattering ore drops one Geode Larva. It ignores blasts, stomps and water ageing (Invulnerable) and is never an
 /// AI target (polarity None). It builds its body itself when placed, like the Bone Kiln.
 /// </summary>
 [DefaultExecutionOrder(-40)] // moves before the player and camera react to it
@@ -35,15 +36,13 @@ public sealed class OreColossus : Creature
     [SerializeField] private Material oreMaterial;
     [SerializeField] private Material heartMaterial;
     [SerializeField] private Material geodeMaterial;
-    [Tooltip("Released from the geode when it kneels. Empty: a default larva is made.")]
+    [Tooltip("Dropped by the heart when it shatters. Empty: a default larva is made.")]
     [SerializeField] private GeodeLarva larvaPrefab;
 
     [Header("Body")]
     [SerializeField] private Vector3 bodySize = new Vector3(6.5f, 3.6f, 9f);
     [Tooltip("Height of the body centre above the mean height of its feet while walking.")]
     [Min(4f)] [SerializeField] private float walkHeight = 9.8f;
-    [Tooltip("How far the body sinks while resting; the ore under the belly then nearly touches the ground.")]
-    [Min(0f)] [SerializeField] private float restDrop = 2.6f;
 
     [Header("Legs")]
     [Tooltip("Hip positions on the body (x to each side, z fore and aft).")]
@@ -63,8 +62,10 @@ public sealed class OreColossus : Creature
     [Min(0.1f)] [SerializeField] private float stepHeight = 1.6f;
     [Tooltip("A foot steps when it is this far from where it would rest.")]
     [Min(0.3f)] [SerializeField] private float stepThreshold = 1.6f;
-    [Tooltip("Seconds of rest at a waypoint (min, max).")]
+    [Tooltip("Extra seconds knelt at a waypoint (min, max), on top of Rest Kneel Hold.")]
     [SerializeField] private Vector2 restTime = new Vector2(6f, 10f);
+    [Tooltip("Seconds it stays knelt with its tail down as a ramp at every rest, besides lowering and rising (Kneel Times x).")]
+    [Min(0f)] [SerializeField] private float restKneelHold = 18f;
     [Range(0f, 1f)] [SerializeField] private float restChance = 0.5f;
     [Tooltip("Steepest ground a foot may land on, in degrees.")]
     [Range(20f, 75f)] [SerializeField] private float maxFootSlope = 60f;
@@ -79,8 +80,10 @@ public sealed class OreColossus : Creature
     [Min(0f)] [SerializeField] private float stompDamage = 20f;
 
     [Header("Heart")]
-    [Tooltip("Size of the ore mass under the belly (width, height down from the belly, length).")]
-    [SerializeField] private Vector3 heartSize = new Vector3(4.4f, 5.8f, 5.4f);
+    [Tooltip("Size of the ore mass on the back (width, height up from the back, length).")]
+    [SerializeField] private Vector3 heartOreSize = new Vector3(3.6f, 3.2f, 3.4f);
+    [Tooltip("Where the ore grows along the back (metres from the body centre, + is forward).")]
+    [SerializeField] private float heartOreOffset = -1.6f;
     [Tooltip("Spacing of the ore's density grid; smaller is finer carving and costlier remeshing.")]
     [Range(0.12f, 0.5f)] [SerializeField] private float heartCellSize = 0.25f;
     [Tooltip("Erosion the heart takes before it breaks.")]
@@ -130,6 +133,7 @@ public sealed class OreColossus : Creature
     private readonly HashSet<Rigidbody> shoved = new HashSet<Rigidbody>();
     private readonly HashSet<Creature> hurt = new HashSet<Creature>();
     private Rigidbody body;
+    private PoseRideSurface ride;
     private Transform bodyTransform, heartAnchor, tailRoot, cradle;
     private OreHeart heart;
     private Mesh shardMesh;
@@ -141,7 +145,8 @@ public sealed class OreColossus : Creature
     private Vector3 home, velocity, pendingSpot, pendingHeading;
     private float clock, yaw, speed, rootGroundY, bodyY, bodyYVelocity, bob, pitch, roll;
     private float phaseTime, phaseLength, nextPathCheck, nextRepick, nextPlayerSearch, nextBellyCheck, placeTimer, placeWait;
-    private bool spotChosen, heartBroken, settleReady, subscribed;
+    private bool spotChosen, heartBroken, settleReady, subscribed, kneelReady;
+    private float kneel;
     private int pendingStaggers;
     private float settleStart;
     private Vector3 settleFrom, settleTo;
@@ -238,10 +243,12 @@ public sealed class OreColossus : Creature
         UpdateGait(deltaTime);
         if (phase == Phase.Settling) TickSettling(deltaTime);
         if (phase == Phase.Settled) return;
+        UpdateKneel(deltaTime);
         PoseBody(deltaTime, false);
         PoseLegs();
         PoseTail();
         UpdateHeart(deltaTime);
+        ride.Step(deltaTime);
     }
 
     private void Begin(Phase next, float length) { phase = next; phaseTime = 0f; phaseLength = length; }
@@ -356,10 +363,12 @@ public sealed class OreColossus : Creature
             leg.foothold = leg.drawn = GroundAt(rest, out Vector3 p, out _) ? p : rest;
             leg.plantedAt = clock;
         }
+        MakeClimbable();
         bodyY = MeanFootY() + walkHeight;
         PoseBody(0f, true);
         PoseLegs();
         PoseTail();
+        ride.ResetMotion();
         if (world != null && !subscribed) { world.TerrainChanged += OnWorldEroded; subscribed = true; }
         PickWaypoint(false);
         Begin(Phase.Walking, 0f);
@@ -437,8 +446,9 @@ public sealed class OreColossus : Creature
 
         // The geode shrine on the back: two halves that swing open on hinges at their outer lower edges.
         const float geodeRadius = 2f;
-        var geodeCentre = new Vector3(0f, halfY + 0.9f, 0.6f);
-        cradle = Node("Cradle", bodyTransform, new Vector3(0f, halfY + 0.02f, 0.6f));
+        // Forward on the back, leaving the rear for the ore.
+        var geodeCentre = new Vector3(0f, halfY + 0.9f, 2.2f);
+        cradle = Node("Cradle", bodyTransform, new Vector3(0f, halfY + 0.02f, 2.2f));
         for (int k = 0; k < 6; k++)
         {
             float a = k * Mathf.PI / 3f;
@@ -454,8 +464,10 @@ public sealed class OreColossus : Creature
             geodeHinges.Add(hinge);
             geodeHalves.Add(half.GetComponent<MeshFilter>());
         }
-        // Slightly inside the hull, so the ore's top seam stays hidden.
-        heartAnchor = Node("Heart Anchor", bodyTransform, new Vector3(0f, -halfY + 0.35f, 0.3f));
+        // The ore is built hanging down from its anchor; turned over, it grows up out of the deck,
+        // its base seam sunk into the back.
+        heartAnchor = Node("Heart Anchor", bodyTransform, new Vector3(0f, halfY + 0.1f, heartOreOffset));
+        heartAnchor.localRotation = Quaternion.Euler(0f, 0f, 180f);
         tailRoot = Node("Tail Root", bodyTransform, new Vector3(0f, halfY, -bodySize.z * 0.5f + 0.2f));
     }
 
@@ -513,13 +525,26 @@ public sealed class OreColossus : Creature
         }
     }
 
+    /// <summary>
+    /// The player reaches the ore by climbing: legs are Wall (8) and body, tail, shrine and ore are Ground (7),
+    /// as in the remains. Grips follow the moving parts and the back carries whoever stands on it.
+    /// </summary>
+    private void MakeClimbable()
+    {
+        foreach (Collider collider in GetComponentsInChildren<Collider>(true))
+            if (heart == null || collider != heart.Collider) collider.gameObject.layer = legColliders.Contains(collider) ? 8 : 7;
+        if (GetComponent<MovingGripSurface>() == null) gameObject.AddComponent<MovingGripSurface>();
+        ride = bodyTransform.gameObject.AddComponent<PoseRideSurface>();
+    }
+
     private void BuildHeart()
     {
-        var go = new GameObject("Heart Ore");
+        // Ground before it activates: its erosion target registers its layer then.
+        var go = new GameObject("Heart Ore") { layer = 7 };
         go.SetActive(false);
         go.transform.SetParent(heartAnchor, false);
         heart = go.AddComponent<OreHeart>();
-        heart.Initialize(this, heartSize, heartCellSize, heartIntegrity, heartSensitivity, seed + 71, heartGlow);
+        heart.Initialize(this, heartOreSize, heartCellSize, heartIntegrity, heartSensitivity, seed + 71, heartGlow);
         shardMesh = Track(OreShapes.ShardCluster(1, 0.9f, seed + 72, "Heart Shard"));
         go.SetActive(true);
     }
@@ -528,6 +553,8 @@ public sealed class OreColossus : Creature
 
     private void TickWalking(float deltaTime)
     {
+        // Still getting up from a rest: stand before walking off.
+        if (kneel > 0f) { speed = Mathf.MoveTowards(speed, 0f, deltaTime * 2f); return; }
         Vector3 flat = waypoint - transform.position; flat.y = 0f;
         float targetYaw = flat.sqrMagnitude > 0.01f ? Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg : yaw;
         float difference = Mathf.Abs(Mathf.DeltaAngle(yaw, targetYaw));
@@ -543,7 +570,7 @@ public sealed class OreColossus : Creature
 
         if (flat.magnitude < 6f)
         {
-            if (random.NextDouble() < restChance) Begin(Phase.Resting, Mathf.Lerp(restTime.x, restTime.y, (float)random.NextDouble()));
+            if (random.NextDouble() < restChance) BeginRest(Mathf.Lerp(restTime.x, restTime.y, (float)random.NextDouble()));
             else PickWaypoint(false);
             return;
         }
@@ -719,9 +746,7 @@ public sealed class OreColossus : Creature
     {
         if (phase == Phase.Settling && settleReady) return;
         float drop = 0f;
-        if (phase == Phase.Resting)
-            drop = restDrop * Mathf.SmoothStep(0f, 1f, Mathf.Min(phaseTime, phaseLength - phaseTime) / 1.5f);
-        else if (phase == Phase.Staggering && phaseLength > 0f)
+        if (phase == Phase.Staggering && phaseLength > 0f)
         {
             float t = phaseTime / phaseLength;
             drop = 1.4f * (t < 0.12f ? t / 0.12f : 1f - Mathf.SmoothStep(0f, 1f, (t - 0.12f) / 0.88f));
@@ -743,8 +768,11 @@ public sealed class OreColossus : Creature
         float blend = snap ? 1f : 1f - Mathf.Exp(-3f * deltaTime);
         pitch = Mathf.Lerp(pitch, targetPitch, blend);
         roll = Mathf.Lerp(roll, targetRoll, blend);
-        bodyTransform.SetPositionAndRotation(new Vector3(transform.position.x, bodyY + bob, transform.position.z),
-            transform.rotation * Quaternion.Euler(pitch, 0f, roll));
+        Vector3 position = new Vector3(transform.position.x, bodyY + bob, transform.position.z);
+        Quaternion rotation = transform.rotation * Quaternion.Euler(pitch, 0f, roll);
+        float k = KneelBlend;
+        if (k > 0f) { position = Vector3.Lerp(position, settleTo, k); rotation = Quaternion.Slerp(rotation, settleRotationTo, k); }
+        bodyTransform.SetPositionAndRotation(position, rotation);
     }
 
     private void PoseLegs()
@@ -789,9 +817,43 @@ public sealed class OreColossus : Creature
             float pitchDown = 30f - 18f * i;
             float sway = Mathf.Sin(clock * 0.7f + i * 0.8f) * 5f * (i + 1) / plates.Count;
             Quaternion plateRotation = rotation * Quaternion.Euler(0f, 180f + sway, 0f) * Quaternion.Euler(pitchDown, 0f, 0f);
-            plates[i].SetPositionAndRotation(p, plateRotation);
+            float k = KneelBlend;
+            if (k > 0f) plates[i].SetPositionAndRotation(Vector3.Lerp(p, plateTo[i], k), Quaternion.Slerp(plateRotation, plateRotationTo[i], k));
+            else plates[i].SetPositionAndRotation(p, plateRotation);
             p += plateRotation * Vector3.forward * (tailPlateLength - 0.35f);
         }
+    }
+
+    // ---------------- Kneeling to rest ----------------
+
+    /// <summary>Starts a rest: kneel down, hold with the tail lowered as a ramp, then stand up again.</summary>
+    internal void BeginRest(float extra)
+    {
+        Begin(Phase.Resting, kneelTimes.x * 2f + restKneelHold + Mathf.Max(0f, extra));
+        kneelReady = false;
+    }
+
+    /// <summary>How far it is knelt down, 0 standing .. 1 knelt with the tail as a ramp (eased).</summary>
+    private float KneelBlend => kneelReady ? Mathf.SmoothStep(0f, 1f, kneel) : 0f;
+    public float Kneel => KneelBlend;
+
+    private void UpdateKneel(float deltaTime)
+    {
+        bool down = phase == Phase.Resting && phaseTime < phaseLength - kneelTimes.x;
+        if (down && !kneelReady && kneel <= 0f && speed < 0.05f)
+        {
+            bool swinging = false;
+            foreach (Leg leg in legs) swinging |= leg.swinging;
+            // The kneeling pose and ramp are worked out once the feet are planted and the body has stopped.
+            if (!swinging) { ComputeSettleTargets(); kneelReady = true; }
+        }
+        if (!kneelReady) { kneel = 0f; return; }
+        // Breaking the heart while knelt: settling takes over from wherever the body is.
+        if (phase == Phase.Settling) return;
+        float target = down ? 1f : 0f;
+        kneel = Mathf.MoveTowards(kneel, target, deltaTime / Mathf.Max(0.1f, kneelTimes.x));
+        if (target > 0f && kneel < 1f && clock >= nextBellyCheck) { nextBellyCheck = clock + 0.2f; ClearUnderBelly(); }
+        if (kneel <= 0f && !down) kneelReady = false;
     }
 
     private void UpdateHeart(float deltaTime)
@@ -827,8 +889,10 @@ public sealed class OreColossus : Creature
         settleReady = false;
         speed = 0f;
         Vector3 at = heart != null ? heart.transform.position : transform.position;
+        Vector3 core = heart != null ? heart.Centre : at;
         if (heart != null) heart.Shatter(shardMesh, heartGlow);
         Shove(new Vector3(at.x, rootGroundY, at.z), 6f, stompFling * 0.8f, stompPush, 0f);
+        ReleaseLarva(core);
     }
 
     private void TickSettling(float deltaTime)
@@ -945,11 +1009,10 @@ public sealed class OreColossus : Creature
         for (int i = 0; i < geodeHinges.Count; i++) geodeHinges[i].localRotation = Quaternion.Euler(0f, 0f, (i == 0 ? 1f : -1f) * 110f);
         PoseLegs();
         ConvertCollidersToRemains();
-        ReleaseLarva();
         phase = Phase.Settled;
         speed = 0f;
         velocity = Vector3.zero;
-        if (!Application.isBatchMode) LandmarkToast.Show("The colossus kneels. Its geode opens.");
+        if (!Application.isBatchMode) LandmarkToast.Show("The colossus kneels.");
         SettledDown?.Invoke(this);
     }
 
@@ -1013,10 +1076,17 @@ public sealed class OreColossus : Creature
         return cradle != null;
     }
 
-    private void ReleaseLarva()
+    /// <summary>
+    /// The larva falls out of the shattered ore, tossed off the back towards the player's side (or its right),
+    /// clear of the kneeling body.
+    /// </summary>
+    private void ReleaseLarva(Vector3 at)
     {
-        if (larvaReleased || !CradlePoint(out Vector3 at)) return;
+        if (larvaReleased) return;
         larvaReleased = true;
+        FindPlayer();
+        float sideSign = player != null && Vector3.Dot(player.transform.position - transform.position, transform.right) < 0f ? -1f : 1f;
+        Vector3 launch = transform.right * sideSign * 5f + Vector3.up * 3f;
         Quaternion rotation = Quaternion.Euler(0f, yaw + 90f, 0f);
         // Spawned inactive in this scene, then unparented, so it never belongs to the colossus.
         var staging = new GameObject("Geode Larva Staging");
@@ -1041,7 +1111,7 @@ public sealed class OreColossus : Creature
         Destroy(staging);
         // A default larva cannot have its lifespan authored; give it the same long life as the prefab.
         if (made) larva.SetRemainingAge(100000f);
-        larva.Nest(this, at, rotation);
+        larva.Drop(this, at, rotation, launch);
     }
 
     // ---------------- Shoving ----------------

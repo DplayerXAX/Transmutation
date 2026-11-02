@@ -75,6 +75,9 @@ hands plant on the edge and the player is pulled over.
   `climbSpeed`), Over The Top (`pullUpTime`), Feel (camera lag, tilt, look-at-hands).
 - `lastEvent` (read-only) shows why the climb last changed. `drawDebug` draws the stand-spot search.
 - Exposes hand/foot grips and a climb frame (`GetHand`, `GetFoot`, `GetClimbFrame`) for `FirstPersonBody`.
+- Grips on anything under a `MovingGripSurface` (the Ore Colossus) are kept in the collider's own space and
+  move with it. Standing on an `IRideSurface` (a compost back, `PoseRideSurface` on the colossus body) carries
+  the player along.
 
 Controls while climbing: **W/S** up/down, **A/D** sideways, **Shift** faster, **Space** push off.
 
