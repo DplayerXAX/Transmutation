@@ -42,12 +42,26 @@ The second milestone adds 24 ceiling bat bugs over the underground Recycle
 creature and 12 on the shaft walls. They use local surface probes for floor,
 wall and ceiling crawling, retain normal carry behavior without a held use,
 and die through the shared Age lifecycle. Initial remaining lifetimes are
-staggered from 20 to 60 seconds; the prefab lifetime is 60 seconds. Their corpses
+staggered from 20 to 60 seconds; newborn lifetimes are 55–75 seconds. Their corpses
 fall normally and can feed Recycle creatures.
 
-**Deferred:** eggs, population replacement, player gripping/riding and movement
-controls. The current finite population can die out. The separate ceiling bat bug
-design document concerns future phases, not the implemented milestone.
+Bugs now share persistent cavern/shaft homes with their offspring and roam much
+farther (18/28 metres), with spread-out starting positions outside the Goo gate.
+Each lays one egg after 15–30 seconds of elapsed life. Incubation takes 13–17
+seconds; ready eggs wait for local population space, with nearby deaths waking
+the oldest eligible egg. Eggs can be carried intact or cracked with LMB; solid
+impacts and a held egg's carrier landing use an 11 m/s closing-speed threshold.
+Unclaimed bug corpses retire after 180 seconds; carrying or Compost absorption
+protects them. Destroying every bug and egg can still eliminate a colony.
+
+Hold **LMB** on a reachable supported bug to grip it and be dragged along as it
+crawls. Looking at another reachable bug while holding transfers the grip.
+Release LMB to let go, Space to jump off, or W to reach a ledge or Goo wall.
+RMB retains ordinary pickup, drop and throw for bugs. Bugs have 1.5× larger
+visuals, a 2.8-metre grip reach and more forgiving grip targeting. Bug shells
+and legs fade toward white as their remaining lifespan falls.
+The upright player capsule sweeps against terrain while following one moving
+anchor; support loss, death, pickup or capture releases the grip.
 
 ## Review and validation
 

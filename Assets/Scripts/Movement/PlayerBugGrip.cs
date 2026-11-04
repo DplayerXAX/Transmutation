@@ -8,7 +8,8 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(SmoothFirstPersonController))]
 public sealed class PlayerBugGrip : MonoBehaviour
 {
-    [SerializeField] private float reach = 2.2f, maxStretch = 2.6f, followSpeed = 8f;
+    [SerializeField] private float reach = 2.8f, maxStretch = 3.2f, followSpeed = 8f;
+    [SerializeField, Min(0f)] private float aimRadius = 0.35f;
     private SmoothFirstPersonController controller;
     private PlayerCreatureCarrier carrier;
     private HandClimber climber;
@@ -49,7 +50,7 @@ public sealed class PlayerBugGrip : MonoBehaviour
         var camera = controller.PlayerCamera;
         if (camera != null)
         {
-            var aimed = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), new Ray(camera.transform.position, camera.transform.forward), reach + 0.5f, ~0, carrier, out _);
+            var aimed = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), new Ray(camera.transform.position, camera.transform.forward), reach + 0.5f, ~0, carrier, out _, aimRadius);
             if (aimed is CeilingBatBug bug && bug != target) TryAttach(bug);
         }
         ConsumesInput = IsGripping;

@@ -20,6 +20,7 @@ public sealed class CeilingBatBugLife : MonoBehaviour
     public Vector3 Home => inheritedHome;
     public bool HasLaidEgg => laidEgg;
     public float Elapsed => elapsedLife;
+    public float TotalLifetime => totalLife;
     public bool Ready => habitat == null || habitat.Ready(transform.position);
     public void InitializeNewborn(CeilingBatBugHabitat data, Vector3 home, int seed)
     {

@@ -299,7 +299,8 @@ internal static class CreatureAim
         float range,
         int layers,
         PlayerCreatureCarrier carrier,
-        out RaycastHit hit)
+        out RaycastHit hit,
+        float aimRadius = 0.18f)
     {
         hit = default;
 
@@ -339,7 +340,7 @@ internal static class CreatureAim
 
         count = scene.SphereCast(
             ray.origin,
-            0.18f,
+            aimRadius,
             ray.direction,
             results,
             wall,
