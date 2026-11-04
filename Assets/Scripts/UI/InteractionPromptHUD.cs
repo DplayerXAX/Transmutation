@@ -198,6 +198,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
         if (handClimber != null && handClimber.isActiveAndEnabled && handClimber.IsClimbing)
         {
+            if (handClimber.OnBugGrip)
+            {
+                title = "BAT BUG";
+                hint = "[Hold LMB] Hang / aim at another bug to transfer\n[W] Reach a ledge or Goo wall    [Space] Jump off    [Release LMB] Let go";
+                return;
+            }
             if (!handClimber.IsMantling) hint = handClimbHint;
             return;
         }

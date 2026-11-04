@@ -152,6 +152,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public void BeginBubbleMovementLock()
     {
+        GetComponent<PlayerBugGrip>()?.Release(false);
         if (rb == null) rb = GetComponent<Rigidbody>();
         bubbleCapture = GetComponent<BubbleCapture>();
         // Cancel traversal first: a ledge or hand climb may own a kinematic body.
@@ -275,6 +276,21 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         if (sliding)
             SlidingMovement();
+        velocityBeforePhysics = rb.isKinematic ? Vector3.zero : rb.linearVelocity;
+    }
+    private Vector3 velocityBeforePhysics;
+    public event System.Action<float> Landed;
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (rb == null || rb.isKinematic) return;
+        float speed = 0f;
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            Vector3 normal = collision.GetContact(i).normal;
+            if (normal.y < 0.55f) continue;
+            speed = Mathf.Max(speed, Mathf.Max(-Vector3.Dot(velocityBeforePhysics, normal), Mathf.Abs(Vector3.Dot(collision.relativeVelocity, normal))));
+        }
+        if (speed > 1f) Landed?.Invoke(speed);
     }
 
     private void GroundCheck()

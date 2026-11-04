@@ -23,14 +23,16 @@ public sealed class WebCapture : MonoBehaviour
     {
         if (!CanCapture || web == null || body == null || body.gameObject != gameObject || body.isKinematic) return false;
         if (body.TryGetComponent<BubbleCapture>(out var bubbleCapture) && !bubbleCapture.CanCapture) return false;
-        creature = body.GetComponentInParent<Creature>();
-        if (creature != null && creature.IsCarried) return false;
+        Creature target = body.GetComponentInParent<Creature>();
+        if (target != null && (target.IsDead || target.IsCarried)) return false;
+        creature = target;
         Body = body;
         ContactPoint = contactPoint;
         OwningWeb = web;
         if (creature != null)
         {
             previousSimulation = creature.SimulationEnabled;
+            creature.Died += OnCreatureDied;
             creature.SetSimulationEnabled(false);
         }
         body.linearVelocity = Vector3.zero;
@@ -61,7 +63,11 @@ public sealed class WebCapture : MonoBehaviour
             Destroy(silkJoint);
             silkJoint = null;
         }
-        if (creature != null) creature.SetSimulationEnabled(previousSimulation);
+        if (creature != null)
+        {
+            creature.Died -= OnCreatureDied;
+            creature.SetSimulationEnabled(previousSimulation);
+        }
         creature = null;
         if (Body != null && !Body.isKinematic) Body.WakeUp();
         eligibleAfter = Time.time + 0.5f;
@@ -70,4 +76,5 @@ public sealed class WebCapture : MonoBehaviour
 
     private void OnDisable() => Release();
     private void OnDestroy() => Release();
+    private void OnCreatureDied(Creature dead) => Release();
 }

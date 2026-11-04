@@ -45,6 +45,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void Update()
     {
+        var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
+        if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); return; }
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).

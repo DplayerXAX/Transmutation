@@ -167,7 +167,19 @@ public sealed class HandClimber : MonoBehaviour
     private Vector3 lagOffset, lagVelocity;
     private float feel, roll, look;
 
-    public bool IsClimbing => climbing;
+    private PlayerBugGrip BugGrip => controller != null ? controller.GetComponent<PlayerBugGrip>() : null;
+    public bool OnBugGrip => BugGrip != null && BugGrip.IsGripping;
+    public bool IsClimbing => climbing || OnBugGrip;
+    public bool TryAcceptBugTransfer()
+    {
+        if (!OnBugGrip) return false;
+        bool gravity = body.useGravity;
+        body.isKinematic = false; body.useGravity = true;
+        if (GooAllowsClimbing) { PrepareForTraversalTransfer(); TryStartClimb(); }
+        else TryLipPull();
+        if (climbing) { BugGrip.Release(false, true); return true; }
+        body.isKinematic = true; body.useGravity = gravity; return false;
+    }
     public bool Controls(SmoothFirstPersonController player) => controller == player;
     public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
     /// <summary>A new mount-to-wall transfer can catch immediately without an old regrab cooldown.</summary>
@@ -204,7 +216,9 @@ public sealed class HandClimber : MonoBehaviour
         get
         {
             if (body == null) return false;
-            if (climbing) return GooPaint.Covers(HandPosition(0)) || GooPaint.Covers(HandPosition(1));
+            // Grip targets own support. The entry animation starts at the chest, outside the paint;
+            // using its visual hand positions would cancel a valid painted grip on the next frame.
+            if (climbing) return GooPaint.Covers(HandTarget(0)) || GooPaint.Covers(HandTarget(1));
             return GooPaint.Near(body.position + Vector3.up * handHeight, 1.2f);
         }
     }
@@ -235,6 +249,7 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>World grip point for a hand (0 = left, 1 = right). False when the hand is free.</summary>
     public bool GetHand(int index, out Vector3 hold, out Vector3 normal, out bool gripping)
     {
+        if (!climbing && OnBugGrip) return BugGrip.GetHand(index, out hold, out normal, out gripping);
         RefreshGrip(index);
         hold = default;
         normal = Vector3.up;
@@ -266,6 +281,7 @@ public sealed class HandClimber : MonoBehaviour
     /// </summary>
     public bool GetClimbFrame(out Vector3 eye, out Vector3 right, out Vector3 up, out Vector3 forward)
     {
+        if (!climbing && OnBugGrip) return BugGrip.GetFrame(out eye, out right, out up, out forward);
         forward = FlatInward();
         up = Vector3.up;
         right = Vector3.Cross(Vector3.up, forward);
@@ -317,6 +333,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
+        if (OnBugGrip) return;
         if (!GooAllowsClimbing && !lipOnly)
         {
             StopForGooDepletion();
