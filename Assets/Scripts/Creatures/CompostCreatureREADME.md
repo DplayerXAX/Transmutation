@@ -1,5 +1,7 @@
 # Recycle
 
+The current creature documentation is [RecycleNetworkREADME.md](RecycleNetworkREADME.md). This legacy filename remains for existing links and the retained `CompostCreature` script/prefab name.
+
 The existing Compost Creature prefab is now an immovable fungal Recycle network. Its original script and prefab identities remain compatible with existing placements. The moving back, ramp, roaming and platform-riding checks are retired.
 
 The body grows procedurally along connected terrain, including walls. Grown strands consume touching corpses using exclusive, reversible claims. Successful meals grant existing nutrition-based recycle points and strand-growth credit. Missing flowers take priority over new goo batches. Only flowers drop normal Goo Creatures.

@@ -180,6 +180,15 @@ It only reads heat; it never changes it.
 
 ## Other creatures
 
+**Ceiling BatBug** crawls on floors, walls and ceilings, serves as a moving handhold,
+and lays one replacement egg per lifetime. See [CeilingBatBugREADME.md](CeilingBatBugREADME.md)
+for controls, lifecycle, habitat tuning and setup.
+
+**Recycle Network** is the rooted fungal replacement for the old Compost platform.
+It consumes corpses, expands over terrain and grows portable Goo-producing flowers.
+See [RecycleNetworkREADME.md](RecycleNetworkREADME.md) for growth, flower limits,
+resource costs, surface attachment and seeding.
+
 **Ore Colossus** is a huge, peaceful creature on four long legs that roams the procedural map with a geode
 shrine on its back, after Elden Ring's Walking Mausoleum. Its stomps fling the player. Only erosive water
 wears away the crystal heart hanging under its belly (an `ErosionTarget`). Once the heart breaks, it kneels
