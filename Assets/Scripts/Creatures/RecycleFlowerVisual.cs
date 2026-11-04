@@ -25,7 +25,7 @@ public sealed class RecycleFlowerVisual : MonoBehaviour
         child.transform.SetParent(transform, false);
         var filter = child.GetComponent<MeshFilter>(); if (filter == null) filter = child.AddComponent<MeshFilter>();
         meshRenderer = child.GetComponent<MeshRenderer>(); if (meshRenderer == null) meshRenderer = child.AddComponent<MeshRenderer>();
-        if (model == null || Vector3.Dot(transform.up, Vector3.up) < 0.98f)
+        if (model == null)
         { ownedMesh = Build(); filter.sharedMesh = ownedMesh; }
         else filter.sharedMesh = model;
         if (organicMaterial != null) meshRenderer.sharedMaterial = organicMaterial;
@@ -36,7 +36,8 @@ public sealed class RecycleFlowerVisual : MonoBehaviour
     {
         var v = new List<Vector3>(); var n = new List<Vector3>(); var colours = new List<Color>();
         var uv = new List<Vector2>(); var closed = new List<Vector4>(); var timing = new List<Vector4>(); var t = new List<int>();
-        Vector3 up = transform.InverseTransformDirection(Vector3.up).normalized;
+        // The root's local up is the mounting normal. Wall flowers grow outward, rather than bending back into rock.
+        Vector3 up = Vector3.up;
         Vector3 stalkOut = Vector3.up * 0.20f;
         Vector3 head = stalkOut + up * 0.47f;
         mouthLocal = head + up * 0.10f;
@@ -78,9 +79,10 @@ public sealed class RecycleFlowerVisual : MonoBehaviour
                 float u = row / (float)rows, w = col / (float)cols * 2f - 1f;
                 Vector3 point = Petal(u,w), du = Petal(Mathf.Min(1f,u+0.005f),w)-Petal(Mathf.Max(0f,u-0.005f),w);
                 Vector3 dw = Petal(u,Mathf.Min(1f,w+0.005f))-Petal(u,Mathf.Max(-1f,w-0.005f));
-                Vector3 normal = Vector3.Cross(dw, du).normalized;
-                Color colour = whorl == 0 ? Color.Lerp(new Color(0.025f,0.15f,0.25f,0.10f), new Color(0.06f,0.46f,0.48f,0.22f),u) :
-                    Color.Lerp(new Color(0.17f,0.015f,0.13f,0.08f),new Color(0.43f,0.025f,0.29f,0.20f),u);
+                Vector3 normal = Vector3.Cross(du.normalized, dw.normalized).normalized;
+                if (normal.sqrMagnitude < 0.5f) normal = up;
+                Color colour = whorl == 0 ? Color.Lerp(new Color(0.035f,0.28f,0.38f,0.16f), new Color(0.10f,0.67f,0.72f,0.28f),u) :
+                    Color.Lerp(new Color(0.38f,0.018f,0.24f,0.16f),new Color(0.72f,0.055f,0.48f,0.28f),u);
                 if (Mathf.Abs(w) > 0.82f) colour = Color.Lerp(colour, new Color(0.70f,0.055f,0.19f,0.3f), 0.75f);
                 Vector3 bud = head + radial * (0.045f + Mathf.Sin(u * Mathf.PI) * 0.055f) + up * (u * 0.33f) + across * (w * 0.025f * Mathf.Sin(u*Mathf.PI));
                 Add(point, normal, colour, new Vector2(u,w), bud, 0.12f + whorl * 0.15f + petal * 0.016f, 1f);

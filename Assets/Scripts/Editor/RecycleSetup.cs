@@ -10,6 +10,30 @@ public static class RecycleSetup
     public const string FlowerPath = "Assets/Prefabs/Creatures/RecycleFlower.prefab";
     const string Folder = "Assets/Generated/Recycle";
 
+    [MenuItem("Tools/Creatures/Recycle/Apply Larger Network Tuning")]
+    public static void ApplyLargerNetworkTuning()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before tuning assets.");
+        GameObject root=PrefabUtility.LoadPrefabContents(CompostCreatureSetup.PrefabPath);
+        try
+        {
+            var colony=root.GetComponent<CompostCreature>();
+            var fields=new SerializedObject(colony);
+            fields.FindProperty("startingStrands").floatValue=32f;
+            fields.FindProperty("seedStartingStrands").floatValue=16f;
+            fields.FindProperty("metresPerFlower").floatValue=32f;
+            fields.FindProperty("flowerSizeRange").vector2Value=new Vector2(0.85f,1.15f);
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            var geometry=root.GetComponent<RecycleNetworkGeometry>();
+            geometry.strandBudget=256f;geometry.stepLength=0.32f;geometry.growthSpeed=4f;geometry.strandWidthMultiplier=10f;
+            geometry.growthMetresPerPoint=4f;geometry.fineLengthMultiplier=2f;
+            PrefabUtility.SaveAsPrefabAsset(root,CompostCreatureSetup.PrefabPath);
+        }
+        finally{PrefabUtility.UnloadPrefabContents(root);}
+        AssetDatabase.SaveAssets();
+        Debug.Log("Recycle tuned: fewer, thicker, more spread-out strands; 32m starting length, 256m limit, 10x original width. One flower slot per 32m, up to eight; flower size +/-15%.");
+    }
+
     [MenuItem("Tools/Creatures/Recycle/Create Or Update Fungal Assets")]
     public static void CreateAssets()
     {

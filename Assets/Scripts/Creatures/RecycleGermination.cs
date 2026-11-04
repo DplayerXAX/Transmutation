@@ -34,7 +34,8 @@ public sealed class RecycleGermination : MonoBehaviour
         if (!Application.isPlaying || flower == null || !flower.IsDead || flower.IsConsumptionPending || flower.SeedReserved ||
             flower.IsCarried || flower.IsBubbleCaptured || flower.SeedPrefab == null ||
             (flower.TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim) ||
-            !SurfaceGeometry.IsTerrain(anchor.Support) || !anchor.Resolve(out Vector3 p, out Vector3 n) || n.y < 0.35f) return false;
+            !SurfaceGeometry.IsTerrain(anchor.Support) || anchor.Support.gameObject.scene != gameObject.scene ||
+            !anchor.Resolve(out Vector3 p, out Vector3 n) || n.y < 0.35f) return false;
         var world = anchor.Support.GetComponent<ProceduralWorldChunk>().Owner;
         if (world == null || !world.IsRegionReady(p, 0.5f)) return false;
         flower.SeedReserved = true;

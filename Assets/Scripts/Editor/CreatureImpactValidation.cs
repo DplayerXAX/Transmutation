@@ -138,14 +138,13 @@ public static class CreatureImpactValidation
             Dispatch(goo, Hit(wallCollider, point, Vector3.left));
             Check(Paint().Length == 1, "consumed Goo cannot splat twice");
             var paint = Paint()[0];
-            Check(Mathf.Abs(paint.radius * paint.radius / (1.4f * 1.4f) - 2f) < 0.0001f,
-                "paint has twice the former nominal area");
-            Check(Mathf.Abs(paint.GetComponent<BoxCollider>().size.x - paint.radius * 1.8f) < 0.001f,
-                "grip collider scales with paint");
-            Check(GooPaint.Covers(point + Vector3.up * 1.8f, 0f) && !GooPaint.Covers(point + Vector3.up * 2.3f, 0f),
-                "coverage uses the enlarged radius");
+            Set(paint,"spread",1f);
+            Check(Mathf.Approximately(paint.radius,4f),"paint has an eight-metre nominal diameter");
+            Check(paint.GetComponent<Collider>()==null && paint.TriangleCount>22,"paint follows receiving triangles without a floating grip box");
+            Check(GooPaint.Covers(point,Vector3.left) && !GooPaint.Covers(point+Vector3.up*4.5f,Vector3.left),"coverage uses the clipped painted surface");
+            Vector3 paintedLocal=wall.transform.InverseTransformPoint(point);
             wall.transform.position += Vector3.forward * 4f; wall.transform.rotation = Quaternion.Euler(0, 40, 0);
-            Check(paint.transform.parent == wall.transform && GooPaint.Covers(paint.transform.position) &&
+            Check(paint.transform.parent == wall.transform && GooPaint.Covers(wall.transform.TransformPoint(paintedLocal)) &&
                 !GooPaint.Covers(point) && Vector3.Dot(paint.Normal, Vector3.left) < 0.9f,
                 "attached paint and coverage follow translated and rotated surfaces");
             ClearPaint();
@@ -211,7 +210,8 @@ public static class CreatureImpactValidation
             ClearPaint();
 
             // Capacity remains bounded even with two patches per burst.
-            for (int i = 0; i < 26; i++) GooPaint.Splat(origin + Vector3.up * 20, Vector3.up, null, surface: floor.transform);
+            for (int i = 0; i < 26; i++) GooPaint.Splat(floor.GetComponent<Collider>().bounds.center + Vector3.up*floor.GetComponent<Collider>().bounds.extents.y,
+                Vector3.up,null,surface:floor.transform);
             yield return null;
             Check(Paint().Length == 24, "existing 24-patch cap is retained");
             Status = "PASS: " + checks + " shared creature impact checks.";

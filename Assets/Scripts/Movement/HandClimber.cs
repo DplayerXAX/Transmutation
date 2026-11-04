@@ -220,8 +220,12 @@ public sealed class HandClimber : MonoBehaviour
             if (body == null) return false;
             // Grip targets own support. The entry animation starts at the chest, outside the paint;
             // using its visual hand positions would cancel a valid painted grip on the next frame.
-            if (climbing) return GooPaint.Covers(HandTarget(0), hands[0].moving ? hands[0].toNormal : hands[0].normal) ||
-                GooPaint.Covers(HandTarget(1), hands[1].moving ? hands[1].toNormal : hands[1].normal);
+            if (climbing)
+            {
+                RefreshGrip(0); RefreshGrip(1);
+                return GooPaint.Covers(HandTarget(0), hands[0].moving ? hands[0].toNormal : hands[0].normal) ||
+                    GooPaint.Covers(HandTarget(1), hands[1].moving ? hands[1].toNormal : hands[1].normal);
+            }
             return GooPaint.Near(body.position + Vector3.up * handHeight, 1.2f);
         }
     }
@@ -583,7 +587,8 @@ public sealed class HandClimber : MonoBehaviour
         Hand hand = hands[index];
         if (hand.surface == null)
         {
-            if (hand.support == null || !hand.support.enabled || !hand.support.gameObject.activeInHierarchy) return;
+            if (hand.support == null || !hand.support.enabled || !hand.support.gameObject.activeInHierarchy)
+            { if (climbing && !mantling) Exit(Vector3.zero); return; }
             Vector3 supported = hand.support.transform.TransformPoint(hand.supportPoint);
             Vector3 supportedNormal = hand.support.transform.worldToLocalMatrix.transpose.MultiplyVector(hand.supportNormal).normalized;
             if (hand.moving) { hands[index].to = supported; hands[index].toNormal = supportedNormal; }

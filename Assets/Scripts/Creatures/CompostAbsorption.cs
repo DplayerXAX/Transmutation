@@ -59,7 +59,8 @@ public sealed class CompostAbsorption : MonoBehaviour
         if (!IsValid) return;
         float scale = Mathf.Max(0.03f, 1f - Progress);
         transform.localScale = originalScale * scale;
-        transform.SetPositionAndRotation(pivot + (originalPosition - pivot) * scale, originalRotation);
+        float jolt = Mathf.Sin(Mathf.Clamp01(Progress / 0.06f) * Mathf.PI) * 0.09f;
+        transform.SetPositionAndRotation(pivot + (originalPosition - pivot) * scale + Vector3.up * jolt, originalRotation);
         if (TryGetComponent<Rigidbody>(out var root)) root.position = transform.position;
     }
     public void CancelForPickup() => Release(true);

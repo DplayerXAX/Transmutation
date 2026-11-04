@@ -42,6 +42,7 @@ public static class SurfaceGeometry
     {
         internal Cache cache;
         internal int index, a, b, c;
+        internal bool collapsed;
         internal readonly EdgeKey[] edges = new EdgeKey[3];
         internal Vector3 A => cache.support.transform.TransformPoint(cache.vertices[a]);
         internal Vector3 B => cache.support.transform.TransformPoint(cache.vertices[b]);
@@ -73,7 +74,18 @@ public static class SurfaceGeometry
     public const int GroundMask = (1 << 7) | (1 << 8);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { caches.Clear(); edges.Clear(); }
+    static void Reset()
+    {
+        caches.Clear(); edges.Clear();
+        SceneManager.sceneUnloaded -= SceneUnloaded;
+        SceneManager.sceneUnloaded += SceneUnloaded;
+    }
+    static void SceneUnloaded(Scene scene)
+    {
+        var removed=new List<int>();
+        foreach(var item in caches)if(item.Value.support==null || item.Value.support.gameObject.scene==scene)removed.Add(item.Key);
+        foreach(int key in removed)Remove(key);
+    }
 
     public static bool IsTerrain(Collider support) => support != null &&
         support.TryGetComponent<ProceduralWorldChunk>(out var chunk) && chunk.Owner != null && chunk.Owner.OwnsCollider(support);
@@ -92,6 +104,7 @@ public static class SurfaceGeometry
         if (!caches.TryGetValue(key, out Cache cache)) return;
         cache.invalidated = true;
         foreach (Face face in cache.faces)
+        if (!face.collapsed)
         foreach (EdgeKey edge in face.edges)
             if (edges.TryGetValue(edge, out var list))
             { list.RemoveAll(l => l.face.cache == cache); if (list.Count == 0) edges.Remove(edge); }
@@ -100,7 +113,8 @@ public static class SurfaceGeometry
 
     static Cache Get(Collider support)
     {
-        if (support == null || !support.enabled || support.isTrigger || support.GetComponentInParent<Creature>() != null) return null;
+        if (support == null || !support.enabled || support.isTrigger || support.GetComponentInParent<Creature>() != null ||
+            support.GetComponentInParent<SmoothFirstPersonController>() != null) return null;
         int key = support.GetInstanceID();
         if (caches.TryGetValue(key, out Cache old))
         { if (old.Valid) return old; Remove(key); }
@@ -126,6 +140,10 @@ public static class SurfaceGeometry
         {
             Face face = cache.faces[i] = new Face { cache = cache, index = i,
                 a = triangles[i * 3], b = triangles[i * 3 + 1], c = triangles[i * 3 + 2] };
+            // Marching cubes can emit collapsed triangles at exact isolevel vertices.
+            // They have no surface area and must not make a valid shared edge look non-manifold.
+            face.collapsed = face.Normal.sqrMagnitude < 0.5f;
+            if (face.collapsed) continue;
             for (int e = 0; e < 3; e++)
             {
                 Vector3 p = cache.space.InverseTransformPoint(face.Vertex(e));
@@ -281,7 +299,53 @@ public static class SurfaceGeometry
         }
         foreach (Visit visit in best.Values)
             Cut(visit, visit.face.A, visit.face.B, visit.face.C, 0, radius, seed, output);
+        if(radius>0.5f && origin.Resolve(out _,out var normal) && Mathf.Abs(normal.y)<0.65f)
+            AppendDrips(origin,radius,output);
         return output;
+    }
+
+    static void AppendDrips(SurfaceAnchor seed,float radius,List<PatchTriangle> output)
+    {
+        seed.Resolve(out _,out var normal);
+        Vector3 down=Vector3.ProjectOnPlane(Vector3.down,normal).normalized,across=Vector3.Cross(normal,down).normalized;
+        var path=new List<SurfaceAnchor>();
+        for(int drip=-1;drip<=1;drip++)
+        {
+            SurfaceAnchor current=seed;
+            if(drip!=0 && !Trace(seed,across*drip,radius*0.25f,out current))continue;
+            int steps=Mathf.CeilToInt(radius/0.15f);
+            for(int step=0;step<steps;step++)
+            {
+                if(!current.Resolve(out _,out normal))break;
+                down=Vector3.ProjectOnPlane(Vector3.down,normal).normalized;
+                if(down.sqrMagnitude<0.1f)break;
+                path.Clear();bool supported=Trace(current,down,0.15f,out var next,path);
+                float width=Mathf.Lerp(0.10f,0.025f,step/(float)steps);
+                for(int i=1;i<path.Count;i++)
+                {
+                    if(!path[i-1].Resolve(out var a,out _) || !path[i].Resolve(out var b,out _))continue;
+                    Face face=path[i].face;Vector3 direction=b-a;if(direction.sqrMagnitude<0.000001f)continue;
+                    Vector3 side=Vector3.Cross(face.Normal,direction.normalized)*width;
+                    var polygon=new List<Vector3>{a-side,b-side,b+side,a+side};
+                    // Clip every stroke segment to its source face: even the sides adhere at sharp corners.
+                    for(int edge=0;edge<3 && polygon.Count>0;edge++)
+                    {
+                        Vector3 first=face.Vertex(edge),span=face.Vertex((edge+1)%3)-first;
+                        var clipped=new List<Vector3>(6);
+                        for(int v=0;v<polygon.Count;v++)
+                        {
+                            Vector3 p=polygon[v],q=polygon[(v+1)%polygon.Count];
+                            float dp=Vector3.Dot(Vector3.Cross(span,p-first),face.Normal),dq=Vector3.Dot(Vector3.Cross(span,q-first),face.Normal);
+                            if(dp>=0f)clipped.Add(p);
+                            if((dp<0f)!=(dq<0f))clipped.Add(Vector3.Lerp(p,q,dp/(dp-dq)));
+                        }
+                        polygon=clipped;
+                    }
+                    for(int v=1;v+1<polygon.Count;v++)output.Add(new PatchTriangle(At(face,polygon[0]),At(face,polygon[v]),At(face,polygon[v+1])));
+                }
+                current=next;if(!supported)break;
+            }
+        }
     }
 
     static float Contour(Visit visit, Vector3 p, float radius, int seed)
@@ -372,7 +436,8 @@ public static class SurfaceGeometry
                 v.Add(centre + rotation * p);
                 if (row == rings) continue;
                 int a = row * sides + col, b = row * sides + (col + 1) % sides, c = a + sides, d = b + sides;
-                t.Add(a); t.Add(b); t.Add(c); t.Add(b); t.Add(d); t.Add(c);
+                if(row>0){t.Add(a);t.Add(b);t.Add(c);}
+                if(row<rings-1){t.Add(b);t.Add(d);t.Add(c);}
             }
         }
         else { vertices = null; triangles = null; return false; }

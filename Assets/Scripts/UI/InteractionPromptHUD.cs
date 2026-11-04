@@ -157,7 +157,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             return;
         }
         string rideHint = null;
-        if (BoneRide.TryNearby(out Component nearbyBone, out _))
+        bool heldOwnsLeft = carrier != null && carrier.CarriedCreature != null &&
+            (carrier.CarriesTentacle || carrier.CarriedCreature.CanUseWhileCarried);
+        if (!heldOwnsLeft && BoneRide.TryNearby(out Component nearbyBone, out _))
         {
             rideMother = nearbyBone as BoneKiln;
             rideHint = nearbyBone is BoneKiln ? "[LMB] Ride bone mother" : "[LMB] Ride bone child";

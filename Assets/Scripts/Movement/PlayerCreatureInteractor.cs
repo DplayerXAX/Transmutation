@@ -76,7 +76,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             return;
 
         // Left click next to a bone creature climbs on (BoneRide), not an interaction.
-        if (BoneRide.Approaching || (BoneRide.Mount == null && BoneRide.TryNearby(out _, out _)))
+        if (BoneRide.Approaching || (BoneRide.Mount == null && !HeldHasOwnUse() && BoneRide.TryNearby(out _, out _)))
             return;
 
         // Aria: Tentacle uses left mouse for its own actions.

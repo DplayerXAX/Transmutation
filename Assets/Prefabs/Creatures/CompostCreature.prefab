@@ -652,8 +652,10 @@ MonoBehaviour:
   flowerCost: 5
   flowerGrowthSeconds: 5
   maximumFlowers: 8
-  metresPerFlower: 8
-  startingStrands: 8
+  metresPerFlower: 32
+  startingStrands: 32
+  seedStartingStrands: 16
+  flowerSizeRange: {x: 0.85, y: 1.15}
   starterFlower: 1
   back: {fileID: 8450315172242763106}
   walkSpeed: 0.6
@@ -671,9 +673,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ea5ef1bd8e2e7d4fbd985cb86d6da4a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RecycleNetworkGeometry
-  strandBudget: 128
-  stepLength: 0.16
-  growthSpeed: 2
+  strandBudget: 256
+  stepLength: 0.32
+  growthSpeed: 4
+  strandWidthMultiplier: 10
+  growthMetresPerPoint: 4
+  fineLengthMultiplier: 2
   strandMaterial: {fileID: 2100000, guid: 2d7563ab439ccdb4b8e77e50e08eb96c, type: 2}
 --- !u!1 &8450471367230219948
 GameObject:

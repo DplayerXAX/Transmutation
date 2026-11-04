@@ -32,9 +32,7 @@ saddle finishes the ascent near the top.
 
 ## Ecology and current bug milestone
 
-Both Recycle creatures are existing `CompostCreature` instances. Corpses must
-actually reach their backs. Production retains ordinary nutrition, charge cost
-and timing. Birds seek the flowers, the spider drains trapped prey's Age, and
+Both Recycles retain their existing `CompostCreature` identities, redesigned as immovable terrain-conforming fungal networks. Corpses must contact grown strands. Meals extend the network and award recycle points; missing flowers are funded before new goo batches. Flowers are independent child creatures, detach on pickup with an empty bank, and can be manually fed while held. Their 120-second detached lifetime ends in a dead flower that can seed a new network on terrain. See [Recycle surface and growth design](../RecycleSurfaceDesign.md). Birds seek the flowers, the spider drains trapped prey's Age, and
 bones fall past the web. Every dead creature is excluded from web capture.
 There are no scripted kills, guided corpses, or automatic feeding.
 

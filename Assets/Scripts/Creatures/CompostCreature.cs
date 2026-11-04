@@ -19,8 +19,10 @@ public sealed class CompostCreature : Creature
     [Min(1)] [SerializeField] int flowerCost = 5;
     [Min(0.1f)] [SerializeField] float flowerGrowthSeconds = 5f;
     [Min(1)] [SerializeField] int maximumFlowers = 8;
-    [Min(1f)] [SerializeField] float metresPerFlower = 8f;
-    [Min(1f)] [SerializeField] float startingStrands = 8f;
+    [Min(1f)] [SerializeField] float metresPerFlower = 32f;
+    [Min(1f)] [SerializeField] float startingStrands = 32f;
+    [Min(1f)] [SerializeField] float seedStartingStrands = 16f;
+    [SerializeField] Vector2 flowerSizeRange = new Vector2(0.85f,1.15f);
     [SerializeField] bool starterFlower = true;
     // Retained serialized identity for old scene overrides and the explicit migration tool.
     [SerializeField, HideInInspector] BoxCollider back;
@@ -31,12 +33,16 @@ public sealed class CompostCreature : Creature
     readonly HashSet<Creature> scanned = new HashSet<Creature>();
     Collider[] overlaps = new Collider[64];
     RecycleNetworkGeometry geometry;
-    SurfaceAnchor seedAnchor, flowerSite;
+    SurfaceAnchor seedAnchor;
     ProceduralWorld world;
-    bool seedConfigured, starterIssued, growingFlower;
-    float flowerTime, scanAfter, retryAfter;
+    bool seedConfigured, starterIssued;
+    float scanAfter, retryAfter;
     Vector3 rootedPosition;
     Quaternion rootedRotation;
+    readonly Collider[] placementHits=new Collider[64];
+    Predicate<SurfaceAnchor> flowerSiteClear;
+    bool flowerPlacementBlocked;
+    float nextFlowerSiteAttempt;
 
     public override bool CanBeCarried => false;
     public override bool CanBeCaptured => false;
@@ -50,6 +56,7 @@ public sealed class CompostCreature : Creature
     public float DigestionSeconds => absorptionSeconds;
     public float ProductionSeconds => productionSeconds;
     public int GooCost => gooCost;
+    public float FlowerGrowthSeconds => flowerGrowthSeconds;
     public bool IsProducing { get { foreach (var f in flowers) if (f != null && f.IsProducing) return true; return false; } }
     public float ProductionProgress { get { float p = 0f; foreach (var f in flowers) if (f != null) p = Mathf.Max(p, f.ProductionProgress); return p; } }
     // Compatibility for existing scene/setup code; these no longer describe a physical platform.
@@ -66,6 +73,7 @@ public sealed class CompostCreature : Creature
         rootedPosition = transform.position; rootedRotation = transform.rotation;
         geometry = GetComponent<RecycleNetworkGeometry>();
         if (geometry == null) geometry = gameObject.AddComponent<RecycleNetworkGeometry>();
+        flowerSiteClear=CanPlaceFlower;
         // Old prefab/scene overrides cannot leave an invisible rideable deck over the new colony.
         foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
             if (CreatureBounds.BelongsTo(renderer.transform, transform)) renderer.enabled = false;
@@ -82,7 +90,7 @@ public sealed class CompostCreature : Creature
     }
     public void InitializeSeed(SurfaceAnchor anchor)
     {
-        seedAnchor = anchor; seedConfigured = true; starterFlower = false; startingStrands = 4f;
+        seedAnchor = anchor; seedConfigured = true; starterFlower = false; startingStrands = seedStartingStrands;
         storedCharges = 0; starterIssued = false;
         InitializeNewIndividual();
     }
@@ -110,20 +118,20 @@ public sealed class CompostCreature : Creature
         long added = digestion.Advance(this, dt, absorptionSeconds, storedCharges, fullnessThreshold);
         if (added > 0) { storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, added); geometry.AddGrowth(added); }
         flowers.RemoveAll(f => f == null || !f.IsAttached || f.Colony != this);
-        if (starterFlower && !starterIssued && geometry.EstablishedLength >= startingStrands - 0.1f &&
-            geometry.TryFlowerSite(flowers, out var starterSite))
-        { if (CreateFlower(starterSite)) starterIssued = true; }
-
-        if (growingFlower)
+        bool needsStarter=starterFlower && !starterIssued && geometry.EstablishedLength>=startingStrands-0.1f;
+        bool canFundFlower=flowers.Count<FlowerSlots && storedCharges>=flowerCost;
+        if ((needsStarter || canFundFlower) && flowerPrefab!=null && Time.time>=nextFlowerSiteAttempt)
         {
-            flowerTime += dt;
-            if (!flowerSite.Resolve(out _, out _))
-            { storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, flowerCost); growingFlower = false; }
-            else if (flowerTime >= flowerGrowthSeconds && CreateFlower(flowerSite)) growingFlower = false;
+            flowerPlacementBlocked=!geometry.TryFlowerSite(flowers,out var flowerSite,flowerSiteClear);
+            if(!flowerPlacementBlocked)
+            {
+                if(!needsStarter)storedCharges-=flowerCost;
+                bool created=CreateFlower(flowerSite);
+                if(created && needsStarter)starterIssued=true;
+                else if(!created && !needsStarter && !IsDead)storedCharges=RecycleDigestion.SaturatingAdd(storedCharges,flowerCost);
+            }
+            else nextFlowerSiteAttempt=Time.time+0.25f;
         }
-        if (!growingFlower && flowers.Count < FlowerSlots && storedCharges >= flowerCost && flowerPrefab != null &&
-            geometry.TryFlowerSite(flowers, out flowerSite))
-        { storedCharges -= flowerCost; growingFlower = true; flowerTime = 0f; }
         for (int i = flowers.Count - 1; i >= 0; i--) if (i < flowers.Count && flowers[i] != null) flowers[i].AdvanceAttached(dt);
         if (Time.time >= scanAfter)
         { scanAfter = Time.time + 0.25f; Scan(); }
@@ -131,26 +139,54 @@ public sealed class CompostCreature : Creature
     int FlowerSlots => Mathf.Clamp(Mathf.FloorToInt((geometry.EstablishedLength + 0.01f) / metresPerFlower), 0, maximumFlowers);
     internal bool ReserveGoo()
     {
-        bool needsFlower = flowers.Count < FlowerSlots && flowerPrefab != null && geometry.TryFlowerSite(flowers, out _);
-        if (!SimulationEnabled || growingFlower || needsFlower || storedCharges < gooCost) return false;
+        bool needsFlower = flowers.Count < FlowerSlots && flowerPrefab != null && !flowerPlacementBlocked;
+        if (!SimulationEnabled || needsFlower || storedCharges < gooCost) return false;
         storedCharges -= gooCost; return true;
     }
-    internal void RefundGoo() => storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, gooCost);
+    internal void RefundGoo() { if (!IsDead) storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, gooCost); }
     internal void FlowerDetached(RecycleFlower flower) => flowers.Remove(flower);
 
     bool CreateFlower(SurfaceAnchor site)
     {
-        if (flowerPrefab == null || !site.Resolve(out Vector3 p, out Vector3 n)) return false;
+        if (flowerPrefab == null || !TryFlowerPose(site,out Pose pose,out float scale)) return false;
         var staging = new GameObject("Recycle flower staging"); staging.SetActive(false);
         SceneManager.MoveGameObjectToScene(staging, gameObject.scene);
         try
         {
-            RecycleFlower flower = Instantiate(flowerPrefab, p + n * 0.012f, Quaternion.FromToRotation(Vector3.up, n), staging.transform);
+            RecycleFlower flower = Instantiate(flowerPrefab,pose.position,pose.rotation,staging.transform);
+            flower.transform.localScale=Vector3.one*scale;
             flower.ConfigureAttached(this, site);
             flower.transform.SetParent(transform, true);
             flowers.Add(flower); return true;
         }
         finally { Destroy(staging); }
+    }
+
+    bool CanPlaceFlower(SurfaceAnchor site)=>TryFlowerPose(site,out _,out _);
+    internal bool TryFlowerPose(SurfaceAnchor site,out Pose pose,out float scale,float existingScale=-1f)
+    {
+        pose=default;scale=1f;
+        if(!site.Resolve(out Vector3 point,out Vector3 normal))return false;
+        Vector3Int cell=Vector3Int.RoundToInt(point*10f);
+        int hash=unchecked(seed^cell.x*73856093^cell.y*83492791^cell.z*19349663)&int.MaxValue;
+        scale=existingScale>0f?existingScale:Mathf.Lerp(flowerSizeRange.x,flowerSizeRange.y,(hash%1001)/1000f);
+        Quaternion rotation=Quaternion.FromToRotation(Vector3.up,normal)*Quaternion.AngleAxis((hash/1001)%360,Vector3.up);
+        pose=new Pose(point+normal*0.012f,rotation);
+        var physics=gameObject.scene.GetPhysicsScene();
+        int count=physics.OverlapCapsule(pose.position+normal*(0.08f*scale),pose.position+normal*(0.60f*scale),0.065f*scale,
+            placementHits,~0,QueryTriggerInteraction.Ignore);
+        if(PlacementBlocked(count))return false;
+        // Check the fully open head, not just the small bud or its narrow pickup capsule.
+        count=physics.OverlapBox(pose.position+rotation*(Vector3.up*(0.81f*scale)),new Vector3(0.52f,0.39f,0.52f)*scale,
+            placementHits,rotation,~0,QueryTriggerInteraction.Ignore);
+        return !PlacementBlocked(count);
+    }
+    bool PlacementBlocked(int count)
+    {
+        if(count==placementHits.Length)return true;
+        for(int i=0;i<count;i++)
+            if(placementHits[i].GetComponentInParent<Creature>()==null && placementHits[i].GetComponentInParent<SmoothFirstPersonController>()==null)return true;
+        return false;
     }
 
     void Scan()
@@ -192,7 +228,7 @@ public sealed class CompostCreature : Creature
     }
     protected override void OnDeath()
     {
-        digestion.Release(); storedCharges = 0; growingFlower = false;
+        digestion.Release(); storedCharges = 0;
         var released = flowers.ToArray(); foreach (var flower in released) if (flower != null) flower.Detach();
     }
     protected override void OnDisable()

@@ -16,6 +16,7 @@ public sealed class RecycleFlower : Creature
     [SerializeField, HideInInspector] long storedCharges;
     CompostCreature colony;
     SurfaceAnchor attachment;
+    Vector3 attachmentPoint, attachmentNormal;
     readonly RecycleDigestion digestion = new RecycleDigestion();
     RecycleFlowerVisual visual;
     float bloom, productionTime, nextClick;
@@ -49,12 +50,21 @@ public sealed class RecycleFlower : Creature
     public void ConfigureAttached(CompostCreature owner, SurfaceAnchor site)
     {
         colony = owner; attachment = site; detachedEver = false; storedCharges = 0; bloom = 0f;
-        if (owner != null) gooPrefab = owner.GooPrefab;
+        site.Resolve(out attachmentPoint, out attachmentNormal);
+        if (owner != null) { gooPrefab = owner.GooPrefab; bloomSeconds = owner.FlowerGrowthSeconds; }
     }
     internal void AdvanceAttached(float dt)
     {
         if (!IsAttached || IsDead || !SimulationEnabled || !colony.SimulationEnabled) return;
-        if (!attachment.Resolve(out _, out _)) { Detach(); return; }
+        if (!attachment.Resolve(out var surfacePoint, out var surfaceNormal))
+        {
+            if (!SurfaceGeometry.Probe(gameObject.scene, attachmentPoint + attachmentNormal * 0.08f, -attachmentNormal, 0.16f, true, out attachment) ||
+                !attachment.Resolve(out surfacePoint, out surfaceNormal)) { Detach(); return; }
+            if(!colony.TryFlowerPose(attachment,out var reboundPose,out _,transform.lossyScale.x)){Detach();return;}
+            transform.rotation=reboundPose.rotation;
+        }
+        attachmentPoint = surfacePoint; attachmentNormal = surfaceNormal;
+        transform.position = surfacePoint + surfaceNormal * 0.012f;
         bloom = Mathf.Min(1f, bloom + dt / bloomSeconds);
         AdvanceOutput(dt);
         visual.SetState(bloom, 1f, ProductionProgress);
@@ -148,6 +158,8 @@ public sealed class RecycleFlower : Creature
         }
         if (target.TryGetComponent<Rigidbody>(out var body) && !body.isKinematic)
             body.AddForce(Vector3.up * 1.1f, ForceMode.VelocityChange);
+        if(target is CompostCreature rooted) rooted.Geometry?.Pulse();
+        else CreatureRecycleJolt.Play(target);
         visual.Jolt();
         return false;
     }

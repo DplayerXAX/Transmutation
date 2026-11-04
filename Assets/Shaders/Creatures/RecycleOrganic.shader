@@ -40,7 +40,7 @@ Shader "Transmutation/Recycle Organic"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             half4 Frag(Varyings i,bool front:SV_IsFrontFace):SV_Target
             {
-                half3 normal=normalize(i.normalWS)*(front?1:-1);
+                half3 normal=normalize(dot(i.normalWS,i.normalWS)>1e-6?i.normalWS:half3(0,1,0))*(front?1:-1);
                 Light light=GetMainLight(TransformWorldToShadowCoord(i.positionWS));
                 half3 colour=i.color.rgb;
                 if(i.uv.z>0.5)
@@ -48,14 +48,14 @@ Shader "Transmutation/Recycle Organic"
                     float central=exp(-abs(i.uv.y)*65);
                     float branches=1-smoothstep(0.015,0.055,abs(frac(i.uv.x*8+abs(i.uv.y)*2.6)-0.5));
                     float vein=max(central,branches*saturate(1-abs(i.uv.y))*0.75);
-                    colour=lerp(colour,colour*0.20,vein*0.75);
+                    colour=lerp(colour,colour*0.30,vein*0.6);
                 }
                 half gray=dot(colour,half3(0.2126,0.7152,0.0722));
                 colour=lerp(gray.xxx*0.8+0.13,colour,saturate(_Life));
                 half diffuse=saturate(dot(normal,light.direction));
-                half3 lit=colour*(SampleSH(normal)+0.12+light.color*(diffuse*0.8+0.12)*light.shadowAttenuation);
+                half3 lit=colour*(SampleSH(normal)+0.32+light.color*(diffuse*0.8+0.12)*light.shadowAttenuation);
                 float wave=pow(saturate(sin(i.uv.x*5-_Clock*3)),8)*_Pulse;
-                half3 glow=colour*i.color.a*(0.15+wave*1.5)*_Life*_Life;
+                half3 glow=colour*i.color.a*(0.45+wave*1.5)*_Life*_Life;
                 return half4(lit+glow,1);
             }
             ENDHLSL
@@ -65,8 +65,25 @@ Shader "Transmutation/Recycle Organic"
             Name "ShadowCaster" Tags { "LightMode"="ShadowCaster" }
             ZWrite On ColorMask 0
             HLSLPROGRAM
-            #pragma vertex Vert
+            #pragma vertex ShadowVert
             #pragma fragment ShadowFrag
+            float3 _LightDirection;
+            float3 _LightPosition;
+            Varyings ShadowVert(Attributes v)
+            {
+                Varyings o=Vert(v);
+                float3 lightDirection=_LightDirection;
+                #if defined(_CASTING_PUNCTUAL_LIGHT_SHADOW)
+                lightDirection=normalize(_LightPosition-o.positionWS);
+                #endif
+                o.positionCS=TransformWorldToHClip(ApplyShadowBias(o.positionWS,normalize(o.normalWS),lightDirection));
+                #if UNITY_REVERSED_Z
+                o.positionCS.z=min(o.positionCS.z,UNITY_NEAR_CLIP_VALUE*o.positionCS.w);
+                #else
+                o.positionCS.z=max(o.positionCS.z,UNITY_NEAR_CLIP_VALUE*o.positionCS.w);
+                #endif
+                return o;
+            }
             half4 ShadowFrag(Varyings i):SV_Target {return 0;}
             ENDHLSL
         }
