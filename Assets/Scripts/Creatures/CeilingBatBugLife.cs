@@ -51,7 +51,7 @@ public sealed class CeilingBatBugLife : MonoBehaviour
     private void Update()
     {
         if (bug == null || !bug.IsDead || habitat == null || habitat.corpseRetentionSeconds <= 0f || !Ready || bug.IsCarried ||
-            (TryGetComponent<CompostAbsorption>(out var claim) && claim.Owner != null)) return;
+            (TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim)) return;
         corpseTime += Time.deltaTime;
         if (corpseTime >= habitat.corpseRetentionSeconds) Destroy(gameObject);
     }

@@ -24,7 +24,8 @@ public sealed class WebCapture : MonoBehaviour
         if (!CanCapture || web == null || body == null || body.gameObject != gameObject || body.isKinematic) return false;
         if (body.TryGetComponent<BubbleCapture>(out var bubbleCapture) && !bubbleCapture.CanCapture) return false;
         Creature target = body.GetComponentInParent<Creature>();
-        if (target != null && (target.IsDead || target.IsCarried)) return false;
+        if (target != null && (!target.CanBeCaptured || target.IsDead || target.IsCarried ||
+            (target.TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim))) return false;
         creature = target;
         Body = body;
         ContactPoint = contactPoint;
