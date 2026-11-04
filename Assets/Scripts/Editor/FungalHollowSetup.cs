@@ -31,6 +31,9 @@ public static class FungalHollowSetup
 
     private static Material rockMat, floorMat, slimeMat, roughMat, stalkMat, bounceMat, solidMat, glowMat, sporeMat;
     private static Mesh capMesh;
+    private static MushroomTree treePrefab;
+    // Caps this wide or wider are Mushroom Tree creatures; smaller pads and caps stay static terrain.
+    private const float TreeRadius = 2.5f;
     private static RealmMeshes stalks, decor;
     private static System.Random random;
     private static Transform lights;
@@ -74,7 +77,8 @@ public static class FungalHollowSetup
         random = new System.Random(11);
         stalks = new RealmMeshes();
         decor = new RealmMeshes();
-        capMesh = SaveMesh(CapMesh(), "Cap");
+        capMesh = MushroomTreeSetup.CapMesh();
+        treePrefab = MushroomTreeSetup.BuildPrefabs();
 
         Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
         var root = new GameObject("Fungal Hollow").transform;
@@ -93,6 +97,7 @@ public static class FungalHollowSetup
         BuildBog(Group(root, "Bog — sunken bounce garden"));
         BuildChimney(Group(root, "North Chimney — the one rough wall, climb to the exit"));
         Nursery(shrooms, shroomPrefab, scene, "Hub Nursery", new Vector2(12f, -30f), 3);
+        YoungGrove(Group(root, "Young Mushroom Trees (carryable until grown)"));
         Scatter(Group(root, "Floor Caps (scattered)"));
 
         Part(root, "Mushroom Stalks", stalks, stalkMat, "Stalks");
@@ -300,6 +305,7 @@ public static class FungalHollowSetup
     /// <summary>A mushroom whose cap top (the standable collider top) is at capTop. Launch 0 = solid blue cap.</summary>
     private static Surface Cap(Transform parent, string name, Vector2 at, float capTop, float radius, float launch, float stalkFrom = float.NaN)
     {
+        if (radius >= TreeRadius && float.IsNaN(stalkFrom)) return Tree(parent, name, at, capTop, radius, launch);
         bool bouncy = launch > 0f;
         var tree = Group(parent, name);
         float origin = capTop - 0.35f * radius;
@@ -339,6 +345,47 @@ public static class FungalHollowSetup
         if (radius >= 2.5f) Lamp(new Vector3(at.x, origin - 0.6f, at.y), radius * 3f, bouncy ? 2.2f : 1.6f, bouncy ? BounceGlow : SolidGlow);
         keepClear.Add(at);
         return Add(name, new Vector3(at.x, capTop, at.y), radius * 0.75f, launch);
+    }
+
+    /// <summary>A grown Mushroom Tree creature, the same shape and cap as before; it also grows essence.</summary>
+    private static Surface Tree(Transform parent, string name, Vector2 at, float capTop, float radius, float launch)
+    {
+        bool bouncy = launch > 0f;
+        float foot = H(at.x, at.y) - 0.3f;
+        var tree = (MushroomTree)PrefabUtility.InstantiatePrefab(treePrefab, parent.gameObject.scene);
+        tree.transform.SetParent(parent, false);
+        tree.name = name;
+        tree.transform.SetPositionAndRotation(new Vector3(at.x, foot, at.y), Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
+        if (bouncy)
+        {
+            var spring = new SerializedObject(tree.GetComponent<BouncySurface>());
+            spring.FindProperty("launchSpeed").floatValue = launch;
+            spring.ApplyModifiedPropertiesWithoutUndo();
+        }
+        tree.Configure(capTop - foot, radius, bouncy, 1f);
+        PrefabUtility.RecordPrefabInstancePropertyModifications(tree);
+        foreach (Transform part in tree.transform) PrefabUtility.RecordPrefabInstancePropertyModifications(part);
+        Lamp(new Vector3(at.x, capTop - 0.95f * radius, at.y), radius * 3f, bouncy ? 2.2f : 1.6f, bouncy ? BounceGlow : SolidGlow);
+        keepClear.Add(at);
+        return Add(name, new Vector3(at.x, capTop, at.y), radius * 0.75f, launch);
+    }
+
+    /// <summary>Young Mushroom Trees rooted on open floor: carry them elsewhere, or let them grow here.</summary>
+    private static void YoungGrove(Transform parent)
+    {
+        Vector2[] spots = { new Vector2(-8f, -42f), new Vector2(20f, -46f), new Vector2(-34f, 34f), new Vector2(30f, 32f) };
+        for (int i = 0; i < spots.Length; i++)
+        {
+            var tree = (MushroomTree)PrefabUtility.InstantiatePrefab(treePrefab, parent.gameObject.scene);
+            tree.transform.SetParent(parent, false);
+            tree.name = "Young Mushroom Tree " + (i + 1);
+            tree.transform.SetPositionAndRotation(new Vector3(spots[i].x, H(spots[i].x, spots[i].y), spots[i].y),
+                Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f));
+            var fields = new SerializedObject(tree);
+            fields.FindProperty("rooted").boolValue = true;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            keepClear.Add(spots[i]);
+        }
     }
 
     private static Surface Pad(Transform parent, string name, Vector2 at, float radius, float launch) =>
@@ -540,36 +587,6 @@ public static class FungalHollowSetup
                 triangles.AddRange(new[] { a, b, c, b, d, c });
             }
         var mesh = new Mesh { name = "HollowFloor", indexFormat = IndexFormat.UInt32, vertices = vertices, triangles = triangles.ToArray() };
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        return mesh;
-    }
-
-    /// <summary>A unit cap: domed top, a little curled lip, and a shallow gilled underside. Origin at the rim.</summary>
-    private static Mesh CapMesh()
-    {
-        Vector2[] profile = { new Vector2(0f, 0.45f), new Vector2(0.35f, 0.42f), new Vector2(0.6f, 0.35f), new Vector2(0.8f, 0.24f),
-            new Vector2(0.93f, 0.12f), new Vector2(1f, 0.02f), new Vector2(1.03f, -0.06f), new Vector2(0.75f, -0.1f),
-            new Vector2(0.4f, -0.13f), new Vector2(0.15f, -0.14f), new Vector2(0f, -0.14f) };
-        const int sides = 18;
-        var rings = new Vector3[profile.Length, sides];
-        for (int i = 0; i < profile.Length; i++)
-            for (int j = 0; j < sides; j++)
-            {
-                float angle = j * Mathf.PI * 2f / sides;
-                float wobble = 1f + 0.035f * Mathf.Sin(j * 2.7f + i * 1.3f);
-                rings[i, j] = new Vector3(Mathf.Cos(angle) * profile[i].x * wobble, profile[i].y, Mathf.Sin(angle) * profile[i].x * wobble);
-            }
-        var flat = new List<Vector3>();
-        for (int i = 0; i < profile.Length - 1; i++)
-            for (int j = 0; j < sides; j++)
-            {
-                int k = (j + 1) % sides;
-                flat.AddRange(new[] { rings[i, j], rings[i, k], rings[i + 1, j], rings[i, k], rings[i + 1, k], rings[i + 1, j] });
-            }
-        var indices = new int[flat.Count];
-        for (int i = 0; i < indices.Length; i++) indices[i] = i;
-        var mesh = new Mesh { name = "MushroomCap", vertices = flat.ToArray(), triangles = indices };
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;

@@ -45,6 +45,7 @@ public static class BounceShroomSetup
                 bounciness = 0f, frictionCombine = PhysicsMaterialCombine.Minimum };
             AssetDatabase.CreateAsset(physics, physicsPath);
         }
+        PhysicsMaterial grip = CompactGrip();
         GameObject root = new GameObject("BounceShroom");
         GameObject prefab;
         try
@@ -71,6 +72,7 @@ public static class BounceShroomSetup
             fields = new SerializedObject(shroom);
             fields.FindProperty("platform").objectReferenceValue = block.transform;
             fields.FindProperty("creatureName").stringValue = "BounceShroom";
+            fields.FindProperty("compactMaterial").objectReferenceValue = grip;
             fields.ApplyModifiedPropertiesWithoutUndo();
             prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
         }
@@ -90,6 +92,37 @@ public static class BounceShroomSetup
         AssetDatabase.SaveAssets();
         Selection.activeGameObject = instance;
         return new { prefab = prefabPath, scene = scene.path, position = position.ToString() };
+    }
+
+    /// <summary>
+    /// Friction for a compact (carryable) shroom, so it rests on slopes. The platform keeps the frictionless
+    /// BouncySurface material; BounceShroom swaps between the two as it expands and shrinks.
+    /// </summary>
+    public static PhysicsMaterial CompactGrip()
+    {
+        const string path = "Assets/Materials/Creatures/BounceShroomGrip.physicMaterial";
+        PhysicsMaterial grip = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
+        if (grip != null) return grip;
+        grip = new PhysicsMaterial("BounceShroomGrip") { dynamicFriction = 0.6f, staticFriction = 0.8f,
+            frictionCombine = PhysicsMaterialCombine.Maximum };
+        AssetDatabase.CreateAsset(grip, path);
+        return grip;
+    }
+
+    /// <summary>Gives the existing prefab its compact grip without rebuilding it (keeps scene references intact).</summary>
+    [MenuItem("Tools/Creatures/BounceShroom/Assign Compact Grip To Prefab")]
+    public static void AssignGripToPrefab()
+    {
+        const string prefabPath = "Assets/Prefabs/Creatures/BounceShroom.prefab";
+        GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+        try
+        {
+            var fields = new SerializedObject(contents.GetComponent<BounceShroom>());
+            fields.FindProperty("compactMaterial").objectReferenceValue = CompactGrip();
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(contents); }
     }
 }
 

@@ -616,6 +616,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public bool Flung => Time.time < flungUntil;
 
+    /// <summary>Scales the jump impulse. Effects such as JumpBoostEffect (Mushroom Essence) set it and put it back to 1.</summary>
+    public float JumpMultiplier { get; set; } = 1f;
+
     private void SpeedControl()
     {
         // A climber drives the body kinematically; its velocity cannot be set.
@@ -654,7 +657,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         exitingSlope = true;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+        rb.AddForce(transform.up * jumpForce * Mathf.Max(0f, JumpMultiplier), ForceMode.Impulse);
         ownJumpRising = true;
     }
 
