@@ -97,6 +97,8 @@ public sealed class FirstPersonBody : MonoBehaviour
     private const float LandTime = 0.4f;
     private MaterialPropertyBlock block;
     private Renderer[] renderers;
+    private readonly System.Collections.Generic.HashSet<Renderer> mimicRenderers = new System.Collections.Generic.HashSet<Renderer>();
+    private Material mimicMaterial;
     private PlayerGooCoating gooCoating;
     private readonly System.Collections.Generic.List<Renderer> gooRenderers = new System.Collections.Generic.List<Renderer>();
 
@@ -125,6 +127,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
         if (showTorso) BuildTorso();
         renderers = root.GetComponentsInChildren<Renderer>();
+        foreach (Renderer part in renderers)
+            if (limbMaterial != null && part.sharedMaterial == limbMaterial) mimicRenderers.Add(part);
         // Tentacle creatures ride on the right hand.
         if (carrier != null)
         {
@@ -145,6 +149,22 @@ public sealed class FirstPersonBody : MonoBehaviour
     private void OnDestroy()
     {
         if (root != null) Destroy(root.gameObject);
+        if (mimicMaterial != null) Destroy(mimicMaterial);
+    }
+
+    /// <summary>Borrow a material for the originally white parts; dark joints keep their own appearance.</summary>
+    public void ApplyMimicMaterial(Material source)
+    {
+        if (source == null || mimicRenderers.Count == 0) return;
+        var snapshot = new Material(source) { name = source.name + " (Player Mimic)", hideFlags = HideFlags.DontSave };
+        foreach (Renderer part in mimicRenderers)
+        {
+            if (part == null) continue;
+            part.sharedMaterial = snapshot;
+            part.SetPropertyBlock(null);
+        }
+        if (mimicMaterial != null) Destroy(mimicMaterial);
+        mimicMaterial = snapshot;
     }
 
     private void LateUpdate()
@@ -201,6 +221,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         block ??= new MaterialPropertyBlock();
         foreach (Renderer part in renderers)
         {
+            if (mimicMaterial != null && mimicRenderers.Contains(part)) continue;
             part.GetPropertyBlock(block);
             block.SetVector("_Center", view.position);
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));

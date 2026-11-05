@@ -30,6 +30,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     // Daniel: Delayed interaction after pickup
     private Creature pendingHeldUse;
     private float pendingHeldUseUntil;
+    private RaycastHit[] surfaceHits = new RaycastHit[32];
 
     private void Awake()
     {
@@ -183,10 +184,32 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Raycasts through screen centre and notifies
-    /// the first Creature hit.
-    /// </summary>
+    /// <summary>Nearest solid under the crosshair, including non-creatures. Never reaches through an obstruction.</summary>
+    public bool TryGetSurfaceHit(out RaycastHit hit)
+    {
+        hit = default;
+        if (interactionCamera == null) return false;
+        Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        var physics = gameObject.scene.GetPhysicsScene();
+        int count;
+        while ((count = physics.Raycast(ray.origin, ray.direction, surfaceHits, interactionRange,
+                   interactionLayers, QueryTriggerInteraction.Ignore)) == surfaceHits.Length)
+            System.Array.Resize(ref surfaceHits, surfaceHits.Length * 2);
+        float nearest = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            Collider candidate = surfaceHits[i].collider;
+            if (candidate.GetComponentInParent<SmoothFirstPersonController>() != null ||
+                (carrier != null && carrier.CarriedCreature != null &&
+                 candidate.transform.IsChildOf(carrier.CarriedCreature.transform))) continue;
+            if (surfaceHits[i].distance >= nearest) continue;
+            hit = surfaceHits[i];
+            nearest = hit.distance;
+        }
+        return hit.collider != null;
+    }
+
+    /// <summary>Uses the held creature, or interacts with the first creature under the crosshair.</summary>
     public void TryInteract()
     {
         if (interactionCamera == null)
