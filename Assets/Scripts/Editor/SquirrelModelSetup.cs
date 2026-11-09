@@ -9,7 +9,7 @@ public static class SquirrelModelSetup
 {
     private const string Source = "Assets/Models/Squirrels.fbx";
     private const string MeshPath = "Assets/Models/SquirrelFacingMesh.asset";
-    private const string PrefabPath = "Assets/Prefabs/Creatures/Squirrel.prefab";
+    private const string PrefabPath = "Assets/Prefabs/Creatures/Squirrels/Squirrel.prefab";
 
     [MenuItem("Tools/Creatures/Apply Squirrel FBX Model")]
     public static void Configure()

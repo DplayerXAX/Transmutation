@@ -17,7 +17,6 @@ public static class ExhibitionSetup
 {
     private const string SourceScene = "Assets/Scenes/Scene_Daniel.unity";
     private const string TargetScene = "Assets/Scenes/Scene_Exhibition.unity";
-    private const string Creatures = "Assets/Prefabs/Creatures/";
     private const int GroundLayer = 7;
     private const float RingRadius = 17f;
 
@@ -174,10 +173,10 @@ public static class ExhibitionSetup
         var templates = new List<GameObject>();
         foreach (string path in exhibit.prefabs)
         {
-            var prefab = Load<GameObject>(Creatures + path);
+            var prefab = Load<GameObject>(CreaturePrefabPaths.Resolve(path));
             if (prefab == null)
             {
-                Debug.LogWarning("Exhibition: missing prefab " + Creatures + path + "; stall " + exhibit.title + " shows its sign only.");
+                Debug.LogWarning("Exhibition: missing prefab " + CreaturePrefabPaths.Resolve(path) + "; stall " + exhibit.title + " shows its sign only.");
                 continue;
             }
             templates.Add(prefab);
@@ -224,7 +223,7 @@ public static class ExhibitionSetup
 
     private static void Nest(Transform stall, Material stone)
     {
-        var prefab = Load<GameObject>(Creatures + "Nest.prefab");
+        var prefab = Load<GameObject>(CreaturePrefabPaths.Resolve("Nest"));
         if (prefab == null) return;
         var nest = (GameObject)PrefabUtility.InstantiatePrefab(prefab, stall);
         nest.transform.localPosition = new Vector3(0f, 0f, -2.5f);
@@ -233,7 +232,7 @@ public static class ExhibitionSetup
     // A small flock circling above the whole hall.
     private static void Flock(Transform stall, Material stone)
     {
-        var bird = Load<BirdCreature>(Creatures + "BirdCreature.prefab");
+        var bird = Load<BirdCreature>(CreaturePrefabPaths.Resolve("BirdCreature"));
         if (bird == null) return;
         var birds = new GameObject("Exhibition Birds");
         birds.transform.SetParent(stall.parent, false);

@@ -37,7 +37,7 @@ internal static class CreatureLifecycleValidation
         }
         Creature Prefab(string name)
         {
-            var asset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/" + name + ".prefab");
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(CreaturePrefabPaths.Resolve(name));
             Check(asset != null, name + " prefab exists");
             var root = Object.Instantiate(asset, staging.transform);
             root.transform.SetParent(null, true);

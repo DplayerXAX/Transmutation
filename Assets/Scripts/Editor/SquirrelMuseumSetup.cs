@@ -7,8 +7,8 @@ using Object = UnityEngine.Object;
 /// <summary>Builds a small, self-contained variant while inheriting the normal squirrel behavior assets.</summary>
 public static class SquirrelMuseumSetup
 {
-    private const string BasePath = "Assets/Prefabs/Systems/SquirrelSystemManager.prefab";
-    private const string Path = "Assets/Prefabs/Systems/SquirrelMuseumDisplay.prefab";
+    private const string BasePath = "Assets/Prefabs/Systems/Squirrels/SquirrelSystemManager.prefab";
+    private const string Path = "Assets/Prefabs/Systems/Squirrels/SquirrelMuseumDisplay.prefab";
 
     [MenuItem("Tools/Creatures/Create Squirrel Museum Display Prefab")]
     public static void Create()

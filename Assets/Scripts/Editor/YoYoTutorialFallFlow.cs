@@ -218,7 +218,7 @@ public static class YoYoTutorialFallFlow
         if(manager!=null){manager.SkyBounds=new Bounds(new Vector3(-1f,29f,22f),new Vector3(310f,58f,250f));EditorUtility.SetDirty(manager);}
         var points=new[]{new Vector2(-108f,-31f),new Vector2(-80f,-43f),new Vector2(-51f,2f),new Vector2(-112f,25f),new Vector2(-27f,40f),new Vector2(102f,-1f),new Vector2(95f,79f)};
         string[] labels={"entry","compost","flower","spider","ridge","dragon basin","spires"};
-        var prefab=AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/BirdCreature.prefab");
+        var prefab=AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/Birds/BirdCreature.prefab");
         var existing=GameObject.Find("Birds — native spawn area");if(existing!=null)existing.name="Flock — dragon basin";
         for(int i=0;i<points.Length;i++)
         {

@@ -6,7 +6,7 @@ public static class SquirrelReactionSetup
     [MenuItem("Tools/Creatures/Configure Squirrel Reaction Prefab")]
     public static void Configure()
     {
-        const string path = "Assets/Prefabs/Creatures/Squirrel.prefab";
+        const string path = "Assets/Prefabs/Creatures/Squirrels/Squirrel.prefab";
         var root = PrefabUtility.LoadPrefabContents(path);
         try
         {

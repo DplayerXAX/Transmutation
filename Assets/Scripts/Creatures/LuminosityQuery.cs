@@ -76,6 +76,7 @@ public static class LuminosityQuery
     {
         if (results == null) throw new ArgumentNullException(nameof(results));
         results.Clear(); LastCandidateChecks = 0;
+        if (observerRoot != null && FlashBlindness.IsBlinded(observerRoot)) return;
         if (float.IsNaN(detectionRadius) || float.IsInfinity(detectionRadius) || detectionRadius < 0f)
             throw new ArgumentOutOfRangeException(nameof(detectionRadius));
         if (float.IsNaN(minimumBrightness) || float.IsInfinity(minimumBrightness) || minimumBrightness < 0f)

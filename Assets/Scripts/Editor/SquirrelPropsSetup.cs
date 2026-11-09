@@ -27,7 +27,7 @@ public static class SquirrelPropsSetup
                 Part(staging.transform, PrimitiveType.Sphere, new Vector3(Mathf.Cos(a) * 0.128f,
                     0.095f + row * 0.034f, Mathf.Sin(a) * 0.128f), new Vector3(0.045f, 0.025f, 0.045f), cap);
             }
-            Apply("Assets/Prefabs/Creatures/Food.prefab", "Acorn Visual", staging, "SquirrelAcornMesh", false);
+            Apply("Assets/Prefabs/Creatures/Squirrels/Food.prefab", "Acorn Visual", staging, "SquirrelAcornMesh", false);
             Clear(staging);
             Part(staging.transform, PrimitiveType.Sphere, Vector3.down * 0.12f, new Vector3(0.75f, 0.07f, 0.75f), straw);
             for (int layer = 0; layer < 5; layer++)
@@ -49,7 +49,7 @@ public static class SquirrelPropsSetup
                 Tube(staging.transform, new Vector3(Mathf.Cos(a) * 0.2f, -0.14f, Mathf.Sin(a) * 0.2f),
                     new Vector3(Mathf.Cos(a + 0.22f) * 0.49f, 0.14f, Mathf.Sin(a + 0.22f) * 0.49f), 0.018f, straw);
             }
-            Apply("Assets/Prefabs/Creatures/Nest.prefab", "Woven Nest Visual", staging, "SquirrelWovenNestMesh", true);
+            Apply("Assets/Prefabs/Creatures/Squirrels/Nest.prefab", "Woven Nest Visual", staging, "SquirrelWovenNestMesh", true);
         }
         finally { Object.DestroyImmediate(staging); }
         AssetDatabase.SaveAssets();

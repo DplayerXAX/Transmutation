@@ -10,7 +10,7 @@ using UnityEngine;
 /// </summary>
 public static class PlayerBodySetup
 {
-    private const string PrefabPath = "Assets/Prefabs/PlayerObjects.prefab";
+    private const string PrefabPath = "Assets/Prefabs/Player/PlayerObjects.prefab";
 
     [MenuItem("Tools/Capstone/Player/Move Arms, Legs And Climbing Into Player Prefab")]
     private static void MoveIntoPrefab()

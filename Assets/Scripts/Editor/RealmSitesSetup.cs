@@ -14,10 +14,10 @@ public static class RealmSitesSetup
     [MenuItem("Tools/Capstone/Realm/Add Web Gorge And Bubble Well To Open Scene")]
     private static void Add()
     {
-        var spider = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/SkySpider.prefab");
-        var flower = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/BubbleFlower.prefab");
-        var fireSource = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/FireSource.prefab");
-        var fireFlower = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire Flower.prefab");
+        var spider = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Spiders/SkySpider.prefab");
+        var flower = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/BubbleFlower.prefab");
+        var fireSource = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire/FireSource.prefab");
+        var fireFlower = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire/Fire Flower.prefab");
         var stone = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_Decor_Stone.mat");
         var silk = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_Realm_Silk.mat");
         var ink = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_Ink.mat");

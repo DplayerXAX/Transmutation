@@ -231,7 +231,7 @@ public static class SkySpiderAgeValidation
                 }
             Check(boneCount == 1 && web.CaptureCount == 0, "bird creates exactly one bones object and leaves web captures");
 
-            var seedPrefab = AssetDatabase.LoadAssetAtPath<CorruptSeed>("Assets/Prefabs/Creatures/CorruptSeed.prefab");
+            var seedPrefab = AssetDatabase.LoadAssetAtPath<CorruptSeed>("Assets/Prefabs/Creatures/Seeds/CorruptSeed.prefab");
             Check(seedPrefab != null && seedPrefab.OffspringPrefab != null, "corrupt seed fixture has an offspring template");
             CorruptSeed SpawnSeed()
             {

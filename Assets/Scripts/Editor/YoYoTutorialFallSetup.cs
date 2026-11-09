@@ -242,11 +242,11 @@ public static class YoYoTutorialFallSetup
         if (!world.GenerationComplete) world.Generate(true);
         if (GameObject.Find("Sketch Regions and Creatures") != null) throw new InvalidOperationException("Population already exists.");
         actors = new GameObject("Sketch Regions and Creatures").transform;
-        var player = Prefab("Assets/Prefabs/PlayerObjects.prefab",null,new Vector3(-112f,-27.8f,-136f),"PlayerObjects");
+        var player = Prefab("Assets/Prefabs/Player/PlayerObjects.prefab",null,new Vector3(-112f,-27.8f,-136f),"PlayerObjects");
         player.transform.rotation = Quaternion.identity;
         var hints = new GameObject("Cave Interaction Hints").AddComponent<InteractionPromptHUD>();
         Edit(hints,s => { B(s,"showText",true); s.FindProperty("carrier").objectReferenceValue = player.GetComponentInChildren<PlayerCreatureCarrier>(true); s.FindProperty("interactor").objectReferenceValue = player.GetComponentInChildren<PlayerCreatureInteractor>(true); });
-        var trigger = Prefab("Assets/Prefabs/Gameplay/InteractionHintsTrigger.prefab",actors,new Vector3(-112f,6f,-48f),"Leave Start Cave — hide hints");
+        var trigger = Prefab("Assets/Prefabs/Gameplay/UI/InteractionHintsTrigger.prefab",actors,new Vector3(-112f,6f,-48f),"Leave Start Cave — hide hints");
         trigger.GetComponent<BoxCollider>().size = new Vector3(14f,14f,4f);
         Edit(trigger.GetComponent<InteractionHintsTrigger>(),s => s.FindProperty("hud").objectReferenceValue = hints);
         var start = Region("01 P and BS — underground start",new Vector3(-112f,-29f,-136f));
@@ -299,10 +299,10 @@ public static class YoYoTutorialFallSetup
         Spawn("Food",compo,Surface(-54f,-48f,0.5f),"Food — recycling hollow");
         var birdArea=new GameObject("Birds — native spawn area").AddComponent<BirdSpawnArea>();
         birdArea.transform.SetParent(final,false); birdArea.transform.position=Surface(95f,30f,17f);
-        birdArea.Configure(AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/BirdCreature.prefab"),6,12f,7127);
+        birdArea.Configure(AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/Birds/BirdCreature.prefab"),6,12f,7127);
         var flock = new GameObject("Final Basin Bird Flock").AddComponent<BirdFlockManager>();
         flock.SkyBounds = new Bounds(new Vector3(100f,22f,48f),new Vector3(115f,36f,140f));
-        var squirrels = Prefab("Assets/Prefabs/Systems/SquirrelSystemManager.prefab",final,Surface(129f,106f),"Squirrel Grove");
+        var squirrels = Prefab("Assets/Prefabs/Systems/Squirrels/SquirrelSystemManager.prefab",final,Surface(129f,106f),"Squirrel Grove");
         Edit(squirrels.GetComponent<SquirrelSystemManager>(),s => { I(s,"population",3); F(s,"squirrelSpawnRadius",4f); });
         AddGroveTrees(squirrels.transform);
         AddColossus(final);
@@ -332,11 +332,11 @@ public static class YoYoTutorialFallSetup
         go.transform.SetParent(parent,false); go.transform.position = Surface(98f,-4f);
         var mother = go.AddComponent<BoneKiln>();
         EditorUtility.CopySerialized(original,mother);
-        var bubblePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubble.prefab");
+        var bubblePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/Bubble.prefab");
         var fuelObject = (GameObject)PrefabUtility.InstantiatePrefab(bubblePrefab);
         fuelObject.name = "Starting Dragon Fuel";
         Edit(fuelObject.GetComponent<FireBubble>(),s => { F(s,"boneFuelHeat",240f); F(s,"ageRate",0f); });
-        var fuel = PrefabUtility.SaveAsPrefabAsset(fuelObject,Folder + "/StartingDragonFuel.prefab").GetComponent<FireBubble>();
+        var fuel = PrefabUtility.SaveAsPrefabAsset(fuelObject,"Assets/Prefabs/Gameplay/Tutorial/StartingDragonFuel.prefab").GetComponent<FireBubble>();
         Object.DestroyImmediate(fuelObject);
         Edit(mother,s => { s.FindProperty("world").objectReferenceValue = world; B(s,"placeAtThisObject",true); I(s,"sinkholeOverride",0); I(s,"children",3); I(s,"nearbyTentacles",0); s.FindProperty("tentacleTemplate").objectReferenceValue = null; s.FindProperty("childStartingFuel").objectReferenceValue = fuel; I(s,"childStartingBubbleCount",3); });
     }
@@ -407,7 +407,7 @@ public static class YoYoTutorialFallSetup
     }
     private static GameObject Spawn(string kind,Transform parent,Vector3 position,string name)
     {
-        string path=kind=="GeodeLarva" ? "Assets/Prefabs/Creatures/OreColossus/GeodeLarva.prefab" : "Assets/Prefabs/Creatures/"+kind+".prefab";
+        string path=CreaturePrefabPaths.Resolve(kind);
         var go=Prefab(path,parent,position,name);
         var creature=go.GetComponent<Creature>();
         if(creature!=null) Edit(creature,s=>F(s,"ageRate",0f));

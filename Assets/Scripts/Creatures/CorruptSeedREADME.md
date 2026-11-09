@@ -5,7 +5,7 @@ It has no movement decisions, direct-use action, or autonomous reproduction. Its
 Nutrition supplies a meal budget (default 120); only the actual eater receives infection.
 
 Run **Tools > Creatures > Create Corrupt Seed Assets** outside Play Mode, then place
-`Assets/Prefabs/Creatures/CorruptSeed.prefab` wherever you want. Setup is repeatable:
+`Assets/Prefabs/Creatures/Seeds/CorruptSeed.prefab` wherever you want. Setup is repeatable:
 existing art, physics tuning, and nonempty references are preserved.
 
 ## Infection and death

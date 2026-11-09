@@ -94,6 +94,7 @@ public static class CreatureSpatialQuery
     }
 
     public static bool Visible(Creature observer, Creature target, Vector3 from, ref RaycastHit[] hits,
-        GameObject extraIgnore = null) => !FirstSolid(observer.gameObject.scene, from, target.AimPosition,
-            observer, extraIgnore, ref hits, out var hit) || Owner(hit.collider) == target;
+        GameObject extraIgnore = null) => observer != null && target != null && !FlashBlindness.IsBlinded(observer) &&
+            (!FirstSolid(observer.gameObject.scene, from, target.AimPosition,
+            observer, extraIgnore, ref hits, out var hit) || Owner(hit.collider) == target);
 }

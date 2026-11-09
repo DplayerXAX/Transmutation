@@ -32,7 +32,7 @@ public static class SquirrelNestValidation
             treeObject.transform.position = new Vector3(4f, 0f, 3f);
             var tree = treeObject.AddComponent<SquirrelTree>();
             fm.GenerateAroundTrees(new[] { tree });
-            squirrel.ConfigureNestBuilding(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Nest.prefab"));
+            squirrel.ConfigureNestBuilding(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Squirrels/Nest.prefab"));
             squirrel.Initialize(fm, nest, 1f, 1);
             var a = Food(scene, fm, new Vector3(-4f, 1f, 0f));
             var b = Food(scene, fm, new Vector3(-3f, 1f, 0f));
