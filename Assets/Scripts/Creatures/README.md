@@ -53,6 +53,13 @@ carry/capture cleanup still run. Hunger is currently bird-specific; Nutrition be
 
 ## Food, nutrition, and death
 
+Health damage also starts the shared `CreatureHurtResponse`: a short red tint and safe visual
+recoil where a separate collider-free Visual pivot exists. Ashura compose the recoil with their
+locomotion/attack animation. Procedural fire and recycle shaders expose `_CreatureHurt` for the
+same feedback. Age loss and rejected damage do not trigger it. Hurt presentation never changes
+carry/capture ownership or applies physical push; successful attacks and explosions use
+`CreatureImpulse` separately. See [AsuraPrototype.md](AsuraPrototype.md) for the contact showcase.
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Food Tags | None | What this creature provides as food: Meat, Plant, Matter, or a combination. |

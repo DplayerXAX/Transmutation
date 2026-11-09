@@ -2,6 +2,7 @@ Shader "Capstone/Creature/FireEater"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         [Header(Cells)]
         _CellDensity ("Cell Density (per UV axis)", Range(0,100)) = 8
         _DotSize ("Dot Radius", Range(0.01,0.48)) = 0.16
@@ -25,6 +26,7 @@ Shader "Capstone/Creature/FireEater"
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
         float _CellDensity, _DotSize, _DotAmount, _PlateBlend, _SeamWidth;
         float _EdgeSoftness, _Warp, _Seed, _Speed, _Motion;
         float _GroundGray, _InkGray, _Variation;
@@ -62,7 +64,7 @@ Shader "Capstone/Creature/FireEater"
         half4 Frag(Varyings i):SV_Target
         {
             UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-            if (_CellDensity<=0 || _DotAmount<=0) return half4(_GroundGray.xxx,1);
+            if (_CellDensity<=0 || _DotAmount<=0) return half4(lerp(_GroundGray.xxx, half3(1,0.08,0.06), _CreatureHurt*0.8),1);
             float t=_Time.y*_Speed;
             float2 p=i.uv*_CellDensity+_Seed;
             p+=_Warp*float2(sin(p.y*1.7+_Motion*sin(t*0.31)),
@@ -102,7 +104,7 @@ Shader "Capstone/Creature/FireEater"
             float variationMask=1-smoothstep(0.2,0.6,first);
             surface=lerp(_GroundGray,surface,variationMask);
             float gray=lerp(surface,_InkGray,ink);
-            return half4(gray.xxx,1);
+            return half4(lerp(gray.xxx, half3(1,0.08,0.06), _CreatureHurt*0.8),1);
         }
         half4 Depth(Varyings i):SV_Target { return 0; }
         half4 Normals(Varyings i):SV_Target

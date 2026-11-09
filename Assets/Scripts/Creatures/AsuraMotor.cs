@@ -7,6 +7,8 @@ public sealed class AsuraMotor : MonoBehaviour
     [Min(0f)] [SerializeField] private float acceleration = 12f;
     [Min(0f)] [SerializeField] private float turnSpeed = 360f;
     [SerializeField] private LayerMask groundLayers = ~0;
+    [Range(0f, 1f)] [SerializeField] private float knockbackMultiplier = 1f;
+    public float KnockbackMultiplier => knockbackMultiplier;
     private Rigidbody body;
     private Collider shape;
     private Creature owner;
@@ -21,7 +23,10 @@ public sealed class AsuraMotor : MonoBehaviour
     private void Awake()
     {
         owner = GetComponent<Creature>(); body = GetComponent<Rigidbody>(); shape = GetComponent<Collider>();
+        owner.Died += OnDied;
     }
+    private void OnDied(Creature dead) { body.linearDamping = 1.2f; Stop(); }
+    private void OnDestroy() { if (owner != null) owner.Died -= OnDied; }
     public void SetIntent(Vector3 velocity, Vector3 look)
     {
         intent = Vector3.ProjectOnPlane(velocity, Vector3.up);
@@ -33,11 +38,12 @@ public sealed class AsuraMotor : MonoBehaviour
     private void FixedUpdate()
     {
         if (!OwnsMovement) { Stop(); return; }
-        if (shape == null || Time.time < pushedUntil) return;
+        if (shape == null) return;
         PhysicsScene physics = gameObject.scene.GetPhysicsScene();
         float foot = shape.bounds.min.y;
         Grounded = physics.Raycast(new Vector3(body.position.x, foot + 0.08f, body.position.z),
             Vector3.down, 0.2f, groundLayers, QueryTriggerInteraction.Ignore);
+        if (Time.time < pushedUntil) return;
         Vector3 desired = intent;
         if (desired.sqrMagnitude > 0.01f)
         {

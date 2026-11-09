@@ -1,23 +1,32 @@
-using System;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public sealed class MeleeAttack : CreatureAttack
 {
-    private Collider[] overlaps = new Collider[16];
+    [SerializeField, Min(0f)] private float contactGap = 0.18f;
+    [SerializeField, Min(0f)] private float knockback = 3.2f;
     private RaycastHit[] hits = new RaycastHit[16];
+
+    public override bool InReach(Creature owner, Creature target)
+    {
+        if (!CreatureSpatialQuery.TryGetSolid(owner, out var a) || !CreatureSpatialQuery.TryGetSolid(target, out var b)) return false;
+        Vector3 pointB = b.ClosestPoint(a.bounds.center);
+        Vector3 pointA = a.ClosestPoint(pointB);
+        pointB = b.ClosestPoint(pointA);
+        return (pointB - pointA).sqrMagnitude <= contactGap * contactGap;
+    }
+
     public override bool Release(Creature owner, Creature target, Transform muzzle)
     {
-        if (target == null || !CreatureSpatialQuery.Visible(owner, target, owner.AimPosition, ref hits)) return false;
-        Vector3 delta = target.AimPosition - owner.AimPosition;
-        if (delta.sqrMagnitude > Range * Range) return false;
-        Vector3 center = owner.AimPosition + delta.normalized * Range * 0.5f;
-        int count;
-        var physics = owner.gameObject.scene.GetPhysicsScene();
-        while ((count = physics.OverlapSphere(center, Range * 0.5f + 0.1f, overlaps, ~0,
-                   QueryTriggerInteraction.Ignore)) == overlaps.Length) Array.Resize(ref overlaps, overlaps.Length * 2);
-        for (int i = 0; i < count; i++)
-            if (CreatureSpatialQuery.Owner(overlaps[i]) == target) return target.ApplyDamage(Damage, owner);
-        return false;
+        if (!InReach(owner, target) || !CreatureSpatialQuery.Visible(owner, target, owner.AimPosition, ref hits)) return false;
+        Vector3 direction = Vector3.ProjectOnPlane(target.AimPosition - owner.AimPosition, Vector3.up).normalized;
+        if (direction.sqrMagnitude < 0.001f) direction = owner.transform.forward;
+        if (Vector3.Dot(owner.transform.forward, direction) < 0.25f || !target.ApplyDamage(Damage, owner)) return false;
+        if (target.TryGetComponent<Rigidbody>(out var body))
+        {
+            bool grounded = target.TryGetComponent<AsuraMotor>(out var motor) && motor.Grounded;
+            float hop = grounded ? Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * 0.08f) : 0f;
+            CreatureImpulse.Apply(body, direction * knockback + Vector3.up * hop, 0.18f);
+        }
+        return true;
     }
 }
