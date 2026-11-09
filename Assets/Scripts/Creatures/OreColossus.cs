@@ -30,6 +30,9 @@ public sealed class OreColossus : Creature
     [Tooltip("Ground for its feet when there is no world.")]
     [SerializeField] private LayerMask groundLayers = 1 << 7;
     [SerializeField] private int seed = 11;
+    [Tooltip("Authored rest stops in world space. Empty: it wanders between random waypoints. Set: it starts at the first, " +
+             "walks them in order (looping) and kneels at every one, so a level can say where its tail ramp comes down.")]
+    [SerializeField] private Vector3[] route = new Vector3[0];
 
     [Header("Materials")]
     [SerializeField] private Material rockMaterial;
@@ -147,7 +150,7 @@ public sealed class OreColossus : Creature
     private float phaseTime, phaseLength, nextPathCheck, nextRepick, nextPlayerSearch, nextBellyCheck, placeTimer, placeWait;
     private bool spotChosen, heartBroken, settleReady, subscribed, kneelReady;
     private float kneel;
-    private int pendingStaggers;
+    private int pendingStaggers, routeIndex;
     private float settleStart;
     private Vector3 settleFrom, settleTo;
     private Quaternion settleRotationFrom, settleRotationTo;
@@ -166,6 +169,7 @@ public sealed class OreColossus : Creature
     public GameObject Remains => remains;
     public float Speed => speed;
     public Vector3 Waypoint => waypoint;
+    private bool HasRoute => route != null && route.Length > 0;
     /// <summary>Raised once when it has knelt for good and the geode is open.</summary>
     public event System.Action<OreColossus> SettledDown;
     /// <summary>Raised where each foot lands.</summary>
@@ -260,8 +264,15 @@ public sealed class OreColossus : Creature
         placeTimer -= deltaTime;
         if (placeTimer > 0f) return;
         placeTimer = 0.5f;
-        if (world == null) { BuildAt(home, transform.forward); return; }
+        if (world == null) { BuildAt(HasRoute ? route[0] : home, RouteHeading()); return; }
         if (!world.LayoutReady) return;
+        if (!spotChosen && HasRoute)
+        {
+            pendingSpot = route[0];
+            pendingHeading = RouteHeading();
+            spotChosen = true;
+            placeWait = 0f;
+        }
         if (!spotChosen)
         {
             Vector3 centre = world.transform.position;
@@ -278,6 +289,14 @@ public sealed class OreColossus : Creature
         placeWait += 0.5f;
         // Feet need real terrain colliders; after a while fall back to the generator's column heights.
         if (world.IsRegionReady(pendingSpot, 25f) || placeWait > 20f) BuildAt(pendingSpot, pendingHeading);
+    }
+
+    /// <summary>Facing from the first route stop toward the second (or its own forward).</summary>
+    private Vector3 RouteHeading()
+    {
+        if (!HasRoute || route.Length < 2) return transform.forward;
+        Vector3 to = route[1] - route[0]; to.y = 0f;
+        return to.sqrMagnitude > 0.01f ? to.normalized : transform.forward;
     }
 
     private bool PickSpot(out Vector3 spot, out Vector3 heading)
@@ -570,7 +589,7 @@ public sealed class OreColossus : Creature
 
         if (flat.magnitude < 6f)
         {
-            if (random.NextDouble() < restChance) BeginRest(Mathf.Lerp(restTime.x, restTime.y, (float)random.NextDouble()));
+            if (HasRoute || random.NextDouble() < restChance) BeginRest(Mathf.Lerp(restTime.x, restTime.y, (float)random.NextDouble()));
             else PickWaypoint(false);
             return;
         }
@@ -587,6 +606,13 @@ public sealed class OreColossus : Creature
     private void PickWaypoint(bool avoidAhead)
     {
         Vector3 position = transform.position;
+        if (HasRoute)
+        {
+            // Blocked or arrived alike: on to the next stop (a single stop is rested at again).
+            routeIndex = (routeIndex + 1) % route.Length;
+            waypoint = new Vector3(route[routeIndex].x, position.y, route[routeIndex].z);
+            return;
+        }
         Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
         for (int i = 0; i < 24; i++)
         {

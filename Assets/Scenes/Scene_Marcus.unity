@@ -1467,6 +1467,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   seed: 77479
+  route: []
   rockMaterial: {fileID: 2100000, guid: bc360df55b156b34c8b7a57ac651f4ac, type: 2}
   oreMaterial: {fileID: 2100000, guid: 2eec1c8658aa89f4a87cdddb8d73cbc3, type: 2}
   heartMaterial: {fileID: 2100000, guid: f4c1bad5f696dd148bd6835cb489a60e, type: 2}
@@ -5926,6 +5927,10 @@ PrefabInstance:
     - target: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: pickupLayers.m_Bits
       value: 887
+      objectReference: {fileID: 0}
+    - target: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: allowAirJump
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: allowUngroundedJump
