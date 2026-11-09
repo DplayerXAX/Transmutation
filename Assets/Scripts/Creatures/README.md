@@ -53,6 +53,13 @@ carry/capture cleanup still run. Hunger is currently bird-specific; Nutrition be
 
 ## Food, nutrition, and death
 
+Health damage also starts the shared `CreatureHurtResponse`: a short red tint and safe visual
+recoil where a separate collider-free Visual pivot exists. Ashura compose the recoil with their
+locomotion/attack animation. Procedural fire and recycle shaders expose `_CreatureHurt` for the
+same feedback. Age loss and rejected damage do not trigger it. Hurt presentation never changes
+carry/capture ownership or applies physical push; successful attacks and explosions use
+`CreatureImpulse` separately. See [AsuraPrototype.md](AsuraPrototype.md) for the contact showcase.
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Food Tags | None | What this creature provides as food: Meat, Plant, Matter, or a combination. |
@@ -179,6 +186,15 @@ It only reads heat; it never changes it.
   radius, folds and colour are all in the vertex shader.
 
 ## Other creatures
+
+**Ceiling BatBug** crawls on floors, walls and ceilings, serves as a moving handhold,
+and lays one replacement egg per lifetime. See [CeilingBatBugREADME.md](CeilingBatBugREADME.md)
+for controls, lifecycle, habitat tuning and setup.
+
+**Recycle Network** is the rooted fungal replacement for the old Compost platform.
+It consumes corpses, expands over terrain and grows portable Goo-producing flowers.
+See [RecycleNetworkREADME.md](RecycleNetworkREADME.md) for growth, flower limits,
+resource costs, surface attachment and seeding.
 
 **Ore Colossus** is a huge, peaceful creature on four long legs that roams the procedural map with a geode
 shrine on its back, after Elden Ring's Walking Mausoleum. Its stomps fling the player. Only erosive water

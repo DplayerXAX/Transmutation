@@ -157,7 +157,9 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             return;
         }
         string rideHint = null;
-        if (BoneRide.TryNearby(out Component nearbyBone, out _))
+        bool heldOwnsLeft = carrier != null && carrier.CarriedCreature != null &&
+            (carrier.CarriesTentacle || carrier.CarriedCreature.CanUseWhileCarried);
+        if (!heldOwnsLeft && BoneRide.TryNearby(out Component nearbyBone, out _))
         {
             rideMother = nearbyBone as BoneKiln;
             rideHint = nearbyBone is BoneKiln ? "[LMB] Ride bone mother" : "[LMB] Ride bone child";
@@ -198,6 +200,12 @@ public sealed class InteractionPromptHUD : MonoBehaviour
 
         if (handClimber != null && handClimber.isActiveAndEnabled && handClimber.IsClimbing)
         {
+            if (handClimber.OnBugGrip)
+            {
+                title = "BAT BUG";
+                hint = "[Hold LMB] Ride bug / aim at another bug to transfer\n[W] Reach a ledge or Goo wall    [Space] Jump off    [Release LMB] Let go";
+                return;
+            }
             if (!handClimber.IsMantling) hint = handClimbHint;
             return;
         }

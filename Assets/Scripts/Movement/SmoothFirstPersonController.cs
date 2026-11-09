@@ -152,6 +152,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public void BeginBubbleMovementLock()
     {
+        GetComponent<PlayerBugGrip>()?.Release(false);
         if (rb == null) rb = GetComponent<Rigidbody>();
         bubbleCapture = GetComponent<BubbleCapture>();
         // Cancel traversal first: a ledge or hand climb may own a kinematic body.
@@ -247,6 +248,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         }
         GroundCheck();
+        if (grounded && Time.time >= blastUntil) blastAirborne = false;
 
         if (grounded)
             doubleJumpAvailable = allowDoubleJump;
@@ -257,7 +259,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded && !Flung && groundAcceleration <= 0f ? groundDrag : 0f;
+        rb.linearDamping = grounded && !Flung && !BlastMotion && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -275,6 +277,21 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         if (sliding)
             SlidingMovement();
+        velocityBeforePhysics = rb.isKinematic ? Vector3.zero : rb.linearVelocity;
+    }
+    private Vector3 velocityBeforePhysics;
+    public event System.Action<float> Landed;
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (rb == null || rb.isKinematic) return;
+        float speed = 0f;
+        for (int i = 0; i < collision.contactCount; i++)
+        {
+            Vector3 normal = collision.GetContact(i).normal;
+            if (normal.y < 0.55f) continue;
+            speed = Mathf.Max(speed, Mathf.Max(-Vector3.Dot(velocityBeforePhysics, normal), Mathf.Abs(Vector3.Dot(collision.relativeVelocity, normal))));
+        }
+        if (speed > 1f) Landed?.Invoke(speed);
     }
 
     private void GroundCheck()
@@ -531,6 +548,21 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
+        if (BlastMotion)
+        {
+            // A blast changes velocity once. Steering stays responsive without ground braking or slope glue.
+            if (moveDirection.sqrMagnitude > 0.01f)
+            {
+                Vector3 flat = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
+                Vector3 wish = moveDirection.normalized * moveSpeed;
+                if (flat.magnitude < moveSpeed || Vector3.Dot(flat, wish) < 0f)
+                    flat = Vector3.MoveTowards(flat, wish, airAcceleration * Time.fixedDeltaTime);
+                rb.linearVelocity = new Vector3(flat.x, rb.linearVelocity.y, flat.z);
+            }
+            rb.useGravity = true;
+            return;
+        }
+
         if (groundAcceleration > 0f && !sliding && !wallRunning && !Flung)
         {
             SteerVelocity();
@@ -602,6 +634,18 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     }
 
     private float flungUntil;
+    private float blastUntil;
+    private bool blastAirborne;
+    public bool BlastMotion => Time.time < blastUntil || (blastAirborne && !grounded);
+
+    public void AddBlastImpulse(Vector3 velocityChange)
+    {
+        if (rb == null || rb.isKinematic) return;
+        rb.linearVelocity += velocityChange;
+        blastUntil = Time.time + 0.18f;
+        blastAirborne = true;
+        ownJumpRising = false;
+    }
 
     /// <summary>
     /// Something outside the player (a stretched tentacle cord, a spring) throws the body: the walking speed
@@ -624,7 +668,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         // A climber drives the body kinematically; its velocity cannot be set.
         if (rb.isKinematic)
             return;
-        if (Flung) return;
+        if (Flung || BlastMotion) return;
         // The walking limit applies relative to a moving back, including its turn at this contact point.
         if (rideSurface != null)
         {

@@ -3,81 +3,83 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>A roaming, rideable compost back. Death eligibility uses the existing Creature.IsDead contract.</summary>
+/// <summary>Recycle: an immovable terrain colony. Flowers are independently portable child creatures.</summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Rigidbody), typeof(CompostRideSurface))]
-[DefaultExecutionOrder(-200)]
+[RequireComponent(typeof(Rigidbody), typeof(RecycleNetworkGeometry))]
 public sealed class CompostCreature : Creature
 {
-    [Header("Back and Output")]
-    [SerializeField] private BoxCollider back;
-    [SerializeField] private GooCreature gooPrefab;
-    [Min(0.01f)] [SerializeField] private float absorptionSeconds = 5f;
-    [Min(1)] [SerializeField] private int fullnessThreshold = 50;
-    [Range(0.1f, 0.95f)] [SerializeField] private float fullSinkFraction = 0.8f;
-    [Min(1)] [SerializeField] private int gooCost = 10;
-    [Min(0.01f)] [SerializeField] private float productionSeconds = 7f;
-
-    [Header("Roaming")]
-    [Min(0f)] [SerializeField] private float walkSpeed = 0.6f;
-    [Min(0f)] [SerializeField] private float roamRadius = 12f;
-    [Min(1f)] [SerializeField] private float turnSpeed = 45f;
-    [Range(0f, 60f)] [SerializeField] private float maxGroundSlope = 36f;
-    [Min(0.01f)] [SerializeField] private float maxStepHeight = 0.35f;
-    [SerializeField] private LayerMask groundLayers = (1 << 7) | (1 << 8);
-
-    private readonly List<CompostAbsorption> absorptions = new List<CompostAbsorption>();
-    private Collider[] overlap = new Collider[64];
-    private readonly RaycastHit[] hits = new RaycastHit[32];
-    private readonly Collider[] outputOverlaps = new Collider[32];
-    private Rigidbody body;
-    private Vector3 home, destination;
-    private Bounds footprintOS;
-    private readonly Collider[] clearanceOverlaps = new Collider[128];
-    private float wanderTimer, avoidanceTimer;
-    private long storedCharges;
-    private bool producing;
-    private float productionTime;
+    [Header("Recycle")]
+    [SerializeField] GooCreature gooPrefab;
+    [SerializeField] RecycleFlower flowerPrefab;
+    [SerializeField] int seed = 7081;
+    [Min(0.01f)] [SerializeField] float absorptionSeconds = 5f;
+    [Min(1)] [SerializeField] int fullnessThreshold = 50;
+    [Min(1)] [SerializeField] int gooCost = 10;
+    [Min(0.01f)] [SerializeField] float productionSeconds = 7f;
+    [Min(1)] [SerializeField] int flowerCost = 5;
+    [Min(0.1f)] [SerializeField] float flowerGrowthSeconds = 5f;
+    [Min(1)] [SerializeField] int maximumFlowers = 8;
+    [Min(1f)] [SerializeField] float metresPerFlower = 32f;
+    [Min(1f)] [SerializeField] float startingStrands = 32f;
+    [Min(1f)] [SerializeField] float seedStartingStrands = 16f;
+    [SerializeField] Vector2 flowerSizeRange = new Vector2(0.85f,1.15f);
+    [SerializeField] bool starterFlower = true;
+    // Retained serialized identity for old scene overrides and the explicit migration tool.
+    [SerializeField, HideInInspector] BoxCollider back;
+    [SerializeField, HideInInspector] float walkSpeed, roamRadius;
+    [SerializeField, HideInInspector] long storedCharges;
+    readonly RecycleDigestion digestion = new RecycleDigestion();
+    readonly List<RecycleFlower> flowers = new List<RecycleFlower>();
+    readonly HashSet<Creature> scanned = new HashSet<Creature>();
+    Collider[] overlaps = new Collider[64];
+    RecycleNetworkGeometry geometry;
+    SurfaceAnchor seedAnchor;
+    ProceduralWorld world;
+    bool seedConfigured, starterIssued;
+    float scanAfter, retryAfter;
+    Vector3 rootedPosition;
+    Quaternion rootedRotation;
+    readonly Collider[] placementHits=new Collider[64];
+    Predicate<SurfaceAnchor> flowerSiteClear;
+    bool flowerPlacementBlocked;
+    float nextFlowerSiteAttempt;
 
     public override bool CanBeCarried => false;
+    public override bool CanBeCaptured => false;
+    protected override bool KeepCorpseStationary => true;
     public long StoredCharges => storedCharges;
     public bool IsFull => storedCharges >= fullnessThreshold;
-    public bool IsProducing => producing;
-    public float ProductionProgress => producing ? Mathf.Clamp01(productionTime / productionSeconds) : 0f;
-    public int AbsorbingBodyCount => absorptions.Count;
+    public int AbsorbingBodyCount => digestion.Count;
+    public IReadOnlyList<RecycleFlower> Flowers => flowers;
+    public RecycleNetworkGeometry Geometry => geometry;
+    public GooCreature GooPrefab => gooPrefab;
+    public float DigestionSeconds => absorptionSeconds;
+    public float ProductionSeconds => productionSeconds;
+    public int GooCost => gooCost;
+    public float FlowerGrowthSeconds => flowerGrowthSeconds;
+    public bool IsProducing { get { foreach (var f in flowers) if (f != null && f.IsProducing) return true; return false; } }
+    public float ProductionProgress { get { float p = 0f; foreach (var f in flowers) if (f != null) p = Mathf.Max(p, f.ProductionProgress); return p; } }
+    // Compatibility for existing scene/setup code; these no longer describe a physical platform.
     public BoxCollider Back => back;
-    public CompostRideSurface RideSurface { get; private set; }
-    public Collider[] BodyColliders { get; private set; }
-    public float BackTopWS => back.transform.TransformPoint(back.center + Vector3.up * back.size.y * 0.5f).y;
+    public CompostRideSurface RideSurface => GetComponent<CompostRideSurface>();
+    public Collider[] BodyColliders { get; private set; } = Array.Empty<Collider>();
+    public float BackTopWS => transform.position.y;
 
     protected override void InitializeCreature()
     {
-        SetCreatureName("Compost Creature");
-        body = GetComponent<Rigidbody>();
-        body.isKinematic = true;
-        body.useGravity = false;
-        body.interpolation = RigidbodyInterpolation.Interpolate;
-        RideSurface = GetComponent<CompostRideSurface>();
-        if (back == null) back = RideSurface.Back;
-        BodyColliders = GetComponentsInChildren<Collider>();
-        footprintOS = new Bounds();
-        bool first = true;
-        foreach (Collider solid in BodyColliders)
-        {
-            Bounds bounds = solid is BoxCollider box ? new Bounds(box.center, box.size) :
-                solid is MeshCollider mesh && mesh.sharedMesh != null ? mesh.sharedMesh.bounds : new Bounds();
-            for (int corner = 0; corner < 8; corner++)
-            {
-                Vector3 point = bounds.center + Vector3.Scale(bounds.extents, new Vector3(
-                    (corner & 1) == 0 ? -1f : 1f, (corner & 2) == 0 ? -1f : 1f, (corner & 4) == 0 ? -1f : 1f));
-                point = transform.InverseTransformPoint(solid.transform.TransformPoint(point));
-                if (first) { footprintOS = new Bounds(point, Vector3.zero); first = false; }
-                else footprintOS.Encapsulate(point);
-            }
-        }
-        home = transform.position;
-        destination = home;
-        RideSurface.PlanMotion(body.position, body.rotation, Time.fixedDeltaTime);
+        SetCreatureName("Recycle");
+        ConfigureLifespan(Mathf.Max(1f, Age), 0f);
+        Rigidbody body = GetComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
+        rootedPosition = transform.position; rootedRotation = transform.rotation;
+        geometry = GetComponent<RecycleNetworkGeometry>();
+        if (geometry == null) geometry = gameObject.AddComponent<RecycleNetworkGeometry>();
+        flowerSiteClear=CanPlaceFlower;
+        // Old prefab/scene overrides cannot leave an invisible rideable deck over the new colony.
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
+            if (CreatureBounds.BelongsTo(renderer.transform, transform)) renderer.enabled = false;
+        foreach (Collider collider in GetComponentsInChildren<Collider>())
+            if (CreatureBounds.BelongsTo(collider.transform, transform)) collider.enabled = false;
+        if (RideSurface != null) RideSurface.enabled = false;
     }
 
     public static long ChargesForNutrition(float nutrition)
@@ -86,275 +88,149 @@ public sealed class CompostCreature : Creature
         double value = Math.Floor(nutrition / 20d);
         return value >= long.MaxValue ? long.MaxValue : Math.Max(1L, (long)value);
     }
-
-    protected override void TickCreature(float deltaTime)
+    public void InitializeSeed(SurfaceAnchor anchor)
     {
-        AdvanceProcessing(deltaTime);
+        seedAnchor = anchor; seedConfigured = true; starterFlower = false; startingStrands = seedStartingStrands;
+        storedCharges = 0; starterIssued = false;
+        InitializeNewIndividual();
     }
 
-    internal void AdvanceProcessing(float deltaTime)
+    protected override void TickCreature(float deltaTime) => AdvanceProcessing(deltaTime);
+    internal void AdvanceProcessing(float dt)
     {
-        if (!isActiveAndEnabled || !SimulationEnabled || deltaTime <= 0f) return;
-        // Stable list order is first confirmed back contact; each deposit affects the next body's threshold.
-        for (int i = 0; i < absorptions.Count;)
+        if (!SimulationEnabled || !isActiveAndEnabled || dt <= 0f) return;
+        if (geometry == null) return;
+        if (!geometry.Ready)
         {
-            CompostAbsorption absorption = absorptions[i];
-            if (absorption == null || absorption.Owner != this || !absorption.IsValid)
+            if (Time.time < retryAfter) return;
+            retryAfter = Time.time + 0.5f;
+            if (!seedConfigured)
             {
-                if (absorption != null && absorption.Owner == this) absorption.Release(false);
-                absorptions.RemoveAt(i);
-                continue;
+                if (!SurfaceGeometry.Probe(gameObject.scene, transform.position + Vector3.up * 0.5f, Vector3.down, 2.5f, true, out seedAnchor)) return;
+                seedConfigured = true;
             }
-            float limit = IsFull ? Mathf.Max(absorption.Progress, fullSinkFraction) : 1f;
-            absorption.Progress = Mathf.MoveTowards(absorption.Progress, limit, deltaTime / absorptionSeconds);
-            if (absorption.Progress >= 1f && !IsFull)
-            {
-                long value = absorption.ChargeValue;
-                if (absorption.Complete()) storedCharges = storedCharges > long.MaxValue - value ? long.MaxValue : storedCharges + value;
-                absorptions.RemoveAt(i);
-            }
-            else i++;
+            if (!seedAnchor.Resolve(out _, out _)) return;
+            world = seedAnchor.Support.GetComponent<ProceduralWorldChunk>().Owner;
+            geometry.Initialize(seedAnchor, seed, startingStrands);
         }
+        if (world != null && !world.IsRegionReady(rootedPosition, 1f)) return;
+        geometry.Advance(dt);
+        long added = digestion.Advance(this, dt, absorptionSeconds, storedCharges, fullnessThreshold);
+        if (added > 0) { storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, added); geometry.AddGrowth(added); }
+        flowers.RemoveAll(f => f == null || !f.IsAttached || f.Colony != this);
+        bool needsStarter=starterFlower && !starterIssued && geometry.EstablishedLength>=startingStrands-0.1f;
+        bool canFundFlower=flowers.Count<FlowerSlots && storedCharges>=flowerCost;
+        if ((needsStarter || canFundFlower) && flowerPrefab!=null && Time.time>=nextFlowerSiteAttempt)
+        {
+            flowerPlacementBlocked=!geometry.TryFlowerSite(flowers,out var flowerSite,flowerSiteClear);
+            if(!flowerPlacementBlocked)
+            {
+                if(!needsStarter)storedCharges-=flowerCost;
+                bool created=CreateFlower(flowerSite);
+                if(created && needsStarter)starterIssued=true;
+                else if(!created && !needsStarter && !IsDead)storedCharges=RecycleDigestion.SaturatingAdd(storedCharges,flowerCost);
+            }
+            else nextFlowerSiteAttempt=Time.time+0.25f;
+        }
+        for (int i = flowers.Count - 1; i >= 0; i--) if (i < flowers.Count && flowers[i] != null) flowers[i].AdvanceAttached(dt);
+        if (Time.time >= scanAfter)
+        { scanAfter = Time.time + 0.25f; Scan(); }
+    }
+    int FlowerSlots => Mathf.Clamp(Mathf.FloorToInt((geometry.EstablishedLength + 0.01f) / metresPerFlower), 0, maximumFlowers);
+    internal bool ReserveGoo()
+    {
+        bool needsFlower = flowers.Count < FlowerSlots && flowerPrefab != null && !flowerPlacementBlocked;
+        if (!SimulationEnabled || needsFlower || storedCharges < gooCost) return false;
+        storedCharges -= gooCost; return true;
+    }
+    internal void RefundGoo() { if (!IsDead) storedCharges = RecycleDigestion.SaturatingAdd(storedCharges, gooCost); }
+    internal void FlowerDetached(RecycleFlower flower) => flowers.Remove(flower);
 
-        if (producing)
+    bool CreateFlower(SurfaceAnchor site)
+    {
+        if (flowerPrefab == null || !TryFlowerPose(site,out Pose pose,out float scale)) return false;
+        var staging = new GameObject("Recycle flower staging"); staging.SetActive(false);
+        SceneManager.MoveGameObjectToScene(staging, gameObject.scene);
+        try
         {
-            productionTime = Mathf.Min(productionSeconds, productionTime + deltaTime);
-            if (productionTime >= productionSeconds && TryReleaseGoo())
-            {
-                producing = false;
-                productionTime = 0f;
-            }
+            RecycleFlower flower = Instantiate(flowerPrefab,pose.position,pose.rotation,staging.transform);
+            flower.transform.localScale=Vector3.one*scale;
+            flower.ConfigureAttached(this, site);
+            flower.transform.SetParent(transform, true);
+            flowers.Add(flower); return true;
         }
-        if (!producing && storedCharges >= gooCost && gooPrefab != null)
-        {
-            storedCharges -= gooCost;
-            producing = true;
-            productionTime = 0f;
-        }
+        finally { Destroy(staging); }
     }
 
-    private void FixedUpdate()
+    bool CanPlaceFlower(SurfaceAnchor site)=>TryFlowerPose(site,out _,out _);
+    internal bool TryFlowerPose(SurfaceAnchor site,out Pose pose,out float scale,float existingScale=-1f)
     {
-        if (body == null || back == null) return;
-        Vector3 next = body.position;
-        Quaternion rotation = body.rotation;
-        if (SimulationEnabled && isActiveAndEnabled && walkSpeed > 0f && roamRadius > 0f)
-        {
-            wanderTimer -= Time.fixedDeltaTime;
-            avoidanceTimer = Mathf.Max(0f, avoidanceTimer - Time.fixedDeltaTime);
-            if (wanderTimer <= 0f || Vector3.ProjectOnPlane(destination - next, Vector3.up).sqrMagnitude < 0.3f)
-                ChooseDestination();
-            Vector3 heading = Vector3.ProjectOnPlane(destination - next, Vector3.up);
-            if (heading.sqrMagnitude > 0.01f)
-            {
-                rotation = Quaternion.RotateTowards(rotation, Quaternion.LookRotation(heading), turnSpeed * Time.fixedDeltaTime);
-                Vector3 forward = rotation * Vector3.forward;
-                Vector3 right = rotation * Vector3.right;
-                Vector3 candidate = next + forward * (walkSpeed * Time.fixedDeltaTime);
-                bool withinHome = Vector3.ProjectOnPlane(candidate - home, Vector3.up).sqrMagnitude <= roamRadius * roamRadius;
-                if (withinHome && CanWalk(candidate, forward, right, out float groundY))
-                {
-                    next = new Vector3(candidate.x, groundY, candidate.z);
-                }
-                else
-                {
-                    // A rejected translation must not rotate the broad tail through an obstacle.
-                    if (!CanWalk(body.position, forward, right, out _)) rotation = body.rotation;
-                    if (avoidanceTimer <= 0f)
-                    {
-                        // Hold an escape heading long enough to turn; rerolling every step causes wall jitter.
-                        Vector3 away = -forward + right * (UnityEngine.Random.value < 0.5f ? -0.8f : 0.8f);
-                        Vector3 offset = Vector3.ProjectOnPlane(body.position + away.normalized * 3f - home, Vector3.up);
-                        destination = home + Vector3.ClampMagnitude(offset, roamRadius);
-                        avoidanceTimer = 4f;
-                        wanderTimer = 6f;
-                    }
-                }
-            }
-        }
-        RideSurface.PlanMotion(next, rotation, Time.fixedDeltaTime);
-        body.MovePosition(next);
-        body.MoveRotation(rotation);
-        if (SimulationEnabled && isActiveAndEnabled) ScanBack();
-        foreach (CompostAbsorption absorption in absorptions)
-            if (absorption != null && absorption.Owner == this) absorption.FollowBack();
+        pose=default;scale=1f;
+        if(!site.Resolve(out Vector3 point,out Vector3 normal))return false;
+        Vector3Int cell=Vector3Int.RoundToInt(point*10f);
+        int hash=unchecked(seed^cell.x*73856093^cell.y*83492791^cell.z*19349663)&int.MaxValue;
+        scale=existingScale>0f?existingScale:Mathf.Lerp(flowerSizeRange.x,flowerSizeRange.y,(hash%1001)/1000f);
+        Quaternion rotation=Quaternion.FromToRotation(Vector3.up,normal)*Quaternion.AngleAxis((hash/1001)%360,Vector3.up);
+        pose=new Pose(point+normal*0.012f,rotation);
+        var physics=gameObject.scene.GetPhysicsScene();
+        int count=physics.OverlapCapsule(pose.position+normal*(0.08f*scale),pose.position+normal*(0.60f*scale),0.065f*scale,
+            placementHits,~0,QueryTriggerInteraction.Ignore);
+        if(PlacementBlocked(count))return false;
+        // Check the fully open head, not just the small bud or its narrow pickup capsule.
+        count=physics.OverlapBox(pose.position+rotation*(Vector3.up*(0.81f*scale)),new Vector3(0.52f,0.39f,0.52f)*scale,
+            placementHits,rotation,~0,QueryTriggerInteraction.Ignore);
+        return !PlacementBlocked(count);
+    }
+    bool PlacementBlocked(int count)
+    {
+        if(count==placementHits.Length)return true;
+        for(int i=0;i<count;i++)
+            if(placementHits[i].GetComponentInParent<Creature>()==null && placementHits[i].GetComponentInParent<SmoothFirstPersonController>()==null)return true;
+        return false;
     }
 
-    private void ChooseDestination()
+    void Scan()
     {
-        Vector2 offset = UnityEngine.Random.insideUnitCircle * roamRadius;
-        destination = home + new Vector3(offset.x, 0f, offset.y);
-        wanderTimer = UnityEngine.Random.Range(3f, 7f);
-    }
-
-    private bool CanWalk(Vector3 candidate, Vector3 forward, Vector3 right, out float groundY)
-    {
-        groundY = candidate.y;
-        if (!GroundAt(candidate, out RaycastHit ground)) return false;
-        groundY = ground.point.y;
-        if (Mathf.Abs(groundY - body.position.y) > maxStepHeight) return false;
-        Quaternion rotation = Quaternion.LookRotation(forward);
-        Vector3 position = new Vector3(candidate.x, groundY, candidate.z);
-        // Probe the body perimeter and the tapered tail, including their swept turn midpoint.
-        return CanOccupy(position, rotation, groundY) && CanOccupy(
-            Vector3.Lerp(body.position, position, 0.5f), Quaternion.Slerp(body.rotation, rotation, 0.5f), groundY);
-    }
-
-    private bool CanOccupy(Vector3 position, Quaternion rotation, float groundY)
-    {
-        Vector3 scale = transform.lossyScale;
-        Vector3 backMin = transform.InverseTransformPoint(back.transform.TransformPoint(back.center - back.size * 0.5f));
-        Vector3 backMax = transform.InverseTransformPoint(back.transform.TransformPoint(back.center + back.size * 0.5f));
-        for (int row = 0; row < 3; row++)
-        for (int side = -1; side <= 1; side++)
+        if (!geometry.Ready) return;
+        // Broad phase is bounded by the actual rendered colony; exact strand contact follows it.
+        Bounds bounds = geometry.SurfaceBounds; bounds.Expand(0.25f);
+        int count;
+        do
         {
-            Vector3 pointOS = new Vector3(Mathf.Lerp(backMin.x, backMax.x, (side + 1) * 0.5f) * 0.95f,
-                0f, Mathf.Lerp(backMin.z, backMax.z, row * 0.5f) * 0.97f);
-            if (!Supported(pointOS)) return false;
-        }
-        if (RideSurface.Ramp is MeshCollider ramp && ramp.sharedMesh != null)
-        {
-            Bounds tail = ramp.sharedMesh.bounds;
-            for (int side = -1; side <= 1; side++)
-            {
-                Vector3 pointOS = transform.InverseTransformPoint(ramp.transform.TransformPoint(
-                    new Vector3(side * tail.extents.x * 0.7f, 0f, tail.min.z + 0.05f)));
-                if (!Supported(pointOS)) return false;
-            }
-        }
-        Vector3 centre = position + rotation * Vector3.Scale(footprintOS.center, scale);
-        int count = gameObject.scene.GetPhysicsScene().OverlapBox(centre,
-            Vector3.Scale(footprintOS.extents, scale) + Vector3.one * 0.02f, clearanceOverlaps,
-            rotation, ~0, QueryTriggerInteraction.Ignore);
-        if (count == clearanceOverlaps.Length) return false;
+            count = gameObject.scene.GetPhysicsScene().OverlapBox(bounds.center, bounds.extents, overlaps, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            if (count < overlaps.Length) break;
+            Array.Resize(ref overlaps, overlaps.Length * 2);
+        } while (overlaps.Length < 4096);
+        scanned.Clear();
         for (int i = 0; i < count; i++)
         {
-            Collider obstacle = clearanceOverlaps[i];
-            if (obstacle.GetComponentInParent<CompostCreature>() == this ||
-                obstacle.GetComponentInParent<CompostAbsorption>()?.Owner == this) continue;
-            foreach (Collider solid in BodyColliders)
-            {
-                Vector3 local = transform.InverseTransformPoint(solid.transform.position);
-                Quaternion localRotation = Quaternion.Inverse(transform.rotation) * solid.transform.rotation;
-                if (Physics.ComputePenetration(solid, position + rotation * Vector3.Scale(local, scale),
-                    rotation * localRotation, obstacle, obstacle.transform.position, obstacle.transform.rotation,
-                    out _, out float depth) && depth > 0.025f) return false;
-            }
-        }
-        return true;
-
-        bool Supported(Vector3 pointOS)
-        {
-            Vector3 pointWS = position + rotation * Vector3.Scale(pointOS, scale);
-            return GroundAt(pointWS, out RaycastHit support) && Mathf.Abs(support.point.y - groundY) <= maxStepHeight;
+            Collider solid = overlaps[i]; Creature target = solid.GetComponentInParent<Creature>();
+            if (target == null || scanned.Contains(target)) continue;
+            if (TryBeginAbsorption(target, solid)) scanned.Add(target);
         }
     }
-
-    private bool GroundAt(Vector3 position, out RaycastHit ground)
-    {
-        ground = default;
-        int count = gameObject.scene.GetPhysicsScene().Raycast(position + Vector3.up * (maxStepHeight + 0.15f), Vector3.down,
-            hits, maxStepHeight * 2f + 0.3f, groundLayers, QueryTriggerInteraction.Ignore);
-        float nearest = float.MaxValue;
-        for (int i = 0; i < count; i++)
-        {
-            RaycastHit hit = hits[i];
-            if (hit.collider.GetComponentInParent<Creature>() != null || hit.distance >= nearest ||
-                Vector3.Angle(hit.normal, Vector3.up) > maxGroundSlope) continue;
-            nearest = hit.distance;
-            ground = hit;
-        }
-        return nearest < float.MaxValue;
-    }
-
-    private void ScanBack()
-    {
-        Vector3 centre = back.transform.TransformPoint(back.center + Vector3.up * (back.size.y * 0.5f + 0.04f));
-        Vector3 half = Vector3.Scale(back.size, back.transform.lossyScale) * 0.5f;
-        half.y = 0.08f;
-        int count = gameObject.scene.GetPhysicsScene().OverlapBox(centre, half, overlap, back.transform.rotation, ~0, QueryTriggerInteraction.Ignore);
-        if (count == overlap.Length)
-        {
-            Array.Resize(ref overlap, overlap.Length * 2);
-            count = gameObject.scene.GetPhysicsScene().OverlapBox(centre, half, overlap, back.transform.rotation, ~0, QueryTriggerInteraction.Ignore);
-        }
-        for (int i = 0; i < count; i++)
-        {
-            Creature target = overlap[i].GetComponentInParent<Creature>();
-            if (target != null) TryBeginAbsorption(target, overlap[i]);
-        }
-    }
-
     internal bool TryBeginAbsorption(Creature target, Collider contactCollider)
     {
-        if (!SimulationEnabled || !isActiveAndEnabled || back == null || target == null || target == this || !target.IsDead ||
-            !target.isActiveAndEnabled || target.IsCarried || target.IsBubbleCaptured || target.IsConsumptionPending ||
-            contactCollider == null || contactCollider.isTrigger) return false;
-        if (target.TryGetComponent<CompostAbsorption>(out var existing) && existing.Owner != null) return false;
-        Bounds contactBounds = contactCollider.bounds;
-        Vector3 centreOS = back.transform.InverseTransformPoint(contactBounds.center) - back.center;
-        if (Mathf.Abs(centreOS.x) > back.size.x * 0.5f || Mathf.Abs(centreOS.z) > back.size.z * 0.5f ||
-            Mathf.Abs(contactBounds.min.y - BackTopWS) > 0.045f) return false;
-        Vector3 foot = new Vector3(contactBounds.center.x, contactBounds.min.y + 0.05f, contactBounds.center.z);
-        int count = gameObject.scene.GetPhysicsScene().Raycast(foot, Vector3.down, hits, 0.12f, ~0, QueryTriggerInteraction.Ignore);
-        Collider support = null;
-        float nearest = float.MaxValue;
-        for (int i = 0; i < count; i++)
-        {
-            if (hits[i].collider.GetComponentInParent<Creature>() == target || hits[i].distance >= nearest) continue;
-            support = hits[i].collider;
-            nearest = hits[i].distance;
-        }
-        if (support != back || !CreatureBounds.TryMeasure(target.transform, out Bounds bounds)) return false;
-        CompostAbsorption claim = existing != null ? existing : target.gameObject.AddComponent<CompostAbsorption>();
-        if (!claim.TryBegin(this, target, bounds, ChargesForNutrition(target.Nutrition))) return false;
-        absorptions.Add(claim);
-        return true;
+        if (!SimulationEnabled || target == this || !CompostAbsorption.Eligible(target) || geometry == null ||
+            !geometry.TryContact(contactCollider, out Vector3 point)) return false;
+        return digestion.Begin(this, target, point);
     }
-
-    private bool TryReleaseGoo()
+    void LateUpdate()
     {
-        if (gooPrefab == null) return false;
-        Vector3 position = transform.TransformPoint(new Vector3(0f, 0f, footprintOS.min.z - 0.55f));
-        // Drop just above known ground, or retain the finished batch at an unsafe ledge.
-        if (!GroundAt(position, out RaycastHit ground)) return false;
-        position.y = ground.point.y + 0.12f;
-        Vector3 centre = position + Vector3.up * 0.2f;
-        int count = gameObject.scene.GetPhysicsScene().OverlapSphere(centre, 0.31f, outputOverlaps, ~0, QueryTriggerInteraction.Ignore);
-        if (count == outputOverlaps.Length) return false;
-        for (int i = 0; i < count; i++)
-        {
-            Collider obstacle = outputOverlaps[i];
-            if (obstacle.GetComponentInParent<CompostCreature>() == this || obstacle == ground.collider) continue;
-            return false;
-        }
-        GooCreature goo = Instantiate(gooPrefab, position, body.rotation);
-        SceneManager.MoveGameObjectToScene(goo.gameObject, gameObject.scene);
-        return true;
+        // The root is an ecological location, not a physics object that another system can push.
+        if (Application.isPlaying) transform.SetPositionAndRotation(rootedPosition, rootedRotation);
     }
-
-    protected override bool KeepCorpseStationary => true;
-
+    protected override void OnEnable() { base.OnEnable(); ProceduralWorld.AnyTerrainChanged += TerrainChanged; }
+    void TerrainChanged(ProceduralWorld changed, Bounds bounds)
+    {
+        if (changed != world || geometry == null) return;
+        SurfaceGeometry.Invalidate(changed, bounds); geometry.Invalidate(bounds);
+    }
     protected override void OnDeath()
     {
-        ReleaseAll();
-        storedCharges = 0;
-        producing = false;
-        productionTime = 0f;
-        if (body != null) RideSurface.PlanMotion(body.position, body.rotation, Time.fixedDeltaTime);
+        digestion.Release(); storedCharges = 0;
+        var released = flowers.ToArray(); foreach (var flower in released) if (flower != null) flower.Detach();
     }
-
-    private void ReleaseAll()
-    {
-        foreach (CompostAbsorption absorption in absorptions)
-            if (absorption != null && absorption.Owner == this) absorption.Release(true);
-        absorptions.Clear();
-    }
-
     protected override void OnDisable()
-    {
-        ReleaseAll();
-        if (body != null && RideSurface != null) RideSurface.PlanMotion(body.position, body.rotation, Time.fixedDeltaTime);
-        base.OnDisable();
-    }
+    { ProceduralWorld.AnyTerrainChanged -= TerrainChanged; digestion.Release(); base.OnDisable(); }
 }

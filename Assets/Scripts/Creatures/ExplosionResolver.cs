@@ -85,10 +85,7 @@ public static class ExplosionResolver
             Vector3 direction = hit.Body.worldCenterOfMass - blast.Center;
             if (direction.sqrMagnitude < 0.001f) direction = Vector3.up;
             Vector3 velocity = direction.normalized * (blast.Push * fraction);
-            var player = hit.Body.GetComponent<SmoothFirstPersonController>();
-            if (player != null) player.Fling(hit.Body.linearVelocity + velocity);
-            else hit.Body.AddForce(velocity, ForceMode.VelocityChange);
-            if (hit.Body.TryGetComponent<AsuraMotor>(out var motor)) motor.AcceptPush();
+            CreatureImpulse.Apply(hit.Body, velocity, 0.22f);
         }
         ResolvedCount++;
         if (Exploded != null)

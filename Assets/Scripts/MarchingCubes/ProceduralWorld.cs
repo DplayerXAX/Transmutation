@@ -26,6 +26,10 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Range(8, 48)] [SerializeField] private int chunkCells = 24;
     [SerializeField] private int seed = 1;
 
+    [Header("Generation Recipe")]
+    [Tooltip("Original preserves existing worlds. Other recipes supply shape data to the same sculpting, erosion and meshing system.")]
+    [SerializeField] private TerrainGenerationRecipe generationRecipe = new TerrainGenerationRecipe();
+
     [Header("Surface")]
     [Tooltip("Height range of hills and valleys.")]
     [Min(0f)] [SerializeField] private float surfaceAmplitude = 32f;
@@ -141,6 +145,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         yMin = -f.crustThickness - f.innerGap - f.surfaceAmplitude * (1f + f.ridges) * Mathf.Max(f.innerInvert, f.ceilingMirror) - f.innerDetail - f.caveDepth - 4f;
 
         if (f.erosionTestCourse) { yMin = -14f; yMax = 14f; }
+        if (f.IsVolumeRecipe) { yMin = f.recipe.verticalBounds.x; yMax = f.recipe.verticalBounds.y + headroom; }
         float chunkSize = f.chunkCells * f.cellSize;
         chunkCount = new Vector3Int(
             Mathf.CeilToInt(f.worldSize.x / chunkSize),
@@ -184,6 +189,15 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public bool erosionTestCourse;
         public Vector2 noiseOffset;
         public Sinkhole[] sinkholes;
+        public TerrainGenerationRecipe recipe;
+        [System.NonSerialized] private MountainDensity volume;
+        public bool IsVolumeRecipe => recipe != null && recipe.kind != TerrainRecipeKind.Original;
+        public void InitializeRecipe()
+        {
+            if (!IsVolumeRecipe) return;
+            if (recipe.kind != TerrainRecipeKind.AmplifiedMountains) throw new System.InvalidOperationException("Unknown terrain recipe: " + recipe.kind);
+            volume = new MountainDensity(seed, worldSize, recipe);
+        }
         // Used when a saved layout is read back from JSON.
         public DensityField() { }
         public DensityField(ProceduralWorld world)
@@ -217,6 +231,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             sinkholes = (Sinkhole[])world.sinkholes.Clone();
             cellSize = world.cellSize;
             chunkCells = world.chunkCells;
+            recipe = world.generationRecipe == null ? null : JsonUtility.FromJson<TerrainGenerationRecipe>(JsonUtility.ToJson(world.generationRecipe));
+            InitializeRecipe();
         }
         private static float CourseHeight(float x, float z)
         {
@@ -229,6 +245,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     /// <summary>Surface height above this transform at a local column.</summary>
     public float SurfaceHeight(float x, float z)
     {
+        if (IsVolumeRecipe) return volume.Height(x,z);
         if (erosionTestCourse) return CourseHeight(x, z);
         Vector2 p = new Vector2(x, z) * surfaceFrequency + noiseOffset;
         // Domain warp so hills do not line up on a grid.
@@ -273,6 +290,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     /// <summary>Positive inside rock.</summary>
     public float Density(Vector3 p, float h, float ceiling, float floor)
     {
+        if (IsVolumeRecipe) return volume.Sample(p);
         if (erosionTestCourse)
         {
             float tunnel = Mathf.Max(Mathf.Abs(p.x - 9f) - 3f, Mathf.Max(Mathf.Abs(p.y + 3f) - 3f, 4f - p.z));
@@ -353,6 +371,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         float x11 = Mathf.Lerp(Hash(ix, iy + 1, iz + 1), Hash(ix + 1, iy + 1, iz + 1), ux);
         return Mathf.Lerp(Mathf.Lerp(x00, x10, uy), Mathf.Lerp(x01, x11, uy), uz);
     }
+
+    // Shared noise primitive; original recipe calculations above stay exactly as before.
+    internal static float TerrainNoise(Vector3 p) => ValueNoise3(p) * 2f - 1f;
 
     /// <summary>Roughly -0.5..0.5.</summary>
     private static float Fbm2(Vector2 p, int octaves)

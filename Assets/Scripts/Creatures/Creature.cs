@@ -116,6 +116,8 @@ public enum FoodTag
         if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
+        if (!TryGetComponent<CreatureHurtResponse>(out var hurt)) hurt = gameObject.AddComponent<CreatureHurtResponse>();
+        hurt.React(source);
         if (Damaged != null)
             foreach (System.Action<Creature, float, Creature> listener in Damaged.GetInvocationList())
                 try { listener(this, applied, source); }
@@ -317,6 +319,7 @@ public enum FoodTag
     internal bool CompleteConsumption(Creature consumer)
     {
         if (consumptionPending || !CanBeConsumed) return false;
+        if (TryGetComponent<CompostAbsorption>(out var recycling) && recycling.HasClaim) return false;
         consumptionPending = true;
         CreatureRegistry.Unregister(this);
         try { Consume(consumer); }
@@ -341,6 +344,16 @@ public enum FoodTag
 
     /// <summary>Whether this creature can currently be picked up.</summary>
     public virtual bool CanBeCarried => true;
+
+    /// <summary>Rooted organisms and attached organs cannot be displaced by capture systems.</summary>
+    public virtual bool CanBeCaptured => true;
+
+    protected void ConfigureLifespan(float remainingSeconds, float rate)
+    {
+        if (isDead || consumptionPending) return;
+        ageRate = Mathf.Max(0f, rate);
+        SetRemainingAge(remainingSeconds);
+    }
 
     /// <summary>Held like an item: fixed in view at the right hand, kinematic, without pushing other bodies.</summary>
     public virtual bool HeldInView => false;

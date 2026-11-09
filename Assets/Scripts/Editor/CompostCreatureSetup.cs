@@ -12,53 +12,10 @@ public static class CompostCreatureSetup
     public const string ScenePath = "Assets/Scenes/Scene_Yoyo.unity";
 
     [MenuItem("Tools/Creatures/Compost/Create Assets")]
-    public static void CreateAssets()
-    {
-        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before compost asset setup.");
-        var gooAsset = AssetDatabase.LoadAssetAtPath<GameObject>(GooCreatureSetup.PrefabPath);
-        if (gooAsset == null) throw new InvalidOperationException("Create the Goo Creature assets before compost setup.");
-        if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null)
-        {
-            var root = new GameObject("CompostCreature");
-            try
-            {
-                Rigidbody body = root.AddComponent<Rigidbody>();
-                body.mass = 500f; body.isKinematic = true; body.useGravity = false;
-                body.interpolation = RigidbodyInterpolation.Interpolate;
-                body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-                root.AddComponent<BoxCollider>();
-                root.AddComponent<CompostRideSurface>();
-                CompostCreature compost = root.AddComponent<CompostCreature>();
-                using (var fields = new SerializedObject(compost))
-                {
-                    fields.FindProperty("creatureName").stringValue = "Compost Creature";
-                    fields.FindProperty("gooPrefab").objectReferenceValue = gooAsset.GetComponent<GooCreature>();
-                    fields.ApplyModifiedPropertiesWithoutUndo();
-                }
-                CompostMossGeometry.Build(root);
-                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-            }
-            finally { Object.DestroyImmediate(root); }
-        }
-        AssetDatabase.SaveAssets();
-    }
+    public static void CreateAssets() => RecycleSetup.CreateAssets();
 
-    [MenuItem("Tools/Creatures/Compost/Redesign As Moss Platform")]
-    public static void RedesignAsMossPlatform()
-    {
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
-            throw new InvalidOperationException("Exit Play Mode before compost redesign.");
-        if (AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null) { CreateAssets(); return; }
-        GameObject root = PrefabUtility.LoadPrefabContents(PrefabPath);
-        try
-        {
-            CompostMossGeometry.Build(root);
-            PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-        }
-        finally { PrefabUtility.UnloadPrefabContents(root); }
-        AssetDatabase.SaveAssets();
-        Debug.Log("Compost redesigned as a 3 x 4 m moss platform with a 2 m tail ramp. Existing tuning retained.");
-    }
+    [MenuItem("Tools/Creatures/Compost/Redesign As Fungal Network")]
+    public static void RedesignAsMossPlatform() => RecycleSetup.CreateAssets();
 
     [MenuItem("Tools/Creatures/Compost/Add One To Scene Yoyo")]
     public static void AddToYoyoScene()

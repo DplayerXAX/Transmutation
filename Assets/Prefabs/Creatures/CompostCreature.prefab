@@ -48,7 +48,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2054379749122297827}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -140,7 +140,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3343722401280451862}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -202,7 +202,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 1
   m_CookingOptions: 30
@@ -256,7 +256,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6138700053580632605}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -318,7 +318,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 3, y: 0.1, z: 4}
   m_Center: {x: 0, y: 0.95, z: 0}
@@ -370,7 +370,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6738192480760705083}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -460,7 +460,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6863296507528613696}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -518,6 +518,7 @@ GameObject:
   - component: {fileID: 630549304896439310}
   - component: {fileID: 9174262509142416446}
   - component: {fileID: 296603038041281245}
+  - component: {fileID: 1227890734239690495}
   m_Layer: 7
   m_Name: CompostCreature
   m_TagString: Untagged
@@ -589,7 +590,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 2.9, y: 0.88, z: 3.9}
   m_Center: {x: 0, y: 0.46, z: 0}
@@ -600,7 +601,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8025366564731473624}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e187ea869150a924faa425e325abd990, type: 3}
   m_Name: 
@@ -619,7 +620,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2eb95ee371ac9004283d4f5cf3d1e3ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompostCreature
-  creatureName: Compost Creature
+  creatureName: Recycle
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
@@ -629,27 +638,48 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
-  back: {fileID: 8450315172242763106}
   gooPrefab: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+  flowerPrefab: {fileID: 3137396226944446916, guid: 46af3b101c4d6e04697f46f3b5009efc, type: 3}
+  seed: 7081
   absorptionSeconds: 5
   fullnessThreshold: 50
-  fullSinkFraction: 0.8
   gooCost: 10
   productionSeconds: 7
+  flowerCost: 5
+  flowerGrowthSeconds: 5
+  maximumFlowers: 8
+  metresPerFlower: 32
+  startingStrands: 32
+  seedStartingStrands: 16
+  flowerSizeRange: {x: 0.85, y: 1.15}
+  starterFlower: 1
+  back: {fileID: 8450315172242763106}
   walkSpeed: 0.6
   roamRadius: 12
-  turnSpeed: 45
-  maxGroundSlope: 36
-  maxStepHeight: 0.35
-  groundLayers:
-    serializedVersion: 2
-    m_Bits: 384
+  storedCharges: 0
+--- !u!114 &1227890734239690495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8025366564731473624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ea5ef1bd8e2e7d4fbd985cb86d6da4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RecycleNetworkGeometry
+  strandBudget: 256
+  stepLength: 0.32
+  growthSpeed: 4
+  strandWidthMultiplier: 10
+  growthMetresPerPoint: 4
+  fineLengthMultiplier: 2
+  strandMaterial: {fileID: 2100000, guid: 2d7563ab439ccdb4b8e77e50e08eb96c, type: 2}
 --- !u!1 &8450471367230219948
 GameObject:
   m_ObjectHideFlags: 0
@@ -698,7 +728,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8450471367230219948}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
