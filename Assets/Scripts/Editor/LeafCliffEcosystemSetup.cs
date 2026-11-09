@@ -97,11 +97,14 @@ public static class LeafCliffEcosystemSetup
         fluidSettings.FindProperty("dropletMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Fluid/MAT_ErosiveWater.mat");
         fluidSettings.FindProperty("debrisMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Fluid/MAT_ErosionDebris.mat");
         fluidSettings.FindProperty("rippleMaterial").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Fluid/MAT_ErosionRipple.mat");
-        fluidSettings.FindProperty("maximumDroplets").intValue = 520;
+        fluidSettings.FindProperty("maximumDroplets").intValue = 200;
         fluidSettings.FindProperty("contactAgeMultiplier").floatValue = 1f; // creatures drink here; the water must not age them
         fluidSettings.FindProperty("contactAgeFloor").floatValue = 0f;
         fluidSettings.FindProperty("erosiveRain").boolValue = false;
+        // No carving: re-meshing the eroded terrain caused 12-23 ms hitches (profiled 2026-11-09). The water still runs.
+        fluidSettings.FindProperty("erodibleLayers").intValue = 0;
         fluidSettings.ApplyModifiedPropertiesWithoutUndo();
+        fluid.gameObject.AddComponent<FluidNearPlayer>(); // stops when the player is far away
         int s_ = 0;
         foreach (var spring in springs)
         {
@@ -110,8 +113,8 @@ public static class LeafCliffEcosystemSetup
             source.transform.SetPositionAndRotation(spring.top - spring.down * 2.5f + Vector3.up * 0.6f, Quaternion.LookRotation(spring.down, Vector3.up));
             var ss = new SerializedObject(source);
             ss.FindProperty("fluid").objectReferenceValue = fluid;
-            ss.FindProperty("dropletsPerSecond").floatValue = 9f;
-            ss.FindProperty("lifetime").floatValue = 22f;
+            ss.FindProperty("dropletsPerSecond").floatValue = 5f;
+            ss.FindProperty("lifetime").floatValue = 12f;
             ss.FindProperty("dropletRadius").floatValue = 0.32f;
             ss.FindProperty("spread").floatValue = 0.5f;
             ss.FindProperty("initialVelocity").vector3Value = new Vector3(0f, 0f, 1.6f);

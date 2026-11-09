@@ -292,6 +292,9 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 /// </summary>
 internal static class CreatureAim
 {
+    // Width of the forgiving second cast (metres): wide enough for flowers and small creatures, still exact enough to choose.
+    private const float AimRadius = 0.3f;
+
     public static Creature Find(
         PhysicsScene scene,
         Ray ray,
@@ -338,7 +341,7 @@ internal static class CreatureAim
 
         count = scene.SphereCast(
             ray.origin,
-            0.18f,
+            AimRadius,
             ray.direction,
             results,
             wall,

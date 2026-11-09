@@ -2,21 +2,36 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Pauses tentacle creatures far from the player (their legs and skin are the costliest per-frame work in a
-/// big map) and wakes them again as the player comes near. Only creatures this component paused are woken,
-/// so other systems that pause creatures keep control of theirs.
+/// Pauses creatures far from the player and wakes them again as the player comes near. Only creatures this
+/// component paused are woken, so other systems that pause creatures keep control of theirs.
+/// Tentacles sleep beyond sleepBeyond (their legs and skin are the costliest per-frame work); every other quiet,
+/// ground-bound kind (goo, flowers, Bellows, spiders, squirrels, shrooms...) sleeps beyond otherSleepBeyond.
+/// Things in flight or in motion are never paused: bubbles, birds, water drops, thrown or carried creatures.
 /// </summary>
 public sealed class CreatureSleep : MonoBehaviour
 {
-    [Tooltip("Creatures further than this from the player are paused (metres).")]
+    [Tooltip("Tentacle creatures further than this from the player are paused (metres).")]
     [Min(10f)] [SerializeField] private float sleepBeyond = 75f;
-    [Tooltip("Paused creatures closer than this wake up again (metres).")]
+    [Tooltip("Paused tentacles closer than this wake up again (metres).")]
     [Min(5f)] [SerializeField] private float wakeWithin = 60f;
+    [Tooltip("Pause the other quiet kinds of creature too (off = tentacles only, as before).")]
+    [SerializeField] private bool allKinds = true;
+    [Tooltip("Other creatures further than this from the player are paused (metres).")]
+    [Min(10f)] [SerializeField] private float otherSleepBeyond = 85f;
+    [Tooltip("Paused other creatures closer than this wake up again (metres).")]
+    [Min(5f)] [SerializeField] private float otherWakeWithin = 70f;
 
-    private readonly List<TentacleCreature> creatures = new List<TentacleCreature>();
-    private readonly HashSet<TentacleCreature> sleeping = new HashSet<TentacleCreature>();
+    private readonly List<Creature> creatures = new List<Creature>();
+    private readonly HashSet<Creature> sleeping = new HashSet<Creature>();
     private float nextCheck, nextScan;
     private Transform player;
+
+    public int SleepingCount => sleeping.Count;
+
+    /// <summary>Kinds that are safe to pause: nothing that is flying, falling or carried by the world's own motion.</summary>
+    private static bool Sleepable(Creature c) =>
+        !(c is LeashBubble || c is BirdCreature || c is ErosiveFluidDroplet || c is ProjectileCreature || c is BlastCore ||
+          c is GlowBee || c is SquirrelFood || c is GlowHoney);
 
     private void Update()
     {
@@ -28,25 +43,31 @@ public sealed class CreatureSleep : MonoBehaviour
             if (carrier == null) return;
             player = carrier.PlayerBody != null ? carrier.PlayerBody.transform : carrier.transform;
         }
-        // New tentacles appear during play (the mother's companions, practice sites); look again now and then.
+        // Creatures appear during play (the mother's companions, practice sites, spawned flowers); look again now and then.
         if (Time.time >= nextScan)
         {
             nextScan = Time.time + 5f;
             creatures.Clear();
-            creatures.AddRange(FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None));
+            if (allKinds)
+            {
+                foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None)) if (Sleepable(c)) creatures.Add(c);
+            }
+            else creatures.AddRange(FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None));
         }
         foreach (var creature in creatures)
         {
             if (creature == null || creature.IsDead) continue;
+            bool tentacle = creature is TentacleCreature;
+            float beyond = tentacle ? sleepBeyond : otherSleepBeyond, within = tentacle ? wakeWithin : otherWakeWithin;
             float distance = Vector3.Distance(creature.transform.position, player.position);
-            bool busy = creature.IsCarried || creature.PinnedCount > 0;
+            bool busy = creature.IsCarried || creature.IsBubbleCaptured || tentacle && ((TentacleCreature)creature).PinnedCount > 0;
             if (!sleeping.Contains(creature))
             {
-                if (busy || distance <= sleepBeyond || !creature.SimulationEnabled) continue;
+                if (busy || distance <= beyond || !creature.SimulationEnabled) continue;
                 creature.SetSimulationEnabled(false);
                 sleeping.Add(creature);
             }
-            else if (busy || distance < wakeWithin)
+            else if (busy || distance < within)
             {
                 creature.SetSimulationEnabled(true);
                 sleeping.Remove(creature);

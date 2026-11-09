@@ -30,6 +30,7 @@ public static class LeafMapTimePass
     private static Transform map, root;
     private static ProceduralWorld world;
     private static System.Random random;
+    private static string meshPrefix="Mesh_";
     private static int serial, movedSerial, blooms;
     private static Material marble, comb, flora, bubble, ribbon, thread, strand, film, fungus, pool, shaft, nativePetals, nativeStems, violet, ice;
     private static Material[] veils;
@@ -95,6 +96,7 @@ public static class LeafMapTimePass
         Veils();
         Bubbles();
         GlowGroves();
+        FieldGroves();
         GroundTide();
         SkyAndBirds();
         Lights();
@@ -564,6 +566,107 @@ public static class LeafMapTimePass
             Lamp(g,Ground(c)+Vector3.up*3f,new Color(0.5f,0.35f,1f),6f,14f);
         }
         report.Add("Glowing groves: "+groves+" on the knolls.");
+    }
+
+
+    // ---------------- Field groves (Daniel 2026-11-09: the knoll groves' trunks, seed puffs, blades and mushrooms in the flower field too) ----------------
+
+    private const string FieldGroveName="06b Glowing groves in the flower field";
+
+    /// <summary>Batch or editor: adds (or rebuilds) only the field groves in Scene_LeafMap; nothing else of the pass is touched.</summary>
+    public static void AddFieldGroves()
+    {
+        var scene=SceneManager.GetSceneByPath(LeafMapSetup.ScenePath);
+        if(!scene.IsValid() || !scene.isLoaded)scene=EditorSceneManager.OpenScene(LeafMapSetup.ScenePath,OpenSceneMode.Single);
+        SceneManager.SetActiveScene(scene);
+        map=scene.GetRootGameObjects().First(g=>g.name.StartsWith("Leaf Map —")).transform;
+        world=scene.GetRootGameObjects().SelectMany(g=>g.GetComponentsInChildren<ProceduralWorld>(true)).First();
+        LeafMapTerrain.Scale=LeafMapTerrain.ReadScale(world.SculptData.Layout);
+        if(!world.LayoutReady)world.Generate(true);
+        Physics.SyncTransforms();
+        root=map.Find(GroupName);
+        if(root==null)throw new InvalidOperationException("Run the time pass first.");
+        nativePetals=Mat("Assets/Materials/Creatures/BubbleFlowerPetals.mat");
+        thread=Mat("Assets/Materials/World/MAT_Realm_Thread.mat");
+        fungus=Mat("Assets/Materials/World/MAT_Realm_MushroomBlue.mat");
+        foreach(string path in Directory.GetFiles(Folder,"FieldGrove_*.asset"))AssetDatabase.DeleteAsset(path.Replace('\\','/'));
+        meshPrefix="FieldGrove_";serial=0;random=new System.Random(911);
+        try{FieldGroves();}
+        finally{meshPrefix="Mesh_";}
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+    }
+
+    private static void FieldGroves()
+    {
+        var old=root.Find(FieldGroveName);if(old!=null)Object.DestroyImmediate(old.gameObject);
+        var group=Group(FieldGroveName,root);
+        Material trunk=Mat("Assets/Materials/World/MAT_Realm_Root.mat");
+        Material cap=Variant(nativePetals,"Glow_Cap",m=>{SetBase(m,new Color(0.52f,0.28f,0.95f));m.SetFloat("_Smoothness",0.6f);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",new Color(0.45f,0.12f,0.85f));m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.None;});
+        Material puff=Variant(nativePetals,"Glow_Puff",m=>{SetBase(m,new Color(0.85f,0.95f,1f));m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",new Color(0.55f,0.85f,1.1f));m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.None;});
+        Material blade=Variant(nativePetals,"Glow_Blade",m=>{SetBase(m,new Color(0.35f,0.95f,0.8f));m.SetFloat("_Cull",0f);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",new Color(0.12f,0.7f,0.55f));m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.None;});
+        // Small groves dotted through the field: open ground between them, off the walking routes, clear of the mother.
+        var centres=new List<Vector2>();
+        Vector2 mother=LeafMapTerrain.ToWorld(LeafMapTerrain.MotherDesign);
+        for(int tries=0;tries<400 && centres.Count<9;tries++)
+        {
+            Vector2 d=new Vector2(Range(-40,34),Range(-90,-36));
+            if(FieldMask(d)<0.2f)continue;
+            Vector2 c=LeafMapTerrain.ToWorld(d);
+            if(LeafMapTerrain.RouteDistance(c)<5f || (c-mother).magnitude<26f)continue;
+            if(centres.Any(o=>(o-c).magnitude<20f))continue;
+            centres.Add(c);
+        }
+        int index=0;
+        foreach(Vector2 c in centres)
+        {
+            var g=Group("Field grove "+(++index),group);
+            var trunks=new RealmMeshes();var caps=new RealmMeshes();var puffs=new RealmMeshes();var threads=new RealmMeshes();var blades=new RealmMeshes();var shrooms=new RealmMeshes();
+            // Every other grove has a trunk with cap shelves; the rest are puffs, blades and mushrooms only.
+            int trunkCount=index%2==1?random.Next(1,3):0;
+            for(int k=0;k<trunkCount;k++)
+            {
+                Vector3 foot=Ground(c+new Vector2(Range(-3,3),Range(-3,3)));float h=Range(5f,9f);Vector3 lean=new Vector3(Range(-1,1),0,Range(-1,1)).normalized*Range(0.8f,2f);
+                var path=Enumerable.Range(0,9).Select(i=>{float t=i/8f;return foot+Vector3.up*t*h+lean*t*t;}).ToList();
+                trunks.Tube(path,t=>Mathf.Lerp(0.6f,0.18f,t),8,0f,0.3f,Range(0,1));
+                for(int i=2;i<9;i++)
+                {
+                    if(Range(0,1)<0.3f)continue;
+                    float a=Range(0,6.28f);Vector3 o=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));
+                    float rr=Range(0.6f,1.5f)*(1.25f-i/10f);
+                    caps.Sphere(path[i]+o*(0.2f+rr*0.6f),new Vector3(rr,rr*0.28f,rr*0.85f),Quaternion.Euler(Range(-8,8),a*Mathf.Rad2Deg,0),5,12,0.5f,Range(0,1));
+                }
+            }
+            for(int k=0,n=random.Next(4,8);k<n;k++)
+            {
+                Vector3 foot=Ground(c+new Vector2(Range(-6,6),Range(-6,6)));float h=Range(1.2f,3f);
+                Vector3 top=foot+Vector3.up*h+new Vector3(Range(-0.3f,0.3f),0,Range(-0.3f,0.3f));
+                threads.Tube(new[]{foot,Vector3.Lerp(foot,top,0.5f)+Vector3.right*0.1f,top},t=>0.03f,4,0f,0.4f,Range(0,1));
+                float size=Range(0.5f,1f);puffs.Sphere(top,Vector3.one*size*0.35f,Quaternion.identity,6,10,0.5f,Range(0,1));
+                for(int f=0;f<18;f++)
+                {
+                    Vector3 dir=Random3();if(dir.y<-0.3f)dir.y=-dir.y;
+                    threads.Tube(new[]{top,top+dir*size*0.6f,top+dir*size},t=>0.008f,3,0f,0.2f,Range(0,1));
+                    if(f%3==0)puffs.Sphere(top+dir*size,Vector3.one*0.035f,Quaternion.identity,3,5,0.5f,0.5f);
+                }
+            }
+            for(int k=0,n=random.Next(6,11);k<n;k++)
+            {
+                float a=Range(0,6.28f),rr=Range(1.5f,8f);Vector2 tuft=c+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*rr;
+                for(int b=0,m=random.Next(6,12);b<m;b++)
+                {
+                    Vector3 foot=Ground(tuft+new Vector2(Range(-0.6f,0.6f),Range(-0.6f,0.6f)));float h=Range(0.6f,1.7f);
+                    Vector3 bend=new Vector3(Range(-0.3f,0.3f),0,Range(-0.3f,0.3f));
+                    blades.Tube(new[]{foot,foot+Vector3.up*h*0.5f+bend*0.3f,foot+Vector3.up*h+bend},t=>Mathf.Lerp(0.07f,0.01f,t),4,0f,0.6f,Range(0,1));
+                }
+            }
+            for(int k=0,n=random.Next(8,14);k<n;k++)RealmFlora.Mushroom(shrooms,Ground(c+new Vector2(Range(-5,5),Range(-5,5))),Vector3.up,Range(0.7f,2f),random);
+            if(trunkCount>0){Part("Trunks",g,trunks,trunk);Shadowless(Part("Glowing cap shelves",g,caps,cap));}
+            Shadowless(Part("Seed puff cores",g,puffs,puff));Shadowless(Part("Seed puff filaments",g,threads,thread));
+            Shadowless(Part("Glowing blades",g,blades,blade));Part("Blue mushrooms",g,shrooms,fungus);
+        }
+        Debug.Log("[FieldGroves] "+centres.Count+" groves in the flower field.");
     }
 
     // ---------------- Bubbles, fungi, ground tide ----------------
@@ -1281,7 +1384,7 @@ public static class LeafMapTimePass
     private static GameObject Shadowless(GameObject go){go.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;return go;}
     private static Mesh Save(Mesh mesh)
     {
-        mesh.hideFlags=HideFlags.None;string path=Folder+"/Mesh_"+(serial++).ToString("D3")+".asset";
+        mesh.hideFlags=HideFlags.None;string path=Folder+"/"+meshPrefix+(serial++).ToString("D3")+".asset";
         if(AssetDatabase.LoadAssetAtPath<Mesh>(path)!=null)AssetDatabase.DeleteAsset(path);
         AssetDatabase.CreateAsset(mesh,path);return mesh;
     }

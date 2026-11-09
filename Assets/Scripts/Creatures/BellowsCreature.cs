@@ -245,6 +245,13 @@ public sealed class BellowsCreature : Creature
 
     protected override void TickCreature(float deltaTime)
     {
+        // Carried: holding the left button keeps the stream going along the view (a click is a short puff).
+        if (IsCarried && Venting && ventAlongView && UnityEngine.InputSystem.Mouse.current != null &&
+            UnityEngine.InputSystem.Mouse.current.leftButton.isPressed && Camera.main != null)
+        {
+            ventLeft = Mathf.Max(ventLeft, 0.15f);
+            ventDirection = Camera.main.transform.forward;
+        }
         if (!Venting && Heat > 0f) SpendHeat(coolPerSecond * deltaTime);
         ApplySize(deltaTime);
         UpdateRings(deltaTime);
@@ -413,6 +420,8 @@ public sealed class BellowsCreature : Creature
             Rigidbody other = c.attachedRigidbody;
             if (other == null || other == body || other.isKinematic || !pushed.Add(other)) continue;
             float push = strength * falloff / Mathf.Sqrt(Mathf.Max(0.2f, other.mass));
+            // Another Bellows is mostly air: it catches the stream like a sail.
+            if (other.GetComponent<BellowsCreature>() != null) push *= 2.2f;
             var player = other.GetComponent<SmoothFirstPersonController>();
             if (player != null) player.Fling(other.linearVelocity + forward * push * deltaTime, 0.2f);
             else other.AddForce(forward * push, ForceMode.Acceleration);

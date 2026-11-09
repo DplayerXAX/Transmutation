@@ -162,6 +162,21 @@ public sealed class ClimbTestDriver : MonoBehaviour
             Quit();
             yield break;
         }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestGroves") >= 0)
+        {
+            GameObject groves = GameObject.Find("06b Glowing groves in the flower field");
+            Log($"Field groves: {(groves != null ? groves.transform.childCount : 0)}");
+            if (groves != null && framesPath != null)
+                for (int i = 0; i < Mathf.Min(3, groves.transform.childCount); i++)
+                {
+                    var r = groves.transform.GetChild(i).GetComponentInChildren<Renderer>();
+                    if (r == null) continue;
+                    Vector3 c = r.bounds.center;
+                    Shot(c + new Vector3(9f, 3f, -9f), c, $"field_grove_{i}.png");
+                }
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestCliff") >= 0)
         {
             yield return CheckCliffEcosystem();
@@ -171,6 +186,18 @@ public sealed class ClimbTestDriver : MonoBehaviour
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestSky") >= 0)
         {
             yield return CheckSkyIslands();
+            Quit();
+            yield break;
+        }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestHold") >= 0)
+        {
+            yield return CheckHolding();
+            Quit();
+            yield break;
+        }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestBellows2") >= 0)
+        {
+            yield return CheckBellowsTwo();
             Quit();
             yield break;
         }
@@ -955,6 +982,114 @@ public sealed class ClimbTestDriver : MonoBehaviour
             Vector3 mid = islands.stones[islands.stones.Length / 2];
             Shot(islands.transform.position + new Vector3(45f, 5f, -45f), mid, "leaf_sky_islands.png");
         }
+    }
+
+    /// <summary>A full Bellows can be picked up; its stream pushes another Bellows and a bubble.</summary>
+    private IEnumerator CheckBellowsTwo()
+    {
+        Vector3 flat = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+        Vector3 at = body.position + flat * 3.5f;
+        if (Physics.Raycast(at + Vector3.up * 10f, Vector3.down, out RaycastHit ground, 40f, 1 << 7, QueryTriggerInteraction.Ignore)) at = ground.point;
+        BellowsCreature Make(Vector3 p, string name)
+        {
+            var go = new GameObject(name);
+            go.transform.SetPositionAndRotation(p + Vector3.up * 1.2f, Quaternion.LookRotation(flat));
+            go.AddComponent<Rigidbody>(); go.AddComponent<SphereCollider>();
+            return go.AddComponent<BellowsCreature>();
+        }
+        BellowsCreature a = Make(at, "Bellows A");
+        yield return new WaitForSeconds(0.5f);
+        a.SetHeat(36f); // full and swollen (1.2), not yet floating
+        yield return new WaitForSeconds(2f);
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        Vector3 to = a.transform.position - Camera.main.transform.position;
+        controller.SetLook(Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg, -Mathf.Atan2(to.y, new Vector2(to.x, to.z).magnitude) * Mathf.Rad2Deg);
+        yield return new WaitForSeconds(0.3f);
+        Log($"Full Bellows: radius {a.Radius:0.00}, floating {a.Floating}, {to.magnitude:0.0} m away, pickup target {(carrier.FindCreature() == a)}");
+        // Another Bellows and a trapping bubble in front of A's spout.
+        a.SetHeat(30f);
+        var bodyA = a.GetComponent<Rigidbody>(); bodyA.isKinematic = true;
+        BellowsCreature b = Make(a.Spout + flat * 3f - Vector3.up * 1.2f, "Bellows B");
+        b.SetHeat(24f);
+        TrappingBubble bubblePrefab = FindFirstObjectByType<BubbleFlower>() != null ? null : null;
+        TrappingBubble bubble = null;
+        BubbleFlower flower = FindFirstObjectByType<BubbleFlower>();
+        if (flower != null)
+        {
+            flower.transform.position = a.Spout + flat * 2.5f + Vector3.Cross(Vector3.up, flat) * 1.5f + Vector3.down * 1.5f;
+            if (flower.TryGetComponent(out Rigidbody fr)) { fr.position = flower.transform.position; fr.isKinematic = true; }
+            Physics.SyncTransforms();
+            flower.EmitGroundBubble();
+            bubble = flower.LastShot;
+        }
+        yield return new WaitForSeconds(1.5f);
+        Vector3 b0 = b.transform.position, bub0 = bubble != null ? bubble.transform.position : Vector3.zero;
+        Log($"    B at {b.transform.position - a.Spout} from A's spout, A facing {a.transform.forward}");
+        a.ReceiveInteraction(new CreatureInteraction(controller.gameObject, a.transform.position, flat));
+        string pushedNames = "";
+        for (int f = 0; f < 60; f++) { yield return new WaitForFixedUpdate(); if (a.LastPushed != null && !pushedNames.Contains(a.LastPushed)) pushedNames += a.LastPushed + "; "; }
+        yield return new WaitForSeconds(1.3f);
+        Log($"    pushed: {pushedNames}");
+        Log($"    stream on Bellows B: moved {Vector3.Dot(b.transform.position - b0, flat):0.0} m along the stream");
+        if (bubble != null) Log($"    stream on a bubble: moved {Vector3.Dot(bubble.transform.position - bub0, flat):0.0} m along the stream (sideways {Vector3.Dot(bubble.transform.position - bub0, Vector3.Cross(Vector3.up, flat)):0.0})");
+        // Carried: hold the left button for a longer stream.
+        bodyA.isKinematic = false;
+        a.SetHeat(30f);
+        typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { a });
+        yield return new WaitForSeconds(0.8f);
+        Vector3 held = Camera.main.WorldToViewportPoint(a.transform.position);
+        Log($"    carried {a.IsCarried}, held at viewport ({held.x:0.00}, {held.y:0.00}), {held.z:0.0} m ahead");
+        carrier.Release();
+    }
+
+    /// <summary>Each kind of carriable creature: where its visual middle sits on screen, how far from the right hand, and whether it goes into the ground when looking down.</summary>
+    private IEnumerator CheckHolding()
+    {
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        var kinds = new Dictionary<System.Type, Creature>();
+        foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None))
+            if (c.CanBeCarried && !(c is TentacleCreature) && !(c is LeashBubble) && !(c is ErosiveFluidDroplet) && !kinds.ContainsKey(c.GetType())) kinds[c.GetType()] = c;
+        {
+            var go = new GameObject("Test Bellows");
+            go.transform.position = body.position + Vector3.forward * 3f;
+            go.AddComponent<Rigidbody>(); go.AddComponent<SphereCollider>();
+            kinds[typeof(BellowsCreature)] = go.AddComponent<BellowsCreature>();
+        }
+        yield return new WaitForSeconds(1f);
+        int index = 0;
+        foreach (var pair in kinds)
+        {
+            Creature creature = pair.Value;
+            if (creature == null) continue;
+            controller.SetLook(controller.LookYaw, 0f);
+            // Brought to arm's length first, as if walked up to.
+            Vector3 near = body.position + controller.Orientation.forward * 1.6f;
+            creature.transform.position = near;
+            if (creature.TryGetComponent(out Rigidbody cb)) { cb.position = near; cb.linearVelocity = Vector3.zero; }
+            Physics.SyncTransforms();
+            yield return new WaitForSeconds(0.2f);
+            typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { creature });
+            yield return new WaitForSeconds(1.2f);
+            if (carrier.CarriedCreature != creature) { Log($"{pair.Key.Name}: not carried"); continue; }
+            CreatureBounds.TryMeasure(creature.transform, out Bounds b);
+            Vector3 v = Camera.main.WorldToViewportPoint(b.center);
+            float hand = carrier.HandAnchor != null ? Vector3.Distance(carrier.HandAnchor.position, b.ClosestPoint(carrier.HandAnchor.position)) : -1f;
+            Log($"{pair.Key.Name}: size {b.size.magnitude:0.0}, middle at viewport ({v.x:0.00}, {v.y:0.00}) {v.z:0.0} m ahead, right hand {hand:0.00} m from its surface");
+            if (framesPath != null && index < 6) Save(Camera.main, Path.Combine(framesPath, $"hold_{pair.Key.Name}.png"));
+            // Looking straight down at the ground.
+            controller.SetLook(controller.LookYaw, 85f);
+            yield return new WaitForSeconds(0.8f);
+            bool inside = false;
+            foreach (Collider c in Physics.OverlapSphere(b.center, 0.01f, 1 << 7, QueryTriggerInteraction.Ignore)) inside = true;
+            CreatureBounds.TryMeasure(creature.transform, out Bounds down);
+            float sunk = 0f;
+            if (Physics.Raycast(down.center + Vector3.up * 5f, Vector3.down, out RaycastHit g, 20f, 1 << 7, QueryTriggerInteraction.Ignore)) sunk = Mathf.Max(0f, g.point.y - down.min.y);
+            Log($"    looking down: its lowest point {sunk:0.00} m below the ground");
+            carrier.Release();
+            index++;
+            yield return new WaitForSeconds(0.4f);
+        }
+        controller.SetLook(controller.LookYaw, 0f);
     }
 
     private void Shot(Vector3 from, Vector3 target, string file)
