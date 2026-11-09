@@ -203,18 +203,47 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BounceShroom
   creatureName: BounceShroom
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 480
+  ageRate: 1
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  affectionGain: 0.35
+  affectionFade: 0.05
   platform: {fileID: 8462021120226903442}
   compactSize: {x: 1, y: 0.5, z: 1}
   expandedSize: {x: 4, y: 1, z: 4}
   expansionDuration: 0.6
   shrinkDuration: 0.6
   expandedDuration: 10
+  expansionPushForce: 8
+  expansionPushRadius: 3.5
+  expansionUpwardModifier: 0.5
+  compactMaterial: {fileID: 13400000, guid: 225dc7add61ae604da3e4e1380f9250f, type: 2}
+  hops: 1
+  hopPause: {x: 1.2, y: 3.5}
+  hopUpSpeed: 7
+  hopForwardSpeed: 2.5
+  wanderRadius: 5
+  maxHopDrop: 1.5
+  crouchTime: 0.18
+  growsInto: {fileID: 2571138955427162492, guid: a82781106c4a49344bbe0219cf8c6c38, type: 3}
+  crowdingRadius: 6
+  lifespanJitter: 0.25
   currentState: 0
   growth: 0
   remainingExpandedTime: 0

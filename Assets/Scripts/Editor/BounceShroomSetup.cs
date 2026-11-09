@@ -45,6 +45,7 @@ public static class BounceShroomSetup
                 bounciness = 0f, frictionCombine = PhysicsMaterialCombine.Minimum };
             AssetDatabase.CreateAsset(physics, physicsPath);
         }
+        PhysicsMaterial grip = CompactGrip();
         GameObject root = new GameObject("BounceShroom");
         GameObject prefab;
         try
@@ -71,6 +72,8 @@ public static class BounceShroomSetup
             fields = new SerializedObject(shroom);
             fields.FindProperty("platform").objectReferenceValue = block.transform;
             fields.FindProperty("creatureName").stringValue = "BounceShroom";
+            fields.FindProperty("compactMaterial").objectReferenceValue = grip;
+            SetLifespan(fields);
             fields.ApplyModifiedPropertiesWithoutUndo();
             prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
         }
@@ -90,6 +93,51 @@ public static class BounceShroomSetup
         AssetDatabase.SaveAssets();
         Selection.activeGameObject = instance;
         return new { prefab = prefabPath, scene = scene.path, position = position.ToString() };
+    }
+
+    /// <summary>
+    /// Friction for a compact (carryable) shroom, so it rests on slopes. The platform keeps the frictionless
+    /// BouncySurface material; BounceShroom swaps between the two as it expands and shrinks.
+    /// </summary>
+    public static PhysicsMaterial CompactGrip()
+    {
+        const string path = "Assets/Materials/Creatures/BounceShroomGrip.physicMaterial";
+        PhysicsMaterial grip = AssetDatabase.LoadAssetAtPath<PhysicsMaterial>(path);
+        if (grip != null) return grip;
+        grip = new PhysicsMaterial("BounceShroomGrip") { dynamicFriction = 0.6f, staticFriction = 0.8f,
+            frictionCombine = PhysicsMaterialCombine.Maximum };
+        AssetDatabase.CreateAsset(grip, path);
+        return grip;
+    }
+
+    /// <summary>
+    /// An eight-minute life (varied per shroom at runtime); dying of old age it sprouts a young Mushroom Tree.
+    /// Builds the tree prefab first if it does not exist yet.
+    /// </summary>
+    private static void SetLifespan(SerializedObject fields)
+    {
+        var tree = AssetDatabase.LoadAssetAtPath<MushroomTree>(MushroomTreeSetup.TreePath);
+        if (tree == null) tree = MushroomTreeSetup.BuildPrefabs();
+        fields.FindProperty("age").floatValue = 480f;
+        fields.FindProperty("ageRate").floatValue = 1f;
+        fields.FindProperty("growsInto").objectReferenceValue = tree;
+    }
+
+    /// <summary>Brings the existing prefab up to date (compact grip, lifespan) without rebuilding it, so scene references stay intact.</summary>
+    [MenuItem("Tools/Creatures/BounceShroom/Update Prefab (Grip, Lifespan)")]
+    public static void UpdatePrefab()
+    {
+        const string prefabPath = "Assets/Prefabs/Creatures/BounceShroom.prefab";
+        GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
+        try
+        {
+            var fields = new SerializedObject(contents.GetComponent<BounceShroom>());
+            fields.FindProperty("compactMaterial").objectReferenceValue = CompactGrip();
+            SetLifespan(fields);
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(contents); }
     }
 }
 
