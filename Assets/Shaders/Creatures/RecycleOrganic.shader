@@ -2,6 +2,7 @@ Shader "Transmutation/Recycle Organic"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         _Bloom("Bloom",Range(0,1))=1 _Life("Remaining life",Range(0,1))=1
         _Clock("Simulation clock",Float)=0 _Pulse("Feeding and production pulse",Float)=0
     }
@@ -13,6 +14,7 @@ Shader "Transmutation/Recycle Organic"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
         CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
         float _Bloom,_Life,_Clock,_Pulse;
         CBUFFER_END
         struct Attributes { float4 positionOS:POSITION;float3 normalOS:NORMAL;half4 color:COLOR;float2 uv:TEXCOORD0;float4 origin:TEXCOORD1;float4 timing:TEXCOORD2; };
@@ -56,7 +58,7 @@ Shader "Transmutation/Recycle Organic"
                 half3 lit=colour*(SampleSH(normal)+0.32+light.color*(diffuse*0.8+0.12)*light.shadowAttenuation);
                 float wave=pow(saturate(sin(i.uv.x*5-_Clock*3)),8)*_Pulse;
                 half3 glow=colour*i.color.a*(0.45+wave*1.5)*_Life*_Life;
-                return half4(lit+glow,1);
+                return half4(lerp(lit+glow, half3(1,0.08,0.06), _CreatureHurt*0.8),1);
             }
             ENDHLSL
         }

@@ -2,6 +2,7 @@ Shader "Capstone/Creature/FireFlower"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         _Growth("Growth / Line Stretch", Range(0, 1)) = 0.75
         _LineStretch("Maximum Line Length", Range(1, 100)) = 24
         _GrowthDirection("Growth Direction (Object Space)", Vector) = (0, 1, 0, 0)
@@ -40,6 +41,7 @@ Shader "Capstone/Creature/FireFlower"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
                 float _Growth;
                 float _LineStretch;
                 float4 _GrowthDirection;
@@ -144,7 +146,7 @@ Shader "Capstone/Creature/FireFlower"
                 float noise = RandomValue(cell, frame);
 
                 noise = saturate((noise - 0.5) * _StaticContrast + 0.5);
-                return half4(noise.xxx, _BaseAlpha);
+                return half4(lerp(noise.xxx, half3(1,0.08,0.06), _CreatureHurt*0.8), _BaseAlpha);
             }
             ENDHLSL
         }

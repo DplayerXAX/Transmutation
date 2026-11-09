@@ -119,6 +119,16 @@ public static class OreColossusValidation
             Check(colossus.Built && colossus.CurrentPhase == OreColossus.Phase.Walking, "builds where it stands without a world and starts walking");
             Check(colossus.Polarity == CreaturePolarity.None && !colossus.CanBeAITargeted, "never an AI target");
             Check(colossus.Invulnerable && !colossus.CanBeCarried && !colossus.CanBeConsumed, "structural creature flags");
+            // ---- Climbing up to the ore ----
+            foreach (Collider collider in colossus.GetComponentsInChildren<Collider>())
+            {
+                bool legPart = collider.name == "Upper" || collider.name == "Lower" || collider.name == "Foot";
+                Check(collider.gameObject.layer == (legPart ? 8 : 7), $"walking, {collider.name} is {(legPart ? "climbable wall" : "ground")}");
+            }
+            Check(colossus.GetComponent<MovingGripSurface>() != null, "climbing grips follow the walking colossus");
+            Check(colossus.Heart.Centre.y > colossus.Body.position.y + 1.5f, "the ore grows on top of the back");
+            var ride = colossus.Body.GetComponent<PoseRideSurface>();
+            Check(ride != null && ride.Supports(colossus.Body.GetComponent<BoxCollider>()) && ride.Supports(colossus.Heart.Collider), "the back and the ore carry whoever stands on them");
             var meleePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AsuraPrototypeSetup.Folder + "/MeleeAsura.prefab");
             if (meleePrefab != null)
             {
@@ -166,6 +176,36 @@ public static class OreColossusValidation
             Check(worstFoot < 0.15f, $"planted feet stay on the ground (worst {worstFoot:0.000} m)");
             Check(worstPivot < 0.5f, "its pivot follows the ground");
             Check(maxPairs <= 1, "only one diagonal pair of legs swings at a time");
+            {
+                for (int i = 0; i < 300 && colossus.Speed < 1f; i++) Advance(colossus, 1);
+                Vector3 deck = colossus.Body.position + colossus.Body.up * 2f;
+                Vector3 carried = ride.VelocityAt(deck); carried.y = 0f;
+                Check(colossus.Speed >= 1f && Vector3.Dot(carried, colossus.transform.forward) > colossus.Speed * 0.5f,
+                    $"standing on its back moves with it ({carried.magnitude:0.00} m/s at {colossus.Speed:0.00} m/s)");
+            }
+
+            // ---- Kneeling to rest: the tail is a ramp up to the ore ----
+            Call(colossus, "BeginRest", 0f);
+            for (int i = 0; i < 800 && colossus.Kneel < 1f; i++) Advance(colossus, 1);
+            Check(colossus.CurrentPhase == OreColossus.Phase.Resting && colossus.Kneel >= 1f, "resting, it kneels down");
+            {
+                float groundY = colossus.transform.position.y;
+                for (int i = 0; i < colossus.TailPlateCount; i++)
+                {
+                    Vector3 along = colossus.TailPlate(i).forward;
+                    Check(Mathf.Asin(Mathf.Clamp(-along.y, -1f, 1f)) * Mathf.Rad2Deg <= colossus.MaxRampSlope + 0.5f, "knelt, the tail ramp is walkable");
+                }
+                Transform restTip = colossus.TailPlate(colossus.TailPlateCount - 1);
+                Check(Mathf.Abs(restTip.position.y + restTip.forward.y * 3f - groundY) < 0.45f, "knelt, the ramp reaches the ground");
+                Transform restMid = colossus.TailPlate(colossus.TailPlateCount / 2);
+                Vector3 onRamp = restMid.position + restMid.forward * 1.5f;
+                Check(physics.Raycast(onRamp + Vector3.up * 2f, Vector3.down, out RaycastHit restRamp, 4f, 1 << 7, QueryTriggerInteraction.Ignore) &&
+                    restRamp.collider.transform.IsChildOf(colossus.transform) && restRamp.normal.y >= Mathf.Cos(40f * Mathf.Deg2Rad), "knelt, the ramp is standable ground");
+                Check(colossus.Body.position.y + 1.8f - groundY < 6f, "knelt, the back is low enough to walk up to");
+            }
+            for (int i = 0; i < 3000 && (colossus.CurrentPhase == OreColossus.Phase.Resting || colossus.Kneel > 0f); i++) Advance(colossus, 1);
+            Advance(colossus, 50);
+            Check(colossus.Kneel <= 0f && colossus.Body.position.y - colossus.transform.position.y > 8f, "after resting it stands up and walks on");
 
             // ---- Stomp ----
             Vector3 stomp = colossus.transform.position + colossus.transform.forward * 30f;
@@ -209,6 +249,8 @@ public static class OreColossusValidation
             // ---- Shatter and kneel ----
             int larvae = CountLarvae(scene);
             colossus.DebugShatter();
+            Advance(colossus, 1);
+            Check(heart.Broken && colossus.ReleasedLarva != null && !colossus.Settled, "the larva drops out the moment the ore shatters, before the colossus kneels");
             for (int i = 0; i < 300 && !colossus.Settled; i++) Advance(colossus, 1);
             Check(colossus.Settled && !colossus.IsDead, "a broken heart makes it kneel for good, alive");
             Check(heart.Broken && !ErosionTarget.TryGet(heart.Collider, out _), "the shattered heart takes no more water");
@@ -242,8 +284,10 @@ public static class OreColossusValidation
 
             // ---- Exactly one larva ----
             GeodeLarva larva = colossus.ReleasedLarva;
-            Check(larva != null && larva.gameObject.scene == scene && larva.transform.parent == null && CountLarvae(scene) == larvae + 1, "the geode releases one larva at the scene root");
-            Check(larva.Nested && larva.Polarity == CreaturePolarity.None && larva.Invulnerable && !larva.CanBeConsumed, "the larva rests in its geode, untargetable and unharmed by water");
+            Check(larva != null && larva.gameObject.scene == scene && larva.transform.parent == null && CountLarvae(scene) == larvae + 1, "the shattered ore drops one larva at the scene root");
+            Check(!larva.Nested && larva.Home == colossus && !larva.GetComponent<Rigidbody>().isKinematic && larva.GetComponent<Rigidbody>().useGravity,
+                "the dropped larva falls free, with the colossus as its home");
+            Check(larva.Polarity == CreaturePolarity.None && larva.Invulnerable && !larva.CanBeConsumed, "the larva is untargetable and unharmed by water");
             colossus.DebugShatter(); Advance(colossus, 5);
             Check(CountLarvae(scene) == larvae + 1, "a colossus releases only one larva");
 

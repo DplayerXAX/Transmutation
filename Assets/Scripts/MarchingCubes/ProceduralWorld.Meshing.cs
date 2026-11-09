@@ -21,14 +21,14 @@ public sealed partial class ProceduralWorld
         for (int z = -1; z <= n; z++) for (int x = -1; x <= n; x++)
         {
             Vector3 p = minimum + (Vector3)(first + new Vector3Int(x, 0, z)) * spacing;
-            float h = field.SurfaceHeight(p.x, p.z), floor = field.InnerGroundHeight(p.x, p.z, h);
+            float h = field.IsVolumeRecipe ? 0f : field.SurfaceHeight(p.x, p.z), floor = field.IsVolumeRecipe ? 0f : field.InnerGroundHeight(p.x, p.z, h);
             int col = (z + 1) * halo + x + 1;
             heights[col] = h; bottoms[col] = floor; undersides[col] = field.CeilingHeight(h);
             maxTop = Mathf.Max(maxTop, h); minFloor = Mathf.Min(minFloor, floor);
         }
         float band = field.overhangAmplitude * 2.5f + 2f;
         // Preserve the original generation fast paths, but never skip edited solid chunks.
-        if (!field.erosionTestCourse && edits.Count == 0 &&
+        if (!field.IsVolumeRecipe && !field.erosionTestCourse && edits.Count == 0 &&
             (origin.y > maxTop + band || origin.y + cells * spacing < minFloor - field.caveDepth - band)) return result;
         var values = new float[halo * halo * halo];
         // Sculpting rebuilds the same chunks many times; the generated part is computed once and reused.
@@ -108,7 +108,7 @@ public sealed partial class ProceduralWorld
                 int a = edges[MarchingCubesTables.TriTable[cube, i]], b = edges[MarchingCubesTables.TriTable[cube, i + 1]], c = edges[MarchingCubesTables.TriTable[cube, i + 2]];
                 Vector3 centre = (vertices[a] + vertices[b] + vertices[c]) / 3f;
                 int col = Mathf.Clamp(Mathf.RoundToInt(centre.z / spacing), 0, n - 1) * n + Mathf.Clamp(Mathf.RoundToInt(centre.x / spacing), 0, n - 1);
-                List<int> triangles = origin.y + centre.y >= (tops[col] + ceilings[col]) * 0.5f ? surface : inner;
+                List<int> triangles = field.IsVolumeRecipe || origin.y + centre.y >= (tops[col] + ceilings[col]) * 0.5f ? surface : inner;
                 triangles.Add(a); triangles.Add(b); triangles.Add(c);
             }
         }

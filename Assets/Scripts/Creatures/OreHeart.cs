@@ -83,6 +83,8 @@ public sealed class OreHeart : MonoBehaviour
     public float Carved => carved;
     /// <summary>The current ore surface, in local space.</summary>
     public Mesh SurfaceMesh => mesh;
+    /// <summary>World centre of what is left of the ore.</summary>
+    public Vector3 Centre => crystal != null ? crystal.bounds.center : transform.position;
     /// <summary>Raised with the amount taken each time water wears the ore.</summary>
     public event System.Action<OreHeart, float> Eroded;
 

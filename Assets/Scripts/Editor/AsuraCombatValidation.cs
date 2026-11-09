@@ -147,7 +147,7 @@ public static class AsuraCombatValidation
             Object.DestroyImmediate(food.gameObject); Object.DestroyImmediate(eater.gameObject);
 
             var melee = Spawn<MeleeAsura>("MeleeAsura", Vector3.zero);
-            var target = Probe(new Vector3(0f, 0.65f, 1.2f), CreaturePolarity.Dark);
+            var target = Probe(new Vector3(0f, 0.65f, 1.0f), CreaturePolarity.Dark);
             var combat = melee.GetComponent<CreatureCombat>();
             Check(combat.Eligible(target, 20f), "opposite ordinary creatures are eligible regardless of tags");
             Resolve(target, CreaturePolarity.None); Check(!combat.Eligible(target, 20f), "None excluded from enemy selection");
@@ -158,7 +158,7 @@ public static class AsuraCombatValidation
             var strike = melee.GetComponent<MeleeAttack>();
             Check(strike.Release(melee, target, null) && target.Health == 80f, "short physical melee strike deals one hit");
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube); SceneManager.MoveGameObjectToScene(wall, scene);
-            wall.transform.position = new Vector3(0f, 0.65f, 0.65f); wall.transform.localScale = new Vector3(2f, 2f, 0.15f);
+            wall.transform.position = new Vector3(0f, 0.65f, 0.52f); wall.transform.localScale = new Vector3(2f, 2f, 0.08f);
             physics.Simulate(0.001f);
             Check(!strike.Release(melee, target, null) && target.Health == 80f, "terrain blocks melee");
             Object.DestroyImmediate(wall); Object.DestroyImmediate(target.gameObject);
@@ -268,7 +268,7 @@ public static class AsuraCombatValidation
             playerBody.linearVelocity = new Vector3(2f, 1f, 0f);
             physics.Simulate(0.001f);
             ExplosionResolver.Request(scene, playerBody.position + new Vector3(-1f, -1f, 0f), 4f, 60f, 12f, core);
-            Check(player.Flung && playerBody.linearVelocity.x > 2f && playerBody.linearVelocity.y > 1f, "blast adds useful upward and sideways player velocity");
+            Check(player.BlastMotion && !player.Flung && playerBody.linearVelocity.x > 2f && playerBody.linearVelocity.y > 1f, "blast adds velocity without entering legacy fling movement");
             Vector3 flung = playerBody.linearVelocity;
             typeof(SmoothFirstPersonController).GetMethod("SpeedControl", Private).Invoke(player, null);
             Check(playerBody.linearVelocity == flung, "movement speed limiting preserves the blast launch");

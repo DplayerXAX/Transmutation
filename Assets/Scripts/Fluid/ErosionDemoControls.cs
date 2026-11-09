@@ -25,7 +25,8 @@ public sealed class ErosionDemoControls : MonoBehaviour
     private void FixedUpdate()
     { if (digging && fluid.World.LayoutReady) fluid.World.Erode(fixedBrushPosition + (brushRelativeToWorld ? fluid.World.transform.position : Vector3.zero), 1.25f, 4f * Time.fixedDeltaTime); }
     private void ToggleWater() { emitting = !emitting; fluid.SetEmitting(emitting); }
-    private void Reset() { fluid.ClearDroplets(); fluid.World.ResetErosion(); }
+    // Also Unity's Reset message, sent when the component is added in the editor before fluid is set.
+    private void Reset() { if (fluid == null) return; fluid.ClearDroplets(); fluid.World.ResetErosion(); }
     private void OnGUI()
     {
         if (fluid == null || fluid.World == null) return;

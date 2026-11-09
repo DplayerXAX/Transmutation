@@ -53,6 +53,13 @@ carry/capture cleanup still run. Hunger is currently bird-specific; Nutrition be
 
 ## Food, nutrition, and death
 
+Health damage also starts the shared `CreatureHurtResponse`: a short red tint and safe visual
+recoil where a separate collider-free Visual pivot exists. Ashura compose the recoil with their
+locomotion/attack animation. Procedural fire and recycle shaders expose `_CreatureHurt` for the
+same feedback. Age loss and rejected damage do not trigger it. Hurt presentation never changes
+carry/capture ownership or applies physical push; successful attacks and explosions use
+`CreatureImpulse` separately. See [AsuraPrototype.md](AsuraPrototype.md) for the contact showcase.
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Food Tags | None | What this creature provides as food: Meat, Plant, Matter, or a combination. |
@@ -191,10 +198,21 @@ resource costs, surface attachment and seeding.
 
 **Ore Colossus** is a huge, peaceful creature on four long legs that roams the procedural map with a geode
 shrine on its back, after Elden Ring's Walking Mausoleum. Its stomps fling the player. Only erosive water
-wears away the crystal heart hanging under its belly (an `ErosionTarget`). Once the heart breaks, it kneels
-for good: its tail becomes a ramp, its body becomes walkable and climbable static remains, and the geode
-releases one **Geode Larva**. Carried, the larva's left click gives its stored life (Age) to the creature
-under the crosshair, and it recharges near any colossus. See [OreColossusREADME.md](OreColossusREADME.md).
+wears away the giant ore heart on its back (an `ErosionTarget`), carving it wherever it touches. When it rests
+it kneels with its tail down as a ramp, so the player can walk up onto its back to reach the ore. The
+shattering heart drops one **Geode Larva**, and the colossus kneels for good: its tail becomes a ramp and its
+body becomes walkable and climbable static remains. Carried, the larva's left click gives its stored life (Age)
+to the creature under the crosshair, and it recharges near any colossus. Set down, it radiates an aura in which
+creatures do not age. See [OreColossusREADME.md](OreColossusREADME.md).
+
+**Cistern Snail** (`CisternSnail`) is a slow snail with a hollow crystal shell that drinks erosive water. Free,
+it crawls to droplets within 14 m and drinks any within 1.2 m of its shell, up to 30; with nothing to drink it
+trails the nearest Ore Colossus about 11 m away. Carried, left click sprays 5 droplets where the player aims
+(0.3 s apart), so a shellful can be carried up a knelt colossus's tail ramp to its ore; tapped on the ground it
+spills 8 around itself. It waits 3 s before drinking again so it does not swallow its own spray. The shell
+glows and swells as it fills. Stored water costs it up to 2 s of Age per second, scaled by how full it is,
+except inside a Geode Larva's aura. Add one with **Tools > Creatures > Cistern Snail > Add Cistern Snail To Open
+Scene**; **Validate (Play Mode)** checks its ageing, the larva's stillness, and spraying and drinking real water.
 
 **Corrupt Seed** is passive Plant food that infects its consumer through a separate
 component. Host death produces 3-5 seeds alongside normal remains, accumulating seed

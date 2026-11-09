@@ -112,3 +112,19 @@ falloff (`injectRate`, `maxDensity`, or `stampDensity`). Sizes are world units; 
 
 Older, standalone: a rocky hill with a walk-through tunnel and chamber, meshed separately to sit on a Unity
 Terrain (which can't have overhangs). Call `Generate()`. Not needed with ProceduralWorld.
+
+# ProceduralWorld recipes
+
+All worlds use `ProceduralWorld` for chunk generation, collision, saved sculpting, runtime erosion and terrain events. A recipe supplies only the base density (positive rock, negative air). There is no Mountain-specific mesher or editing tool.
+
+`Original` (enum value zero) retains the original formulas, grid bounds, material split and height queries. Saved layouts with no recipe field use this behavior. Do not change those formulas when adding a new recipe. `TerrainRecipeValidation.CaptureLegacy()` / `VerifyLegacy()` compare saved layouts before and after an engine change; the baseline is kept in `Temp`.
+
+`AmplifiedMountains`, version 1, combines warped ridges, blended 3D noise, cavern/tunnel subtraction and seeded skyland volumes. Its settings and version are frozen into the existing `TerrainSculptData.Layout` alongside the world seed. `MountainDensity` is the pure, thread-safe recipe evaluator, not a scene component. Its coarse base lattice is shared by meshes, sculpt brushes, erosion and sampling; edits still use the finer world grid. Bounds and spacing are part of the saved layout and should stay fixed once sculpting starts.
+
+For a new world, select its generation recipe and parameters, then use the existing **Tools > Capstone > Terrain > Bake Open Scene World To Sculpted Terrain** and **Sculpt And Place Window**. Saved worlds use their frozen settings rather than live inspector settings. Rebaking is an intentional replacement and clears sculpt edits, as before.
+
+`ColumnHeights` preserves the original behavior for Original worlds. For a volume recipe it reports the highest surface plus the ceiling/floor around the supplied elevation. `TryFindSurfaceBelow` and `TryFindSurfaceAbove` query the actual edited density to distinguish stacked surfaces. Missing surfaces return false; they are not an invented ground plane.
+
+Shape changes must enter the density recipe so collision and editing see them. Rendering uses the existing world materials. A visually displaced shader alone does not create editable or collidable terrain. Supporting a new recipe version must retain the evaluator for previous saved versions or explicitly migrate their data.
+
+`TerrainRecipeValidation.RunMountainTools()` checks islands, cavities, chunk seams, sculpting, serialization and collider agreement in a temporary scene, without modifying Mountain's sculpt asset. Runtime erosion is verified separately in Play mode.

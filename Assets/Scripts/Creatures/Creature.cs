@@ -119,6 +119,8 @@ public enum FoodTag
         if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
+        if (!TryGetComponent<CreatureHurtResponse>(out var hurt)) hurt = gameObject.AddComponent<CreatureHurtResponse>();
+        hurt.React(source);
         if (Damaged != null)
             foreach (System.Action<Creature, float, Creature> listener in Damaged.GetInvocationList())
                 try { listener(this, applied, source); }

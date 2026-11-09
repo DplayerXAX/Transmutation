@@ -209,7 +209,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private float xRotation;
     private float yRotation;
     private Coroutine speedLerpCoroutine;
-    private CompostRideSurface rideSurface;
+    private IRideSurface rideSurface;
     private RaycastHit rideGround;
     private Vector3 rideVelocity;
 
@@ -255,6 +255,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         }
         GroundCheck();
+        if (grounded && Time.time >= blastUntil) blastAirborne = false;
 
         if (grounded)
             doubleJumpAvailable = allowDoubleJump;
@@ -265,7 +266,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded && !Flung && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
+        rb.linearDamping = grounded && !Flung && !BlastMotion && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -321,7 +322,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             (skateShoes != null && skateShoes.SuppressGrounding) ||
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.
-        // Use a raised support cast; only compost backs accept it, preserving ordinary ground rules.
+        // Use a raised support cast; only ride surfaces (compost backs, the Ore Colossus) accept it, preserving ordinary ground rules.
         // Lift the whole footprint clear of a walkable ramp before casting. A thin cast
         // starting inside the uphill edge cannot report its supporting surface.
         float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
@@ -329,7 +330,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
             Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
             whatIsGround, QueryTriggerInteraction.Ignore)) return;
-        var surface = ground.collider.GetComponentInParent<CompostRideSurface>();
+        var surface = ground.collider.GetComponentInParent<IRideSurface>();
         if (surface == null || !surface.Supports(ground.collider) || Vector3.Angle(ground.normal, Vector3.up) > maxSlopeAngle) return;
         rideSurface = surface;
         rideGround = ground;
@@ -568,6 +569,21 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
+        if (BlastMotion)
+        {
+            // A blast changes velocity once. Steering stays responsive without ground braking or slope glue.
+            if (moveDirection.sqrMagnitude > 0.01f)
+            {
+                Vector3 flat = Vector3.ProjectOnPlane(rb.linearVelocity, Vector3.up);
+                Vector3 wish = moveDirection.normalized * moveSpeed;
+                if (flat.magnitude < moveSpeed || Vector3.Dot(flat, wish) < 0f)
+                    flat = Vector3.MoveTowards(flat, wish, airAcceleration * Time.fixedDeltaTime);
+                rb.linearVelocity = new Vector3(flat.x, rb.linearVelocity.y, flat.z);
+            }
+            rb.useGravity = true;
+            return;
+        }
+
         if (skateShoes == null) skateShoes = GetComponent<PlayerSkateShoes>();
         if (skateShoes != null)
         {
@@ -648,6 +664,18 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     }
 
     private float flungUntil;
+    private float blastUntil;
+    private bool blastAirborne;
+    public bool BlastMotion => Time.time < blastUntil || (blastAirborne && !grounded);
+
+    public void AddBlastImpulse(Vector3 velocityChange)
+    {
+        if (rb == null || rb.isKinematic) return;
+        rb.linearVelocity += velocityChange;
+        blastUntil = Time.time + 0.18f;
+        blastAirborne = true;
+        ownJumpRising = false;
+    }
 
     /// <summary>
     /// Something outside the player (a stretched tentacle cord, a spring) throws the body: the walking speed
@@ -662,12 +690,15 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     public bool Flung => Time.time < flungUntil;
 
+    /// <summary>Scales the jump impulse. Effects such as JumpBoostEffect (Mushroom Essence) set it and put it back to 1.</summary>
+    public float JumpMultiplier { get; set; } = 1f;
+
     private void SpeedControl()
     {
         // A climber drives the body kinematically; its velocity cannot be set.
         if (rb.isKinematic)
             return;
-        if (Flung) return;
+        if (Flung || BlastMotion) return;
         if (skateShoes != null && skateShoes.CanDrive) return;
         // The walking limit applies relative to a moving back, including its turn at this contact point.
         if (rideSurface != null)
@@ -701,7 +732,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         exitingSlope = true;
         rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
-        rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+        rb.AddForce(transform.up * jumpForce * Mathf.Max(0f, JumpMultiplier), ForceMode.Impulse);
         ownJumpRising = true;
     }
 
