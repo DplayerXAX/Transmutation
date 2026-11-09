@@ -6,9 +6,16 @@
 				<SoundBank Name="Transmutation" ID="{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}">
 					<ObjectInclusionList>
 						<ObjectRef Name="Play_Footstep_Left" ID="{68B83415-D24B-415C-A452-A8619448A65C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Drop" ID="{9F9A4CCA-07C8-4279-9DBE-080CF20F3857}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_ShootTentacle" ID="{61816451-2FCD-4328-AFE6-4627921E06D3}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_PickUp" ID="{3E76E931-6BCE-4335-8F07-641FE1E0A76B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_BubblePop" ID="{D4BC598C-865F-44DE-9A15-BAD751981A83}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Footstep_Right" ID="{5C4F89C2-C554-474D-A9F1-088B610F61BD}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Climb_Reach" ID="{FAC6352C-DFDB-48BB-A514-B0D401159B5B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="PlayBGM" ID="{35352506-54B6-4A54-9C06-399C44291C2C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_TentacleNear" ID="{FB444205-6D6B-4D10-8E27-78C6A98B0B26}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Tutorial" ID="{E9FA5187-5530-4DB3-A3A1-AA8E1CFF345C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_LMB" ID="{9838F8BC-F7E4-4F21-B214-7408FD250FD7}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 					</ObjectInclusionList>
 					<ObjectExclusionList/>
 					<GameSyncExclusionList/>

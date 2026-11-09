@@ -15,11 +15,13 @@ public sealed class SquirrelFood : Creature
     public bool IsAvailable => !IsStored && Owner == null && !IsCarried && !IsDead && !IsConsumptionPending && isActiveAndEnabled;
     public override bool CanBeCarried => !IsStored && !IsDead;
     public override bool CanUseWhileCarried => !IsDead;
-    public override string CarriedPrompt => "[LMB at nest] Store food | [RMB] Drop";
+    public override string CarriedPrompt => TryGetComponent<PlantableBubbleSeed>(out _)
+        ? "[LMB at ground] Plant bubble flower | [LMB at nest] Store seed | [RMB] Drop"
+        : "[LMB at nest] Store food | [RMB] Drop";
 
     protected override void InitializeCreature()
     {
-        SetCreatureName("Squirrel Food");
+        SetCreatureName(TryGetComponent<PlantableBubbleSeed>(out _) ? "Bubble Flower Seed" : "Squirrel Food");
         SetResolvedPolarity(CreaturePolarity.None);
         SetFoodAndDiet(FoodTag.None, FoodTag.None);
         StopFoodPhysics();
@@ -42,7 +44,8 @@ public sealed class SquirrelFood : Creature
         if (camera == null) return;
         Ray ray = camera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         Creature found = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, 5f, ~0, Carrier, out _);
-        if (found is SquirrelNest nest) nest.TryPlayerDeposit(Carrier, this);
+        if (found is SquirrelNest nest) { nest.TryPlayerDeposit(Carrier, this); return; }
+        if (TryGetComponent<PlantableBubbleSeed>(out var seed)) seed.TryPlant(Carrier, ray);
     }
 
     // Only new world food is initialized here; stored inventory must never be recycled.

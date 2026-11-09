@@ -88,6 +88,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !HeldHasOwnUse())
             return;
 
+        AudioManager.PostEvent("Play_LMB", gameObject);
         TryInteract();
     }
 

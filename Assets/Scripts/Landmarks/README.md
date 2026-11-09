@@ -69,3 +69,11 @@ Settings:
 - **Climbing:** designed to be climbed with `HandClimber`.
 - **Meditation:** learned glyphs appear on the steles.
 - **Audio:** the audio setup menu adds a `MusicChannel` (`BGM_landmark`, 15–70 m) to the spire.
+
+## Bone mother's ground scar (BoneScar)
+
+Tools > Capstone > Landmarks > Bone Mother > Carve Ground Scar carves a long torn trench through her hole into the
+saved terrain (Editor/BoneScarSetup.cs). The shape and a backup of the changed terrain live on the Bone Scar component
+of the Bone Kiln object; Remove Ground Scar puts the terrain back. In Play mode the scar glows along its floor, grows
+inner-world decor on its walls and down the shaft, and fire bubbles rise from vents deep in it (her nests on the open
+ground switch off). Toggles: `dress`, `bubblesFromCrack`, counts of vents and growths.

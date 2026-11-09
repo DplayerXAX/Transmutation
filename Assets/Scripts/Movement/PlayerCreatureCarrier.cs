@@ -37,6 +37,12 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearBelowCrosshair = 8f;
     [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
+    [Tooltip("A carried flower is held close, low in the bottom right of the view, like a tool in hand. Off = held out in front like other creatures.")]
+    [SerializeField] private bool flowerInCorner = true;
+    [Tooltip("Where a carried flower is held, from the camera (right, up, forward). Up is for the top of the flower.")]
+    [SerializeField] private Vector3 flowerCorner = new Vector3(0.62f, -0.24f, 0.95f);
+    [Tooltip("Where a carried Bellows is held (its middle, from the camera): out to the right, only a little low, so it is not dropped into the ground.")]
+    [SerializeField] private Vector3 bellowsHold = new Vector3(0.9f, -0.45f, 2.1f);
 
     public Creature CarriedCreature { get; private set; }
     public Camera CarryCamera => carryCamera;
@@ -171,7 +177,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
                 bool shouldThrow = IsChargingThrow;
                 float charge = ThrowCharge01;
                 CancelRightMouse();
-                if (shouldThrow) thrower.Throw(charge);
+                if (shouldThrow) { thrower.Throw(charge); AudioManager.PostEvent("Play_Drop", gameObject); }
                 else Drop();
             }
             else if (!held) CancelRightMouse();
@@ -271,6 +277,17 @@ private void FitCarryPoint(Creature creature)
     if (carryPoint == null) return;
 
     MeasureCreature(creature, out float above, out float sideways);
+    if (creature is BellowsCreature)
+    {
+        carryPoint.localPosition = bellowsHold;
+        return;
+    }
+    if (flowerInCorner && creature is BubbleFlower)
+    {
+        // The flower's top sits at the corner point, so the whole flower stays in the lower right.
+        carryPoint.localPosition = new Vector3(flowerCorner.x, flowerCorner.y - above, flowerCorner.z);
+        return;
+    }
 
     Vector3 home = carryPointHome;
     float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
@@ -305,6 +322,7 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
+        AudioManager.PostEvent("Play_PickUp", gameObject);
         CancelRightMouse();
         if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
@@ -387,6 +405,7 @@ private void FitCarryPoint(Creature creature)
         if (TentacleLockedForRide) return;
         Creature dropped = CarriedCreature;
         Release();
+        if (dropped != null) AudioManager.PostEvent("Play_Drop", gameObject);
         if (dropped == null || carryCamera == null) return;
 
         Rigidbody body = dropped.GetComponent<Rigidbody>();

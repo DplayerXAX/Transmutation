@@ -138,6 +138,13 @@ public sealed class BoneChild : MonoBehaviour
         child.Build(seed, bone, skin, yaw);
         return child;
     }
+    public void SetRestingHome(Vector3 position, Vector3 motherPosition)
+    {
+        rest=position;transform.position=position;mother=motherPosition;
+        if(beads.Count>0)head=beads[0].position;
+        trail.Clear();nextGroundCheck=0;
+        orbitRadius=Mathf.Max(8f,new Vector2(position.x-mother.x,position.z-mother.z).magnitude);
+    }
 
     private void Build(int seed, Material bone, Material skin, float yaw)
     {
@@ -345,6 +352,12 @@ public sealed class BoneChild : MonoBehaviour
         if (Physics.SphereCast(head + Vector3.up * 0.3f, 0.35f * size, step.normalized, out RaycastHit block, step.magnitude + 0.3f, Ground, QueryTriggerInteraction.Ignore)
             && !block.collider.transform.IsChildOf(transform) && block.normal.y < 0.5f)
             step = Vector3.ProjectOnPlane(step, block.normal);
+        // Its mother's open crack (BoneScar) is a drop it will not crawl into: it stops at the lip and turns along it.
+        if (BoneScar.Covers(head + step * 4f, 0.8f) && !BoneScar.Covers(head, 0.2f))
+        {
+            step = Vector3.zero;
+            if (!fire) headDir = Quaternion.Euler(0f, 70f * orbitSense * dt, 0f) * headDir;
+        }
         head += step;
         float groundY = GroundBelow(head);
         head.y = Mathf.Max(groundY + 0.3f * size, Mathf.Lerp(head.y, groundY + 0.3f * size, 1f - Mathf.Exp(-8f * dt)));

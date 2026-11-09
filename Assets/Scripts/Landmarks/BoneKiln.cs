@@ -66,6 +66,11 @@ public sealed class BoneKiln : MonoBehaviour
     [Tooltip("Seconds fully warm before it wakes.")]
     [Min(0f)] [SerializeField] private float wakeAfter = 2.5f;
     [Min(6f)] [SerializeField] private float emergenceDuration = 14f;
+    [Tooltip("On: she bursts head first straight up out of the hole, passing through the ground, then turns and roams with collision. Off: the slow tail-first back-out.")]
+    [SerializeField] private bool launchToSky = true;
+    [Tooltip("How high above the mouth the launch climbs before she turns away.")]
+    [Min(10f)] [SerializeField] private float launchHeight = 60f;
+    [Min(5f)] [SerializeField] private float launchSpeed = 34f;
     [Tooltip("Degrees each metre of spine is turned further round (the helix of the ribcage), asleep and awake.")]
     [Range(0f, 30f)] [SerializeField] private float helixTwist = 9f;
     [Tooltip("Awake: how fast the helix rolls along the body, degrees per second.")]
@@ -150,6 +155,11 @@ public sealed class BoneKiln : MonoBehaviour
     private Vector3 emergenceStart;
     private float flightRoll;
     public bool Emerging => emerging;
+    /// <summary>Waking with launchToSky: rising straight up with no collision.</summary>
+    public bool Launching => launching;
+    public Vector3 MouthPoint => mouth;
+    private bool launching;
+    private float launchElapsed, launchTravel;
     public int RequiredFireBubbles => Mathf.Max(2, bubblesToWarm);
     public Vector3 ExitDirection => backOutDirection.sqrMagnitude > 0.1f ? backOutDirection : root != null ? root.forward : transform.forward;
 
@@ -234,14 +244,18 @@ public sealed class BoneKiln : MonoBehaviour
         float period = awake ? (flying ? 6f : 8f) : wavePeriod;
         float share = awake ? 0.6f : waveOpenShare;
         float time = Time.time * Mathf.PI * 2f / period;
+        // Each rib's pose checks the ground several times a frame. Asleep and seen from a distance, the ribs
+        // still move every frame, but run those physics checks only every second or fourth frame (in turn).
+        int stride = awake ? 1 : RibStride();
         for (int i = 0; i < count; i++)
         {
+            bool checks = stride <= 1 || (i + Time.frameCount) % stride == 0;
             float pair = i / 2;
             float side = (i % 2) * (awake && !flying ? Mathf.PI : 0.6f);
             float wave = 0.5f + 0.5f * Mathf.Sin(time - pair * Mathf.PI * 2f / waveLength - side);
             float target = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - share * 1.4f, 1f, wave));
             if (emerging) ribs[i].FoldForEmergence(Time.deltaTime);
-            else ribs[i].Drive(awake ? target * Mathf.Lerp(0.2f, 1f, FlightStrength) : Mathf.Max(target, warmth), Time.deltaTime);
+            else ribs[i].Drive(awake ? target * Mathf.Lerp(0.2f, 1f, FlightStrength) : Mathf.Max(target, warmth), Time.deltaTime, checks);
         }
 
         if (awake)
@@ -257,6 +271,15 @@ public sealed class BoneKiln : MonoBehaviour
             float top = seatRenderer != null ? seatRenderer.bounds.max.y : rideSeat.position.y + 2f;
             BoneRide.Seat(new Vector3(rideSeat.position.x, top + 0.08f, rideSeat.position.z));
         }
+    }
+
+    private static Camera viewCamera;
+    private int RibStride()
+    {
+        if (viewCamera == null || !viewCamera.isActiveAndEnabled) viewCamera = Camera.main;
+        if (viewCamera == null || root == null) return 1;
+        float distance = Vector3.Distance(viewCamera.transform.position, root.position);
+        return distance < 40f ? 1 : distance < 90f ? 2 : 4;
     }
 
     /// <summary>True while the player rides her.</summary>
@@ -342,11 +365,15 @@ public sealed class BoneKiln : MonoBehaviour
         for (int i = 0; i < 12; i++)
         {
             float a = i * Mathf.PI / 6f;
-            rimY = Mathf.Min(rimY, GroundHeight(mouthApprox + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (holeRadius + 2.5f)));
+            Vector3 rim = mouthApprox + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (holeRadius + 2.5f);
+            if (BoneScar.Covers(rim, 1.5f)) continue; // a carved scar (BoneScar) is not the rim
+            rimY = Mathf.Min(rimY, GroundHeight(rim));
         }
+        if (rimY == float.MaxValue) rimY = surfaceAtCentre;
         mouth = world.SinkholeCentre(sinkholeIndex, rimY, out _);
         float R = holeRadius + 0.5f;
-        Vector3 heading = PickHeading(mouth, R);
+        // With a carved scar she keeps the heading she had when it was carved.
+        Vector3 heading = BoneScar.TryHeading(sinkholeIndex, out Vector3 scarHeading) ? scarHeading : PickHeading(mouth, R);
 
         root = new GameObject("Bone Kiln (runtime)").transform;
         root.SetParent(transform, false);
@@ -539,6 +566,12 @@ public sealed class BoneKiln : MonoBehaviour
             float angle = 120f + c * (120f / Mathf.Max(1, children - 1)) + (float)random.NextDouble() * 15f;
             Vector3 dir = Quaternion.Euler(0f, angle, 0f) * heading;
             Vector3 spot = mouth + dir * (R + 10f + (float)random.NextDouble() * 4f);
+            // Never born inside her open crack (BoneScar): turn further round until clear of it.
+            for (int turn = 1; turn <= 12 && BoneScar.Covers(spot, 4f); turn++)
+            {
+                dir = Quaternion.Euler(0f, 15f * (c % 2 == 0 ? 1f : -1f), 0f) * dir;
+                spot = mouth + dir * (R + 12f);
+            }
             spot.y = GroundHeight(spot);
             BoneChild child = BoneChild.Spawn(root, spot, Quaternion.LookRotation(-dir).eulerAngles.y, seed * 31 + c, boneMaterial, ribMaterial != null ? ribMaterial : boneMaterial, mouth);
             if (childStartingFuel != null && childStartingBubbleCount > 0)
@@ -732,6 +765,16 @@ public sealed class BoneKiln : MonoBehaviour
         // Contact triggers still accept fuel in flight, without pushing the rider or disabling the children.
         foreach (BoneFireContact contact in fireContacts) if (contact != null) contact.SetFlying();
         foreach (BoneRib rib in ribs) rib.free = true;
+        if (launchToSky)
+        {
+            // Head first this time: the trail runs from the tail to the skull, which leads straight up the shaft.
+            launching = true;
+            launchElapsed = launchTravel = 0f;
+            trail.Clear();
+            for (int i = path.Count - 1; i >= 0; i--) trail.Add(root.TransformPoint(path[i]));
+            head = trail[trail.Count - 1];
+            headDir = Vector3.up;
+        }
         if (Application.isPlaying) BoneAwakeningCutscene.Play(this);
         Debug.Log("Bone Kiln: the colossus wakes.");
     }
@@ -739,6 +782,7 @@ public sealed class BoneKiln : MonoBehaviour
     private void MoveHead(float deltaTime)
     {
         awakeBlend = Mathf.Clamp01((Time.time - wakeTime) / 6f);
+        if (launching) { Launch(deltaTime); return; }
         if (emerging) { BackOut(deltaTime); return; }
         float t = Time.time;
         Vector3 desired;
@@ -809,7 +853,8 @@ public sealed class BoneKiln : MonoBehaviour
         float progress = Mathf.Clamp01((emergenceElapsed - 2f) / Mathf.Max(6f, emergenceDuration));
         float eased = progress * progress * progress * (progress * (progress * 6f - 15f) + 10f);
         float wanted = (pathLength + 8f) * eased;
-        float lift = emergenceLift * Mathf.SmoothStep(0f, 1f, wanted / 24f);
+        // Rise out of the hole before moving off sideways, so the body clears the walls round the mouth.
+        float lift = emergenceLift * Mathf.SmoothStep(0f, 1f, wanted / 12f);
         Vector3 goal = emergenceStart + backOutDirection * wanted + Vector3.up * lift;
         Vector3 step = Vector3.ClampMagnitude(goal - head,
             Mathf.Max(flySpeed * 2f, (pathLength + 8f) / Mathf.Max(6f, emergenceDuration) * 2.5f) * Mathf.Max(0f, deltaTime));
@@ -822,6 +867,39 @@ public sealed class BoneKiln : MonoBehaviour
         if ((head - trail[trail.Count - 1]).sqrMagnitude > 0.16f) trail.Add(head);
         // Wait until the entire original spine, including the skull, has cleared the entrance.
         if (progress >= 1f && backOutDistance >= pathLength + 7.9f) FinishBackingOut();
+    }
+
+    /// <summary>
+    /// A short shudder, then she shoots head first up out of the hole, ignoring the ground on the way, arcs over high
+    /// above it, and only then starts colliding and roaming.
+    /// </summary>
+    private void Launch(float deltaTime)
+    {
+        launchElapsed += Mathf.Max(0f, deltaTime);
+        if (launchElapsed < 1.2f) return;
+        float speed = launchSpeed * Mathf.SmoothStep(0.15f, 1f, (launchElapsed - 1.2f) / 1.5f);
+        float top = mouth.y + launchHeight;
+        Vector3 away = ExitDirection;
+        away.y = 0f;
+        away = away.sqrMagnitude > 0.01f ? away.normalized : Vector3.forward;
+        // Straight up until near the top, then bend over towards open ground.
+        Vector3 desired = head.y < top - 10f ? Vector3.up : (away + Vector3.up * Mathf.Clamp((top - head.y) * 0.05f, -0.2f, 0.4f)).normalized;
+        headDir = Vector3.RotateTowards(headDir, desired, 1.3f * deltaTime, 0f).normalized;
+        Vector3 step = headDir * (speed * deltaTime);
+        head += step;
+        launchTravel += step.magnitude;
+        if ((head - trail[trail.Count - 1]).sqrMagnitude > 0.16f) trail.Add(head);
+        // The whole body must be out of the hole (the tail has travelled a body length) and she must be flying level.
+        if (launchTravel >= pathLength + 12f && headDir.y < 0.45f && head.y > top - 15f)
+        {
+            launching = false;
+            emerging = false;
+            flying = true;
+            awakeBlend = 0f;
+            wakeTime = Time.time;
+            modeTimer = Random.Range(modeTime.x, modeTime.y);
+            PickWaypoint();
+        }
     }
 
     private Vector3 PointBehind(float distance)
@@ -895,13 +973,14 @@ public sealed class BoneKiln : MonoBehaviour
         // entire skeleton many revolutions during activation, especially late in a play session.
         if (!emerging) flightRoll += helixRoll * deltaTime * awakeBlend;
         float roll = flightRoll;
-        float follow = 1f - Mathf.Exp(-4f * deltaTime);
+        float follow = 1f - Mathf.Exp((launching ? -12f : -4f) * deltaTime);
+        bool backing = emerging && !launching;
         foreach (Station station in stations)
         {
-            float distance = emerging ? pathLength - station.s : station.s;
+            float distance = backing ? pathLength - station.s : station.s;
             Vector3 p = Behind(distance);
             Vector3 tangent = Behind(distance + 0.6f) - Behind(distance - 0.6f);
-            if (emerging) tangent = -tangent;
+            if (backing) tangent = -tangent;
             if (tangent.sqrMagnitude < 1e-6f) continue;
             tangent.Normalize();
             // Parallel transport an untwisted frame; feeding the already twisted transform.up
@@ -915,19 +994,46 @@ public sealed class BoneKiln : MonoBehaviour
             Quaternion target = Quaternion.LookRotation(tangent, up);
             // Ease into the new pose over the first seconds, so waking is a stir, not a snap.
             Vector3 destination = Vector3.Lerp(station.transform.position, p, follow);
-            destination = BoneFlightCollision.Move(station.transform.position, destination, Mathf.Max(0.4f, station.flightRadius), root, !emerging);
+            if (!launching) // the launch passes through the ground
+                destination = BoneFlightCollision.Move(station.transform.position, destination, Mathf.Max(0.4f, station.flightRadius), root, !emerging);
             station.transform.SetPositionAndRotation(destination, Quaternion.Slerp(station.transform.rotation, target, follow));
         }
+        KeepSpineTogether();
         if (skull != null)
         {
-            Vector3 facing = emerging ? Behind(pathLength + 0.6f) - Behind(pathLength - 0.6f) : headDir;
+            Vector3 facing = backing ? Behind(pathLength + 0.6f) - Behind(pathLength - 0.6f) : headDir;
             if (facing.sqrMagnitude < 0.0001f) facing = -headDir;
             facing.Normalize();
             Quaternion look = Quaternion.LookRotation(facing, Mathf.Abs(facing.y) > 0.95f ? Vector3.forward : Vector3.up);
-            Vector3 at = (emerging ? Behind(pathLength) : head) + facing * 4f;
-            float ease = 1f - Mathf.Exp(-3f * deltaTime);
-            Vector3 destination = MoveSkull(skull.position, Vector3.Lerp(skull.position, at, ease), facing);
+            Vector3 at = (backing ? Behind(pathLength) : head) + facing * 4f;
+            float ease = 1f - Mathf.Exp((launching ? -12f : -3f) * deltaTime);
+            Vector3 eased = Vector3.Lerp(skull.position, at, ease);
+            Vector3 destination = launching ? eased : MoveSkull(skull.position, eased, facing);
+            // The skull stays on the end of the neck even when the walls hold it back.
+            if (stations.Count > 0)
+            {
+                Vector3 neck = stations[0].transform.position, reach = destination - neck;
+                if (reach.magnitude > 5.5f) destination = neck + reach.normalized * 5.5f;
+            }
             skull.SetPositionAndRotation(destination, Quaternion.Slerp(skull.rotation, look, ease));
+        }
+    }
+
+    // Collision can hold one vertebra back while its neighbours move on, which pulled the spine apart in tight
+    // places. One pass each way along the spine keeps every link no longer than its resting length.
+    private void KeepSpineTogether()
+    {
+        for (int pass = 0; pass < 2; pass++)
+        {
+            bool forward = pass == 0;
+            for (int k = 1; k < stations.Count; k++)
+            {
+                int i = forward ? k : stations.Count - 1 - k, j = forward ? i - 1 : i + 1;
+                Transform moving = stations[i].transform, anchor = stations[j].transform;
+                float link = Mathf.Abs(stations[i].s - stations[j].s) * 1.06f + 0.05f;
+                Vector3 offset = moving.position - anchor.position;
+                if (offset.sqrMagnitude > link * link) moving.position = anchor.position + offset.normalized * link;
+            }
         }
     }
 

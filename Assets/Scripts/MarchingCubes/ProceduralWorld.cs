@@ -26,6 +26,11 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Range(8, 48)] [SerializeField] private int chunkCells = 24;
     [SerializeField] private int seed = 1;
 
+    [Tooltip("Authored leaf-shaped exploration layout. Off preserves the original terrain generator.")]
+    [SerializeField] private bool leafMap;
+    [Tooltip("Horizontal growth of the leaf layout around the tutorial exit (1 = first layout).")]
+    [Min(0.5f)] [SerializeField] private float leafScale = 1f;
+
     [Header("Surface")]
     [Tooltip("Height range of hills and valleys.")]
     [Min(0f)] [SerializeField] private float surfaceAmplitude = 32f;
@@ -159,6 +164,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public float cellSize;
         public int chunkCells;
         public int seed;
+        public bool leafMap;
+        public float leafScale;
         public float surfaceAmplitude;
         public float surfaceFrequency;
         public float ridges;
@@ -190,6 +197,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         {
             worldSize = world.worldSize;
             seed = world.seed;
+            leafMap = world.leafMap;
+            leafScale = world.leafScale;
             surfaceAmplitude = world.surfaceAmplitude;
             surfaceFrequency = world.surfaceFrequency;
             ridges = world.ridges;
@@ -229,6 +238,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     /// <summary>Surface height above this transform at a local column.</summary>
     public float SurfaceHeight(float x, float z)
     {
+        if (leafMap) return LeafMapTerrain.Height(x, z);
         if (erosionTestCourse) return CourseHeight(x, z);
         Vector2 p = new Vector2(x, z) * surfaceFrequency + noiseOffset;
         // Domain warp so hills do not line up on a grid.
@@ -259,10 +269,11 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         return height;
     }
 
-    public float CeilingHeight(float h) => -crustThickness - h * ceilingMirror;
+    public float CeilingHeight(float h) => leafMap ? -32f - Mathf.Max(0f, h) * 0.15f : -crustThickness - h * ceilingMirror;
 
     public float InnerGroundHeight(float x, float z, float h)
     {
+        if (leafMap) return -65f + Mathf.PerlinNoise(x * 0.025f + 71f, z * 0.025f + 31f) * 2f;
         Vector2 p = new Vector2(x, z) * surfaceFrequency * 2.3f + noiseOffset * 1.37f;
         float detail = Fbm2(p, 4) * innerDetail;
         float ground = -crustThickness - innerGap - h * innerInvert + detail;
@@ -319,7 +330,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
                 density = Mathf.Min(density, shaft);
             }
         }
-        return density;
+        return leafMap ? LeafMapTerrain.ShapeDensity(p, density) : density;
     }
 
     }

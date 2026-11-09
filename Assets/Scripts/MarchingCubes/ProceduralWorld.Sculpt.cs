@@ -80,6 +80,7 @@ public sealed partial class ProceduralWorld
         }
         if (saved.sinkholes == null) saved.sinkholes = new Sinkhole[0];
         field = saved;
+        ApplyLeafScale();
         noiseOffset = saved.noiseOffset;
         sinkholes = saved.sinkholes;
 

@@ -8,6 +8,7 @@ public sealed class BubbleFlower : Creature
     [SerializeField] private TrappingBubble bubblePrefab;
     [SerializeField] private Transform muzzle;
     [SerializeField] private Vector2 groundFiringInterval = new Vector2(3f, 6f);
+    [SerializeField] private bool autoEmitOnGround = true;
     [Min(0f)] [SerializeField] private float manualCooldown = 0.5f;
     [Min(0f)] [SerializeField] private float launchSpeed = 8f;
     [Tooltip("Shots fired while carried: launch speed and how long they keep it, so they fly straight out ahead " +
@@ -25,8 +26,27 @@ public sealed class BubbleFlower : Creature
     private RaycastHit[] shotHits = new RaycastHit[32];
     private Collider[] shotOverlaps = new Collider[32];
     private const float InputBufferSeconds = 0.18f;
+    public bool AutoEmitOnGround => autoEmitOnGround;
+    // Scene ecology may pause ambient production without disabling pickup or carried shots.
+    public bool AmbientEmissionAllowed { get; set; } = true;
+
+    public void ConfigureGroundEmission(bool automatic, Vector2 interval)
+    {
+        autoEmitOnGround = automatic;
+        groundFiringInterval = interval;
+        ResetGroundTimer();
+    }
 
     public TrappingBubble LastShot { get; private set; }
+
+    /// <summary>Fires one bubble straight up now, as ground emission does (for scene choreography such as
+    /// BubbleCascade). Does nothing while carried, dead or paused.</summary>
+    public bool EmitGroundBubble()
+    {
+        if (IsCarried || IsDead || !isActiveAndEnabled || !SimulationEnabled) return false;
+        ResetGroundTimer();
+        return Fire(Vector3.up, null, 0f);
+    }
     public override bool CanUseWhileCarried => !IsDead;
     public override string CarriedPrompt => IsDead ? null : "[LMB] Shoot bubble";
     public override string InteractionPrompt => !IsDead && IsCarried ? "Shoot bubble" : null;
@@ -52,6 +72,7 @@ public sealed class BubbleFlower : Creature
         }
         queuedCarrier = null;
         if (wasCarried) { ResetGroundTimer(); wasCarried = false; }
+        if (!autoEmitOnGround || !AmbientEmissionAllowed) return;
         groundTimer -= deltaTime;
         if (groundTimer > 0f) return;
         Fire(Vector3.up, null, 0f);

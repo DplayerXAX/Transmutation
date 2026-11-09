@@ -11,6 +11,7 @@ public static class AudioSetup
 {
     private const string Folder = "Assets/Audio";
     private const string BankPath = Folder + "/AudioEvents.asset";
+    private const string SfxFolder = Folder + "/SFX";
 
     [MenuItem("Tools/Capstone/Audio/Set Up Adaptive Music In Open Scene")]
     private static void SetUp()
@@ -113,6 +114,55 @@ public static class AudioSetup
         AudioEventBank bank = LoadOrCreateBank();
         int linked = LinkClips(bank);
         EditorUtility.DisplayDialog("Audio", "Linked " + linked + " clip(s).", "OK");
+    }
+
+    [MenuItem("Tools/Capstone/Audio/Add Sound Effects (Assets/Audio/SFX)")]
+    private static void AddSoundEffectsMenu()
+    {
+        int added = AddSoundEffects();
+        EditorUtility.DisplayDialog("Audio", "Sound effects set up (" + added + " new event(s)).", "OK");
+    }
+
+    // Sound effects from Assets/Audio/SFX: tentacle shots, the tentacle creature's nearby loop, mouse buttons,
+    // bubble pop and the tutorial music. Existing entries keep their tuning and only get their clips refreshed.
+    internal static int AddSoundEffects()
+    {
+        AudioEventBank bank = LoadOrCreateBank();
+        int added = 0;
+        AudioClip Clip(string file) => AssetDatabase.LoadAssetAtPath<AudioClip>(SfxFolder + "/" + file + ".wav");
+        void Sound(string name, string[] files, float volume, float spatial, float maxDistance, bool loop, Vector2 pitch)
+        {
+            AudioEventDef def = bank.Find(name);
+            if (def == null)
+            {
+                def = new AudioEventDef { name = name, kind = AudioEventKind.Sound, volume = volume, spatialBlend = spatial,
+                    maxDistance = maxDistance, loop = loop, pitchRange = pitch, fadeIn = 1.5f, fadeOut = 2.5f };
+                bank.events.Add(def);
+                added++;
+            }
+            var clips = new System.Collections.Generic.List<AudioClip>();
+            foreach (string f in files)
+            {
+                AudioClip c = Clip(f);
+                if (c != null) clips.Add(c);
+                else Debug.LogWarning("[Audio] Missing " + SfxFolder + "/" + f + ".wav");
+            }
+            def.clips = clips.ToArray();
+        }
+
+        Sound("Play_ShootTentacle", new[] { "shootTenacles_D2", "shootTenacles_F2" }, 0.9f, 0.5f, 25f, false, Vector2.one);
+        Sound("Play_TentacleNear", new[] { "tenacles" }, 0.8f, 1f, 14f, true, Vector2.one);
+        Sound("Play_LMB", new[] { "LMB" }, 0.7f, 0f, 10f, false, Vector2.one);
+        Sound("Play_PickUp", new[] { "pickUp_RMB" }, 0.8f, 0f, 10f, false, Vector2.one);
+        Sound("Play_Drop", new[] { "drop_RMB" }, 0.8f, 0f, 10f, false, Vector2.one);
+        Sound("Play_BubblePop", new[] { "bubble_pop" }, 0.9f, 0.8f, 30f, false, Vector2.one);
+
+        if (!bank.creatureSounds.Exists(s => s.creatureType == "TentacleCreature"))
+            bank.creatureSounds.Add(new CreatureSound { creatureType = "TentacleCreature", eventName = "Play_TentacleNear", radius = 14f });
+
+        EditorUtility.SetDirty(bank);
+        AssetDatabase.SaveAssets();
+        return added;
     }
 
     private static AudioEventBank LoadOrCreateBank()

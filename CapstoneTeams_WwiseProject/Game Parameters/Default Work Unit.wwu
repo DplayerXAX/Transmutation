@@ -38,6 +38,31 @@
 						<Property Name="InitialValue" Type="Real64" Value="0"/>
 					</PropertyList>
 				</GameParameter>
+				<GameParameter Name="Tutorial_1" ID="{70F9897C-4DAA-4419-9807-DF34CC6152EF}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_2" ID="{62D558F1-5257-475F-BC26-76F496D5E99F}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_3" ID="{00BCFA34-B2A8-4256-9B17-1AF6E107D8A1}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_4" ID="{4D82FAC9-96E2-4026-BBE1-DE3676BEC8B2}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_5" ID="{F45F7410-E9F8-4B9D-8A43-CF872791FBA2}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
 			</ChildrenList>
 		</WorkUnit>
 	</GameParameters>

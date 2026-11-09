@@ -1,0 +1,15 @@
+Leaf scale: 1.4  world size: (376.00, 568.00)
+Map already grown to 1.4; only the decoration was rebuilt.
+Mother moved to (46.20, 6.67, -14.40); 3 nearby objects set aside.
+Resettled after reshaping: 17 creatures, 33 decoration pieces.
+Bubble cascade: 19 flowers on 5 mesas, firing in turn every 7 s; bubbles hover 1.5–8 m up; ambient budget 64.
+Bubble lily look on the leaf flower prefab and 3 scene flowers.
+Field zones: 46 real emitters, two at most per 28 m area, fired in turn every 9 s.
+Field: 12263 instanced lilies, 172 vertices each; the ones within reach of the player turn real.
+Glowing groves: 6 on the knolls.
+Shaft: the mother's sinkhole (radius 4.5 m) opens to the inner world; the fire vent moved east of her.
+Atmosphere: exp2 fog, cool fill light, scene post volume (bloom, vignette, grade).
+Player start: (0.00, 38.30, -120.70)
+Validation: finite meshes PASS
+Field blooms: 12263
+Generated meshes: 46 (+0 migrated)
