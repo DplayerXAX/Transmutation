@@ -11413,6 +11413,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -11429,6 +11430,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -95112,6 +95115,8 @@ MonoBehaviour:
   travelHeights: {x: 3, y: 24}
   modeTime: {x: 25, y: 45}
   children: 3
+  childStartingFuel: {fileID: 0}
+  childStartingBubbleCount: 0
   tentacleTemplate: {fileID: 1700000015}
   nearbyTentacles: 3
   seedId: kiln_seed
@@ -96772,6 +96777,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  hintsVisible: 1
   carrier: {fileID: 0}
   interactor: {fileID: 0}
   traversal: {fileID: 0}
@@ -96893,6 +96899,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Tentacle Creature
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -96909,6 +96916,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -97217,6 +97226,7 @@ MonoBehaviour:
   chunkLayer: 7
   blockingRadius: 40
   meshesPerFrame: 6
+  placePlayerOnSurface: 1
   respawnFallingPlayer: 1
   erosionTestCourse: 0
   erodibility: 1
@@ -97251,18 +97261,6 @@ MonoBehaviour:
   chunksBuilt: 800
   chunksTotal: 800
   sculptData: {fileID: 11400000, guid: 143d2d468563d3444a317dd6bc37c34d, type: 2}
---- !u!114 &1700000038
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1700000031}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8153e8b915842c3ba2caee0042b53fe, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::HeightStippleGroundRange
 --- !u!114 &1700000034
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -97675,6 +97673,18 @@ MonoBehaviour:
   insideInner: 0
   loadedRadius: 0
   fogEnd: 0
+--- !u!114 &1700000038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000031}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c8153e8b915842c3ba2caee0042b53fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeightStippleGroundRange
 --- !u!1 &1700000051
 GameObject:
   m_ObjectHideFlags: 0
@@ -97770,6 +97780,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -97786,6 +97797,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -97913,6 +97926,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -97929,6 +97943,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -98056,6 +98072,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -98072,6 +98089,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -98199,6 +98218,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Fuzz
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -98215,6 +98235,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -100112,6 +100134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -100128,6 +100151,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -108471,6 +108496,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -108487,6 +108513,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -113877,6 +113905,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireEater
   creatureName: Fire Eater
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -113893,6 +113922,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2

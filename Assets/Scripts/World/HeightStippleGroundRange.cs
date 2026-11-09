@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Calibrates height dots to the actual surface submesh, excluding inner-world geometry.</summary>
+/// <summary>Calibrates elevation bands to the actual surface submesh, excluding inner-world geometry.</summary>
 [ExecuteAlways, DisallowMultipleComponent, RequireComponent(typeof(ProceduralWorld))]
 public sealed class HeightStippleGroundRange : MonoBehaviour
 {
