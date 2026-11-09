@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// Procedural first-person arms, hands and legs built from primitives and posed with two-bone IK.
+/// Procedural first-person body with translucent four-digit skinned hands and two-bone arm/leg IK.
 /// Arms hang from the camera so they stay in view; legs hang from the body so they show when looking down.
 /// Hands follow whatever the player is doing: idle sway while walking, the right hand holding a carried
 /// creature, a quick reach on interact, and real grips on the wall while <see cref="HandClimber"/> climbs.
@@ -62,6 +62,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     private sealed class Limb
     {
         public Transform upper, lower, elbow, end;
+        public WebbedPlayerHand webbedHand;
         public Transform[] fingers;     // Two segments per finger, null for legs.
         public Vector3 current;         // Smoothed target, relative to the camera (arms) or the body (legs).
         public bool started;
@@ -135,7 +136,9 @@ public sealed class FirstPersonBody : MonoBehaviour
         if (showTorso) BuildTorso();
         renderers = root.GetComponentsInChildren<Renderer>();
         foreach (Renderer part in renderers)
-            if (limbMaterial != null && part.sharedMaterial == limbMaterial) mimicRenderers.Add(part);
+            if ((limbMaterial != null && part.sharedMaterial == limbMaterial) ||
+                part.sharedMaterial == leftArm.webbedHand.Skin || part.sharedMaterial == rightArm.webbedHand.Skin)
+                mimicRenderers.Add(part);
         // Tentacle creatures ride on the right hand.
         if (carrier != null)
         {
@@ -229,9 +232,12 @@ public sealed class FirstPersonBody : MonoBehaviour
         var luminosity = controller != null ? controller.GetComponent<PlayerCreatureStats>() : null;
         Color emission = LuminosityLighting.Emission(PlayerLuminosityVisuals.Tint,
             luminosity != null && luminosity.IsAvailableForPerception && controller.enabled ? luminosity.Luminosity : 0f);
+        leftArm.webbedHand.UpdateEmission(emission);
+        rightArm.webbedHand.UpdateEmission(emission);
         foreach (Renderer part in renderers)
         {
             if (mimicMaterial != null && mimicRenderers.Contains(part)) continue;
+            if (leftArm.webbedHand.OwnsRenderer(part) || rightArm.webbedHand.OwnsRenderer(part)) continue;
             part.GetPropertyBlock(block);
             block.SetVector("_Center", view.position);
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
@@ -254,6 +260,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         torsoRoot.SetParent(root, false);
         leftCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
         rightCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
+        leftCap.GetComponent<Renderer>().enabled = false;
+        rightCap.GetComponent<Renderer>().enabled = false;
         collar = Part(PrimitiveType.Capsule, "Collar", torsoRoot, limbMaterial, new Vector3(armThickness * 1.2f, 0.2f, armThickness * 1.2f), true);
         torso = Part(PrimitiveType.Capsule, "Spine", torsoRoot, limbMaterial, new Vector3(0.21f, 0.2f, 0.12f), true);
     }
@@ -281,8 +289,29 @@ public sealed class FirstPersonBody : MonoBehaviour
     {
         // Anatomical progress increases from shoulder (0) to fingertip (1), independently of pose.
         AddGooPart(arm.upper, 0f, 0.38f, Vector3.up);
-        AddGooPart(arm.elbow, 0.35f, 0.41f, Vector3.up);
+        if (arm.webbedHand == null) AddGooPart(arm.elbow, 0.35f, 0.41f, Vector3.up);
         AddGooPart(arm.lower, 0.38f, 0.78f, Vector3.up);
+        if (arm.webbedHand != null)
+        {
+            foreach (var skin in arm.end.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (skin.sharedMaterial != arm.webbedHand.Skin) continue;
+                var shell = new GameObject("Goo Coating", typeof(SkinnedMeshRenderer));
+                shell.transform.SetParent(skin.transform, false);
+                var renderer = shell.GetComponent<SkinnedMeshRenderer>();
+                renderer.sharedMesh = skin.sharedMesh;
+                renderer.bones = skin.bones; renderer.rootBone = skin.rootBone;
+                renderer.localBounds = skin.localBounds; renderer.sharedMaterial = gooMaterial;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.enabled = false;
+                var properties = new MaterialPropertyBlock();
+                Bounds bounds = skin.sharedMesh.bounds;
+                properties.SetVector("_PathRange", new Vector4(0.78f, 1f, bounds.min.z, 1f / Mathf.Max(bounds.size.z, 0.001f)));
+                properties.SetVector("_AxisOS", Vector3.forward);
+                renderer.SetPropertyBlock(properties); gooRenderers.Add(renderer);
+            }
+            return;
+        }
         foreach (MeshFilter mesh in arm.end.GetComponentsInChildren<MeshFilter>())
         {
             bool palm = mesh.name == "Palm";
@@ -524,6 +553,19 @@ public sealed class FirstPersonBody : MonoBehaviour
         if (up.sqrMagnitude < 1e-4f) up = view.up;
         Quaternion handRotation = Quaternion.LookRotation(forward, up.normalized);
         arm.end.SetPositionAndRotation(wrist, handRotation);
+        if (arm.webbedHand != null)
+        {
+            // PlaceSegment points its Y axis from shoulder to elbow.
+            Vector3 shoulder = arm.upper.position - arm.upper.up * arm.upper.localScale.y;
+            arm.webbedHand.PoseArmSurface(shoulder, arm.elbow.position, wrist, armThickness);
+        }
+
+        if (arm.webbedHand != null)
+        {
+            // Webbing couples all three fingers, including the interaction pointing pose.
+            arm.webbedHand.Pose(arm.fingerGoal[0], arm.grip, deltaTime);
+            return;
+        }
 
         // Fingers: two segments each. Each finger closes at its own speed, so a grab ripples from
         // the index finger to the little finger; open hands splay the fingers apart.
@@ -641,37 +683,13 @@ public sealed class FirstPersonBody : MonoBehaviour
             // Unscaled hand pivot at the wrist; all sizes below are in metres.
             limb.end = new GameObject("Hand").transform;
             limb.end.SetParent(limbRoot, false);
-            Transform palm = Part(PrimitiveType.Cube, "Palm", limb.end, jointMaterial, new Vector3(0.085f, 0.028f, 0.095f), true);
-            palm.localPosition = new Vector3(0f, 0f, 0.0475f);
+            limb.webbedHand = limb.end.gameObject.AddComponent<WebbedPlayerHand>();
+            limb.webbedHand.Initialize(side);
+            limb.webbedHand.DressArm(limb.upper);
+            limb.webbedHand.DressArm(limb.lower);
+            limb.elbow.GetComponent<Renderer>().enabled = false;
+            limb.webbedHand.CreateArmSurface(limbRoot);
 
-            limb.fingers = new Transform[8];
-            for (int f = 0; f < 4; f++)
-            {
-                // Uneven finger lengths keep the hand from looking stamped out.
-                float first = f == 0 ? 0.03f : f == 3 ? 0.026f : 0.034f;
-                float second = first * 0.75f;
-                var knuckle = new GameObject("Finger " + f).transform;
-                knuckle.SetParent(limb.end, false);
-                knuckle.localPosition = new Vector3((f - 1.5f) * 0.021f * side, 0f, 0.095f);
-                Transform bone = Part(PrimitiveType.Cube, "Phalanx", knuckle, limbMaterial, new Vector3(0.017f, 0.017f, first), true);
-                bone.localPosition = new Vector3(0f, 0f, first * 0.5f);
-
-                var middle = new GameObject("Knuckle").transform;
-                middle.SetParent(knuckle, false);
-                middle.localPosition = new Vector3(0f, 0f, first);
-                Transform tip = Part(PrimitiveType.Cube, "Phalanx", middle, limbMaterial, new Vector3(0.015f, 0.015f, second), true);
-                tip.localPosition = new Vector3(0f, 0f, second * 0.5f);
-
-                limb.fingers[f * 2] = knuckle;
-                limb.fingers[f * 2 + 1] = middle;
-            }
-
-            var thumbBase = new GameObject("Thumb").transform;
-            thumbBase.SetParent(limb.end, false);
-            thumbBase.localPosition = new Vector3(-0.045f * side, 0f, 0.03f);
-            thumbBase.localRotation = Quaternion.Euler(20f, -40f * side, 0f);
-            Transform thumb = Part(PrimitiveType.Cube, "Phalanx", thumbBase, limbMaterial, new Vector3(0.019f, 0.019f, 0.045f), true);
-            thumb.localPosition = new Vector3(0f, 0f, 0.0225f);
         }
         else
         {
