@@ -53,6 +53,13 @@ carry/capture cleanup still run. Hunger is currently bird-specific; Nutrition be
 
 ## Food, nutrition, and death
 
+Health damage also starts the shared `CreatureHurtResponse`: a short red tint and safe visual
+recoil where a separate collider-free Visual pivot exists. Ashura compose the recoil with their
+locomotion/attack animation. Procedural fire and recycle shaders expose `_CreatureHurt` for the
+same feedback. Age loss and rejected damage do not trigger it. Hurt presentation never changes
+carry/capture ownership or applies physical push; successful attacks and explosions use
+`CreatureImpulse` separately. See [AsuraPrototype.md](AsuraPrototype.md) for the contact showcase.
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | Food Tags | None | What this creature provides as food: Meat, Plant, Matter, or a combination. |
@@ -180,12 +187,32 @@ It only reads heat; it never changes it.
 
 ## Other creatures
 
+**Ceiling BatBug** crawls on floors, walls and ceilings, serves as a moving handhold,
+and lays one replacement egg per lifetime. See [CeilingBatBugREADME.md](CeilingBatBugREADME.md)
+for controls, lifecycle, habitat tuning and setup.
+
+**Recycle Network** is the rooted fungal replacement for the old Compost platform.
+It consumes corpses, expands over terrain and grows portable Goo-producing flowers.
+See [RecycleNetworkREADME.md](RecycleNetworkREADME.md) for growth, flower limits,
+resource costs, surface attachment and seeding.
+
 **Ore Colossus** is a huge, peaceful creature on four long legs that roams the procedural map with a geode
 shrine on its back, after Elden Ring's Walking Mausoleum. Its stomps fling the player. Only erosive water
-wears away the crystal heart hanging under its belly (an `ErosionTarget`). Once the heart breaks, it kneels
-for good: its tail becomes a ramp, its body becomes walkable and climbable static remains, and the geode
-releases one **Geode Larva**. Carried, the larva's left click gives its stored life (Age) to the creature
-under the crosshair, and it recharges near any colossus. See [OreColossusREADME.md](OreColossusREADME.md).
+wears away the giant ore heart on its back (an `ErosionTarget`), carving it wherever it touches. When it rests
+it kneels with its tail down as a ramp, so the player can walk up onto its back to reach the ore. The
+shattering heart drops one **Geode Larva**, and the colossus kneels for good: its tail becomes a ramp and its
+body becomes walkable and climbable static remains. Carried, the larva's left click gives its stored life (Age)
+to the creature under the crosshair, and it recharges near any colossus. Set down, it radiates an aura in which
+creatures do not age. See [OreColossusREADME.md](OreColossusREADME.md).
+
+**Cistern Snail** (`CisternSnail`) is a slow snail with a hollow crystal shell that drinks erosive water. Free,
+it crawls to droplets within 14 m and drinks any within 1.2 m of its shell, up to 30; with nothing to drink it
+trails the nearest Ore Colossus about 11 m away. Carried, left click sprays 5 droplets where the player aims
+(0.3 s apart), so a shellful can be carried up a knelt colossus's tail ramp to its ore; tapped on the ground it
+spills 8 around itself. It waits 3 s before drinking again so it does not swallow its own spray. The shell
+glows and swells as it fills. Stored water costs it up to 2 s of Age per second, scaled by how full it is,
+except inside a Geode Larva's aura. Add one with **Tools > Creatures > Cistern Snail > Add Cistern Snail To Open
+Scene**; **Validate (Play Mode)** checks its ageing, the larva's stillness, and spraying and drinking real water.
 
 **Corrupt Seed** is passive Plant food that infects its consumer through a separate
 component. Host death produces 3-5 seeds alongside normal remains, accumulating seed
@@ -248,7 +275,7 @@ prompts and carry work.
 
 ## Squirrels: food, real nest inventory and construction
 
-Drag `Assets/Prefabs/Systems/SquirrelSystemManager.prefab` into a scene to add the complete system.
+Drag `Assets/Prefabs/Systems/Squirrels/SquirrelSystemManager.prefab` into a scene to add the complete system.
 `Scene_Ariia` already contains an instance. Its single `SquirrelSystemManager` component owns population,
 nests, food spawning/refresh and food fights, with all three creature prefab references assigned.
 At startup it discovers scene-local `SquirrelTree` anchors and authored squirrel/food/nest components.
@@ -336,7 +363,7 @@ escalation and physics-based escape placement in isolated scenes.
 
 ### Museum display prefab
 
-Drag **Assets/Prefabs/Systems/SquirrelMuseumDisplay.prefab** into a museum/display level with an
+Drag **Assets/Prefabs/Systems/Squirrels/SquirrelMuseumDisplay.prefab** into a museum/display level with an
 existing player. This is a **variant of SquirrelSystemManager.prefab**, retaining the same creature,
 food, nest and player-reaction behavior. The original system prefab is unchanged.
 

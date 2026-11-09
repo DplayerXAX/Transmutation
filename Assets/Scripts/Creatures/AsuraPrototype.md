@@ -1,5 +1,40 @@
 # Asura prototype
 
+## Contact feel and showcase
+
+Open `Assets/Scenes/Scene_AsuraShowcase.unity` and press Play for the revised contact combat.
+Keys **1–6** select duel, hurt/size samples, melee crowd, mixed clash, Blast Core, and rolling bomber.
+**R** recreates the current finite encounter; **Tab** cycles close/overview/first-person views.
+In station 2, **H** applies a sample health hit and impulse. Rooted/kinematic bodies retain their attachments.
+The launcher is in station 5; use the existing pickup and held-fire controls in first person.
+
+Melee approaches to a 0.18 m solid-surface gap, uses a 0.1 s preparation and 0.9 s interval,
+and applies one physical knockback on a successful hit. A grounded victim receives a small hop
+adjusted for world gravity; the motor yields for 0.18 s, then pursues again. Visuals add alternating
+steps, a forward jab, red hurt tint and recoil. Health damage creates the shared `CreatureHurtResponse`
+on demand, including ordinary creatures. Procedural fire/recycle shaders have an explicit hurt adapter.
+The shared response preserves existing material properties and never moves the physics root.
+
+Prefab scales are 0.8 / 1.1 / 1.5 for melee/ranged/General, with knockback multipliers
+1 / 0.6 / 0.25. `VelocityChange` is intentionally multiplied explicitly rather than relying on mass.
+The General retains its original explosive-shooter behavior and damage-death core drop.
+
+`RollingAsura` rolls toward the nearest visible opposing creature, arms close by, waits 0.6 simulated
+seconds, then resolves one 2.8 m blast and dies. Capture/carry permanently disarms it. Damage death
+is inert. There is no runtime replenishment, squad behavior or strategy layer.
+
+Blast damage and push resolve once at full radius. The short fading sphere has no collider.
+Player blasts use additive velocity and a short launch allowance with normal gravity/air steering;
+they do not enter legacy `Fling`. Entering a finished blast has no effect. A muzzle obstructed by
+nearby terrain cannot spawn a projectile beyond or inside the obstruction.
+
+**Tools > Creatures > Asura > Upgrade Contact Feel Assets** explicitly updates the three existing
+prefabs and creates the bomber; ordinary **Create Assets** keeps its original create-only behavior.
+**Create Contact Showcase** creates the dedicated scene without replacing an existing one.
+**Validate Contact Feel (Play Mode)** supplements the original gameplay/lifecycle validation.
+`AsuraShowcaseRecorder` is an explicitly added development helper for normal-speed duel captures;
+it is not attached to the saved scene or gameplay prefabs.
+
 Open `Assets/Scenes/Scene_Yoyo.unity` and press Play. The player starts on the
 separate arena under **Asura Prototype**, centered at (75, 8, -15). Six authored
 Asuras, two ecology witnesses, and a spare Blast Core are placed in the scene.
@@ -16,8 +51,8 @@ spent being carried. Capture pauses the shared simulation and Age normally.
 Prefabs: `Assets/Prefabs/Creatures/Asura/`. Materials:
 `Assets/Materials/Creatures/Asura/`. Light and Dark share prefabs and statistics;
 the scene instances override only their initial polarity. New ordinary creatures
-default to Random; projectiles resolve to None. Existing ordinary appearances
-are unchanged.
+default to Random; projectiles resolve to None. Ordinary appearances are retained outside
+the shared short health-damage reaction.
 
 Editor commands under **Tools > Creatures > Asura** create missing assets, place
 the scene setup, run gameplay checks, and profile disposable groups. Placement is
@@ -28,10 +63,10 @@ preserved when running asset creation again.
 | --- | ---: | ---: | ---: |
 | Health | 100 | 80 | 300 |
 | Speed (m/s) | 3 | 2.5 | 1.5 |
-| Reach/range (m) | 1.5 | 12 | 16 |
+| Reach/range (m) | 0.18 surface gap | 12 | 16 |
 | Damage | 20 | 12 | 60 at blast center |
-| Interval (seconds between releases) | 1 | 1.2 | 3.5 |
-| Windup (seconds) | 0.2 | 0.25 | 0.6 |
+| Interval (seconds between releases) | 0.9 | 1.2 | 3.5 |
+| Windup (seconds) | 0.1 | 0.25 | 0.6 |
 | Projectile speed (m/s) | — | 18 | 12 |
 | Blast radius (m) | — | — | 4 |
 
@@ -68,8 +103,8 @@ Explosions queue chain reactions, use the closest visible collider surface,
 deduplicate damage by creature and push by Rigidbody, and damage static creature
 colliders too. Damage and push fall linearly to zero at the radius. Initial push
 is a 12 m/s velocity change at the center. Emitter damage is excluded; player
-push remains enabled. Player push adds to current velocity through `Fling`,
-preserving the existing 0.8-second movement grace.
+push remains enabled. Player push adds to current velocity through `AddBlastImpulse`,
+preserving its velocity through a 0.18-second ground allowance and its ensuing flight.
 
 ## Verification
 

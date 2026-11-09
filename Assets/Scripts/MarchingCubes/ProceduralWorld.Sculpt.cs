@@ -81,6 +81,7 @@ public sealed partial class ProceduralWorld
         if (saved.sinkholes == null) saved.sinkholes = new Sinkhole[0];
         field = saved;
         ApplyLeafScale();
+        field.InitializeRecipe();
         noiseOffset = saved.noiseOffset;
         sinkholes = saved.sinkholes;
 
@@ -198,7 +199,7 @@ public sealed partial class ProceduralWorld
         for (int z = 0; z < 2; z++) for (int x = 0; x < 2; x++)
         {
             Vector3 column = gridMin + new Vector3(lo.x + x, 0f, lo.z + z) * cell;
-            float h = field.SurfaceHeight(column.x, column.z);
+            float h = field.IsVolumeRecipe ? 0f : field.SurfaceHeight(column.x, column.z);
             float ceiling = field.CeilingHeight(h), floor = field.InnerGroundHeight(column.x, column.z, h);
             float across = (x == 0 ? 1f - f.x : f.x) * (z == 0 ? 1f - f.z : f.z);
             for (int y = 0; y < 2; y++)
@@ -267,7 +268,7 @@ public sealed partial class ProceduralWorld
         for (int z = min.z - 1; z <= max.z + 1; z++) for (int x = min.x - 1; x <= max.x + 1; x++)
         {
             Vector3 column = gridMin + new Vector3(x, 0f, z) * cell;
-            float h = field.SurfaceHeight(column.x, column.z);
+            float h = field.IsVolumeRecipe ? 0f : field.SurfaceHeight(column.x, column.z);
             float ceiling = field.CeilingHeight(h), floor = field.InnerGroundHeight(column.x, column.z, h);
             for (int y = min.y - 1; y <= max.y + 1; y++)
             {

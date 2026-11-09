@@ -14,6 +14,7 @@ public sealed class AsuraPrototypeEffects : MonoBehaviour
         sphere.name = "Blast Flash";
         SceneManager.MoveGameObjectToScene(sphere, scene);
         sphere.transform.position = center;
+        sphere.transform.localScale = Vector3.one * (radius * 2f);
         sphere.GetComponent<Collider>().enabled = false;
         Destroy(sphere.GetComponent<Collider>());
         if (explosionMaterial != null) sphere.GetComponent<Renderer>().sharedMaterial = explosionMaterial;

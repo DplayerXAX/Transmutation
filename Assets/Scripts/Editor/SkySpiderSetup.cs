@@ -4,8 +4,8 @@ using UnityEngine;
 /// <summary>Explicit, repeatable asset creation. Does not open, edit, or save a scene.</summary>
 public static class SkySpiderSetup
 {
-    public const string SpiderPath = "Assets/Prefabs/Creatures/SkySpider.prefab";
-    public const string WebPath = "Assets/Prefabs/Creatures/SkyWeb.prefab";
+    public const string SpiderPath = "Assets/Prefabs/Creatures/Spiders/SkySpider.prefab";
+    public const string WebPath = "Assets/Prefabs/Creatures/Spiders/SkyWeb.prefab";
 
     [MenuItem("Tools/Creatures/Set Sky Web Strands Black")]
     public static void SetStrandsBlack()

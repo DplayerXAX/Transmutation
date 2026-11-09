@@ -28,7 +28,7 @@ public static class ErosionSceneSetup
         ErosiveFluidSystem fluid = AddFluid(world, new Vector3(0.5f, 7f, -10f), true);
         AddSource(fluid, "Branch Water (enable to divert flow)", new Vector3(2f, 5.4f, -5f), false);
         AddSource(fluid, "Cave Wall Water", new Vector3(6.2f, -1.5f, 9f), false);
-        var playerAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var playerAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
         var player = (GameObject)PrefabUtility.InstantiatePrefab(playerAsset);
         player.transform.position = new Vector3(-4f, 8f, -8f);
         var controller = player.GetComponentInChildren<SmoothFirstPersonController>();

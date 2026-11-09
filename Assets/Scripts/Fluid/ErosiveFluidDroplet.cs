@@ -23,7 +23,7 @@ public sealed class ErosiveFluidDroplet : Creature
     private float elapsed, probeTimer;
     private float drain, drainTouched = float.NegativeInfinity;
     private Vector3 drainPoint;
-    private bool evaporated, wasCarried, splashed;
+    private bool evaporated, wasCarried, splashed, absorbed;
     private Touch effectContact;
     public Rigidbody Body => body;
     public SphereCollider Collider => sphere;
@@ -34,6 +34,8 @@ public sealed class ErosiveFluidDroplet : Creature
     /// <summary>Contacts with non-terrain erosion targets (see ErosionTarget).</summary>
     public int TargetContactCount => touchCount - TerrainContactCount;
     public bool Evaporated => evaporated;
+    /// <summary>The source whose settings this droplet was launched with (null once recycled).</summary>
+    internal ErosiveFluidSource Source => source;
     private static readonly int VelocityId = Shader.PropertyToID("_FlowVelocity");
     private static readonly int ContactId = Shader.PropertyToID("_ContactPoint");
     private static readonly int NormalId = Shader.PropertyToID("_ContactNormal");
@@ -63,7 +65,7 @@ public sealed class ErosiveFluidDroplet : Creature
     {
         source = emitter; elapsed = probeTimer = drain = 0f; touchCount = 0; effectContact = default;
         drainTouched = float.NegativeInfinity;
-        evaporated = wasCarried = splashed = false;
+        evaporated = wasCarried = splashed = absorbed = false;
         transform.localScale = Vector3.one * emitter.Radius * 2f;
         body.position = position; transform.position = position; lastPosition = position;
         body.linearVelocity = velocity; body.angularVelocity = Vector3.zero;
@@ -74,7 +76,7 @@ public sealed class ErosiveFluidDroplet : Creature
     }
     internal bool Simulate(float dt)
     {
-        if (IsDead || evaporated || splashed || source == null || !fluid.InBounds(body.position)) return false;
+        if (IsDead || evaporated || splashed || absorbed || source == null || !fluid.InBounds(body.position)) return false;
         // The carrier restores player collision on release; water must not push the player.
         if (wasCarried && !IsCarried) fluid.IgnoreActors(sphere);
         wasCarried = IsCarried;
@@ -193,6 +195,13 @@ public sealed class ErosiveFluidDroplet : Creature
         target.Splash(hit.point, velocity.magnitude);
         splashed = true;
         fluid.Evaporate(hit.point);
+        return true;
+    }
+    /// <summary>Drunk by a creature (the Cistern Snail): the pool recycles it on the next step. False if it is not free water.</summary>
+    internal bool TryAbsorb()
+    {
+        if (IsDead || evaporated || splashed || absorbed || IsCarried || source == null || !isActiveAndEnabled) return false;
+        absorbed = true;
         return true;
     }
     internal void Invalidate(Bounds bounds)

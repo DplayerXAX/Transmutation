@@ -31,7 +31,7 @@ public static class SquirrelEcologyValidation
             var managerObject = new GameObject("Test Food Manager");
             SceneManager.MoveGameObjectToScene(managerObject, scene);
             var foods = managerObject.AddComponent<SquirrelSystemManager>();
-            Set(foods, "foodPrefab", AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Food.prefab"));
+            Set(foods, "foodPrefab", AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Squirrels/Food.prefab"));
             Set(foods, "initialFoodCount", 0);
             Set(foods, "respawnInterval", 1f);
             Set(foods, "foodPerCycle", 2);

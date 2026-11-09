@@ -32,7 +32,7 @@ public sealed partial class Squirrel
     public bool CanSeePlayer(PlayerCreatureCarrier player)
     {
         if (player == null || !player.isActiveAndEnabled || player.gameObject.scene != gameObject.scene ||
-            !CanMoveAutonomously || IsDead) return false;
+            !CanMoveAutonomously || IsDead || FlashBlindness.IsBlinded(this)) return false;
         Vector3 eye = player.CarryCamera != null ? player.CarryCamera.transform.position : player.transform.position + Vector3.up;
         Vector3 offset = eye - AimPosition;
         Vector3 flat = Vector3.ProjectOnPlane(offset, Vector3.up);

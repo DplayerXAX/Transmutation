@@ -109,7 +109,7 @@ Web release gives the retained corpse the normal half-second recapture grace per
 - `Tools > Creatures > Add Bird Flock To Scene Yoyo` places one manager and three spawn
   tools, each creating 24 birds in Play Mode. Repeated setup does not duplicate placement.
 - Save `Scene_Yoyo` after running the placement menu.
-- Drag `Assets/Prefabs/Creatures/BirdCreature.prefab` into any scene, or instantiate it
+- Drag `Assets/Prefabs/Creatures/Birds/BirdCreature.prefab` into any scene, or instantiate it
   from another script. No explicit manager reference or spawn area is required.
 - `BirdSpawnArea` is only a development placement tool. Its count, radius, and seed
   determine a one-time runtime spawn. Spawned birds are independent scene roots;
@@ -127,7 +127,7 @@ Web release gives the retained corpse the normal half-second recapture grace per
   manager to see occupied leaf cells in Play Mode.
 - Tune Hunt Radius/Hunt Desire alongside other weights on the bird prefab. The selected
   bird gizmo shows its food detection radius and current target. Create Bird Flock Assets
-  also creates `Assets/Prefabs/Creatures/BirdBones.prefab` and its shared URP material;
+  also creates `Assets/Prefabs/Creatures/Birds/BirdBones.prefab` and its shared URP material;
   bones can be spawned independently.
 
 ## Validation

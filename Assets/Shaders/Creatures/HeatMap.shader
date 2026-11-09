@@ -2,6 +2,7 @@ Shader "Capstone/Effects/HeatMap"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         [Header(Fresnel)]
         _FresnelPower("Fresnel Power", Range(0.5, 8)) = 2.5
         _FresnelBias("Fresnel Bias", Range(0, 1)) = 0.15
@@ -77,6 +78,7 @@ Shader "Capstone/Effects/HeatMap"
             SAMPLER(sampler_RampTex);
 
             CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
                 float _FresnelPower;
                 float _FresnelBias;
                 float _FresnelWeight;
@@ -322,7 +324,7 @@ Shader "Capstone/Effects/HeatMap"
                 float alpha = saturate((heat - _AlphaCutoff) / max(1.0 - _AlphaCutoff, 0.001));
                 alpha *= rampAlpha * _BaseAlpha;
 
-                return half4(rampColor.rgb, alpha);
+                return half4(lerp(rampColor.rgb, half3(1,0.08,0.06), _CreatureHurt*0.8), alpha);
             }
             ENDHLSL
         }

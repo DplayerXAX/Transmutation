@@ -2,6 +2,7 @@ Shader "Transmutation/Goo Coating"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         _BaseColor ("Goo Color", Color) = (0.18, 0.85, 0.27, 1)
         _Coverage ("Coverage", Range(0, 1)) = 1
         _Thickness ("Thickness (metres)", Range(0, 0.01)) = 0.002
@@ -22,6 +23,7 @@ Shader "Transmutation/Goo Coating"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
                 half4 _BaseColor;
                 float _Coverage;
                 float _Thickness;
@@ -77,7 +79,7 @@ Shader "Transmutation/Goo Coating"
             {
                 clip(_Coverage - 0.00001);
                 clip(input.armProgress - (1.0 - _Coverage));
-                return half4(CreateGooLighting(input.positionWS, normalize(input.normalWS)), 1.0);
+                return half4(lerp(CreateGooLighting(input.positionWS, normalize(input.normalWS)), half3(1,0.08,0.06), _CreatureHurt*0.8), 1.0);
             }
             ENDHLSL
         }

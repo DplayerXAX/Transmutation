@@ -35,7 +35,8 @@ public sealed class BubbleCapture : MonoBehaviour
         if (!CanCapture || bubble == null) return false;
         creature = GetComponent<Creature>();
         player = GetComponent<SmoothFirstPersonController>();
-        if ((creature == null && player == null) || (creature != null && creature.IsCarried)) return false;
+        if ((creature == null && player == null) || (creature != null && (!creature.CanBeCaptured || creature.IsCarried ||
+            (creature.TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim)))) return false;
         if (creature != null) CreatureThrower.ReleaseFlight(creature);
 
         // Release silk before recording simulation state, so release resumes the original behavior.

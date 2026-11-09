@@ -1,7 +1,7 @@
 # Sky Spider / TimeSpider prototype
 
 Run **Tools > Creatures > Create Sky Spider Assets** once, then place
-`Assets/Prefabs/Creatures/SkySpider.prefab` at the desired airborne web center.
+`Assets/Prefabs/Creatures/Spiders/SkySpider.prefab` at the desired airborne web center.
 The setup command creates assets only; it never opens or saves a scene.
 Repeated setup runs preserve existing prefab and material edits.
 

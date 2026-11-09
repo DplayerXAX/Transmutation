@@ -62,13 +62,13 @@ public static class BasinLevelSetup
             return false;
         }
 
-        var goo = AssetDatabase.LoadAssetAtPath<GooCreature>("Assets/Prefabs/Creatures/GooCreature.prefab");
-        var flower = AssetDatabase.LoadAssetAtPath<BubbleFlower>("Assets/Prefabs/Creatures/BubbleFlower.prefab");
-        var spider = AssetDatabase.LoadAssetAtPath<SkySpider>("Assets/Prefabs/Creatures/SkySpider.prefab");
-        var fireSource = AssetDatabase.LoadAssetAtPath<FireSource>("Assets/Prefabs/Creatures/FireSource.prefab");
-        var fireFlower = AssetDatabase.LoadAssetAtPath<FireFlower>("Assets/Prefabs/Creatures/Fire Flower.prefab");
-        var compost = AssetDatabase.LoadAssetAtPath<CompostCreature>("Assets/Prefabs/Creatures/CompostCreature.prefab");
-        var bird = AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/BirdCreature.prefab");
+        var goo = AssetDatabase.LoadAssetAtPath<GooCreature>("Assets/Prefabs/Creatures/Traversal/GooCreature.prefab");
+        var flower = AssetDatabase.LoadAssetAtPath<BubbleFlower>("Assets/Prefabs/Creatures/Bubbles/BubbleFlower.prefab");
+        var spider = AssetDatabase.LoadAssetAtPath<SkySpider>("Assets/Prefabs/Creatures/Spiders/SkySpider.prefab");
+        var fireSource = AssetDatabase.LoadAssetAtPath<FireSource>("Assets/Prefabs/Creatures/Fire/FireSource.prefab");
+        var fireFlower = AssetDatabase.LoadAssetAtPath<FireFlower>("Assets/Prefabs/Creatures/Fire/Fire Flower.prefab");
+        var compost = AssetDatabase.LoadAssetAtPath<CompostCreature>("Assets/Prefabs/Creatures/Compost/CompostCreature.prefab");
+        var bird = AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/Birds/BirdCreature.prefab");
         var tower = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_SpireStone.mat");
         var bone = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_BoneMarble.mat");
         var silk = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_Realm_Silk.mat");
@@ -189,11 +189,11 @@ public static class BasinLevelSetup
             EditorUtility.DisplayDialog("Basin Level", "No Hanging Spire in the open scene (run Landmarks > Add Hanging Spire first).", "OK");
             return;
         }
-        var goo = AssetDatabase.LoadAssetAtPath<GooCreature>("Assets/Prefabs/Creatures/GooCreature.prefab");
-        var flower = AssetDatabase.LoadAssetAtPath<BubbleFlower>("Assets/Prefabs/Creatures/BubbleFlower.prefab");
-        var spider = AssetDatabase.LoadAssetAtPath<SkySpider>("Assets/Prefabs/Creatures/SkySpider.prefab");
-        var compost = AssetDatabase.LoadAssetAtPath<CompostCreature>("Assets/Prefabs/Creatures/CompostCreature.prefab");
-        var bird = AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/BirdCreature.prefab");
+        var goo = AssetDatabase.LoadAssetAtPath<GooCreature>("Assets/Prefabs/Creatures/Traversal/GooCreature.prefab");
+        var flower = AssetDatabase.LoadAssetAtPath<BubbleFlower>("Assets/Prefabs/Creatures/Bubbles/BubbleFlower.prefab");
+        var spider = AssetDatabase.LoadAssetAtPath<SkySpider>("Assets/Prefabs/Creatures/Spiders/SkySpider.prefab");
+        var compost = AssetDatabase.LoadAssetAtPath<CompostCreature>("Assets/Prefabs/Creatures/Compost/CompostCreature.prefab");
+        var bird = AssetDatabase.LoadAssetAtPath<BirdCreature>("Assets/Prefabs/Creatures/Birds/BirdCreature.prefab");
         var ink = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_Ink.mat");
         if (goo == null || flower == null || spider == null || compost == null || bird == null)
         {

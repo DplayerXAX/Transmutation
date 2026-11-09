@@ -22,6 +22,7 @@ Shader "Capstone/Creatures/TentacleLines"
         [Header(Driven By Script)]
         _Center("Creature Centre (WS)", Vector) = (0, 0, 0, 0)
         _Activity("Activity", Range(0, 1)) = 0
+        [HDR] _EmissionColor("Luminosity Emission", Color) = (0, 0, 0, 0)
     }
 
     SubShader
@@ -49,6 +50,7 @@ Shader "Capstone/Creatures/TentacleLines"
             half _RimStrength;
             float4 _Center;
             half _Activity;
+            half4 _EmissionColor;
         CBUFFER_END
         ENDHLSL
 
@@ -127,6 +129,7 @@ Shader "Capstone/Creatures/TentacleLines"
                 half rim = pow(1.0 - saturate(dot(normalWS, viewDirWS)), _RimPower) * _RimStrength;
                 color = lerp(color, _LineColor.rgb, saturate(rim));
 
+                color += _EmissionColor.rgb;
                 color = MixFog(color, input.fogFactor);
                 return half4(color, 1.0);
             }

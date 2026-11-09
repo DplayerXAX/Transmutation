@@ -7,8 +7,8 @@ public static class SquirrelNestSetup
     public static void Configure()
     {
         if (Application.isPlaying) { Debug.LogWarning("Leave Play Mode before configuring prefabs."); return; }
-        Add<SquirrelFood>("Assets/Prefabs/Creatures/Food.prefab");
-        Add<SquirrelNest>("Assets/Prefabs/Creatures/Nest.prefab");
+        Add<SquirrelFood>("Assets/Prefabs/Creatures/Squirrels/Food.prefab");
+        Add<SquirrelNest>("Assets/Prefabs/Creatures/Squirrels/Nest.prefab");
         Debug.Log("Squirrel food and nest prefabs configured for player carry, real inventory and capacity.");
     }
     private static void Add<T>(string path) where T : Component

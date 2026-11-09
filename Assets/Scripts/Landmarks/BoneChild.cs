@@ -869,7 +869,7 @@ public static class BoneRide
             return true;
         }
         if (toggledFrame == Time.frameCount) return true;
-        if (!CanToggle || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
+        if (!CanToggle || (leftIsBusy && !ScriptedToggle) || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
         if (!TryNearby(out Component mount, out Transform seat)) return false;
         ScriptedToggle = false;
         return BeginApproach(mount, seat, carrier);

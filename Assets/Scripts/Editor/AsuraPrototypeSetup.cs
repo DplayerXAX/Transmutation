@@ -196,7 +196,7 @@ public static class AsuraPrototypeSetup
     }
     private static void PlaceWitness(Scene scene, Transform parent, string name, Vector3 point, CreaturePolarity polarity)
     {
-        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/" + name + ".prefab");
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CreaturePrefabPaths.Resolve(name));
         if (prefab == null) return;
         GameObject root = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
         root.transform.SetParent(parent, false); root.transform.localPosition = point;

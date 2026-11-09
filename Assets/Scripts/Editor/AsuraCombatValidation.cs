@@ -147,7 +147,7 @@ public static class AsuraCombatValidation
             Object.DestroyImmediate(food.gameObject); Object.DestroyImmediate(eater.gameObject);
 
             var melee = Spawn<MeleeAsura>("MeleeAsura", Vector3.zero);
-            var target = Probe(new Vector3(0f, 0.65f, 1.2f), CreaturePolarity.Dark);
+            var target = Probe(new Vector3(0f, 0.65f, 1.0f), CreaturePolarity.Dark);
             var combat = melee.GetComponent<CreatureCombat>();
             Check(combat.Eligible(target, 20f), "opposite ordinary creatures are eligible regardless of tags");
             Resolve(target, CreaturePolarity.None); Check(!combat.Eligible(target, 20f), "None excluded from enemy selection");
@@ -158,7 +158,7 @@ public static class AsuraCombatValidation
             var strike = melee.GetComponent<MeleeAttack>();
             Check(strike.Release(melee, target, null) && target.Health == 80f, "short physical melee strike deals one hit");
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube); SceneManager.MoveGameObjectToScene(wall, scene);
-            wall.transform.position = new Vector3(0f, 0.65f, 0.65f); wall.transform.localScale = new Vector3(2f, 2f, 0.15f);
+            wall.transform.position = new Vector3(0f, 0.65f, 0.52f); wall.transform.localScale = new Vector3(2f, 2f, 0.08f);
             physics.Simulate(0.001f);
             Check(!strike.Release(melee, target, null) && target.Health == 80f, "terrain blocks melee");
             Object.DestroyImmediate(wall); Object.DestroyImmediate(target.gameObject);
@@ -268,7 +268,7 @@ public static class AsuraCombatValidation
             playerBody.linearVelocity = new Vector3(2f, 1f, 0f);
             physics.Simulate(0.001f);
             ExplosionResolver.Request(scene, playerBody.position + new Vector3(-1f, -1f, 0f), 4f, 60f, 12f, core);
-            Check(player.Flung && playerBody.linearVelocity.x > 2f && playerBody.linearVelocity.y > 1f, "blast adds useful upward and sideways player velocity");
+            Check(player.BlastMotion && !player.Flung && playerBody.linearVelocity.x > 2f && playerBody.linearVelocity.y > 1f, "blast adds velocity without entering legacy fling movement");
             Vector3 flung = playerBody.linearVelocity;
             typeof(SmoothFirstPersonController).GetMethod("SpeedControl", Private).Invoke(player, null);
             Check(playerBody.linearVelocity == flung, "movement speed limiting preserves the blast launch");
@@ -298,7 +298,7 @@ public static class AsuraCombatValidation
             Check(reclaimed.IsCarried && reclaimed.SimulationEnabled && reclaimed.GetComponent<Rigidbody>().isKinematic,
                 "picking up a thrown spent projectile retires throw ownership");
             thrower.Throw();
-            var handoffAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TrappingBubble.prefab");
+            var handoffAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab");
             var handoffRoot = Object.Instantiate(handoffAsset, reclaimed.transform.position, Quaternion.identity, staging.transform);
             handoffRoot.transform.SetParent(null, true);
             Check(handoffRoot.GetComponent<TrappingBubble>().TryCapture(reclaimed.gameObject), "bubble can take ownership of thrown material");
@@ -318,7 +318,7 @@ public static class AsuraCombatValidation
             var projectile = Spawn<ExplosiveProjectile>("ExplosiveProjectile", new Vector3(0f, 4f, 0f));
             var source = Probe(new Vector3(10f, 4f, 0f));
             projectile.Launch(source, null, Vector3.forward, 60f, 4f, 12f);
-            var bubbleAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TrappingBubble.prefab");
+            var bubbleAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab");
             var bubbleRoot = Object.Instantiate(bubbleAsset, new Vector3(0f, 4f, -2f), Quaternion.identity, staging.transform);
             bubbleRoot.transform.SetParent(null, true); var bubble = bubbleRoot.GetComponent<TrappingBubble>();
             Check(bubble.TryCapture(projectile.gameObject) && projectile.FlightState == ProjectileFlightState.Spent && !projectile.SimulationEnabled,
@@ -331,7 +331,7 @@ public static class AsuraCombatValidation
             Object.DestroyImmediate(projectile.gameObject); Object.DestroyImmediate(bubbleRoot);
             projectile = Spawn<ExplosiveProjectile>("ExplosiveProjectile", new Vector3(0f, 4f, 0f));
             projectile.Launch(source, null, Vector3.forward, 60f, 4f, 12f);
-            var webAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/SkyWeb.prefab");
+            var webAsset = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Spiders/SkyWeb.prefab");
             var webRoot = Object.Instantiate(webAsset, new Vector3(0f, 4f, 0f), Quaternion.identity, staging.transform);
             webRoot.transform.SetParent(null, true); var web = webRoot.GetComponent<SkyWeb>();
             Check(web.TryCapture(projectile.GetComponent<Rigidbody>(), projectile.transform.position) && projectile.FlightState == ProjectileFlightState.Spent,

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c176e8d13bf61b4191a526377e71c2f, type: 3}
+  m_Name: Scene_Mountain_Terrain
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainSculptData
+  headroom: 24
+  editedSamples: 0
+  bakedFrom: Mountain / amplified recipe v1 / ProceduralWorld
+  layout: '{"worldSize":{"x":1152.0,"y":1152.0},"cellSize":3.0,"chunkCells":24,"seed":1707,"surfaceAmplitude":32.0,"surfaceFrequency":0.013000000268220902,"ridges":0.699999988079071,"overhangAmplitude":5.0,"overhangFrequency":0.05999999865889549,"spawnFlatRadius":18.0,"spawnBlend":30.0,"rimHeight":30.0,"basin":false,"basinFloor":0.6200000047683716,"basinSlope":0.30000001192092898,"crustThickness":9.0,"innerGap":20.0,"ceilingMirror":0.800000011920929,"innerInvert":1.0,"innerDetail":5.0,"caveFrequency":0.02500000037252903,"caveWidth":0.11999999731779099,"caveDepth":14.0,"sinkholeCount":0,"sinkholeRadius":{"x":4.0,"y":7.0},"firstSinkholeDistance":0.0,"erosionTestCourse":false,"noiseOffset":{"x":506.2546081542969,"y":682.9056396484375},"sinkholes":[],"recipe":{"kind":1,"version":1,"mountainHeight":310.0,"mountainFrequency":0.0035000001080334188,"overhangStrength":80.0,"cavernWidth":0.08500000089406967,"islandCount":24,"islandElevation":{"x":340.0,"y":490.0},"islandRadius":{"x":40.0,"y":85.0},"verticalBounds":{"x":-90.0,"y":558.0},"baseSampleSpacing":9.0,"safeSpawn":{"x":0.0,"y":148.0,"z":-360.0}}}'
+  checks:
+  - 1.1268438
+  - 19.678257
+  - -6.6192446
+  - -3.6542463
+  - -0.88508415
+  - -5.2392025
+  - 7.223032
+  - 0.9485675
+  - 7.0250797
+  - 9.162752
+  - -36.64036
+  - -0.70854187
+  - 0.9661497
+  - 9.063767
+  - 9.396881
+  - 9.5384865
+  packedEdits: 
+  revision: 1

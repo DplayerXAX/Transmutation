@@ -30,6 +30,11 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     // Daniel: Delayed interaction after pickup
     private Creature pendingHeldUse;
     private float pendingHeldUseUntil;
+    [SerializeField, Min(0.1f)] private float honeyCoatHoldTime = 0.45f;
+    private GlowHoney pressedHoney;
+    private float honeyHeldTime;
+    private bool honeyGesture;
+    private RaycastHit[] surfaceHits = new RaycastHit[32];
 
     private void Awake()
     {
@@ -45,6 +50,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void Update()
     {
+        var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
+        if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); return; }
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
@@ -55,6 +62,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !Application.isFocused)
         {
             pendingHeldUse = null;
+            CancelHoneyGesture();
             UpdateHeldSqueeze(false);
             return;
         }
@@ -69,12 +77,16 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         if (UpdateHeldSqueeze(leftHeld))
             return;
 
+        if (UpdateHoneyGesture(Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame,
+            leftHeld, Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame, Time.deltaTime))
+            return;
+
         if (Mouse.current == null ||
             !Mouse.current.leftButton.wasPressedThisFrame)
             return;
 
         // Left click next to a bone creature climbs on (BoneRide), not an interaction.
-        if (BoneRide.Approaching || (BoneRide.Mount == null && BoneRide.TryNearby(out _, out _)))
+        if (BoneRide.Approaching || (BoneRide.Mount == null && !HeldHasOwnUse() && BoneRide.TryNearby(out _, out _)))
             return;
 
         // Aria: Tentacle uses left mouse for its own actions.
@@ -138,6 +150,46 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         !carrier.CarriedCreature.IsDead &&
         carrier.CarriedCreature.CanUseWhileCarried;
 
+    // Delay ground honey's click until release so a long press never drinks first.
+    internal bool UpdateHoneyGesture(bool pressed, bool held, bool released, float deltaTime)
+    {
+        if (pressed && !honeyGesture && carrier != null && carrier.CarriedCreature == null &&
+            carrier.PendingCreature == null && !BoneRide.Busy &&
+            !BoneRide.TryNearby(out _, out _) && FindCreature() is GlowHoney honey && !honey.IsCarried)
+        {
+            pressedHoney = honey;
+            honeyHeldTime = 0f;
+            honeyGesture = true;
+        }
+        if (!honeyGesture) return false;
+        if (pressedHoney != null)
+        {
+            if (carrier == null || carrier.CarriedCreature != null || carrier.PendingCreature != null ||
+                pressedHoney.IsCarried || pressedHoney.IsDead || FindCreature() != pressedHoney)
+                pressedHoney = null;
+            else
+            {
+                honeyHeldTime += Mathf.Max(0f, deltaTime);
+                if (honeyHeldTime >= honeyCoatHoldTime)
+                {
+                    pressedHoney.TryUse(GlowHoney.Use.Coat, carrier);
+                    pressedHoney = null;
+                }
+                else if (released)
+                    pressedHoney.TryUse(GlowHoney.Use.Drink, carrier);
+            }
+        }
+        if (released || !held) CancelHoneyGesture();
+        return true;
+    }
+
+    private void CancelHoneyGesture()
+    {
+        pressedHoney = null;
+        honeyHeldTime = 0f;
+        honeyGesture = false;
+    }
+
     private void OnDisable()
     {
         if (squeezedSquirrel != null)
@@ -145,6 +197,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         squeezedSquirrel = null;
         pendingHeldUse = null;
+        CancelHoneyGesture();
     }
 
     /// <summary>
@@ -182,10 +235,32 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Raycasts through screen centre and notifies
-    /// the first Creature hit.
-    /// </summary>
+    /// <summary>Nearest solid under the crosshair, including non-creatures. Never reaches through an obstruction.</summary>
+    public bool TryGetSurfaceHit(out RaycastHit hit)
+    {
+        hit = default;
+        if (interactionCamera == null) return false;
+        Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        var physics = gameObject.scene.GetPhysicsScene();
+        int count;
+        while ((count = physics.Raycast(ray.origin, ray.direction, surfaceHits, interactionRange,
+                   interactionLayers, QueryTriggerInteraction.Ignore)) == surfaceHits.Length)
+            System.Array.Resize(ref surfaceHits, surfaceHits.Length * 2);
+        float nearest = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            Collider candidate = surfaceHits[i].collider;
+            if (candidate.GetComponentInParent<SmoothFirstPersonController>() != null ||
+                (carrier != null && carrier.CarriedCreature != null &&
+                 candidate.transform.IsChildOf(carrier.CarriedCreature.transform))) continue;
+            if (surfaceHits[i].distance >= nearest) continue;
+            hit = surfaceHits[i];
+            nearest = hit.distance;
+        }
+        return hit.collider != null;
+    }
+
+    /// <summary>Uses the held creature, or interacts with the first creature under the crosshair.</summary>
     public void TryInteract()
     {
         if (interactionCamera == null)
@@ -218,6 +293,18 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
                 new Vector3(0.5f, 0.5f, 0f)
             );
 
+            if (held is GlowHoney honey)
+            {
+                Creature target = FindCreature(out RaycastHit coatHit, out _);
+                if (coatHit.collider != null)
+                {
+                    GameObject owner = target != null ? target.gameObject
+                        : coatHit.rigidbody != null ? coatHit.rigidbody.gameObject : coatHit.collider.gameObject;
+                    honey.TryCoat(owner, coatHit.point + coatHit.normal * 0.05f);
+                }
+                return;
+            }
+
             held.ReceiveInteraction(
                 new CreatureInteraction(
                     gameObject,
@@ -233,6 +320,14 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             out RaycastHit hit,
             out Ray ray
         );
+
+        SkateShoesPickup shoes = FindSkateShoes();
+        if (shoes != null)
+        {
+            var player = carrier != null ? carrier.PlayerController : GetComponentInParent<SmoothFirstPersonController>();
+            shoes.TryEquip(player);
+            return;
+        }
 
         if (creature == null)
             return;
@@ -254,6 +349,16 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     public Creature FindCreature()
     {
         return FindCreature(out _, out _);
+    }
+
+    public SkateShoesPickup FindSkateShoes()
+    {
+        if (interactionCamera == null || (carrier != null &&
+            (carrier.CarriedCreature != null || carrier.PendingCreature != null))) return null;
+        Ray ray = interactionCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, interactionRange,
+            interactionLayers, carrier, out RaycastHit hit);
+        return hit.collider != null ? hit.collider.GetComponentInParent<SkateShoesPickup>() : null;
     }
 
     private Creature FindCreature(
@@ -301,7 +406,8 @@ internal static class CreatureAim
         float range,
         int layers,
         PlayerCreatureCarrier carrier,
-        out RaycastHit hit)
+        out RaycastHit hit,
+        float aimRadius = AimRadius)
     {
         hit = default;
 
@@ -341,7 +447,7 @@ internal static class CreatureAim
 
         count = scene.SphereCast(
             ray.origin,
-            AimRadius,
+            aimRadius,
             ray.direction,
             results,
             wall,

@@ -45,7 +45,8 @@ public sealed class CreatureCombat : MonoBehaviour
 
     public void Tick(float deltaTime)
     {
-        if (owner == null || !owner.SimulationEnabled || owner.IsConsumptionPending || attack == null) { Cancel(); return; }
+        if (owner == null || !owner.SimulationEnabled || owner.IsConsumptionPending || attack == null ||
+            FlashBlindness.IsBlinded(owner)) { Cancel(); return; }
         if (Target != null && !Eligible(Target, retentionRange)) Cancel();
         if (Target == null && Time.time >= nextSearch)
         {
@@ -73,20 +74,20 @@ public sealed class CreatureCombat : MonoBehaviour
             if (aim.sqrMagnitude > 0.0001f)
                 firingPivot.rotation = Quaternion.RotateTowards(firingPivot.rotation, Quaternion.LookRotation(aim), 540f * deltaTime);
         }
-        bool inRange = delta.sqrMagnitude <= attack.Range * attack.Range;
+        bool inRange = attack.InReach(owner, Target);
         if (State == CreatureCombatState.Windup)
         {
             motor?.SetIntent(Vector3.zero, delta);
             windupRemaining -= deltaTime;
             if (windupRemaining > 0f) return;
-            if (Eligible(Target, attack.Range) && visible)
+            if (Eligible(Target, retentionRange) && attack.InReach(owner, Target) && visible)
             {
                 SetState(CreatureCombatState.Release);
                 if (attack.Release(owner, Target, muzzle)) Releases++;
                 nextRelease = Time.time + attack.Interval;
                 SetState(CreatureCombatState.Recovery);
             }
-            else SetState(CreatureCombatState.Approach);
+            else { nextRelease = Time.time + attack.Interval; SetState(CreatureCombatState.Approach); }
             return;
         }
         // Recovery is mobile; only the committed windup stops pursuit.

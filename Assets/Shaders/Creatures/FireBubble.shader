@@ -2,6 +2,7 @@ Shader "Capstone/Creature/FireBubble"
 {
     Properties
     {
+        [HideInInspector] _CreatureHurt("Health hurt", Range(0,1)) = 0
         _StaticScale("Static Grain Size", Range(8, 160)) = 70
         _StaticSpeed("Static Speed", Range(1, 60)) = 24
         _StaticContrast("Static Contrast", Range(0.25, 4)) = 1.6
@@ -35,6 +36,7 @@ Shader "Capstone/Creature/FireBubble"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+        float _CreatureHurt;
                 float _StaticScale;
                 float _StaticSpeed;
                 float _StaticContrast;
@@ -84,7 +86,7 @@ Shader "Capstone/Creature/FireBubble"
                 float hue = RandomValue(cell + float3(7, 19, 31), frame);
                 float3 tint = saturate(abs(frac(hue + float3(0, 0.666667, 0.333333)) * 6 - 3) - 1);
                 half3 color = lerp(noise.xxx, noise * tint, colored);
-                return half4(color, _BaseAlpha);
+                return half4(lerp(color, half3(1,0.08,0.06), _CreatureHurt*0.8), _BaseAlpha);
             }
             ENDHLSL
         }

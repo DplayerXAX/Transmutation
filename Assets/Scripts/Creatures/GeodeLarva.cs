@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// Geode Larva: a crystal grub that grows inside an Ore Colossus's geode and is released, once, when the
-/// colossus kneels. Carried, left click pours its stored life into the creature under the crosshair
+/// Geode Larva: a crystal grub that grows inside an Ore Colossus's ore and drops out, once, when the
+/// ore shatters. Carried, left click pours its stored life into the creature under the crosshair
 /// (adds remaining Age) - the opposite of the TimeSpider, and an answer to water's ageing. Its store
 /// refills while it rests near any Ore Colossus. Water, blasts and stomps cannot hurt it.
 /// Whenever it is not carried it radiates a stillness aura: creatures inside do not age (StillnessField).
@@ -136,6 +136,22 @@ public sealed class GeodeLarva : Creature, StillnessField.ISource
             if (!body.isKinematic) { body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
         }
         SetMovementPhysics(true, false);
+    }
+
+    /// <summary>Drops the larva free out of a colossus's shattering ore; that colossus stays its home.</summary>
+    internal void Drop(OreColossus colossus, Vector3 at, Quaternion rotation, Vector3 launch)
+    {
+        home = colossus;
+        nested = false;
+        transform.SetPositionAndRotation(at, rotation);
+        if (body == null) body = GetComponent<Rigidbody>();
+        SetMovementPhysics(false, true);
+        if (body != null)
+        {
+            body.position = at; body.rotation = rotation;
+            body.linearVelocity = launch;
+            body.angularVelocity = Random.insideUnitSphere * 3f;
+        }
     }
 
     protected override void OnCarryStarted()

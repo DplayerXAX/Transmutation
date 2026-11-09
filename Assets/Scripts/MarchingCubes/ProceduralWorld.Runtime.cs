@@ -113,6 +113,7 @@ public sealed partial class ProceduralWorld
     }
     public void ColumnHeights(Vector3 worldPoint, out float surface, out float ceiling, out float innerGround)
     {
+        if (field.IsVolumeRecipe) { VolumeColumnHeights(worldPoint,out surface,out ceiling,out innerGround); return; }
         Vector3 local = worldPoint - transform.position;
         float h = SurfaceHeight(local.x, local.z);
         float c = CeilingHeight(h), g = InnerGroundHeight(local.x, local.z, h);
@@ -172,7 +173,7 @@ public sealed partial class ProceduralWorld
         {
             Vector3Int key = lo + new Vector3Int(x, y, z);
             Vector3 p = gridMin + (Vector3)key * CellSize;
-            float h = field.SurfaceHeight(p.x, p.z);
+            float h = field.IsVolumeRecipe ? 0f : field.SurfaceHeight(p.x, p.z);
             float d = field.Density(p, h, field.CeilingHeight(h), field.InnerGroundHeight(p.x, p.z, h));
             if (includeErosion && modifications.TryGetValue(key, out float delta)) d += delta;
             if (sculpt.TryGetValue(key, out float carved)) d += carved;

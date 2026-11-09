@@ -160,7 +160,7 @@ public sealed class BirdCreature : Creature
     internal Vector3 FoodDirection(Vector3 position, List<Creature> foods, List<Vector3> foodPositions)
     {
         FoodTarget = null;
-        if (EffectiveHuntDesire <= 0f || huntRadius <= 0f) return Vector3.zero;
+        if (EffectiveHuntDesire <= 0f || huntRadius <= 0f || FlashBlindness.IsBlinded(this)) return Vector3.zero;
         float nearestSquared = huntRadius * huntRadius;
         Vector3 direction = Vector3.zero;
         for (int i = 0; i < foods.Count; i++)

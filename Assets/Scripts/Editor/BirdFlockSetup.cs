@@ -8,9 +8,9 @@ using Object = UnityEngine.Object;
 /// <summary>Repeatable prefab creation and explicit, undoable placement in Scene_Yoyo.</summary>
 public static class BirdFlockSetup
 {
-    public const string BirdPath = "Assets/Prefabs/Creatures/BirdCreature.prefab";
+    public const string BirdPath = "Assets/Prefabs/Creatures/Birds/BirdCreature.prefab";
     public const string MaterialPath = "Assets/Materials/Creatures/BirdCube.mat";
-    public const string BonesPath = "Assets/Prefabs/Creatures/BirdBones.prefab";
+    public const string BonesPath = "Assets/Prefabs/Creatures/Birds/BirdBones.prefab";
     public const string BonesMaterialPath = "Assets/Materials/Creatures/BirdBones.mat";
     public const string YoyoPath = "Assets/Scenes/Scene_Yoyo.unity";
     public const string RootName = "Bird Flock Setup";
