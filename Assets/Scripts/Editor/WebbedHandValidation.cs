@@ -130,6 +130,8 @@ public static class WebbedHandValidation
             arm.SetActive(false);
             hand.PoseArmSurface(new Vector3(-0.13f,0,-0.25f),new Vector3(0.10f,0,-0.14f),Vector3.zero,0.062f);
             Render(camera,target,Path.Combine(output,"bent-elbow.png"));
+            rig.SetActive(false);arm.SetActive(false);
+            ValidateLegs(camera,target,output);
             camera.targetTexture = null;
             Debug.Log("PASS: anatomy, skin weights, linked curl, grab deformation, skin/bone fluorescence in darkness, glow reset, animated interior, shaders and previews.");
         }
@@ -141,6 +143,63 @@ public static class WebbedHandValidation
             if(pipeline != null) Object.DestroyImmediate(pipeline);
             if(rendererData != null) Object.DestroyImmediate(rendererData);
         }
+    }
+    static void ValidateLegs(Camera camera,RenderTexture target,string output)
+    {
+        var roots=new GameObject[2];var feet=new WebbedPlayerHand[2];
+        var uppers=new Transform[2];var lowers=new Transform[2];
+        for(int i=0;i<2;i++)
+        {
+            float side=i==0?-1:1;
+            roots[i]=new GameObject(i==0?"Left leg fixture":"Right leg fixture");
+            var foot=new GameObject("Foot");foot.transform.SetParent(roots[i].transform,false);
+            feet[i]=foot.AddComponent<WebbedPlayerHand>();feet[i].InitializeFoot(side);
+            for(int segment=0;segment<2;segment++)
+            {
+                var go=GameObject.CreatePrimitive(PrimitiveType.Capsule);go.name=segment==0?"Thigh":"Shin";
+                go.transform.SetParent(roots[i].transform,false);
+                if(segment==0)uppers[i]=go.transform;else lowers[i]=go.transform;
+                feet[i].DressArm(go.transform);
+            }
+            feet[i].CreateArmSurface(roots[i].transform);
+            feet[i].SetFootVisible(false);
+            if(foot.GetComponentsInChildren<SkinnedMeshRenderer>().Any(r=>r.enabled))throw new Exception("Skate shoe foot hiding failed.");
+            feet[i].SetFootVisible(true);
+            if(foot.GetComponentsInChildren<SkinnedMeshRenderer>().Any(r=>!r.enabled))throw new Exception("Bare feet did not restore.");
+        }
+        camera.transform.position=new Vector3(1.15f,0.85f,1.75f);
+        camera.transform.LookAt(new Vector3(0,0.52f,0.04f));camera.orthographicSize=0.65f;
+        for(int frame=0;frame<16;frame++)
+        {
+            for(int i=0;i<2;i++)
+            {
+                float side=i==0?-1:1,phase=frame*Mathf.PI*2/16+(i==0?0:Mathf.PI);
+                Vector3 hip=new Vector3(side*0.14f,1.02f,0);
+                Vector3 ankle=new Vector3(side*0.14f,0.04f+Mathf.Max(0,Mathf.Cos(phase))*0.13f,Mathf.Sin(phase)*0.20f);
+                Vector3 knee=Vector3.Lerp(hip,ankle,0.51f)+Vector3.forward*(0.09f+0.06f*Mathf.Max(0,Mathf.Cos(phase)));
+                PosePreviewSegment(uppers[i],hip,knee,0.11f);PosePreviewSegment(lowers[i],knee,ankle,0.0935f);
+                feet[i].transform.position=ankle+Vector3.forward*0.06f;
+                feet[i].PoseArmSurface(hip,knee,ankle,0.11f);
+                foreach(var r in roots[i].GetComponentsInChildren<Renderer>())
+                {
+                    if(r.sharedMaterial==null||!r.sharedMaterial.HasProperty("_AnimationTime"))continue;
+                    var properties=new MaterialPropertyBlock();r.GetPropertyBlock(properties);
+                    properties.SetFloat("_UseAnimationTime",1);properties.SetFloat("_AnimationTime",frame*0.2f);
+                    r.SetPropertyBlock(properties);
+                }
+                var mesh=roots[i].GetComponentsInChildren<MeshFilter>().Single(f=>f.name=="Continuous leg skin").sharedMesh;
+                if(mesh.vertices.Any(v=>!float.IsFinite(v.x)||!float.IsFinite(v.y)||!float.IsFinite(v.z)))throw new Exception("Walking knee produced invalid skin.");
+            }
+            Render(camera,target,Path.Combine(output,"legs-"+frame.ToString("D2")+".png"));
+        }
+        foreach(var foot in feet)foot.UpdateEmission(new Color(1.8f,3f,0.75f));
+        Render(camera,target,Path.Combine(output,"legs-glow.png"));
+        Debug.Log("PASS: leg and foot anatomy, knee deformation, finite walk poses, skate shoe visibility and fluorescence.");
+    }
+    static void PosePreviewSegment(Transform segment,Vector3 a,Vector3 b,float width)
+    {
+        segment.SetPositionAndRotation((a+b)*0.5f,Quaternion.FromToRotation(Vector3.up,(b-a).normalized));
+        segment.localScale=new Vector3(width,Vector3.Distance(a,b)*0.5f,width);
     }
     static float MeanBrightness(string path)
     {
@@ -161,7 +220,8 @@ public static class WebbedHandValidation
     {
         // Explicit snapshots allow several different poses to render during one editor frame.
         var snapshots = new List<GameObject>();
-        var sources = camera.gameObject.scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<SkinnedMeshRenderer>()).ToArray();
+        var sources = camera.gameObject.scene.GetRootGameObjects().SelectMany(g => g.GetComponentsInChildren<SkinnedMeshRenderer>())
+            .Where(r=>r.enabled && r.gameObject.activeInHierarchy).ToArray();
         foreach(var source in sources)
         {
             var mesh = new Mesh(); source.BakeMesh(mesh);

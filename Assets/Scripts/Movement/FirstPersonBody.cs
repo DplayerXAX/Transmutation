@@ -137,7 +137,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         renderers = root.GetComponentsInChildren<Renderer>();
         foreach (Renderer part in renderers)
             if ((limbMaterial != null && part.sharedMaterial == limbMaterial) ||
-                part.sharedMaterial == leftArm.webbedHand.Skin || part.sharedMaterial == rightArm.webbedHand.Skin)
+                part.sharedMaterial == leftArm.webbedHand.Skin || part.sharedMaterial == rightArm.webbedHand.Skin ||
+                (showLegs && (part.sharedMaterial == leftLeg.webbedHand.Skin || part.sharedMaterial == rightLeg.webbedHand.Skin)))
                 mimicRenderers.Add(part);
         // Tentacle creatures ride on the right hand.
         if (carrier != null)
@@ -234,10 +235,12 @@ public sealed class FirstPersonBody : MonoBehaviour
             luminosity != null && luminosity.IsAvailableForPerception && controller.enabled ? luminosity.Luminosity : 0f);
         leftArm.webbedHand.UpdateEmission(emission);
         rightArm.webbedHand.UpdateEmission(emission);
+        if (showLegs) { leftLeg.webbedHand.UpdateEmission(emission); rightLeg.webbedHand.UpdateEmission(emission); }
         foreach (Renderer part in renderers)
         {
             if (mimicMaterial != null && mimicRenderers.Contains(part)) continue;
-            if (leftArm.webbedHand.OwnsRenderer(part) || rightArm.webbedHand.OwnsRenderer(part)) continue;
+            if (leftArm.webbedHand.OwnsRenderer(part) || rightArm.webbedHand.OwnsRenderer(part) ||
+                (showLegs && (leftLeg.webbedHand.OwnsRenderer(part) || rightLeg.webbedHand.OwnsRenderer(part)))) continue;
             part.GetPropertyBlock(block);
             block.SetVector("_Center", view.position);
             block.SetFloat("_Activity", climbing ? 1f : Mathf.Clamp01(speed / 8f));
@@ -585,7 +588,7 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private void UpdateLeg(Limb leg, float side, float speed, bool grounded, bool climbing, float deltaTime)
     {
-        leg.end.GetComponent<Renderer>().enabled = !controller.WearingSkateShoes;
+        leg.webbedHand.SetFootVisible(!controller.WearingSkateShoes);
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         Vector3 centre = controller.transform.position;
         Vector3 hip = centre + Vector3.up * hipHeight + orientation.right * (hipWidth * side);
@@ -631,6 +634,7 @@ public sealed class FirstPersonBody : MonoBehaviour
         Vector3 pole = orientation.forward + orientation.right * (0.15f * side);
         SolveTwoBone(leg, hip, hip + leg.current, pole, thighLength, shinLength, out Vector3 ankle);
         leg.end.SetPositionAndRotation(ankle + orientation.forward * 0.06f, Quaternion.LookRotation(orientation.forward, Vector3.up));
+        leg.webbedHand.PoseArmSurface(hip, leg.elbow.position, ankle, legThickness);
     }
 
     // ---------------- IK ----------------
@@ -693,7 +697,14 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
         else
         {
-            limb.end = Part(PrimitiveType.Cube, "Foot", limbRoot, jointMaterial, new Vector3(thickness * 1.1f, thickness * 0.6f, thickness * 2.2f), false);
+            limb.end = new GameObject("Foot").transform;
+            limb.end.SetParent(limbRoot,false);
+            limb.webbedHand = limb.end.gameObject.AddComponent<WebbedPlayerHand>();
+            limb.webbedHand.InitializeFoot(side);
+            limb.webbedHand.DressArm(limb.upper);
+            limb.webbedHand.DressArm(limb.lower);
+            limb.elbow.GetComponent<Renderer>().enabled = false;
+            limb.webbedHand.CreateArmSurface(limbRoot);
         }
         return limb;
     }

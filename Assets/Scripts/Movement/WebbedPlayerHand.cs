@@ -13,6 +13,7 @@ public sealed class WebbedPlayerHand : MonoBehaviour
     Transform thumb;
     float curl, thumbCurl;
     float side;
+    bool isFoot;
     Mesh armSurface;
     Transform armFrame;
     Vector3[] armVertices, armNormals;
@@ -21,6 +22,8 @@ public sealed class WebbedPlayerHand : MonoBehaviour
     public Material Bone { get; private set; }
     public Material Vein { get; private set; }
     Material fleckMaterial;
+    Renderer[] footRenderers;
+    bool footVisible=true;
     public bool OwnsRenderer(Renderer renderer) => anatomyRenderers.Contains(renderer);
 
     public void UpdateEmission(Color playerEmission)
@@ -35,6 +38,12 @@ public sealed class WebbedPlayerHand : MonoBehaviour
 
     public void Initialize(float handedness)
     {
+        InitializeMaterials(handedness);
+        BuildHand();
+    }
+
+    void InitializeMaterials(float handedness)
+    {
         side = handedness;
         var skinTemplate = Resources.Load<Material>("WebbedPlayerSkin");
         Skin = skinTemplate != null ? new Material(skinTemplate) :
@@ -48,6 +57,10 @@ public sealed class WebbedPlayerHand : MonoBehaviour
         fleckMaterial.SetFloat("_Effect",2);
         Vein.SetFloat("_Phase",side*2f);fleckMaterial.SetFloat("_Phase",side*1.3f);
         bones.Add(transform);
+    }
+
+    void BuildHand()
+    {
         var skin = new Builder(); var skeleton = new Builder(); var vessels = new Builder(); var dots = new Builder();
         // Rounded flattened palm, tapering into the wrist. All dimensions are metres.
         skin.Ellipsoid(new Vector3(0, 0, 0.058f), new Vector3(0.052f, 0.021f, 0.073f), 0);
@@ -110,6 +123,42 @@ public sealed class WebbedPlayerHand : MonoBehaviour
         skin = new Builder();
         skin.HandSurface(side, bones, transform);
         Render("Webbed skin", skin, Skin);
+    }
+
+    /// <summary>Matching four-toed foot, using the same fluorescence and animated internal anatomy.</summary>
+    public void InitializeFoot(float handedness)
+    {
+        isFoot=true;InitializeMaterials(handedness);
+        var skin=new Builder();var skeleton=new Builder();var vessels=new Builder();var dots=new Builder();
+        skin.HandSurface(side,bones,transform,true);
+        skeleton.BoneShape(new Vector3(0,0.016f,-0.060f),new Vector3(0,-0.006f,-0.050f),0.011f,0.009f,0);
+        skeleton.BoneShape(new Vector3(0,-0.008f,-0.097f),new Vector3(0,-0.008f,-0.068f),0.011f,0.010f,0);
+        for(int toe=0;toe<4;toe++)
+        {
+            float x=(toe-1.5f)*0.026f*side;
+            float length=0.042f-toe*0.004f;
+            Vector3 start=new Vector3(x*0.30f,-0.006f,-0.027f),end=new Vector3(x,-0.008f,0.061f);
+            skeleton.BoneShape(start,end,0.0055f,0.0045f,0);
+            Vector3 offset=new Vector3(0.008f*side,0.006f,0),direction=(end-start).normalized;
+            vessels.Vessel(start+direction*0.008f+offset,end-direction*0.006f+offset,0.0018f,0.0015f,0);
+            Vector3 toeStart=end+Vector3.forward*0.007f;
+            Vector3 joint=toeStart+Vector3.forward*length*0.52f;
+            Vector3 tip=toeStart+Vector3.forward*length;
+            skeleton.BoneShape(toeStart,joint-Vector3.forward*0.002f,0.0048f,0.0040f,0);
+            skeleton.BoneShape(joint+Vector3.forward*0.002f,tip,0.0042f,0.0035f,0);
+            vessels.Vessel(toeStart+offset,joint+Vector3.forward*0.009f+offset,0.0014f,0.0011f,0);
+        }
+        Scatter(dots,new Vector3(0,-0.006f,0.016f),new Vector3(0.043f,0.015f,0.077f),0,150,handedness>0?813:397);
+        Render("Foot skeleton",skeleton,Bone);Render("Foot vessels",vessels,Vein);
+        Render("Foot inclusions",dots,fleckMaterial);Render("Foot skin",skin,Skin);
+        footRenderers=GetComponentsInChildren<SkinnedMeshRenderer>();
+    }
+
+    public void SetFootVisible(bool visible)
+    {
+        if(visible==footVisible)return;
+        footVisible=visible;
+        foreach(var renderer in footRenderers)renderer.enabled=visible;
     }
 
     int AddBone(string label, Vector3 position, int parent)
@@ -181,7 +230,7 @@ public sealed class WebbedPlayerHand : MonoBehaviour
     /// <summary>A single tapered sleeve, with shared rings through the elbow rather than separate joint balls.</summary>
     public void CreateArmSurface(Transform parent)
     {
-        var go = new GameObject("Continuous arm skin",typeof(MeshFilter),typeof(MeshRenderer));
+        var go = new GameObject(isFoot?"Continuous leg skin":"Continuous arm skin",typeof(MeshFilter),typeof(MeshRenderer));
         go.transform.SetParent(parent,false);
         armFrame=go.transform;
         armSurface = new Mesh { name="Continuous anatomical arm" }; armSurface.MarkDynamic(); meshes.Add(armSurface);
@@ -210,7 +259,7 @@ public sealed class WebbedPlayerHand : MonoBehaviour
         Transform frame=armFrame;
         Vector3 upper=(elbow-shoulder).normalized,lower=(wrist-elbow).normalized;
         Vector3 bendStart=elbow-upper*0.055f,bendEnd=elbow+lower*0.055f;
-        Vector3 wristEnd=wrist-transform.forward*0.019f;
+        Vector3 wristEnd=isFoot?wrist+Vector3.up*0.056f:wrist-transform.forward*0.019f;
         Vector3 previousRight=Vector3.ProjectOnPlane(transform.right,upper).normalized;
         if(previousRight.sqrMagnitude<0.01f)
             previousRight=Vector3.Cross(upper,Mathf.Abs(upper.y)>0.9f?Vector3.forward:Vector3.up).normalized;
@@ -235,12 +284,12 @@ public sealed class WebbedPlayerHand : MonoBehaviour
             else
             {
                 float u=(t-0.60f)/0.40f;
-                radius=Mathf.Lerp(thickness*0.39f,0.0275f,u)+Mathf.Sin(u*Mathf.PI)*thickness*0.075f;
+                radius=Mathf.Lerp(thickness*0.39f,isFoot?0.023f:0.0275f,u)+Mathf.Sin(u*Mathf.PI)*thickness*0.075f;
             }
             for(int s=0;s<ArmSides;s++)
             {
                 float angle=s*Mathf.PI*2/ArmSides;
-                float flatten=Mathf.Lerp(0.82f,0.70f,Mathf.InverseLerp(0.60f,1f,t));
+                float flatten=Mathf.Lerp(0.82f,isFoot?1.10f:0.70f,Mathf.InverseLerp(0.60f,1f,t));
                 Vector3 offset=right*(Mathf.Cos(angle)*radius)+up*(Mathf.Sin(angle)*radius*flatten);
                 int i=r*ArmSides+s;
                 armVertices[i]=frame.InverseTransformPoint(center+offset);
@@ -297,15 +346,15 @@ public sealed class WebbedPlayerHand : MonoBehaviour
         readonly List<int> triangles = new List<int>();
         readonly List<BoneWeight> weights = new List<BoneWeight>();
         readonly List<Vector3> normals = new List<Vector3>();
-        public void HandSurface(float side, List<Transform> bones, Transform root)
+        public void HandSurface(float side, List<Transform> bones, Transform root, bool foot = false)
         {
             const float step = 0.004f;
-            const int nx = 56, ny = 18, nz = 70;
+            int nx = foot?43:56, ny = foot?24:18, nz = foot?74:70;
             // Open wrist boundary meets the arm sleeve; no hemispherical cap inside the forearm.
-            Vector3 origin = new Vector3(-0.112f,-0.036f,-0.019f);
+            Vector3 origin = foot?new Vector3(-0.086f,-0.04f,-0.125f):new Vector3(-0.112f,-0.036f,-0.019f);
             var values = new float[nx+1,ny+1,nz+1];
             for(int x=0;x<=nx;x++)for(int y=0;y<=ny;y++)for(int z=0;z<=nz;z++)
-                values[x,y,z]=Field(origin+new Vector3(x,y,z)*step,side);
+                values[x,y,z]=Field(origin+new Vector3(x,y,z)*step,side,foot);
             Vector3[] corners = {new Vector3(0,0,0),new Vector3(1,0,0),new Vector3(1,1,0),new Vector3(0,1,0),new Vector3(0,0,1),new Vector3(1,0,1),new Vector3(1,1,1),new Vector3(0,1,1)};
             int[,] tetra = {{0,5,1,6},{0,1,2,6},{0,2,3,6},{0,3,7,6},{0,7,4,6},{0,4,5,6}};
             int[,] edges={{0,1},{0,2},{0,3},{1,2},{1,3},{2,3}};
@@ -330,7 +379,7 @@ public sealed class WebbedPlayerHand : MonoBehaviour
                     polygon[count++]=Vector3.Lerp(points[a],points[b],density[a]/(density[a]-density[b]));
                 }
                 Vector3 center=Vector3.zero;for(int i=0;i<count;i++)center+=polygon[i];center/=count;
-                Vector3 normal=Gradient(center,side), axis=(polygon[0]-center).normalized, tangent=Vector3.Cross(normal,axis);
+                Vector3 normal=Gradient(center,side,foot), axis=(polygon[0]-center).normalized, tangent=Vector3.Cross(normal,axis);
                 // Sort the four edge intersections around the surface normal before triangulating.
                 for(int a=0;a<count-1;a++)for(int b=a+1;b<count;b++)
                     if(Mathf.Atan2(Vector3.Dot(polygon[a]-center,tangent),Vector3.Dot(polygon[a]-center,axis))>
@@ -340,9 +389,9 @@ public sealed class WebbedPlayerHand : MonoBehaviour
                 for(int i=0;i<count;i++)
                 {
                     Vector3 p=polygon[i]; int bone=0,other=0;float blend=0;
-                    float thumbInfluence=Mathf.SmoothStep(0,1,Mathf.InverseLerp(0.035f,0.060f,-p.x*side)) *
+                    float thumbInfluence=foot?0:Mathf.SmoothStep(0,1,Mathf.InverseLerp(0.035f,0.060f,-p.x*side)) *
                         (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(0.09f,0.13f,p.z)));
-                    if(p.z>0.085f)
+                    if(!foot && p.z>0.085f)
                     {
                         int finger=Mathf.Clamp(Mathf.RoundToInt(p.x*side/0.031f)+1,0,2);
                         int baseIndex=1+finger*3;
@@ -364,7 +413,7 @@ public sealed class WebbedPlayerHand : MonoBehaviour
                         boneIndex0=bone,weight0=(1-blend)*(1-thumbInfluence),
                         boneIndex1=other,weight1=blend*(1-thumbInfluence),
                         boneIndex2=bones.Count-1,weight2=thumbInfluence };
-                    normals.Add(Gradient(p,side));
+                    normals.Add(Gradient(p,side,foot));
                 }
                 for(int i=1;i<count-1;i++)Tri(first,first+i,first+i+1);
             }
@@ -375,8 +424,9 @@ public sealed class WebbedPlayerHand : MonoBehaviour
         { Vector3 d=b-a;float t=Mathf.Clamp01(Vector3.Dot(p-a,d)/d.sqrMagnitude);return (p-a-d*t).magnitude-radius; }
         static float Ellipse(Vector3 p,Vector3 center,Vector3 radii)
         { p-=center;return (new Vector3(p.x/radii.x,p.y/radii.y,p.z/radii.z).magnitude-1)*Mathf.Min(radii.x,Mathf.Min(radii.y,radii.z)); }
-        static float Field(Vector3 p,float side)
+        static float Field(Vector3 p,float side,bool foot=false)
         {
+            if(foot)return FootField(p,side);
             float d=Ellipse(p,new Vector3(0,0,0.063f),new Vector3(0.055f,0.023f,0.071f));
             d=SmoothMin(d,Ellipse(p,new Vector3(0,0,-0.005f),new Vector3(0.029f,0.020f,0.038f)));
             for(int f=0;f<3;f++)
@@ -391,12 +441,25 @@ public sealed class WebbedPlayerHand : MonoBehaviour
             d=SmoothMin(d,Ellipse(p,new Vector3(-0.048f*side,0,0.073f),new Vector3(0.024f,0.010f,0.032f)));
             return d;
         }
-        static Vector3 Gradient(Vector3 p,float side)
+        static float FootField(Vector3 p,float side)
+        {
+            float d=Ellipse(p,new Vector3(0,-0.004f,-0.073f),new Vector3(0.036f,0.028f,0.046f));
+            d=SmoothMin(d,Ellipse(p,new Vector3(0,0.003f,-0.020f),new Vector3(0.043f,0.025f,0.071f)));
+            d=SmoothMin(d,Ellipse(p,new Vector3(0,-0.008f,0.045f),new Vector3(0.058f,0.027f,0.060f)));
+            d=SmoothMin(d,Ellipse(p,new Vector3(0,0.022f,-0.060f),new Vector3(0.031f,0.050f,0.035f)));
+            for(int toe=0;toe<4;toe++)
+            {
+                float x=(toe-1.5f)*0.026f*side;
+                d=SmoothMin(d,Ellipse(p,new Vector3(x,-0.009f,0.094f-toe*0.003f),new Vector3(0.016f,0.019f,0.030f)));
+            }
+            return d;
+        }
+        static Vector3 Gradient(Vector3 p,float side,bool foot=false)
         {
             const float e=0.0003f;
-            return new Vector3(Field(p+Vector3.right*e,side)-Field(p-Vector3.right*e,side),
-                Field(p+Vector3.up*e,side)-Field(p-Vector3.up*e,side),
-                Field(p+Vector3.forward*e,side)-Field(p-Vector3.forward*e,side)).normalized;
+            return new Vector3(Field(p+Vector3.right*e,side,foot)-Field(p-Vector3.right*e,side,foot),
+                Field(p+Vector3.up*e,side,foot)-Field(p-Vector3.up*e,side,foot),
+                Field(p+Vector3.forward*e,side,foot)-Field(p-Vector3.forward*e,side,foot)).normalized;
         }
         int Add(Vector3 v, int bone, int other = -1, float blend = 0)
         {
