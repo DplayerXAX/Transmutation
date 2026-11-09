@@ -73,6 +73,7 @@ public static class BounceShroomSetup
             fields.FindProperty("platform").objectReferenceValue = block.transform;
             fields.FindProperty("creatureName").stringValue = "BounceShroom";
             fields.FindProperty("compactMaterial").objectReferenceValue = grip;
+            SetLifespan(fields);
             fields.ApplyModifiedPropertiesWithoutUndo();
             prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
         }
@@ -109,9 +110,22 @@ public static class BounceShroomSetup
         return grip;
     }
 
-    /// <summary>Gives the existing prefab its compact grip without rebuilding it (keeps scene references intact).</summary>
-    [MenuItem("Tools/Creatures/BounceShroom/Assign Compact Grip To Prefab")]
-    public static void AssignGripToPrefab()
+    /// <summary>
+    /// An eight-minute life (varied per shroom at runtime); dying of old age it sprouts a young Mushroom Tree.
+    /// Builds the tree prefab first if it does not exist yet.
+    /// </summary>
+    private static void SetLifespan(SerializedObject fields)
+    {
+        var tree = AssetDatabase.LoadAssetAtPath<MushroomTree>(MushroomTreeSetup.TreePath);
+        if (tree == null) tree = MushroomTreeSetup.BuildPrefabs();
+        fields.FindProperty("age").floatValue = 480f;
+        fields.FindProperty("ageRate").floatValue = 1f;
+        fields.FindProperty("growsInto").objectReferenceValue = tree;
+    }
+
+    /// <summary>Brings the existing prefab up to date (compact grip, lifespan) without rebuilding it, so scene references stay intact.</summary>
+    [MenuItem("Tools/Creatures/BounceShroom/Update Prefab (Grip, Lifespan)")]
+    public static void UpdatePrefab()
     {
         const string prefabPath = "Assets/Prefabs/Creatures/BounceShroom.prefab";
         GameObject contents = PrefabUtility.LoadPrefabContents(prefabPath);
@@ -119,6 +133,7 @@ public static class BounceShroomSetup
         {
             var fields = new SerializedObject(contents.GetComponent<BounceShroom>());
             fields.FindProperty("compactMaterial").objectReferenceValue = CompactGrip();
+            SetLifespan(fields);
             fields.ApplyModifiedPropertiesWithoutUndo();
             PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
         }

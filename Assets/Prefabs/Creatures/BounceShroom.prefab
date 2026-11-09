@@ -216,8 +216,8 @@ MonoBehaviour:
   canEatSameType: 0
   nutrition: 120
   simulationEnabled: 1
-  age: 40
-  ageRate: 0
+  age: 480
+  ageRate: 1
   isDead: 0
   heat: 0
   luminosity: 0
@@ -234,6 +234,16 @@ MonoBehaviour:
   expansionPushRadius: 3.5
   expansionUpwardModifier: 0.5
   compactMaterial: {fileID: 13400000, guid: 225dc7add61ae604da3e4e1380f9250f, type: 2}
+  hops: 1
+  hopPause: {x: 1.2, y: 3.5}
+  hopUpSpeed: 7
+  hopForwardSpeed: 2.5
+  wanderRadius: 5
+  maxHopDrop: 1.5
+  crouchTime: 0.18
+  growsInto: {fileID: 2571138955427162492, guid: a82781106c4a49344bbe0219cf8c6c38, type: 3}
+  crowdingRadius: 6
+  lifespanJitter: 0.25
   currentState: 0
   growth: 0
   remainingExpandedTime: 0

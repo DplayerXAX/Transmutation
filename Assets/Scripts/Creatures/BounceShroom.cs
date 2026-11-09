@@ -41,6 +41,14 @@ public sealed class BounceShroom : Creature
     [Min(0.1f)] [SerializeField] private float maxHopDrop = 1.5f;
     [Min(0.01f)] [SerializeField] private float crouchTime = 0.18f;
 
+    [Header("Life Cycle")]
+    [Tooltip("Dying of old age, it sprouts this young Mushroom Tree where it lay, unless another tree is too close.")]
+    [SerializeField] private MushroomTree growsInto;
+    [Tooltip("No sprout this close to another Mushroom Tree's trunk: the old shroom just withers away.")]
+    [Min(0f)] [SerializeField] private float crowdingRadius = 6f;
+    [Tooltip("Each shroom's lifespan varies by up to this share, so a group does not age out all at once.")]
+    [Range(0f, 0.9f)] [SerializeField] private float lifespanJitter = 0.25f;
+
     [Header("Runtime (Read Only)")]
     [SerializeField] private ShroomState currentState;
     [SerializeField, Range(0f, 1f)] private float growth;
@@ -90,6 +98,8 @@ public sealed class BounceShroom : Creature
         SetGrip(true);
         surface.SetBouncy(false);
         ApplySize();
+        if (Application.isPlaying && AgeRate > 0f && lifespanJitter > 0f && !IsDead)
+            SetRemainingAge(Age * Random.Range(1f - lifespanJitter, 1f + lifespanJitter));
     }
 
     public override void ReceiveInteraction(CreatureInteraction interaction)
@@ -262,6 +272,28 @@ public sealed class BounceShroom : Creature
     protected override void OnDeath()
     {
         if (surface != null) surface.SetBouncy(false);
+    }
+
+    /// <summary>Old age closes the cycle: a young Mushroom Tree sprouts where the shroom lay. Other deaths leave remains.</summary>
+    protected override void OnAgeDeath()
+    {
+        Vector3 at = transform.position;
+        if (growsInto != null && !Crowded(at))
+        {
+            MushroomTree sprout = Instantiate(growsInto, at, Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
+            sprout.name = "Mushroom Tree (sprouted)";
+        }
+        Destroy(gameObject);
+    }
+
+    private bool Crowded(Vector3 at)
+    {
+        foreach (MushroomTree tree in FindObjectsByType<MushroomTree>(FindObjectsSortMode.None))
+        {
+            Vector3 offset = tree.transform.position - at;
+            if (new Vector2(offset.x, offset.z).magnitude < crowdingRadius) return true;
+        }
+        return false;
     }
 
     private void SetGrip(bool compact)

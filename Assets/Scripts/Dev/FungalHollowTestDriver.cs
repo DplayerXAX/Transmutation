@@ -158,6 +158,46 @@ public sealed class FungalHollowTestDriver : MonoBehaviour
         Check(compactName == "BounceShroomGrip" && expandedName == "BouncySurface",
             $"collider material: {compactName} while compact, {expandedName} once expanded");
 
+        // 7. Old age: a BounceShroom sprouts a young Mushroom Tree, unless another tree stands too close.
+        Check(hopper.AgeRate > 0f && hopper.Age >= 480f * 0.74f && hopper.Age <= 480f * 1.26f,
+            $"BounceShrooms age (life left {hopper.Age:0} s, about 8 min ± 25%)");
+        Vector3 open = Vector3.zero;
+        bool found = false;
+        for (float x = -40f; x <= 40f && !found; x += 4f)
+            for (float z = -45f; z <= 40f && !found; z += 4f)
+            {
+                bool clear = true;
+                foreach (var t in FindObjectsByType<MushroomTree>(FindObjectsSortMode.None))
+                    if (new Vector2(t.transform.position.x - x, t.transform.position.z - z).magnitude < 9f) { clear = false; break; }
+                float floor = FungalHollowFloor(x, z, 40f);
+                if (!clear || floor < -2f || Physics.Raycast(new Vector3(x, 40f, z), Vector3.down, out RaycastHit cover, 39f - floor, 1 << 7) && cover.point.y > floor + 0.5f) continue;
+                open = new Vector3(x, floor + 0.1f, z);
+                found = true;
+            }
+        int treesBefore = FindObjectsByType<MushroomTree>(FindObjectsSortMode.None).Length;
+        var elder = Instantiate(hopper, open, Quaternion.identity);
+        yield return new WaitForSeconds(0.5f);
+        elder.SetRemainingAge(0f);
+        yield return null;
+        MushroomTree sprout = null;
+        foreach (var t in FindObjectsByType<MushroomTree>(FindObjectsSortMode.None))
+            if (t.name == "Mushroom Tree (sprouted)") sprout = t;
+        Check(found && elder == null && sprout != null && FindObjectsByType<MushroomTree>(FindObjectsSortMode.None).Length == treesBefore + 1,
+            "dying of old age, the BounceShroom became a Mushroom Tree");
+        float waitedRoot = 0f;
+        while (sprout != null && !sprout.Rooted && waitedRoot < 5f) { waitedRoot += Time.deltaTime; yield return null; }
+        Check(sprout != null && sprout.Growth < 0.1f && sprout.CanBeCarried && sprout.Rooted,
+            $"the sprout is a young, carryable tree and roots ({waitedRoot:0.0} s)");
+
+        var neighbour = GameObject.Find("Young Mushroom Tree 2").transform.position;
+        treesBefore = FindObjectsByType<MushroomTree>(FindObjectsSortMode.None).Length;
+        var crowded = Instantiate(hopper, neighbour + new Vector3(2.5f, 0.5f, 0f), Quaternion.identity);
+        yield return new WaitForSeconds(0.5f);
+        crowded.SetRemainingAge(0f);
+        yield return null;
+        Check(crowded == null && FindObjectsByType<MushroomTree>(FindObjectsSortMode.None).Length == treesBefore,
+            "next to another tree it just withers away, no sprout");
+
         Report = log.ToString();
         Debug.Log("[FungalHollow]\n" + Report);
     }
