@@ -363,6 +363,7 @@ GameObject:
   - component: {fileID: 5322836975175712463}
   - component: {fileID: 8471188044157651221}
   - component: {fileID: 4423835645187831772}
+  - component: {fileID: 6461527916014412871}
   m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
@@ -710,6 +711,22 @@ MonoBehaviour:
   throwGravity: 14
   maxFlightTime: 4
   debugShowThrowTrajectory: 0
+--- !u!114 &6461527916014412871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4143822023010584049}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c754bb271478934bb114ab4ecd9e233, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerBugGrip
+  reach: 2.8
+  maxStretch: 3.2
+  followSpeed: 8
+  aimRadius: 0.35
 --- !u!1 &6924890591384260322
 GameObject:
   m_ObjectHideFlags: 0

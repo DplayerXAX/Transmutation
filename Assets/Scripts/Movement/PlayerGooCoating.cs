@@ -65,7 +65,7 @@ public sealed class PlayerGooCoating : MonoBehaviour
         var player = GetComponent<SmoothFirstPersonController>();
         foreach (HandClimber climber in handClimbers)
             // Hands on a goo splat use none of the coating; fast climbing (Shift) uses it faster.
-            if (climber != null && climber.isActiveAndEnabled && climber.Controls(player) && climber.IsClimbing && !climber.OnGooPaint)
+            if (climber != null && climber.isActiveAndEnabled && climber.Controls(player) && climber.IsClimbing && !climber.OnBugGrip && !climber.OnGooPaint)
                 rate = Mathf.Max(rate, climber.GooDrainRate);
         if (rate <= 0f) return;
         SetRemaining(Mathf.Max(0f, remainingSeconds - deltaTime * rate));

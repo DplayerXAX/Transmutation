@@ -320,6 +320,7 @@ public enum FoodTag
     internal bool CompleteConsumption(Creature consumer)
     {
         if (consumptionPending || !CanBeConsumed) return false;
+        if (TryGetComponent<CompostAbsorption>(out var recycling) && recycling.HasClaim) return false;
         consumptionPending = true;
         CreatureRegistry.Unregister(this);
         try { Consume(consumer); }
@@ -344,6 +345,16 @@ public enum FoodTag
 
     /// <summary>Whether this creature can currently be picked up.</summary>
     public virtual bool CanBeCarried => true;
+
+    /// <summary>Rooted organisms and attached organs cannot be displaced by capture systems.</summary>
+    public virtual bool CanBeCaptured => true;
+
+    protected void ConfigureLifespan(float remainingSeconds, float rate)
+    {
+        if (isDead || consumptionPending) return;
+        ageRate = Mathf.Max(0f, rate);
+        SetRemainingAge(remainingSeconds);
+    }
 
     /// <summary>Held like an item: fixed in view at the right hand, kinematic, without pushing other bodies.</summary>
     public virtual bool HeldInView => false;
@@ -541,6 +552,8 @@ public enum FoodTag
     protected void AdvanceAge(float deltaTime)
     {
         if (!simulationEnabled || isDead || consumptionPending || deltaTime <= 0f) return;
+        // Time stands still inside a Geode Larva's aura.
+        if (StillnessField.Holds(this)) return;
         SetRemainingAge(age - Mathf.Max(0f, ageRate) * deltaTime);
     }
 

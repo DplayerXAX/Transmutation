@@ -104,7 +104,8 @@ public sealed class GooCreature : Creature
         bool supportedStrike = impact.ReceiverVelocity.sqrMagnitude < 1f &&
             (impact.ReceiverVelocity - impact.RelativeVelocity).y < -1f && TryFindSupport(impact.OtherCollider, out support);
         // The normal points out of the struck surface, so this patch sits on that surface's receiving side.
-        GooPaint.Splat(impact.Point, impact.Normal, material, surface: impact.OtherCollider.transform);
+        GooPaint paint = GooPaint.Splat(impact.Point, impact.Normal, material, surface: impact.OtherCollider.transform);
+        if (paint == null) { usePending = false; return; }
         if (supportedStrike && !SameSurface(support.collider, impact.OtherCollider))
             GooPaint.Splat(support.point, support.normal, material, surface: support.collider.transform);
         Debug.Log("goo explode", this);

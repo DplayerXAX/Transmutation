@@ -176,7 +176,7 @@ public sealed class TrappingBubble : LeashBubble
         if (flower != null && target == flower.gameObject) return true;
         if (target == shooter && elapsedTime < shooterProtection) return true;
         Creature creature = target.GetComponent<Creature>();
-        return creature != null && (creature is TrappingBubble || creature is SkyWeb || creature.IsCarried ||
+        return creature != null && (!creature.CanBeCaptured || creature is TrappingBubble || creature is SkyWeb || creature.IsCarried ||
             (creature is LeashBubble balloon && balloon.IsLeashed) ||
             creature.IsBubbleCaptured || !creature.isActiveAndEnabled);
     }

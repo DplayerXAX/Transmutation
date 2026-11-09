@@ -193,6 +193,16 @@ public static class OreColossusValidation
             float again = (float)Call(heart.Target, "Splash", heart.transform.position, 12f);
             Check(splash > 0.5f && again == 0f, "thrown bursts count and are throttled");
             Check(Mathf.Abs(heart.Integrity - (before - first - second - splash)) < 1e-3f, "erosion wears the heart's integrity");
+            Check(heart.Carved > 0f, "erosion carves the ore's density volume");
+            Vector3[] shapeBefore = heart.SurfaceMesh.vertices;
+            int lowest = 0;
+            for (int v = 1; v < shapeBefore.Length; v++) if (shapeBefore[v].y < shapeBefore[lowest].y) lowest = v;
+            Vector3 underside = heart.transform.TransformPoint(shapeBefore[lowest]);
+            Call(heart, "Carve", underside, 2f);
+            Call(heart, "Rebuild");
+            Vector3[] shapeAfter = heart.SurfaceMesh.vertices;
+            Check(shapeAfter.Length != shapeBefore.Length || !System.Linq.Enumerable.SequenceEqual(shapeAfter, shapeBefore),
+                "water carves the ore where it touches, and the surface remeshes");
             Advance(colossus, 1);
             Check(colossus.CurrentPhase == OreColossus.Phase.Staggering, "cracking past a quarter makes it stagger");
 
@@ -273,6 +283,20 @@ public static class OreColossusValidation
             Call(larva, "Nest", colossus, origin + new Vector3(120f, 1f, 0f), Quaternion.identity);
             Call(larva, "TickCreature", 1f);
             Check(Mathf.Abs(larva.Reserve - 11.5f) < 1e-3f, "far from any colossus it does not refill");
+
+            // ---- Stillness aura ----
+            var still = Probe(scene, origin + new Vector3(120f + larva.AuraRadius * 0.5f, 1f, 0f));
+            var outside = Probe(scene, origin + new Vector3(120f + larva.AuraRadius * 2f, 1f, 0f));
+            Set(still, "ageRate", 1f); Set(outside, "ageRate", 1f);
+            Call(still, "SetRemainingAge", 30f); Call(outside, "SetRemainingAge", 30f);
+            Physics.SyncTransforms();
+            Call(still, "AdvanceAge", 1f); Call(outside, "AdvanceAge", 1f);
+            Check(larva.StillnessActive && still.Age == 30f && Mathf.Abs(outside.Age - 29f) < 1e-3f, "creatures inside a free larva's aura do not age");
+            Call(still, "SetRemainingAge", 40f);
+            Check(still.Age == 40f, "life can still be given inside the aura");
+            Call(witness.carrier, "BeginCarry", larva);
+            Check(larva.IsCarried && !larva.StillnessActive, "carried, the larva's aura is down");
+            witness.carrier.Release();
 
             // ---- Meditation journal ----
             CreatureCast cast = CreatureCast.Capture(colossus, 2.5f);

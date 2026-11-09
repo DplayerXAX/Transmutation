@@ -123,6 +123,8 @@ public sealed class HandClimber : MonoBehaviour
         public float t;
         public TentacleGripSurface surface;
         public float surfaceParameter;
+        public Collider support;
+        public Vector3 supportPoint, supportNormal;
     }
 
     private struct Foot
@@ -167,7 +169,19 @@ public sealed class HandClimber : MonoBehaviour
     private Vector3 lagOffset, lagVelocity;
     private float feel, roll, look;
 
-    public bool IsClimbing => climbing;
+    private PlayerBugGrip BugGrip => controller != null ? controller.GetComponent<PlayerBugGrip>() : null;
+    public bool OnBugGrip => BugGrip != null && BugGrip.IsGripping;
+    public bool IsClimbing => climbing || OnBugGrip;
+    public bool TryAcceptBugTransfer()
+    {
+        if (!OnBugGrip) return false;
+        bool gravity = body.useGravity;
+        body.isKinematic = false; body.useGravity = true;
+        if (GooAllowsClimbing) { PrepareForTraversalTransfer(); TryStartClimb(); }
+        else TryLipPull();
+        if (climbing) { BugGrip.Release(false, true); return true; }
+        body.isKinematic = true; body.useGravity = gravity; return false;
+    }
     public bool Controls(SmoothFirstPersonController player) => controller == player;
     public void StopForBubbleCapture() { if (climbing) Exit(Vector3.zero); }
     /// <summary>A new mount-to-wall transfer can catch immediately without an old regrab cooldown.</summary>
@@ -204,7 +218,14 @@ public sealed class HandClimber : MonoBehaviour
         get
         {
             if (body == null) return false;
-            if (climbing) return GooPaint.Covers(HandPosition(0)) || GooPaint.Covers(HandPosition(1));
+            // Grip targets own support. The entry animation starts at the chest, outside the paint;
+            // using its visual hand positions would cancel a valid painted grip on the next frame.
+            if (climbing)
+            {
+                RefreshGrip(0); RefreshGrip(1);
+                return GooPaint.Covers(HandTarget(0), hands[0].moving ? hands[0].toNormal : hands[0].normal) ||
+                    GooPaint.Covers(HandTarget(1), hands[1].moving ? hands[1].toNormal : hands[1].normal);
+            }
             return GooPaint.Near(body.position + Vector3.up * handHeight, 1.2f);
         }
     }
@@ -235,6 +256,7 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>World grip point for a hand (0 = left, 1 = right). False when the hand is free.</summary>
     public bool GetHand(int index, out Vector3 hold, out Vector3 normal, out bool gripping)
     {
+        if (!climbing && OnBugGrip) return BugGrip.GetHand(index, out hold, out normal, out gripping);
         RefreshGrip(index);
         hold = default;
         normal = Vector3.up;
@@ -266,6 +288,7 @@ public sealed class HandClimber : MonoBehaviour
     /// </summary>
     public bool GetClimbFrame(out Vector3 eye, out Vector3 right, out Vector3 up, out Vector3 forward)
     {
+        if (!climbing && OnBugGrip) return BugGrip.GetFrame(out eye, out right, out up, out forward);
         forward = FlatInward();
         up = Vector3.up;
         right = Vector3.Cross(Vector3.up, forward);
@@ -302,14 +325,15 @@ public sealed class HandClimber : MonoBehaviour
             Vector3 target = HandTarget(i);
             if (!bounds.Contains(target)) continue;
             Vector3 normal = hands[i].moving ? hands[i].toNormal : hands[i].normal;
-            if (Physics.Raycast(target + normal * 0.12f, -normal, out RaycastHit hit, 0.24f, climbLayers, QueryTriggerInteraction.Ignore))
+            if (ClimbRaycast(target + normal * 0.12f, -normal, out RaycastHit hit, 0.24f, climbLayers, QueryTriggerInteraction.Ignore))
             {
                 if (hands[i].moving) { hands[i].to = hit.point; hands[i].toNormal = hit.normal; }
                 else { hands[i].hold = hit.point; hands[i].normal = hit.normal; }
+                AttachGrip(i, hit.collider, hit.point);
                 continue;
             }
             if (!mantling && ProbeWall(target, out hit) && (hit.point - target).sqrMagnitude <= 0.25f)
-            { hands[i].moving = false; hands[i].hold = hit.point; hands[i].normal = hit.normal; continue; }
+            { hands[i].moving = false; hands[i].hold = hit.point; hands[i].normal = hit.normal; AttachGrip(i, hit.collider, hit.point); continue; }
             lastEvent = "Let go: terrain beneath a grip was eroded";
             Exit(Vector3.zero); return;
         }
@@ -317,6 +341,7 @@ public sealed class HandClimber : MonoBehaviour
 
     private void Update()
     {
+        if (OnBugGrip) return;
         if (!GooAllowsClimbing && !lipOnly)
         {
             StopForGooDepletion();
@@ -379,7 +404,7 @@ public sealed class HandClimber : MonoBehaviour
         }
 
         // Climbing down onto the floor ends the climb.
-        if (vertical < 0f && Physics.Raycast(body.position, Vector3.down, halfHeight + 0.15f, climbLayers, QueryTriggerInteraction.Ignore))
+        if (vertical < 0f && ClimbRaycast(body.position, Vector3.down, halfHeight + 0.15f, climbLayers, QueryTriggerInteraction.Ignore))
         {
             lastEvent = "Climbed down onto the floor";
             Exit(Vector3.zero);
@@ -473,7 +498,7 @@ public sealed class HandClimber : MonoBehaviour
         hit = default;
         if (!GooAllowsClimbing && !withoutGoo) return false;
         Vector3 origin = controller.transform.position + Vector3.up * 0.3f;
-        if (!Physics.SphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
+        if (!ClimbSphereCast(origin, 0.25f, orientation.forward, out hit, detectDistance, climbLayers, QueryTriggerInteraction.Ignore))
             return false;
         // With a tentacle on the hand even gentle slopes and overhangs can be grabbed.
         float steepness = StickyHands ? 45f : minWallSteepness;
@@ -488,7 +513,7 @@ public sealed class HandClimber : MonoBehaviour
         // Look straight at the wall a little above the hands; walls that lean back are further away up there.
         Vector3 inward = -Vector3.ProjectOnPlane(wall.normal, Vector3.up).normalized;
         Vector3 origin = controller.transform.position + Vector3.up * (handHeight + 0.4f);
-        return Physics.Raycast(origin, inward, out RaycastHit high, detectDistance + 1.2f, climbLayers, QueryTriggerInteraction.Ignore)
+        return ClimbRaycast(origin, inward, out RaycastHit high, detectDistance + 1.2f, climbLayers, QueryTriggerInteraction.Ignore)
             && Vector3.Angle(high.normal, Vector3.up) >= MinGripAngle;
     }
 
@@ -546,6 +571,13 @@ public sealed class HandClimber : MonoBehaviour
 
     private void AttachGrip(int index, Collider collider, Vector3 point)
     {
+        hands[index].support = collider;
+        if (collider != null)
+        {
+            hands[index].supportPoint = collider.transform.InverseTransformPoint(point);
+            Vector3 normal = hands[index].moving ? hands[index].toNormal : hands[index].normal;
+            hands[index].supportNormal = collider.transform.localToWorldMatrix.transpose.MultiplyVector(normal).normalized;
+        }
         hands[index].surface = collider != null ? collider.GetComponent<TentacleGripSurface>() : null;
         if (hands[index].surface != null) hands[index].surfaceParameter = hands[index].surface.Capture(point);
     }
@@ -553,7 +585,16 @@ public sealed class HandClimber : MonoBehaviour
     private void RefreshGrip(int index)
     {
         Hand hand = hands[index];
-        if (hand.surface == null) return;
+        if (hand.surface == null)
+        {
+            if (hand.support == null || !hand.support.enabled || !hand.support.gameObject.activeInHierarchy)
+            { if (climbing && !mantling) Exit(Vector3.zero); return; }
+            Vector3 supported = hand.support.transform.TransformPoint(hand.supportPoint);
+            Vector3 supportedNormal = hand.support.transform.worldToLocalMatrix.transpose.MultiplyVector(hand.supportNormal).normalized;
+            if (hand.moving) { hands[index].to = supported; hands[index].toNormal = supportedNormal; }
+            else { hands[index].hold = supported; hands[index].normal = supportedNormal; }
+            return;
+        }
         Vector3 normal = hand.moving ? hand.toNormal : hand.normal;
         if (!hand.surface.Resolve(hand.surfaceParameter, normal, out Vector3 point))
         { hands[index].surface = null; return; }
@@ -740,16 +781,46 @@ public sealed class HandClimber : MonoBehaviour
     /// <summary>A sphere cast (steady on small bumps) with a thin ray as fallback, keeping only grippable surfaces.</summary>
     private bool Cast(Vector3 origin, Vector3 direction, float distance, out RaycastHit hit)
     {
-        if (Physics.SphereCast(origin, probeRadius, direction, out RaycastHit swept, distance, climbLayers, QueryTriggerInteraction.Ignore) && swept.distance > 0f)
+        if (ClimbSphereCast(origin, probeRadius, direction, out RaycastHit swept, distance, climbLayers, QueryTriggerInteraction.Ignore) && swept.distance > 0f)
         {
             // A sphere touching an edge reports a blended normal; aim a thin ray at the contact for the real face.
             Vector3 toContact = swept.point - origin;
-            if (Physics.Raycast(origin, toContact.normalized, out hit, toContact.magnitude + 0.2f, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal))
+            if (ClimbRaycast(origin, toContact.normalized, out hit, toContact.magnitude + 0.2f, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal))
                 return true;
         }
-        return Physics.Raycast(origin, direction, out hit, distance, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal);
+        return ClimbRaycast(origin, direction, out hit, distance, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal);
     }
 
+    private RaycastHit[] surfaceHits = new RaycastHit[48];
+    // Painted supports outside normal climb layers remain usable. The nearest solid still occludes.
+    private bool ClimbRaycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float distance,
+        int layers, QueryTriggerInteraction triggers) => QuerySupport(origin, 0f, direction, distance, layers, out hit);
+    private bool ClimbRaycast(Vector3 origin, Vector3 direction, float distance, int layers,
+        QueryTriggerInteraction triggers) => QuerySupport(origin, 0f, direction, distance, layers, out _);
+    private bool ClimbSphereCast(Vector3 origin, float radius, Vector3 direction, out RaycastHit hit,
+        float distance, int layers, QueryTriggerInteraction triggers) => QuerySupport(origin, radius, direction, distance, layers, out hit);
+    private bool QuerySupport(Vector3 origin, float radius, Vector3 direction, float distance, int layers, out RaycastHit hit)
+    {
+        hit = default;
+        var physics = gameObject.scene.GetPhysicsScene();
+        int count, mask = layers | GooPaint.SupportLayerMask;
+        do
+        {
+            count = radius > 0f ? physics.SphereCast(origin, radius, direction, surfaceHits, distance, mask, QueryTriggerInteraction.Ignore)
+                : physics.Raycast(origin, direction, surfaceHits, distance, mask, QueryTriggerInteraction.Ignore);
+            if (count < surfaceHits.Length) break;
+            System.Array.Resize(ref surfaceHits, surfaceHits.Length * 2);
+        } while (surfaceHits.Length < 2048);
+        float best = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            var candidate = surfaceHits[i];
+            if (candidate.distance >= best || candidate.collider.GetComponentInParent<SmoothFirstPersonController>() != null ||
+                (carrier != null && carrier.CarriedCreature != null && candidate.collider.transform.IsChildOf(carrier.CarriedCreature.transform))) continue;
+            best = candidate.distance; hit = candidate;
+        }
+        return hit.collider != null && (((1 << hit.collider.gameObject.layer) & layers) != 0 || GooPaint.Covers(hit.point, hit.normal));
+    }
     private static readonly float[] ReachScales = { 1f, 0.7f, 0.45f, 0.25f };
     private static readonly float[] DetourScales = { 1f, 0.6f };
 
@@ -784,7 +855,7 @@ public sealed class HandClimber : MonoBehaviour
     {
         Vector3 inward = FlatInward();
         Vector3 origin = anchor + Vector3.up * 1.2f - inward * 0.6f;
-        return Physics.Raycast(origin, inward, out RaycastHit hit, 1.4f, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal);
+        return ClimbRaycast(origin, inward, out RaycastHit hit, 1.4f, climbLayers, QueryTriggerInteraction.Ignore) && Grippable(hit.normal);
     }
 
     /// <summary>Too steep to stand on, and not a ceiling (overhangs are fine).</summary>
@@ -796,7 +867,7 @@ public sealed class HandClimber : MonoBehaviour
         slipSurface = null;
         // Ledge tops and lips hold: hands resting on something flat-ish do not slide.
         if (normal.y > 0.45f) { hit = default; return false; }
-        if (!Physics.Raycast(point + normal * 0.3f, -normal, out hit, 0.6f, climbLayers, QueryTriggerInteraction.Ignore)) return false;
+        if (!ClimbRaycast(point + normal * 0.3f, -normal, out hit, 0.6f, climbLayers, QueryTriggerInteraction.Ignore)) return false;
         if (hit.normal.y > 0.45f) return false;
         slipSurface = hit.collider.GetComponent<SlipperySurface>();
         return slipSurface != null;
@@ -834,7 +905,7 @@ public sealed class HandClimber : MonoBehaviour
                 hands[i].to += drop;
                 Vector3 lower = hands[i].hold + drop;
                 // Stay on the surface as it curves.
-                if (Physics.Raycast(lower + hands[i].normal * 0.3f, -hands[i].normal, out RaycastHit hit, 0.8f, climbLayers, QueryTriggerInteraction.Ignore)
+                if (ClimbRaycast(lower + hands[i].normal * 0.3f, -hands[i].normal, out RaycastHit hit, 0.8f, climbLayers, QueryTriggerInteraction.Ignore)
                     && Grippable(hit.normal))
                 {
                     hands[i].hold = hit.point;
@@ -881,7 +952,7 @@ public sealed class HandClimber : MonoBehaviour
         foreach (float height in heights)
         {
             Vector3 origin = anchor + Vector3.up * height + inward * back + side * lateral;
-            bool ok = Physics.Raycast(origin, Vector3.down, out RaycastHit hit, height + 1f, climbLayers, QueryTriggerInteraction.Ignore)
+            bool ok = ClimbRaycast(origin, Vector3.down, out RaycastHit hit, height + 1f, climbLayers, QueryTriggerInteraction.Ignore)
                 && hit.normal.y >= minNormalY;
             if (ok)
             {
@@ -926,7 +997,7 @@ public sealed class HandClimber : MonoBehaviour
         if (length < 1e-3f) return false;
         // Starting against the wall itself: judge by a thin line instead.
         if (Physics.CheckSphere(from, radius, climbLayers, QueryTriggerInteraction.Ignore)) return Physics.Linecast(from, to, climbLayers, QueryTriggerInteraction.Ignore);
-        return Physics.SphereCast(from, radius, path / length, out _, length, climbLayers, QueryTriggerInteraction.Ignore);
+        return ClimbSphereCast(from, radius, path / length, out _, length, climbLayers, QueryTriggerInteraction.Ignore);
     }
 
     // Spots start a little back from the edge so the player is not set down half over it.
@@ -945,7 +1016,7 @@ public sealed class HandClimber : MonoBehaviour
         for (float d = 0.05f; d <= reach + 0.05f; d += 0.12f)
         {
             Vector3 origin = new Vector3(anchor.x, y, anchor.z) + inward * d;
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, y - top.y + 1.5f, climbLayers, QueryTriggerInteraction.Ignore)
+            if (ClimbRaycast(origin, Vector3.down, out RaycastHit hit, y - top.y + 1.5f, climbLayers, QueryTriggerInteraction.Ignore)
                 && hit.normal.y > 0.35f && hit.point.y > anchor.y - 0.3f)
                 return hit.point;
         }
@@ -1008,7 +1079,7 @@ public sealed class HandClimber : MonoBehaviour
             else if ((foot.hold - ideal).sqrMagnitude > 0.35f * 0.35f && !footholds[1 - i].moving)
             {
                 Vector3 to = ideal;
-                if (Physics.Raycast(ideal + wallNormal * 0.5f, -wallNormal, out RaycastHit hit, 1f, climbLayers, QueryTriggerInteraction.Ignore))
+                if (ClimbRaycast(ideal + wallNormal * 0.5f, -wallNormal, out RaycastHit hit, 1f, climbLayers, QueryTriggerInteraction.Ignore))
                     to = hit.point + hit.normal * 0.03f;
                 foot = new Foot { hold = foot.hold, from = foot.hold, to = to, moving = true, t = 0f };
             }
@@ -1106,7 +1177,7 @@ public sealed class HandClimber : MonoBehaviour
         {
             float s = i == 0 ? -1f : 1f;
             Vector3 plant = lip + side * (0.24f * s) + inward * 0.1f;
-            if (Physics.Raycast(plant + Vector3.up * 0.6f, Vector3.down, out RaycastHit hit, 1.2f, climbLayers, QueryTriggerInteraction.Ignore))
+            if (ClimbRaycast(plant + Vector3.up * 0.6f, Vector3.down, out RaycastHit hit, 1.2f, climbLayers, QueryTriggerInteraction.Ignore))
                 plant = hit.point;
             hands[i] = new Hand { moving = true, from = HandPosition(i), to = plant, normal = hands[i].normal, toNormal = Vector3.up, t = 0f };
         }

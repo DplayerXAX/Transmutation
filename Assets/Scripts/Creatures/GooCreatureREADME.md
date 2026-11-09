@@ -33,9 +33,8 @@ a non-creature solid. A falling object hitting resting Goo paints both the strik
 and the supporting ground, when present. Successful reactions log `goo explode`
 once. Full Fuzz and other creatures preserve the blob.
 
-Paint follows its supporting object. Its radius is approximately 1.98 metres,
-twice the former 1.4-metre patch's area; visible paint, grip collider, and climb
-coverage scale together. The oldest patches are removed beyond 24 active splats.
+Paint follows its supporting object and the actual connected collision surface, including uneven ground, corners, and chunk seams. Its nominal diameter is eight metres. Border detail adapts to the irregular outline; visible coverage and grip queries use the same triangles. Paint has no floating box collider. The oldest patches are removed beyond 24 active splats. Terrain edits locally rebuild affected patches or remove unsupported paint. See [the surface design](../../../Docs/RecycleSurfaceDesign.md) for the tracing algorithm and research.
+
 The maximum charged throw speed is 26 m/s; minimum speed remains 4 m/s.
 
 ## Setup

@@ -131,6 +131,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
         Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, petRange, petLayers, carrier, out hit);
         // The creature already held in the right hand is not petted.
         if (creature == null || creature is GlowHoney || creature.IsDead ||
+            creature is CeilingBatBug || creature is CeilingBatBugEgg ||
             (carrier != null && (carrier.CarriedCreature == creature || carrier.CarriedCreature is GlowHoney))) return null;
         return creature;
     }

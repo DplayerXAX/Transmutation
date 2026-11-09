@@ -6,9 +6,10 @@ using UnityEngine.Rendering;
 /// colossus kneels. Carried, left click pours its stored life into the creature under the crosshair
 /// (adds remaining Age) - the opposite of the TimeSpider, and an answer to water's ageing. Its store
 /// refills while it rests near any Ore Colossus. Water, blasts and stomps cannot hurt it.
+/// Whenever it is not carried it radiates a stillness aura: creatures inside do not age (StillnessField).
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
-public sealed class GeodeLarva : Creature
+public sealed class GeodeLarva : Creature, StillnessField.ISource
 {
     [Header("Life Store")]
     [Tooltip("Most life (seconds of Age) it can hold.")]
@@ -28,6 +29,13 @@ public sealed class GeodeLarva : Creature
     [Tooltip("Slower than this (m/s) counts as resting.")]
     [Min(0f)] [SerializeField] private float restSpeed = 0.25f;
 
+    [Header("Stillness Aura")]
+    [Tooltip("Radius of the aura, in metres; creatures inside do not age while the larva is not carried.")]
+    [Min(0.5f)] [SerializeField] private float auraRadius = 6f;
+    [Tooltip("Seconds between pulses rippling out to the edge of the aura.")]
+    [Min(0.2f)] [SerializeField] private float auraPulseInterval = 2.4f;
+    [ColorUsage(false, true)] [SerializeField] private Color auraColor = new Color(0.45f, 1.3f, 1.05f);
+
     [Header("Look")]
     [SerializeField] private Material glowMaterial;
     [Tooltip("Glow left when the store is empty (share of full).")]
@@ -46,6 +54,13 @@ public sealed class GeodeLarva : Creature
     private LineRenderer beam;
     private Material beamMaterial, runtimeMaterial;
     private Mesh runtimeMesh;
+    private Transform auraRoot;
+    private Renderer[] auraShells = new Renderer[0];
+    private Material auraMaterial;
+    private MaterialPropertyBlock auraBlock;
+    private float auraBlend;
+    private static readonly int AuraFadeId = Shader.PropertyToID("_Fade");
+    private static readonly int AuraColorId = Shader.PropertyToID("_Color");
     private static readonly RaycastHit[] hits = new RaycastHit[24];
     private static readonly int EmissionId = Shader.PropertyToID("_EmissionColor");
 
@@ -56,6 +71,12 @@ public sealed class GeodeLarva : Creature
     public bool Nested => nested;
     public OreColossus Home => home;
     public int Infusions { get; private set; }
+    public float AuraRadius => auraRadius;
+    /// <summary>The aura is up whenever the larva lies free (nested or dropped), not while carried.</summary>
+    public bool StillnessActive => !IsDead && !IsCarried && isActiveAndEnabled;
+    public Vector3 StillnessCentre => transform.position;
+    public float StillnessRadius => auraRadius;
+    public UnityEngine.SceneManagement.Scene StillnessScene => gameObject.scene;
     /// <summary>Raised after life is given: (receiver, amount).</summary>
     public event System.Action<Creature, float> Infused;
 
@@ -65,6 +86,9 @@ public sealed class GeodeLarva : Creature
     public override string InteractionPrompt => IsDead || !IsCarried || reserve < 1f ? null : "Infuse life";
     public override string CarriedPrompt => IsDead ? null : reserve >= 1f ?
         $"Left click: infuse life ({reserve:0}/{capacity:0})" : "Drained: let it rest near an Ore Colossus";
+
+    protected override void OnEnable() { base.OnEnable(); StillnessField.Register(this); }
+    protected override void OnDisable() { StillnessField.Unregister(this); if (auraRoot != null) auraRoot.gameObject.SetActive(false); base.OnDisable(); }
 
     protected override void InitializeCreature()
     {
@@ -131,6 +155,68 @@ public sealed class GeodeLarva : Creature
         flash = Mathf.MoveTowards(flash, 0f, deltaTime * 2.5f);
         UpdateGlow();
         UpdateBeam(deltaTime);
+        UpdateAura(deltaTime);
+    }
+
+    // ---------------- Stillness aura ----------------
+
+    /// <summary>A faint shell at the aura's edge and two pulses rippling out to it, kept in world space.</summary>
+    private void BuildAura()
+    {
+        Shader shader = Shader.Find("Capstone/Creature/StillnessAura");
+        if (shader == null) return;
+        auraMaterial = new Material(shader) { name = "Stillness Aura (runtime)", hideFlags = HideFlags.DontSave };
+        auraMaterial.SetColor(AuraColorId, auraColor);
+        auraBlock = new MaterialPropertyBlock();
+        var probe = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        Mesh sphere = probe.GetComponent<MeshFilter>().sharedMesh;
+        Destroy(probe);
+        auraRoot = new GameObject("Stillness Aura") { layer = 2 }.transform;
+        UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(auraRoot.gameObject, gameObject.scene);
+        auraShells = new Renderer[3];
+        for (int i = 0; i < auraShells.Length; i++)
+        {
+            var shell = new GameObject(i == 0 ? "Edge" : "Pulse " + i) { layer = 2 };
+            shell.transform.SetParent(auraRoot, false);
+            shell.AddComponent<MeshFilter>().sharedMesh = sphere;
+            var renderer = shell.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = auraMaterial;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            auraShells[i] = renderer;
+        }
+    }
+
+    private void UpdateAura(float deltaTime)
+    {
+        auraBlend = Mathf.MoveTowards(auraBlend, StillnessActive ? 1f : 0f, deltaTime * 2f);
+        if (auraRoot == null)
+        {
+            if (auraBlend <= 0f) return;
+            BuildAura();
+            if (auraRoot == null) return;
+        }
+        bool visible = auraBlend > 0f;
+        if (auraRoot.gameObject.activeSelf != visible) auraRoot.gameObject.SetActive(visible);
+        if (!visible) return;
+        auraRoot.SetPositionAndRotation(transform.position, Quaternion.identity);
+        float diameter = auraRadius * 2f;
+        float breathe = 0.85f + 0.15f * Mathf.Sin(Time.time * 1.3f);
+        SetShell(auraShells[0], diameter, 0.35f * breathe * auraBlend);
+        for (int k = 1; k < auraShells.Length; k++)
+        {
+            float t = Mathf.Repeat(Time.time / auraPulseInterval + (k - 1f) / (auraShells.Length - 1f), 1f);
+            float grow = 1f - (1f - t) * (1f - t);
+            SetShell(auraShells[k], diameter * Mathf.Max(0.05f, grow), Mathf.Pow(1f - t, 1.5f) * 0.8f * auraBlend);
+        }
+    }
+
+    private void SetShell(Renderer shell, float diameter, float fade)
+    {
+        shell.transform.localScale = Vector3.one * diameter;
+        shell.GetPropertyBlock(auraBlock);
+        auraBlock.SetFloat(AuraFadeId, fade);
+        shell.SetPropertyBlock(auraBlock);
     }
 
     private bool NearColossus()
@@ -249,6 +335,8 @@ public sealed class GeodeLarva : Creature
 
     private void OnDestroy()
     {
+        if (auraRoot != null) Destroy(auraRoot.gameObject);
+        if (auraMaterial != null) Destroy(auraMaterial);
         if (beamMaterial != null) Destroy(beamMaterial);
         if (runtimeMaterial != null) Destroy(runtimeMaterial);
         if (runtimeMesh != null) Destroy(runtimeMesh);
