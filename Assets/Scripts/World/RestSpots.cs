@@ -134,11 +134,14 @@ public sealed class RestSpotSystem : MonoBehaviour
 
     // ---------------- Update ----------------
 
+    private float nextDefaults, nextMeditationLookup;
+
     private void Update()
     {
         if (!FindPlayer()) return;
         if (BoneRide.Busy) { near = null; return; }
-        AddDefaultSpots();
+        // Looks for the world and landmarks (whole-scene searches) only twice a second until they are found.
+        if (Time.time >= nextDefaults && (!spawnSeatAdded || !landmarkSpotsAdded)) { nextDefaults = Time.time + 0.5f; AddDefaultSpots(); }
         Keyboard keyboard = Keyboard.current;
         bool meditating = meditation != null && meditation.IsMeditating;
 
@@ -485,7 +488,7 @@ public sealed class RestSpotSystem : MonoBehaviour
             view = Camera.main;
             if (view != null) cameraHolder = view.transform.parent != null ? view.transform.parent : view.transform;
         }
-        if (meditation == null) meditation = FindFirstObjectByType<MeditationController>();
+        if (meditation == null && Time.time >= nextMeditationLookup) { nextMeditationLookup = Time.time + 1f; meditation = FindFirstObjectByType<MeditationController>(); }
         return body != null && view != null;
     }
 

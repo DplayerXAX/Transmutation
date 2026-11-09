@@ -1,0 +1,5 @@
+FAIL: System.InvalidOperationException: Player starts in the original underground tutorial
+  at LeafMapValidation.Check (System.Boolean pass, System.String label) [0x0001f] in D:\unity\CapstoneTeams\Assets\Scripts\Editor\LeafMapValidation.cs:206 
+  at LeafMapValidation.TutorialAndLayout () [0x0001c] in D:\unity\CapstoneTeams\Assets\Scripts\Editor\LeafMapValidation.cs:160 
+  at LeafMapValidation.Tick () [0x001e4] in D:\unity\CapstoneTeams\Assets\Scripts\Editor\LeafMapValidation.cs:77 
+Mode: tutorial geometry, selective emission, carried shooting, planting and scene collision (short check).

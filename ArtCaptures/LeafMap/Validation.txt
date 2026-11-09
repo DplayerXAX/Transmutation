@@ -1,0 +1,6 @@
+Scene: Assets/Scenes/Scene_LeafMap.unity
+Creature count: 163
+Mesh renderers: 2271
+Interactive bubble flowers: 114
+Plantable seeds: 10
+Shader errors: 0

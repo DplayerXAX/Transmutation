@@ -1,0 +1,8 @@
+Dense meadow blooms: 5095
+Interactive flowers: 49
+Original purple four-petal flower prefab restored.
+Six floating stone traversal nodes.
+03 adjoining the meadow northwest / 05 northeast / 06 horizontal above 05.
+Generated mesh assets: 208
+Finite geometry / main route / vent clearance: PASS
+Original ArtReference scene and materials preserved.

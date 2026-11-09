@@ -1,0 +1,3 @@
+Longest vertebra gap / resting gap during the awakening: 1.12
+Vertebra samples inside the terrain: 837 of 34240 (2.4%)
+Still emerging after 16 s: False

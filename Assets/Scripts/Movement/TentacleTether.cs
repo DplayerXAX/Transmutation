@@ -324,6 +324,8 @@ public sealed class TentacleTether : MonoBehaviour
         if (arm < 0) Say("No free arm: tap R to let the stuck ones go");
         if (arm >= 0)
         {
+            // One of two shots at random (Play_ShootTentacle holds both clips).
+            AudioManager.PostEvent("Play_ShootTentacle", gameObject);
             pinnedArms.Add(arm);
             // It is shot at its full length: walking further than this stretches it.
             restLengths[arm] = playerBody != null ? Vector3.Distance(playerBody.position, point) : 0f;

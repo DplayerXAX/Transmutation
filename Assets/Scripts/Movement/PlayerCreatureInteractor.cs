@@ -100,6 +100,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !HeldHasOwnUse())
             return;
 
+        AudioManager.PostEvent("Play_LMB", gameObject);
         TryInteract();
     }
 
@@ -396,6 +397,9 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 /// </summary>
 internal static class CreatureAim
 {
+    // Width of the forgiving second cast (metres): wide enough for flowers and small creatures, still exact enough to choose.
+    private const float AimRadius = 0.3f;
+
     public static Creature Find(
         PhysicsScene scene,
         Ray ray,
@@ -403,7 +407,7 @@ internal static class CreatureAim
         int layers,
         PlayerCreatureCarrier carrier,
         out RaycastHit hit,
-        float aimRadius = 0.18f)
+        float aimRadius = AimRadius)
     {
         hit = default;
 

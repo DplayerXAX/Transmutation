@@ -122,6 +122,7 @@ public static class BoneAwakeningValidation
                 stationType.GetField("frameUp").SetValue(station, Vector3.forward);
                 stations.Add(station);
             }
+            Set(mother, "launchToSky", false); // this check covers the tail-first back-out; the launch is checked in -climbTestBones
             mother.Wake();
             Check(mother.RequiredFireBubbles == 15 && mother.Emerging, "new mothers require fifteen bubbles and start tail-first emergence");
             var cutscene = UnityEngine.Object.FindFirstObjectByType<BoneAwakeningCutscene>();

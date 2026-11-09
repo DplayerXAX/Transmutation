@@ -78,6 +78,34 @@ The base and layers are synced looping AudioSources (`masterVolume`, `musicVolum
 mixer groups in the bank). Events without clips use `PlaceholderSynth` voices (clock: `bpm`,
 `beatsPerBar`, `bars` in the bank).
 
+## Sound effects (`Assets/Audio/SFX`)
+
+The clips are imported into Wwise (Containers > SFX, SFX Audio Bus) with events of the same names, so with the Wwise
+backend they play through Wwise. **Tools > Capstone > Audio > Add Sound Effects (Assets/Audio/SFX)** also puts the
+clips on the bank entries; those are only used by the Unity backend.
+
+| Event | Clip(s) | Played by |
+| --- | --- | --- |
+| `Play_ShootTentacle` | `shootTenacles_D2`, `shootTenacles_F2` (one at random) | `TentacleTether.FireAt` when an arm sticks |
+| `Play_TentacleNear` | `tenacles` (loop, 3D) | `creatureSounds`: on each `TentacleCreature` while the listener is within 14 m |
+| `Play_LMB` | `LMB` | `PlayerCreatureInteractor`, a left click that interacts / uses |
+| `Play_PickUp` | `pickUp_RMB` | `PlayerCreatureCarrier.BeginCarry` |
+| `Play_Drop` | `drop_RMB` | `PlayerCreatureCarrier.Drop` and throws |
+| `Play_BubblePop` | `bubble_pop` (3D) | `TrappingBubble.Pop` |
+
+`creatureSounds` in the bank maps a Creature class name to a looping sound that plays on the creature while the
+listener is near (fades in, fades out past 1.15 × radius); like music channels, creatures need no audio code.
+
+### Tutorial music (`TutorialMusic`)
+
+Wwise only. `Play_Tutorial` plays the `Tutorial` playlist: segment `Tutorial_Stems` (tracks intro_1..5, 12.5 s,
+looping) and then segment `Tutorial_Outro` (intro_loop trimmed to its last 3.75 s, played once).
+
+Put a `TutorialMusic` on any object (or turn on `playOnStart`). `Begin()` stops `PlayBGM` and starts the stems, all
+silent; `Unlock(n)` / `UnlockNext()` fades stems 1..n in through Game Parameters `Tutorial_1`..`Tutorial_5` (they
+stack); `Finish()` sends a Break, so the current loop ends, the outro plays, and `PlayBGM` starts again when it is done;
+`End()` stops at once. Code: `TutorialMusic.Instance.UnlockNext();`
+
 ## Adding sound
 
 - New layer: add a `MusicLayer` to the bank and a Game Parameter + track of the same name in Wwise, then

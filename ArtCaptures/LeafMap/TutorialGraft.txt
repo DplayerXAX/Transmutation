@@ -1,0 +1,5 @@
+Source: Assets/Scenes/Scene_YoYoTutorialFall.unity
+Offset: (112.00, 26.00, -61.00)
+Resampled density points: 497284
+Practice creatures: 3
+Player: (0.00, -1.80, -197.00)

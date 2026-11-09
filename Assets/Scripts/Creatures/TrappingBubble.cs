@@ -271,6 +271,7 @@ public sealed class TrappingBubble : LeashBubble
             return;
         }
         popped = true;
+        if (Application.isPlaying) AudioManager.PostEvent("Play_BubblePop", gameObject);
         ReleaseLeash();
         if (solidCollider != null) solidCollider.enabled = false;
         if (captureTrigger != null) captureTrigger.enabled = false;

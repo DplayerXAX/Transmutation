@@ -1,0 +1,11 @@
+Batches 4825, SetPass 525, triangles 6354601, bubbles 56
+All on: frame 21.4 ms, player loop 16.0 ms, script Update 6.82 ms
+
+Saving when switched off (frame / player loop / script Update), largest first:
+  [content] flower field: 4.88 / 3.85 / 1.34 ms
+  [content] instanced lily field: 2.69 / 2.33 / 0.78 ms
+  [content] bubble rendering: 1.14 / 0.80 / 0.31 ms
+  [content] time veils: 0.59 / 0.39 / 0.14 ms
+  [content] field emitters: -0.21 / -0.14 / -0.06 ms
+  [content] post effects: -0.66 / -0.65 / -0.48 ms
+  [content] all time-pass decoration: -4.56 / -4.75 / -5.04 ms

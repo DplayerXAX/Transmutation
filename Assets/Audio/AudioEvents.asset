@@ -150,6 +150,79 @@ MonoBehaviour:
     fadeIn: 1.5
     fadeOut: 3
     placeholderVoice: 102
+  - name: Play_ShootTentacle
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: 21b9867b267452146b69d542677b1212, type: 3}
+    - {fileID: 8300000, guid: 41987391106feea449935c63866eedd8, type: 3}
+    volume: 0.9
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0.5
+    maxDistance: 25
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
+  - name: Play_TentacleNear
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: beee305d1eb62b2449132ba60c210a14, type: 3}
+    volume: 0.8
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 1
+    maxDistance: 14
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
+  - name: Play_LMB
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: ef93f15157cfa584bbc5a406dfd50ec2, type: 3}
+    volume: 0.7
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 10
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
+  - name: Play_PickUp
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: 9ee3c59aea0a1984290a93998c6a06e9, type: 3}
+    volume: 0.8
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 10
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
+  - name: Play_Drop
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: 68b01812391d41f4d9c21cba316e629b, type: 3}
+    volume: 0.8
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0
+    maxDistance: 10
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
+  - name: Play_BubblePop
+    kind: 2
+    clips:
+    - {fileID: 8300000, guid: 0c7610e8c9c26924fb367e8203d14ea5, type: 3}
+    volume: 0.9
+    pitchRange: {x: 1, y: 1}
+    loop: 0
+    spatialBlend: 0.8
+    maxDistance: 30
+    fadeIn: 1.5
+    fadeOut: 2.5
+    placeholderVoice: -1
   creatureChannels:
   - creatureType: FuzzCreature
     layerEvent: BGM_fuzzy
@@ -167,3 +240,7 @@ MonoBehaviour:
     layerEvent: BGM_bird
     innerRadius: 2
     outerRadius: 10
+  creatureSounds:
+  - creatureType: TentacleCreature
+    eventName: Play_TentacleNear
+    radius: 14

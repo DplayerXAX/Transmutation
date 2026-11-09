@@ -132,13 +132,21 @@ public sealed class CrosshairHUD : MonoBehaviour
         }
     }
 
+    private float nextLookup;
+
     private void Update()
     {
-        if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
-        if (interactor == null) interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
-        if (petter == null) petter = FindFirstObjectByType<PlayerCreaturePetter>();
-        if (climber == null) climber = FindFirstObjectByType<HandClimber>();
-        if (meditation == null) meditation = FindFirstObjectByType<MeditationController>();
+        // Looking the player's parts up is a search of the whole scene: once a second at most for any still missing
+        // (a scene without meditation used to search every frame).
+        if (Time.unscaledTime >= nextLookup && (carrier == null || interactor == null || petter == null || climber == null || meditation == null))
+        {
+            nextLookup = Time.unscaledTime + 1f;
+            if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+            if (interactor == null) interactor = FindFirstObjectByType<PlayerCreatureInteractor>();
+            if (petter == null) petter = FindFirstObjectByType<PlayerCreaturePetter>();
+            if (climber == null) climber = FindFirstObjectByType<HandClimber>();
+            if (meditation == null) meditation = FindFirstObjectByType<MeditationController>();
+        }
 
         Mode mode = Choose(out bool active, out bool valid);
         CurrentMode = mode.ToString();

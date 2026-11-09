@@ -59,6 +59,17 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Tooltip("Vertical field of view of the player's camera, set at start (60 = the old narrow view; 72 is about 103 degrees across on a wide screen). 0 leaves the camera as it is.")]
     [Range(0f, 110f)] [SerializeField] private float fieldOfView = 72f;
 
+    [Header("Getting Unstuck")]
+    [Tooltip("Count any solid, walkable surface underfoot as ground, whatever its layer (otherwise only What Is Ground).")]
+    [SerializeField] private bool groundOnAnyLayer = true;
+    [Tooltip("Give the body a frictionless material, so it slides off edges and out of corners instead of sticking to them " +
+             "(walking speed and stopping are set by the movement itself, not by friction).")]
+    [SerializeField] private bool frictionlessBody = true;
+    [Tooltip("Pushing against something without moving for this long gives a small hop up and back to get free (0 = off).")]
+    [Min(0f)] [SerializeField] private float unstickAfter = 0.45f;
+    private float stuckFor;
+    private Vector3 lastStuckCheck;
+
     [Header("Feel")]
     [Tooltip("How fast walking reaches full speed (m/s gained per second). Set to 0 for the old force-and-drag movement.")]
     [Min(0f)] [SerializeField] private float groundAcceleration = 60f;
@@ -242,6 +253,15 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         if (playerCamera != null && fieldOfView > 0f) playerCamera.fieldOfView = fieldOfView;
+        if (frictionlessBody)
+        {
+            var slick = new PhysicsMaterial("Player (frictionless)")
+            {
+                dynamicFriction = 0f, staticFriction = 0f, bounciness = 0f,
+                frictionCombine = PhysicsMaterialCombine.Minimum, bounceCombine = PhysicsMaterialCombine.Minimum,
+            };
+            foreach (Collider own in GetComponents<Collider>()) if (!own.isTrigger) own.sharedMaterial = slick;
+        }
         skateShoes = GetComponent<PlayerSkateShoes>();
         if (spawnSkateShoes) SkateShoesPickup.OfferNear(this);
     }
@@ -281,6 +301,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         UpdateRideSupport();
         MovePlayer();
         ExtraGravity();
+        Unstick();
 
         if (sliding)
             SlidingMovement();
@@ -352,24 +373,41 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return Physics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
                 Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore);
         }
-        return Physics.BoxCast(
-            GetGroundCheckOrigin(),
-            groundCheckHalfExtents,
-            Vector3.down,
-            out hit,
-            Quaternion.identity,
-            groundCheckDistance,
-            whatIsGround,
-            QueryTriggerInteraction.Ignore);
+        if (Physics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
+                groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore))
+            return true;
+        // Anything else solid and flat enough underfoot counts too (bones, rocks, decor on other layers):
+        // standing on it without counting as grounded left the player floating, unable to walk or jump.
+        if (!groundOnAnyLayer) return false;
+        int count = Physics.BoxCastNonAlloc(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, groundHits, Quaternion.identity,
+            groundCheckDistance, AnyGroundMask, QueryTriggerInteraction.Ignore);
+        float best = float.MaxValue;
+        bool found = false;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = groundHits[i];
+            if (candidate.collider == null || candidate.collider.attachedRigidbody == rb || candidate.collider.transform.IsChildOf(transform)) continue;
+            if (candidate.distance <= 0f && candidate.point == Vector3.zero) continue; // started overlapping: no usable normal
+            if (Vector3.Angle(candidate.normal, Vector3.up) > maxSlopeAngle + 5f) continue;
+            if (candidate.distance < best) { best = candidate.distance; hit = candidate; found = true; }
+        }
+        return found;
     }
+
+    private readonly RaycastHit[] groundHits = new RaycastHit[16];
+    // Every layer except Ignore Raycast (2), Water (4), UI (5) and Player (6).
+    private const int AnyGroundMask = ~((1 << 2) | (1 << 4) | (1 << 5) | (1 << 6));
+
+    /// <summary>For automated tests with no keyboard: the WASD axes to use.</summary>
+    public Vector2 ScriptedMove { get; set; }
 
     private void ReadMovementInput()
     {
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null)
         {
-            horizontalInput = 0f;
-            verticalInput = 0f;
+            horizontalInput = ScriptedMove.x;
+            verticalInput = ScriptedMove.y;
             return;
         }
 
@@ -651,6 +689,30 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         else if (flat.magnitude <= moveSpeed + 0.1f)
             flat = Vector3.MoveTowards(flat, Vector3.zero, airBrake * dt);
         rb.linearVelocity = rideVelocity + new Vector3(flat.x, velocity.y, flat.z);
+    }
+
+    /// <summary>
+    /// Off the ground but not falling (wedged in a corner, caught on a lip): the keys push but the body has not moved for a moment. A small hop
+    /// up and back frees it.
+    /// </summary>
+    private void Unstick()
+    {
+        if (unstickAfter <= 0f || grounded || rb.isKinematic || restricted || climbing || wallRunning || Flung)
+        {
+            stuckFor = 0f;
+            lastStuckCheck = rb.position;
+            return;
+        }
+        bool pushing = moveDirection.sqrMagnitude > 0.01f;
+        Vector3 moved = rb.position - lastStuckCheck;
+        lastStuckCheck = rb.position;
+        float expected = moveSpeed * Time.fixedDeltaTime;
+        if (pushing && new Vector2(moved.x, moved.z).magnitude < expected * 0.08f) stuckFor += Time.fixedDeltaTime;
+        else stuckFor = 0f;
+        if (stuckFor < unstickAfter) return;
+        stuckFor = 0f;
+        Vector3 back = -moveDirection.normalized * 1.2f;
+        rb.linearVelocity = new Vector3(back.x, 4.5f, back.z);
     }
 
     /// <summary>Heavier falls, and short hops when the jump key is let go early.</summary>
