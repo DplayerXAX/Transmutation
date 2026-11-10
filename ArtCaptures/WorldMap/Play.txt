@@ -1,0 +1,38 @@
+World complete: True after 0.0 s after the first Play frame, 19.5 s after pressing Play (incl. domain reload); saved chunk meshes used: True
+Player at (-10.00, 5.00, -55.00), surface 4.0, ground under feet: World Chunk (9, 2, 9) 1.5 m
+Player velocity (0.00, 0.00, 0.00)
+Bone mother: built, sinkhole 1 root (2.00, -16.70, 162.17)
+Spire: sinkhole 0 children 1
+Creatures alive: 158
+  03 Goo cave — Scene_Goo (yoyo), under the forest: 43 (CeilingBatBug 36, BubbleFlower 4, SkySpider 1, CompostCreature 2)
+  06 Mushroom basin — Scene_FungalHollow (marcus): 27 (MushroomTree 22, BounceShroom 5)
+  Bird 16: 1 (BirdCreature 1)
+  07 Floating stones — flower field up to the crystal island: 20 (BubbleFlower 20)
+  CeilingBatBugEgg(Clone): 31 (CeilingBatBugEgg 31)
+  05 Great crack — bone mother wedged in it: 2 (TentacleCreature 2)
+  Bird 20: 1 (BirdCreature 1)
+  Bird 22: 1 (BirdCreature 1)
+  BirdBones(Clone): 4 (BirdBones 4)
+  Bird 4: 1 (BirdCreature 1)
+  08 Crystal sky island — Scene_CisternBasin (marcus): 8 (CisternSnail 5, OreColossus 3)
+  Bird 3: 1 (BirdCreature 1)
+  Bird 24: 1 (BirdCreature 1)
+  Bird 13: 1 (BirdCreature 1)
+  Bird 23: 1 (BirdCreature 1)
+  TrappingBubble(Clone): 5 (TrappingBubble 5)
+  Bird 15: 1 (BirdCreature 1)
+  Bird 14: 1 (BirdCreature 1)
+  Bird 10: 1 (BirdCreature 1)
+  Bird 9: 1 (BirdCreature 1)
+  Bird 1: 1 (BirdCreature 1)
+  04 Tower ruins — Hanging Spire: 1 (BounceShroom 1)
+  Bird 8: 1 (BirdCreature 1)
+  Bird 18: 1 (BirdCreature 1)
+  Bird 11: 1 (BirdCreature 1)
+  Bird 21: 1 (BirdCreature 1)
+  Bird 6: 1 (BirdCreature 1)
+  Sky Web 1: 1 (SkyWeb 1)
+  Bird 7: 1 (BirdCreature 1)
+  Bird 17: 1 (BirdCreature 1)
+Fell out of the world: 0
+Errors logged: 0

@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{3EB59B83-D5E7-2AC6-4811-8E58F16144B1}",
+    "Hash": "{8211AF03-51BC-3252-8B75-B8DA2585DB6A}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
@@ -434,6 +434,6 @@
     ]
    }
   ],
-  "FileHash": "{4D6E7801-7CBF-60E1-263B-0715CBBF0B2E}"
+  "FileHash": "{B01C0DF4-B694-B3C4-390B-B4FFDF08CCCA}"
  }
 }

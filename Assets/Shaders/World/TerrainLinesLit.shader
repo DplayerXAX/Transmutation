@@ -51,6 +51,11 @@ Shader "Capstone/World/TerrainLinesLit"
         _FloorTriplanarSharpness("Floor Triplanar Sharpness", Range(1, 8)) = 4
         _RingKeepThreshold("Ring Keep Threshold", Range(0, 1)) = 0.14
         _RingKeepMix("Ring Keep Mix", Range(0, 1)) = 0.67
+
+        [Header(Colourful Black)]
+        _IridescentAmount("Ground Tint", Range(0, 0.3)) = 0
+        _IridescentLines("Line Tint", Range(0, 1)) = 0
+        _IridescentScale("Patch Frequency", Float) = 0.015
     }
 
     SubShader
@@ -70,6 +75,9 @@ Shader "Capstone/World/TerrainLinesLit"
             half4 _ShadowColor;
             half4 _LineColor;
             half4 _LineColor2;
+            half _IridescentAmount;
+            half _IridescentLines;
+            float _IridescentScale;
             half _ShadowLineDim;
             half _MainLightAmount;
             float4 _FakeLightDir;
@@ -252,6 +260,15 @@ Shader "Capstone/World/TerrainLinesLit"
                 return saturate(max((half)rings, (half)rays));
             }
 
+            // Oil-slick hues drifting slowly over the world and shifting with the view angle ("colourful black").
+            half3 Iridescence(float3 p, half3 n, half3 v)
+            {
+                float k = _IridescentScale;
+                float s = sin(p.x * k + sin(p.z * k * 1.7) * 2.0) + sin(p.z * k * 1.31 + p.y * k * 3.0 + sin(p.x * k * 0.8));
+                float phase = s * 0.45 + (1.0 - saturate(dot(n, v))) * 0.6;
+                return (half3)(0.5 + 0.5 * cos(6.2832 * (phase + float3(0.0, 0.33, 0.67))));
+            }
+
             half4 Frag(Varyings input) : SV_Target
             {
                 half3 normalWS = normalize(input.normalWS);
@@ -266,9 +283,12 @@ Shader "Capstone/World/TerrainLinesLit"
                 half detail = LineWorldDetail(input.positionWS);
                 half hatch = LineWorldHatch(input.positionWS, light, _HatchScale, _HatchWidth) * _HatchStrength * detail;
                 half3 color = lerp(baseColor, _HatchColor.rgb, hatch);
+                half3 irid = Iridescence(input.positionWS, normalWS, viewDirWS);
+                color += irid * _IridescentAmount * (0.35h + 0.65h * light);
 
                 half3 lineColor = LineWorldSheen(_LineColor.rgb, _LineColor2.rgb, normalWS, viewDirWS, input.positionWS, _SheenAmount);
                 lineColor *= lerp(_ShadowLineDim, 1.0h, light);
+                lineColor = lerp(lineColor, lineColor * (0.45h + irid * 0.95h), _IridescentLines);
                 color = lerp(color, lineColor, TerrainLines(input.positionWS, normalWS) * detail);
 
                 color = LineWorldHaze(color, input.positionWS, _HazeColor, _HazeStart, _HazeEnd);

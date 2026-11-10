@@ -109,7 +109,7 @@ public sealed partial class ProceduralWorld
                 Vector3 centre = (vertices[a] + vertices[b] + vertices[c]) / 3f;
                 int col = Mathf.Clamp(Mathf.RoundToInt(centre.z / spacing), 0, n - 1) * n + Mathf.Clamp(Mathf.RoundToInt(centre.x / spacing), 0, n - 1);
                 // The leaf's open-air gorge remains part of the surface world, including its deep floor.
-                bool openRift=field.leafMap && LeafMapTerrain.IsOpenRiftSurface(origin+centre);
+                bool openRift=field.leafMap && LeafMapTerrain.IsOpenRiftSurface(origin+centre) || field.worldMap && WorldMapTerrain.IsOpenCrackSurface(origin+centre);
                 List<int> triangles = field.IsVolumeRecipe || openRift || origin.y + centre.y >= (tops[col] + ceilings[col]) * 0.5f ? surface : inner;
                 triangles.Add(a); triangles.Add(b); triangles.Add(c);
             }
