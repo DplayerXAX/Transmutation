@@ -1075,7 +1075,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
             Vector3 v = Camera.main.WorldToViewportPoint(b.center);
             float hand = carrier.HandAnchor != null ? Vector3.Distance(carrier.HandAnchor.position, b.ClosestPoint(carrier.HandAnchor.position)) : -1f;
             Log($"{pair.Key.Name}: size {b.size.magnitude:0.0}, middle at viewport ({v.x:0.00}, {v.y:0.00}) {v.z:0.0} m ahead, right hand {hand:0.00} m from its surface");
-            if (framesPath != null && index < 6) Save(Camera.main, Path.Combine(framesPath, $"hold_{pair.Key.Name}.png"));
+            if (framesPath != null && index < 6) { Directory.CreateDirectory(framesPath); Save(Camera.main, Path.Combine(framesPath, $"hold_{pair.Key.Name}.png")); }
             // Looking straight down at the ground.
             controller.SetLook(controller.LookYaw, 85f);
             yield return new WaitForSeconds(0.8f);

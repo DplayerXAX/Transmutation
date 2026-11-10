@@ -467,6 +467,8 @@ public sealed partial class ProceduralWorld
             (blockUntilDone || distance <= blockingRadius ? near : far).Add(coord);
         }
         chunksTotal = chunks.Count;
+        // Saved chunk meshes (when they still match) replace the whole sampling phase.
+        if (LoadChunkCache()) return;
         // Blocking startup also uses frozen data; it is the only unbudgeted loading phase.
         var snapshots = new Dictionary<Vector3Int, Dictionary<Vector3Int, float>>();
         foreach (Vector3Int coord in near) snapshots[coord] = CopyModifications(coord);

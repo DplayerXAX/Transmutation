@@ -1,0 +1,25 @@
+Scene copied from Assets/Scenes/Scene_LeafMap.unity; leaf-only content removed.
+Terrain layout (560.00, 640.00) baked to Assets/Terrain/Sculpted/Scene_World_Terrain.asset
+Grafted Assets/Scenes/Scene_Goo.unity at (4.00, -34.00, -138.00): 347605 saved samples.
+Grafted Assets/Scenes/Scene_CisternBasin.unity at (0.00, 88.00, 60.00): 463455 saved samples.
+Spire on sinkhole 0 at (0.00, 31.00, 250.00), mother on sinkhole 1 at (2.00, -16.00, 161.00)
+Player spawn (-10.00, 5.50, -55.00)
+Forest trees: 520
+Ruin pieces: 66
+Goo: tundra decor under the roof kept, 10 pieces through the roof left out.
+Assets/Scenes/Scene_Goo.unity / Goo Level Content: 47 creatures, 39 references moved to Scene_World, 0 cleared.
+Mushroom basin: ceiling removed, 9 west slime walls opened, the rest cut to 52 m.
+Assets/Scenes/Scene_FungalHollow.unity / Fungal Hollow: 27 creatures, 2 references moved to Scene_World, 0 cleared.
+Island: Cistern Basin — 1 pieces past the island edge left out.
+Assets/Scenes/Scene_CisternBasin.unity / Cistern Basin: 8 creatures, 5 references moved to Scene_World, 0 cleared.
+Island: Cistern Basin Decor — 20 pieces past the island edge left out.
+Assets/Scenes/Scene_CisternBasin.unity / Cistern Basin Decor: 0 creatures, 0 references moved to Scene_World, 0 cleared.
+Island: Erosive Fluid — 1 pieces past the island edge left out.
+Assets/Scenes/Scene_CisternBasin.unity / Erosive Fluid: 0 creatures, 1 references moved to Scene_World, 0 cleared.
+Colourful black: terrain World_InkStone, basin floor World_FungalFloor, 19 basin walls darkened.
+Floating stones: spiral reached 74 m (103 stones, 601 tries).
+Floating stones: largest rise 1.7 m, widest gap 4.5 m.
+Floating stones: 116 on the route (9 m to 88 m), 26 decoys, 20 bubble flowers on the upper half.
+Flower field: 8391 bubble lilies (all pickable near the player).
+Region decor: 590 WorldDecor prefabs.
+Saved chunk meshes: 27.2 MB in 16 s.

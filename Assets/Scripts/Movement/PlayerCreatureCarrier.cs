@@ -295,7 +295,8 @@ private void FitCarryPoint(Creature creature)
         // Held by its visual middle (many pivots sit at the feet or off to one side), in front of the right hand.
         heldCentreLocal = Quaternion.Inverse(creature.transform.rotation) * (seen.center - creature.transform.position);
         heldRadius = Mathf.Max(seen.extents.x, Mathf.Max(seen.extents.y, seen.extents.z));
-        carryPoint.localPosition = handRest + holdOutward.normalized * (heldRadius * 0.9f + 0.05f);
+        // Small ones sit right at the hand; big ones go out far enough not to fill the view.
+        carryPoint.localPosition = handRest + holdOutward.normalized * Mathf.Max(heldRadius * 0.9f + 0.05f, heldRadius * 2f - 0.3f);
         return;
     }
     if (creature is BellowsCreature bellows)
@@ -435,7 +436,7 @@ private void FitCarryPoint(Creature creature)
         float distance = toward.magnitude;
         if (distance < 0.01f) return wanted;
         Vector3 dir = toward / distance;
-        float radius = Mathf.Max(0.05f, heldRadius * 0.75f);
+        float radius = Mathf.Max(0.05f, heldRadius * 1.1f); // the whole creature must stay clear, not just its middle
         int count = Physics.SphereCastNonAlloc(eye, radius, dir, holdHits, distance, ~((1 << 2) | (1 << 6)), QueryTriggerInteraction.Ignore);
         float clear = distance;
         for (int i = 0; i < count; i++)
