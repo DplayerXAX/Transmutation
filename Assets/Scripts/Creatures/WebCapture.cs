@@ -75,7 +75,7 @@ public sealed class WebCapture : MonoBehaviour
         if (previousWeb != null) previousWeb.ForgetCapture(this);
     }
 
-    private void OnDisable() => Release();
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots) Release(); }
     private void OnDestroy() => Release();
     private void OnCreatureDied(Creature dead) => Release();
 }

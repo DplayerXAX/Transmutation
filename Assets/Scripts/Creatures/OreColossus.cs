@@ -215,6 +215,12 @@ public sealed class OreColossus : Creature
         return null;
     }
 
+    internal void PrepareReflection(GeodeLarva prefab)
+    {
+        larvaPrefab = prefab;
+        if (!Built) BuildAt(home, RouteHeading());
+    }
+
     /// <summary>Runs one creature update (validation drives it with a fixed step).</summary>
     internal void Advance(float deltaTime) => TickCreature(deltaTime);
 

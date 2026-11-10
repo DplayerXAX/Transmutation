@@ -17,6 +17,8 @@ public sealed class InkSurface : MonoBehaviour
     private bool dirty;
     private bool unsaved;
     private int width, height;
+    private string drawingPath;
+    public bool HasUnsavedInk => unsaved;
 
     public string SurfaceId => surfaceId;
     public MeshCollider Collider { get; private set; }
@@ -26,6 +28,7 @@ public sealed class InkSurface : MonoBehaviour
     public void Setup(string id, Vector2 sizeInMetres)
     {
         surfaceId = id;
+        drawingPath = ReflectionStorage.DrawingPath(id);
         Size = sizeInMetres;
         Collider = GetComponent<MeshCollider>();
         surfaceRenderer = GetComponent<Renderer>();
@@ -47,6 +50,16 @@ public sealed class InkSurface : MonoBehaviour
         block.SetTexture("_InkTex", texture);
         block.SetFloat("_DrawingAmount", 1f);
         surfaceRenderer.SetPropertyBlock(block);
+    }
+
+    internal void LoadPage(string id, string path)
+    {
+        surfaceId = id;
+        drawingPath = path;
+        texture.SetPixelData(new byte[width * height], 0);
+        texture.Apply(false);
+        dirty = unsaved = false;
+        Load();
     }
 
     /// <summary>Paints a soft round line between two uv points.</summary>
@@ -91,16 +104,25 @@ public sealed class InkSurface : MonoBehaviour
         texture.Apply(false);
     }
 
-    public void Save()
+    public bool Save()
     {
-        if (!unsaved || texture == null) return;
-        unsaved = false;
-        ReflectionStorage.SaveBytes(ReflectionStorage.DrawingPath(surfaceId), texture.EncodeToPNG());
+        if (!unsaved || texture == null) return true;
+        try
+        {
+            SlabJournalData.WriteAtomic(drawingPath, texture.EncodeToPNG());
+            unsaved = false;
+            return true;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogWarning("Could not save slab ink: " + exception.Message);
+            return false;
+        }
     }
 
     private void Load()
     {
-        byte[] bytes = ReflectionStorage.LoadBytes(ReflectionStorage.DrawingPath(surfaceId));
+        byte[] bytes = ReflectionStorage.LoadBytes(drawingPath);
         if (bytes == null) return;
         var loaded = new Texture2D(2, 2, TextureFormat.RGBA32, false);
         if (loaded.LoadImage(bytes) && loaded.width == width && loaded.height == height)

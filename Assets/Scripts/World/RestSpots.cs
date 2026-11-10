@@ -4,26 +4,9 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Places to sit and rest, and the scenic views seen from them.
-///   - Walk up to a resting place: [C] sits down and the view slowly turns to that place's scenic view
-///     (the camera stays at the player's eyes). Moving the mouse takes the view back at once.
-///     Only [C] stands up again (the move keys do nothing while seated).
-///   - Every resting place has a scenic view: the direction recorded for it (F7), or else one picked by itself
-///     (the most open way from the seat, towards a landmark if one is in sight).
-///   - Each KIND of resting place (seat, ledge, lookout, hollow, landing, crown, hearth) allows one meditation:
-///     the first time you rest at a new kind, [M] meditates; after that, that kind is spent. Meditation only
-///     starts at a resting place of a new kind (MeditationController.Gate).
-///   - A small glyph hovers over places whose kind you have not meditated at yet.
-/// Places come from: the landmarks (each bridge landing, the spire's crown beam, beside the kiln heart), one seat
-/// near the spawn facing the spire, and whatever was recorded in play mode:
-///   F6 records a resting place where you stand (facing where you look), F8 changes the kind it records,
-///   F7 records where the camera looks as the scenic view of the nearest resting place (sit there, look
-///   round with the mouse, press F7). They are saved to
-///   Assets/Resources/RestSpots.json, kept after play mode, and loaded in builds.
-/// Added by itself to scenes with a ProceduralWorld.
-/// </summary>
+/// <summary>Creates resting creatures at authored and procedural world locations and manages seating.</summary>
 [DefaultExecutionOrder(-50)] // before the controller and the climber read the keys
 public sealed class RestSpotSystem : MonoBehaviour
 {
@@ -56,16 +39,14 @@ public sealed class RestSpotSystem : MonoBehaviour
     private const string ResourceName = "RestSpots";
     private static string EditorFile => Path.Combine(Application.dataPath, "Resources", ResourceName + ".json");
 
-    [SerializeField] private float sitRadius = 2.6f;
     [Tooltip("F7 gives the view to the nearest resting place within this distance (metres).")]
     [SerializeField] private float viewRange = 60f;
-    [Tooltip("Off: meditation works anywhere, as before.")]
-    [SerializeField] private bool meditateOnlyAtRestSpots = true;
 
     private readonly List<RestSpot> spots = new List<RestSpot>();
     private FileData recorded = new FileData();
     private int recordKind;
-    private RestSpot near;
+    private int consumedFrame = -1;
+    private RestSpot worldSeat;
     private RestSpot sittingAt;
     private bool landmarkSpotsAdded, spawnSeatAdded;
     private string toast;
@@ -77,35 +58,52 @@ public sealed class RestSpotSystem : MonoBehaviour
     private MeditationController meditation;
     private bool turning;
     private ViewData scenic;
-    private bool wasKinematic;
+    private bool wasKinematic, seatWasKinematic;
     private Material stone, ink, glow;
 
     public static RestSpotSystem Instance { get; private set; }
     public IReadOnlyList<RestSpot> Spots => spots;
     public bool Sitting => sittingAt != null;
+    internal RestSpot SeatedAt => sittingAt;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AddToScene()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void RegisterSceneSetup()
     {
-        if (FindFirstObjectByType<ProceduralWorld>() == null || FindFirstObjectByType<RestSpotSystem>() != null) return;
-        new GameObject("Rest Spots").AddComponent<RestSpotSystem>();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (Instance != null) return;
+        var world = FindFirstObjectByType<ProceduralWorld>();
+        if (world != null && world.gameObject.scene == scene) Create(scene);
+    }
+
+    internal static void EnsureFor(MeditationController controller)
+    {
+        if (Instance == null) Create(controller.gameObject.scene);
+        Instance.meditation = controller;
+    }
+
+    private static void Create(Scene scene)
+    {
+        var system = new GameObject("Rest Spots");
+        SceneManager.MoveGameObjectToScene(system, scene);
+        system.AddComponent<RestSpotSystem>();
     }
 
     private void Awake()
     {
         Instance = this;
         Load();
-        stone = Unlit(new Color(0.88f, 0.87f, 0.84f));
-        ink = Unlit(new Color(0.06f, 0.06f, 0.07f));
-        glow = Unlit(new Color(0.55f, 0.95f, 1f));
-        if (meditateOnlyAtRestSpots) MeditationController.Gate = MeditationGate;
-        MeditationController.Entered += OnMeditate;
+        stone = MakeRestMaterial(new Color(0.88f, 0.87f, 0.84f));
+        ink = MakeRestMaterial(new Color(0.06f, 0.06f, 0.07f));
+        glow = MakeRestMaterial(new Color(0.55f, 0.95f, 1f));
     }
 
     private void OnDestroy()
     {
-        if (MeditationController.Gate == (Func<string>)MeditationGate) MeditationController.Gate = null;
-        MeditationController.Entered -= OnMeditate;
         if (Instance == this) Instance = null;
     }
 
@@ -114,65 +112,73 @@ public sealed class RestSpotSystem : MonoBehaviour
         foreach (SpotData s in recorded.spots) AddSpot(s.kind, s.position, s.yaw, snap: false);
     }
 
-    // ---------------- Meditation rule ----------------
+    internal static bool BlocksInteraction => Instance != null &&
+        (Instance.Sitting || Instance.consumedFrame == Time.frameCount);
 
-    private string MeditationGate()
+    internal void TrySit(RestSpot spot)
     {
-        if (near == null && sittingAt == null) return "Find a place to rest before meditating";
-        RestSpot spot = sittingAt != null ? sittingAt : near;
-        if (LandmarkProgress.HasRested(spot.kind)) return "You have rested like this before. Find another kind of resting place";
-        return null;
+        if (!FindPlayer() || Sitting || consumedFrame == Time.frameCount || !controller.Grounded ||
+            BoneRide.Busy || !spot.CanSit || spot.gameObject.scene != controller.gameObject.scene) return;
+        if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        if (carrier != null && (carrier.CarriedCreature != null || carrier.PendingCreature != null)) return;
+        consumedFrame = Time.frameCount;
+        Sit(spot);
     }
 
-    private void OnMeditate()
+    internal void BeginVisit()
     {
-        RestSpot spot = sittingAt != null ? sittingAt : near;
-        if (spot == null) return;
-        LandmarkProgress.AddRest(spot.kind);
-        foreach (RestSpot s in spots) s.SetNew(!LandmarkProgress.HasRested(s.kind));
+        worldSeat = sittingAt;
+        Stand();
     }
 
-    // ---------------- Update ----------------
+    internal void StandForReturn() => Stand();
+
+    internal void EndVisit()
+    {
+        if (worldSeat == null) return;
+        if (sittingAt != null) Stand();
+        Sit(worldSeat);
+        worldSeat = null;
+    }
 
     private float nextDefaults, nextMeditationLookup;
 
     private void Update()
     {
         if (!FindPlayer()) return;
-        if (BoneRide.Busy) { near = null; return; }
-        // Looks for the world and landmarks (whole-scene searches) only twice a second until they are found.
-        if (Time.time >= nextDefaults && (!spawnSeatAdded || !landmarkSpotsAdded)) { nextDefaults = Time.time + 0.5f; AddDefaultSpots(); }
-        Keyboard keyboard = Keyboard.current;
-        bool meditating = meditation != null && meditation.IsMeditating;
-
-        // Nearest resting place within reach.
-        near = null;
-        float best = sitRadius;
-        foreach (RestSpot spot in spots)
+        if (meditation != null && meditation.Transitioning) return;
+        if (meditation == null || !meditation.Inside)
         {
-            if (spot == null) continue;
-            float d = Vector3.Distance(spot.Seat, body.position);
-            if (d < best) { best = d; near = spot; }
+            if (Time.time >= nextDefaults && (!spawnSeatAdded || !landmarkSpotsAdded))
+            {
+                nextDefaults = Time.time + 0.5f;
+                AddDefaultSpots();
+            }
+            if (Keyboard.current != null) Record(Keyboard.current);
         }
-
-        // Seated: the move, jump and climb keys do nothing (only C stands up).
-        if (sittingAt != null) controller.SuppressJumpForCurrentFrame();
-
-        // Right click (with empty hands and no creature in the crosshair) sits down and stands up; C still works.
-        bool rightClick = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && Application.isFocused && RightClickFree();
-        bool toggle = rightClick || (keyboard != null && keyboard.cKey.wasPressedThisFrame);
-        if (!meditating)
+        if (sittingAt == null) return;
+        controller.SuppressJumpForCurrentFrame();
+        if (Mouse.current?.rightButton.wasPressedThisFrame == true ||
+            Keyboard.current?.spaceKey.wasPressedThisFrame == true)
         {
-            if (sittingAt == null && near != null && toggle) Sit(near);
-            else if (sittingAt != null && toggle) Stand();
-            if (keyboard != null) Record(keyboard);
+            consumedFrame = Time.frameCount;
+            Stand();
+        }
+        else if (consumedFrame != Time.frameCount && Mouse.current?.leftButton.wasPressedThisFrame == true)
+        {
+            consumedFrame = Time.frameCount;
+            if (meditation != null)
+            {
+                if (meditation.Inside) meditation.RequestReturn();
+                else meditation.RequestEntry(sittingAt);
+            }
         }
     }
 
     private void LateUpdate()
     {
         if (!turning || sittingAt == null || scenic == null || controller == null) return;
-        bool meditating = meditation != null && meditation.IsMeditating;
+        bool meditating = meditation != null && meditation.Transitioning;
         Mouse mouse = Mouse.current;
         // Looking round by hand ends the turn.
         if (meditating || (mouse != null && mouse.delta.ReadValue().sqrMagnitude > 4f)) { turning = false; return; }
@@ -189,16 +195,19 @@ public sealed class RestSpotSystem : MonoBehaviour
     private void Sit(RestSpot spot)
     {
         sittingAt = spot;
+        var seatBody = spot.GetComponent<Rigidbody>();
+        seatWasKinematic = seatBody.isKinematic;
+        seatBody.isKinematic = true;
         wasKinematic = body.isKinematic;
         controller.SetRestricted(true);
-        body.linearVelocity = Vector3.zero;
+        if (!body.isKinematic) body.linearVelocity = Vector3.zero;
         body.isKinematic = true;
         // Lower the body so the eyes are at sitting height.
         body.position = spot.Seat + Vector3.up * 0.35f;
-        scenic = ViewFor(spot);
+        scenic = spot.Fixed ? null : ViewFor(spot);
         turning = true;
         spot.SetNew(false); // keep the glyph out of the view while seated
-        Say(LandmarkProgress.HasRested(spot.kind) ? "Resting" : "Resting   [M] meditate here (a new kind of rest)");
+
     }
 
     private void Stand()
@@ -207,7 +216,8 @@ public sealed class RestSpotSystem : MonoBehaviour
         body.position = sittingAt.Seat + Vector3.up * 1.05f;
         body.isKinematic = wasKinematic;
         controller.SetRestricted(false);
-        sittingAt.SetNew(!LandmarkProgress.HasRested(sittingAt.kind));
+        sittingAt.SetNew(false);
+        sittingAt.GetComponent<Rigidbody>().isKinematic = seatWasKinematic;
         sittingAt = null;
         scenic = null;
         turning = false;
@@ -310,7 +320,7 @@ public sealed class RestSpotSystem : MonoBehaviour
         go.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
         RestSpot spot = go.AddComponent<RestSpot>();
         spot.Build(kind, stone, ink, glow);
-        spot.SetNew(!LandmarkProgress.HasRested(kind));
+        spot.SetNew(false);
         spots.Add(spot);
         return spot;
     }
@@ -322,7 +332,7 @@ public sealed class RestSpotSystem : MonoBehaviour
         {
             ProceduralWorld world = FindFirstObjectByType<ProceduralWorld>();
             HangingSpire spire = FindFirstObjectByType<HangingSpire>();
-            if (world != null && world.LayoutReady && Physics.Raycast(body.position + Vector3.up, Vector3.down, 6f, 1 << 7))
+            if ((world == null || world.LayoutReady) && Physics.Raycast(body.position + Vector3.up, Vector3.down, 6f, 1 << 7))
             {
                 spawnSeatAdded = true;
                 // A seat a few steps from where the player starts, facing the spire.
@@ -431,21 +441,9 @@ public sealed class RestSpotSystem : MonoBehaviour
     }
 
     /// <summary>True when right click would sit down here or stand up (the mouse icon shows it).</summary>
-    public bool RightClickSits => (sittingAt != null || near != null) && RightClickFree() && !(meditation != null && meditation.IsMeditating);
+    public bool RightClickSits => false;
 
     private PlayerCreatureCarrier carrier;
-
-    /// <summary>Right click is free for sitting: nothing in the hands and no creature in the crosshair to pick up.</summary>
-    private bool RightClickFree()
-    {
-        if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
-        if (carrier == null) return true;
-        if (sittingAt != null) return carrier.CarriedCreature == null; // seated: right click stands up (unless it puts a creature down)
-        return carrier.CarriedCreature == null && carrier.FindCreature() == null && !BoneRide.Busy;
-    }
-
-    [Tooltip("Off: no written prompts by the rest spot (the mouse icon shows right click). Recording messages still show.")]
-    [SerializeField] private bool showPrompts = false;
 
     // ---------------- Prompt ----------------
 
@@ -457,12 +455,11 @@ public sealed class RestSpotSystem : MonoBehaviour
 
     private void OnGUI()
     {
-        bool meditating = meditation != null && meditation.IsMeditating;
+        bool meditating = meditation != null && meditation.Transitioning;
         if (meditating) return;
         string line = null;
         if (Time.time < toastUntil) line = toast;
-        else if (showPrompts && sittingAt != null) line = LandmarkProgress.HasRested(sittingAt.kind) ? "[RMB] Stand" : "[M] Meditate      [RMB] Stand";
-        else if (showPrompts && near != null) line = LandmarkProgress.HasRested(near.kind) ? "[RMB] Sit" : "[RMB] Sit      [M] Meditate";
+        else if (sittingAt != null && meditation != null) line = meditation.Inside ? "[LMB] Return     [RMB / Space] Stand" : "[LMB] Reflect     [RMB / Space] Stand";
         if (line == null) return;
         var style = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleCenter, fontSize = 18 };
         style.normal.textColor = new Color(0.95f, 0.95f, 0.92f, 0.95f);
@@ -492,7 +489,7 @@ public sealed class RestSpotSystem : MonoBehaviour
         return body != null && view != null;
     }
 
-    private static Material Unlit(Color colour)
+    internal static Material MakeRestMaterial(Color colour)
     {
         var m = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         m.SetColor("_BaseColor", colour);
@@ -504,9 +501,49 @@ public sealed class RestSpotSystem : MonoBehaviour
 /// One resting place: a low stone seat in an etched ring, shaped a little by its kind (a lookout has an empty
 /// frame standing before it, a hollow a low hood of stone). A small glyph hovers over it while its kind is new.
 /// </summary>
-public sealed class RestSpot : MonoBehaviour
+[RequireComponent(typeof(Rigidbody))]
+public sealed class RestSpot : Creature
 {
     public string kind;
+    [SerializeField, Min(0f)] private float discoveryRadius = 10f;
+    [SerializeField] private bool showDiscoveryRange;
+    public float DiscoveryRadius => discoveryRadius;
+    public bool Fixed { get; private set; }
+    public bool CanSit => !IsCarried && !IsDead && (Fixed ||
+        (GetComponent<Rigidbody>().linearVelocity.sqrMagnitude < 0.25f &&
+        ReflectionPhysics.Raycast(Seat, Vector3.down, 0.8f, 1 << 7, QueryTriggerInteraction.Ignore)));
+    public override bool CanBeCarried => !Fixed && !(RestSpotSystem.Instance != null && RestSpotSystem.Instance.Sitting);
+    public override bool CanBeConsumed => false;
+    public override bool Invulnerable => true;
+    public override bool CanUseWhileCarried => true;
+    public override string InteractionPrompt => IsCarried ? null : "Sit";
+    public override void Die() { }
+    public override void ReceiveInteraction(CreatureInteraction interaction)
+    {
+        if (!IsCarried) RestSpotSystem.Instance?.TrySit(this);
+    }
+
+    public void MakeFixed()
+    {
+        Fixed = true;
+        GetComponent<Rigidbody>().isKinematic = true;
+    }
+
+    protected override void InitializeCreature()
+    {
+        SetCreatureName("Resting Creature");
+        Rigidbody body = GetComponent<Rigidbody>();
+        body.constraints = RigidbodyConstraints.FreezeRotation;
+        body.mass = 8f;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!showDiscoveryRange || Fixed) return;
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, discoveryRadius);
+    }
+
     // The view composed for this place when none was recorded (RestSpotSystem.ViewFor).
     [System.NonSerialized] public RestSpotSystem.ViewData autoView;
     private Transform marker;
@@ -561,7 +598,7 @@ public sealed class RestSpot : MonoBehaviour
         if (marker != null) marker.gameObject.SetActive(isNew);
     }
 
-    private void Update()
+    protected override void TickCreature(float dt)
     {
         if (marker != null && marker.gameObject.activeSelf)
         {
@@ -575,7 +612,7 @@ public sealed class RestSpot : MonoBehaviour
         GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.name = "Rest Stone";
         if (!solid) Destroy(go.GetComponent<Collider>());
-        else go.layer = 7;
+        else go.layer = 8;
         go.transform.SetParent(transform, false);
         go.transform.localPosition = local;
         go.transform.localRotation = Quaternion.Euler(tilt, yaw, tilt * 0.5f);

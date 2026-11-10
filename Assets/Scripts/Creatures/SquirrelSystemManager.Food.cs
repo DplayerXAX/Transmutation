@@ -40,6 +40,7 @@ public sealed partial class SquirrelSystemManager
     internal void TickFoodGrowth(float deltaTime)
     {
         if (!replenishFood || deltaTime <= 0f || spawnTrees.Count == 0) return;
+        if (squirrels.Count == 1 && squirrels[0] != null && ReflectionSpotlight.IsFrozen(squirrels[0])) return;
         respawnTimer += deltaTime;
         if (respawnTimer < respawnInterval) return;
         respawnTimer = 0f;

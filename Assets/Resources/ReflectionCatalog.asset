@@ -1,0 +1,276 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a03c632e2eb4ac6a00b5ff36d52c4b7, type: 3}
+  m_Name: ReflectionCatalog
+  m_EditorClassIdentifier:
+  exhibits:
+  - id: birds
+    creatureType: BirdCreature
+    prefab: {fileID: 1589476739031209822, guid: 7e93df72226606c479cd69ed0d8b706c, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 6
+    radius: 5
+    height: 8
+  - id: bat-bugs
+    creatureType: CeilingBatBug
+    prefab: {fileID: 8371091434220634193, guid: 7c2612520c0ceeb4f84f18b5daac60bd, type: 3}
+    support: {fileID: 1197243303752582189, guid: a3115b85825238342929ed65be0b96bd, type: 3}
+    product: {fileID: 0}
+    recipe: 9
+    count: 5
+    radius: 5
+    height: 7
+  - id: sky-spider
+    creatureType: SkySpider
+    prefab: {fileID: 1209126781797158621, guid: a0f1c9776c127f54eaa5cb8e373f04b5, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 7
+    height: 12
+  - id: glow-bees
+    creatureType: GlowBee
+    prefab: {fileID: 0}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 7
+    count: 1
+    radius: 9
+    height: 8
+  - id: squirrel
+    creatureType: Squirrel
+    prefab: {fileID: 2224693188947993226, guid: 6bfee320e35194fc99b2c55d1bd38eaa, type: 3}
+    support: {fileID: 7812910053619368809, guid: 606358e6904854f61985a28041ab5963, type: 3}
+    product: {fileID: 2935333217659554997, guid: e074c5cfe37a44e85976920a38e90ec1, type: 3}
+    recipe: 11
+    count: 1
+    radius: 8
+    height: 9
+  - id: mushroom-tree
+    creatureType: MushroomTree
+    prefab: {fileID: 3548421241432380006, guid: a82781106c4a49344bbe0219cf8c6c38, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 10
+    count: 2
+    radius: 8
+    height: 15
+  - id: bounce-shroom
+    creatureType: BounceShroom
+    prefab: {fileID: 7281831412284706066, guid: 4cd6305231c96654dbe803b89538ca5f, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 4
+    height: 5
+  - id: water
+    creatureType: ErosiveFluidDroplet
+    prefab: {fileID: 0}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 8
+    count: 30
+    radius: 3
+    height: 5
+  - id: general-asura
+    creatureType: GeneralAsura
+    prefab: {fileID: 8854511930475670162, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 5
+    height: 7
+  - id: melee-asura
+    creatureType: MeleeAsura
+    prefab: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: ranged-asura
+    creatureType: RangedAsura
+    prefab: {fileID: 6879694285982727221, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: rolling-asura
+    creatureType: RollingAsura
+    prefab: {fileID: 4609335362252107142, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: fuzz
+    creatureType: FuzzCreature
+    prefab: {fileID: 2040242689, guid: 8851d70f1608403abb377708e2449895, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: bellows
+    creatureType: BellowsCreature
+    prefab: {fileID: 0}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 2
+    count: 1
+    radius: 3
+    height: 5
+  - id: chameleon
+    creatureType: ChameleonCreature
+    prefab: {fileID: 5481141405892126478, guid: 544931d333b4a5646840685a7ff88541, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: compost
+    creatureType: CompostCreature
+    prefab: {fileID: 8025366564731473624, guid: 331bf545ab7c4344a87cc8c873d94622, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: cistern-snail
+    creatureType: CisternSnail
+    prefab: {fileID: 0}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 3
+    count: 1
+    radius: 3
+    height: 5
+  - id: geode-larva
+    creatureType: GeodeLarva
+    prefab: {fileID: 3246921033820648122, guid: c163dae5009d80644ae393da2e3ce91b, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: ore-colossus
+    creatureType: OreColossus
+    prefab: {fileID: 0}
+    support: {fileID: 3246921033820648122, guid: c163dae5009d80644ae393da2e3ce91b, type: 3}
+    product: {fileID: 0}
+    recipe: 4
+    count: 1
+    radius: 24
+    height: 36
+  - id: goo
+    creatureType: GooCreature
+    prefab: {fileID: 7537355415353030912, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: tentacle
+    creatureType: TentacleCreature
+    prefab: {fileID: 1876917216, guid: 50abbeb208954e0cb3f5d2b9bdce0768, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 6
+    height: 9
+  - id: fire-eater
+    creatureType: FireEater
+    prefab: {fileID: 0}
+    support: {fileID: 6899895537282456957, guid: c05a285be30dfe8488310060958d1d64, type: 3}
+    product: {fileID: 0}
+    recipe: 6
+    count: 1
+    radius: 3
+    height: 5
+  - id: recycle-flower
+    creatureType: RecycleFlower
+    prefab: {fileID: 1368712823290443595, guid: 46af3b101c4d6e04697f46f3b5009efc, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: light-moth
+    creatureType: LightMoth
+    prefab: {fileID: 1625857278532673309, guid: 7fcde289f1f6f50418482bcfeb32c968, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: flash-bloom
+    creatureType: FlashBloom
+    prefab: {fileID: 391855873279420763, guid: a59a3178d1de368459a446e85097606a, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: afterglow-pod
+    creatureType: AfterglowPod
+    prefab: {fileID: 6022517212800692504, guid: 6178756f695d82640b3950d7163ba65b, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: corrupt-seed
+    creatureType: CorruptSeed
+    prefab: {fileID: 6140028010984302325, guid: c878ceb52fe491046adcfdd9b2f6f863, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: fire-flower
+    creatureType: FireFlower
+    prefab: {fileID: 6899895537282456957, guid: c05a285be30dfe8488310060958d1d64, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5
+  - id: bubble-flower
+    creatureType: BubbleFlower
+    prefab: {fileID: 78356777658104957, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+    support: {fileID: 0}
+    product: {fileID: 0}
+    recipe: 0
+    count: 1
+    radius: 3
+    height: 5

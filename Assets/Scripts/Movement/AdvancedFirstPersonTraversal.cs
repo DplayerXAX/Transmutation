@@ -215,13 +215,13 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void CheckForSideWalls()
     {
-        wallRight = Physics.Raycast(
+        wallRight = ReflectionPhysics.Raycast(
             transform.position,
             orientation.right,
             out rightWallHit,
             wallCheckDistance,
             whatIsWall) && IsSteepEnough(rightWallHit.normal);
-        wallLeft = Physics.Raycast(
+        wallLeft = ReflectionPhysics.Raycast(
             transform.position,
             -orientation.right,
             out leftWallHit,
@@ -236,7 +236,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private bool AboveGround()
     {
-        return !Physics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
+        return !ReflectionPhysics.Raycast(transform.position, Vector3.down, minJumpHeight, whatIsGround);
     }
 
     private void WallRunStateMachine(Keyboard keyboard)
@@ -349,7 +349,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void ClimbWallCheck()
     {
-        wallFront = Physics.SphereCast(
+        wallFront = ReflectionPhysics.SphereCast(
             transform.position,
             climbSphereCastRadius,
             orientation.forward,
@@ -485,7 +485,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
         if (cameraTransform == null)
             return;
 
-        bool ledgeDetected = Physics.SphereCast(
+        bool ledgeDetected = ReflectionPhysics.SphereCast(
             transform.position,
             ledgeSphereCastRadius,
             cameraTransform.forward,

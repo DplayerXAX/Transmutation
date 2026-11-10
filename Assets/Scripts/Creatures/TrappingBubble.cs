@@ -183,6 +183,7 @@ public sealed class TrappingBubble : LeashBubble
 
     public bool TryCapture(GameObject target)
     {
+        if (target != null && target.TryGetComponent(out Creature creatureInLight) && ReflectionSpotlight.IsFrozen(creatureInLight)) return false;
         if (popped || IsOccupied || !SimulationEnabled || IgnoreTarget(target)) return false;
         if (target.GetComponent<Creature>() == null && target.GetComponent<SmoothFirstPersonController>() == null) return false;
         BubbleCapture capture = target.GetComponent<BubbleCapture>();
@@ -298,7 +299,7 @@ public sealed class TrappingBubble : LeashBubble
         if (Occupant != null) Occupant.Release();
         RestoreExpiredIgnores(true);
     }
-    protected override void OnDisable() { base.OnDisable(); Pop(); }
+    protected override void OnDisable() { base.OnDisable(); if (!ReflectionPhysics.SwitchingWorldRoots) Pop(); }
     private void OnDestroy() => Pop();
 
     private void OnValidate()

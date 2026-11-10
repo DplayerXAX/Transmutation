@@ -34,9 +34,9 @@ public sealed class SkyIslands : MonoBehaviour
     public Vector3 AltarPoint => stones.Length > 0 ? stones[stones.Length - 1] : transform.position;
     public Transform Built => built;
 
-    private void OnEnable() => Rebuild();
+    private void OnEnable() { if (!ReflectionPhysics.SwitchingWorldRoots) Rebuild(); }
 
-    private void OnDisable() => Clear();
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots) Clear(); }
 
     private void OnValidate()
     {

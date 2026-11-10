@@ -348,7 +348,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         // starting inside the uphill edge cannot report its supporting surface.
         float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
             Mathf.Tan(maxSlopeAngle * Mathf.Deg2Rad);
-        if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
+        if (!ReflectionPhysics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
             Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
             whatIsGround, QueryTriggerInteraction.Ignore)) return;
         var surface = ground.collider.GetComponentInParent<IRideSurface>();
@@ -370,16 +370,16 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (WearingSkateShoes)
         {
             // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
-            return Physics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
+            return ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
                 Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore);
         }
-        if (Physics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
+        if (ReflectionPhysics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
                 groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore))
             return true;
         // Anything else solid and flat enough underfoot counts too (bones, rocks, decor on other layers):
         // standing on it without counting as grounded left the player floating, unable to walk or jump.
         if (!groundOnAnyLayer) return false;
-        int count = Physics.BoxCastNonAlloc(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, groundHits, Quaternion.identity,
+        int count = ReflectionPhysics.BoxCastNonAlloc(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, groundHits, Quaternion.identity,
             groundCheckDistance, AnyGroundMask, QueryTriggerInteraction.Ignore);
         float best = float.MaxValue;
         bool found = false;
