@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,6 +16,10 @@ public sealed class ReflectionVisitor : MonoBehaviour
     private Transform cameraHolder;
     private Camera viewCamera;
     private InkSurface focusSurface;
+    private SlabJournal focusJournal;
+    private bool openJournal, suppressRightInk;
+    private SlabJournalButton.Action initialTool;
+    private readonly List<Renderer> hiddenPlayerVisuals = new();
     private Vector3 focusPosition, normalPosition;
     private Quaternion focusRotation, normalRotation;
     private float focusBlend;
@@ -43,7 +48,7 @@ public sealed class ReflectionVisitor : MonoBehaviour
     private void Update()
     {
         if (!active || GetComponent<MeditationController>().Transitioning) return;
-        if (IsDrawing) { UpdateDrawing(); return; }
+        if (IsDrawing) { UpdateJournal(); return; }
         if (RestSpotSystem.BlocksInteraction || Mouse.current == null) { hud.SetHint(null, null); return; }
         var carrier = controller.GetComponentInChildren<PlayerCreatureCarrier>();
         if (carrier != null && (carrier.CarriedCreature != null || carrier.PendingCreature != null))
@@ -55,13 +60,29 @@ public sealed class ReflectionVisitor : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             if (hit.collider.transform.IsChildOf(controller.transform.root)) continue;
+            var control = hit.collider.GetComponent<SlabJournalButton>();
+            if (control != null)
+            {
+                hud.SetHint(null, "[LMB] " + control.Command);
+                if (Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    ConsumedFrame = Time.frameCount;
+                    switch (control.Command)
+                    {
+                        case SlabJournalButton.Action.Previous: control.Journal.Turn(-1); break;
+                        case SlabJournalButton.Action.Next: control.Journal.Turn(1); break;
+                        default: StartFocus(control.Journal.GetComponent<InkSurface>(), control.Command); break;
+                    }
+                }
+                return;
+            }
             var ink = hit.collider.GetComponent<InkSurface>();
             var beam = hit.collider.GetComponentInParent<ReflectionSpotlight>();
             var creature = hit.collider.GetComponentInParent<Creature>();
             if (beam == null && creature != null) beam = ReflectionSpotlight.ForFrozen(creature);
             if (ink != null || beam != null)
             {
-                hud.SetHint(null, ink != null ? "[LMB] Draw" : beam.IsLit ? "[LMB] Release exhibit" : "[LMB] Turn on light");
+                hud.SetHint(null, ink != null ? "[LMB] Open journal" : beam.IsLit ? "[LMB] Release exhibit" : "[LMB] Turn on light");
                 if (Mouse.current.leftButton.wasPressedThisFrame)
                 {
                     ConsumedFrame = Time.frameCount;
@@ -80,13 +101,20 @@ public sealed class ReflectionVisitor : MonoBehaviour
         if (IsDrawing) UpdateFocusCamera();
     }
 
-    private void StartFocus(InkSurface surface)
+    private void StartFocus(InkSurface surface, SlabJournalButton.Action tool = SlabJournalButton.Action.Type)
     {
         normalPosition = cameraHolder.position;
         normalRotation = cameraHolder.rotation;
         controller.SetRestricted(true);
         controller.enabled = false;
         focusSurface = surface;
+        focusJournal = surface.GetComponent<SlabJournal>();
+        openJournal = false;
+        initialTool = tool;
+        suppressRightInk = false;
+        HidePlayerVisuals(controller.transform.root);
+        var firstPerson = FindFirstObjectByType<FirstPersonBody>();
+        if (firstPerson != null) HidePlayerVisuals(firstPerson.VisualRoot);
         focusBlend = 0f;
         focusLeaving = false;
         hasLastUv = false;
@@ -104,24 +132,44 @@ public sealed class ReflectionVisitor : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        hud?.SetHint(null, "[LMB] Draw     [RMB] Erase     [Space] Step back");
+        hud?.SetHint(null, null);
     }
 
-    private void UpdateDrawing()
+    private void UpdateJournal()
     {
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
         if (focusLeaving) return;
 
-        if (keyboard != null && (keyboard.spaceKey.wasPressedThisFrame))
+        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
         {
+            if (focusJournal != null && focusJournal.CancelSticker()) return;
             LeaveFocus();
             return;
         }
-        if (mouse == null || focusBlend < 0.95f) return;
+        if (!openJournal && focusBlend >= 1f)
+        {
+            focusJournal?.BeginEditing(initialTool, viewCamera);
+            openJournal = true;
+            hud?.SetCorner("[Esc] Step back");
+        }
+        if (mouse != null && !mouse.rightButton.isPressed) suppressRightInk = false;
+        if (openJournal && focusJournal != null && mouse?.rightButton.wasPressedThisFrame == true &&
+            focusJournal.DiscardHeldSticker())
+        {
+            suppressRightInk = true;
+            hasLastUv = false;
+            return;
+        }
+        if (mouse == null || !openJournal || focusJournal == null ||
+            !focusJournal.AcceptsInk(mouse.position.ReadValue()))
+        {
+            hasLastUv = false;
+            return;
+        }
 
         bool drawing = mouse.leftButton.isPressed;
-        bool erasing = mouse.rightButton.isPressed;
+        bool erasing = (!suppressRightInk && mouse.rightButton.isPressed) || (drawing && focusJournal.Erasing);
         Vector2 mousePosition = mouse.position.ReadValue();
         if (!drawing && !erasing)
         {
@@ -142,6 +190,7 @@ public sealed class ReflectionVisitor : MonoBehaviour
         float speed = (mousePosition - lastMouse).magnitude / Mathf.Max(Time.deltaTime, 0.001f);
         float radius = erasing ? eraserPixels : brushPixels * Mathf.Lerp(1.25f, 0.55f, Mathf.Clamp01(speed / 2500f));
         focusSurface.Stroke(hasLastUv ? lastUv : uv, uv, radius, erasing);
+        focusJournal.MarkInkDirty();
         lastUv = uv;
         hasLastUv = true;
         lastMouse = mousePosition;
@@ -162,7 +211,8 @@ public sealed class ReflectionVisitor : MonoBehaviour
     private void LeaveFocus()
     {
         focusLeaving = true;
-        focusSurface.Save();
+        focusJournal?.EndEditing();
+        hud?.SetCorner(null);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         hud?.SetHint(null, null);
@@ -170,21 +220,46 @@ public sealed class ReflectionVisitor : MonoBehaviour
 
     private void FinishFocus()
     {
+        RestorePlayerVisuals();
         controller.enabled = true;
         controller.SetRestricted(false);
         ConsumedFrame = Time.frameCount;
         focusSurface = null;
+        focusJournal = null;
         focusLeaving = false;
     }
 
     private void EndFocusNow()
     {
         if (focusSurface == null) return;
-        focusSurface.Save();
+        focusJournal?.EndEditing();
+        hud?.SetCorner(null);
         focusSurface = null;
+        focusJournal = null;
         focusLeaving = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         cameraHolder.SetPositionAndRotation(normalPosition, normalRotation);
+        RestorePlayerVisuals();
     }
+
+    private void HidePlayerVisuals(Transform visuals)
+    {
+        if (visuals == null) return;
+        foreach (Renderer renderer in visuals.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer.forceRenderingOff) continue;
+            renderer.forceRenderingOff = true;
+            hiddenPlayerVisuals.Add(renderer);
+        }
+    }
+
+    private void RestorePlayerVisuals()
+    {
+        foreach (Renderer renderer in hiddenPlayerVisuals)
+            if (renderer != null) renderer.forceRenderingOff = false;
+        hiddenPlayerVisuals.Clear();
+    }
+
+    private void OnDisable() => RestorePlayerVisuals();
 }

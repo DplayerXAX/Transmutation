@@ -9,7 +9,7 @@ public sealed class ReflectionSpace : MonoBehaviour
     [SerializeField] private Material stoneMaterial;
     [SerializeField] private Shader spotlightShader;
     private readonly List<Object> resources = new();
-    private InkSurface slab;
+    private SlabJournal slab;
     private Transform root;
     public Transform Root => root;
     public float FloorRadius { get; private set; }
@@ -68,7 +68,7 @@ public sealed class ReflectionSpace : MonoBehaviour
         seat.Build("Seat", pale, dark, switchMaterial);
         seat.MakeFixed();
         seat.SetNew(false);
-        BuildSlab(stone, pale);
+        BuildSlab(stone, pale, progress.Unlocked);
 
         ErosiveFluidSystem fluid = null;
         ErosiveFluidSource source = null;
@@ -112,14 +112,16 @@ public sealed class ReflectionSpace : MonoBehaviour
         }
     }
 
-    private void BuildSlab(Material stone, Material glyphMaterial)
+    private void BuildSlab(Material stone, Material glyphMaterial, IReadOnlyList<string> unlocked)
     {
         var shape = new SlabShape { width = 14f, height = 6f, depth = 1f, taper = 0.95f, roughness = 0.06f, seed = 7 };
         var board = Part("Giant Slab", Own(MeditationShapes.Slab(shape, 32)), stone, Vector3.forward * 17f);
         board.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
         board.AddComponent<MeshCollider>().sharedMesh = board.GetComponent<MeshFilter>().sharedMesh;
-        slab = board.AddComponent<InkSurface>();
-        slab.Setup("amphitheater-slab-v1", new Vector2(shape.width, shape.height));
+        var ink = board.AddComponent<InkSurface>();
+        ink.Setup(SlabJournalData.FirstPageId, new Vector2(shape.width, shape.height));
+        slab = board.AddComponent<SlabJournal>();
+        slab.Setup(ink, unlocked);
         var glyphs = LandmarkProgress.Glyphs;
         for (int i = 0; i < glyphs.Count; i++)
         {
