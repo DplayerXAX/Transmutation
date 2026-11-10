@@ -240,11 +240,11 @@ public sealed class CreatureThrower : MonoBehaviour
         nearest = default;
         Vector3 step = to - from;
         if (step.sqrMagnitude < 1e-8f) return false;
-        int count = Physics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Collide);
+        int count = ReflectionPhysics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Collide);
         RaycastHit[] results = flightHits;
         if (count == flightHits.Length)
         {
-            results = Physics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Collide);
+            results = ReflectionPhysics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Collide);
             count = results.Length;
         }
         float distance = float.PositiveInfinity;

@@ -1739,7 +1739,7 @@ public sealed class ClimbTestDriver : MonoBehaviour
             {
                 var kinds = new List<string>();
                 foreach (RestSpot r in rests.Spots) kinds.Add(r.kind);
-                Log($"Rest spots: {rests.Spots.Count} ({string.Join(", ", kinds)}); away from them the meditation gate says: {MeditationController.Gate?.Invoke() ?? "(allowed)"}");
+                Log($"Rest spots: {rests.Spots.Count} ({string.Join(", ", kinds)})");
                 if (rests.Spots.Count > 0)
                 {
                     RestSpot first = rests.Spots[0];
@@ -1748,7 +1748,6 @@ public sealed class ClimbTestDriver : MonoBehaviour
                     body.linearVelocity = Vector3.zero;
                     Physics.SyncTransforms();
                     yield return new WaitForSeconds(0.5f);
-                    Log($"    beside the {first.kind}: gate says {MeditationController.Gate?.Invoke() ?? "(allowed)"}");
                     if (framesPath != null)
                     {
                         if (captureCamera == null) { captureCamera = new GameObject("Climb Test Camera").AddComponent<Camera>(); captureCamera.enabled = false; }

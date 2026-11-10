@@ -671,7 +671,7 @@ public sealed class TentacleTether : MonoBehaviour
 
     private static bool BodyClear(Cord cord, Vector3 at)
     {
-        int count = Physics.OverlapSphereNonAlloc(at, PocketRadius(cord), terrainOverlaps, ~0, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(at, PocketRadius(cord), terrainOverlaps, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++) if (TerrainSolid(terrainOverlaps[i])) return false;
         return true;
     }
@@ -724,9 +724,9 @@ public sealed class TentacleTether : MonoBehaviour
 
     private static RaycastHit[] Sweep(Vector3 from, float radius, Vector3 direction, float distance, out int count)
     {
-        count = Physics.SphereCastNonAlloc(from, radius, direction, terrainCasts, distance, ~0, QueryTriggerInteraction.Ignore);
+        count = ReflectionPhysics.SphereCastNonAlloc(from, radius, direction, terrainCasts, distance, ~0, QueryTriggerInteraction.Ignore);
         if (count < terrainCasts.Length) return terrainCasts;
-        var all = Physics.SphereCastAll(from, radius, direction, distance, ~0, QueryTriggerInteraction.Ignore);
+        var all = ReflectionPhysics.SphereCastAll(from, radius, direction, distance, ~0, QueryTriggerInteraction.Ignore);
         count = all.Length;
         return all;
     }
@@ -909,7 +909,7 @@ public sealed class TentacleTether : MonoBehaviour
                 Vector3 dir = -back / stretch;
                 float speed = Mathf.Clamp(stretch * flingPerMetre, 5f, maxFling);
                 Vector3 shot = dir * speed + Vector3.up * (speed * 0.35f);
-                int count = Physics.OverlapSphereNonAlloc(cord.pocket, Mathf.Max(2.5f, stretch * 0.6f), hits, ~0, QueryTriggerInteraction.Ignore);
+                int count = ReflectionPhysics.OverlapSphereNonAlloc(cord.pocket, Mathf.Max(2.5f, stretch * 0.6f), hits, ~0, QueryTriggerInteraction.Ignore);
                 var done = new HashSet<Rigidbody>();
                 for (int i = 0; i < count; i++)
                 {

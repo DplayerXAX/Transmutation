@@ -41,11 +41,13 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     private readonly List<MaterialPropertyBlock> rippleProperties = new List<MaterialPropertyBlock>();
     private readonly float[] rippleAges = new float[32];
     private int nextRipple;
+    private float reflectionRadius;
     public ProceduralWorld World => world;
+    internal int TerrainLayer => world != null ? world.TerrainLayer : 7;
     public ErosiveRain Rain => GetComponentInChildren<ErosiveRain>();
     public float MaximumSpeed => maximumSpeed;
     public float SampleInterval => sampleInterval;
-    public int CollisionLayers => collisionLayers.value | (1 << world.TerrainLayer) | (1 << 4);
+    public int CollisionLayers => collisionLayers.value | (1 << TerrainLayer) | (1 << 4);
     public int ActiveCount => active.Count;
     public int Capacity => maximumDroplets;
     public IReadOnlyList<ErosiveFluidDroplet> Droplets => active;
@@ -73,9 +75,21 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
                 if (droplet != null && droplet.isActiveAndEnabled) Physics.IgnoreCollision(droplet.Collider, surface, false);
         }
     }
+    internal void InitializeReflection(float radius, Material material)
+    {
+        reflectionRadius = radius;
+        dropletMaterial = material;
+        maximumDroplets = 128;
+        erosiveRain = false;
+        Initialize();
+    }
     private void Start()
     {
-        if (world == null) { enabled = false; return; }
+        if (sources == null) Initialize();
+    }
+    private void Initialize()
+    {
+        if (world == null && reflectionRadius <= 0f) { enabled = false; return; }
         view = Camera.main;
         if (erosiveRain && GetComponentInChildren<ErosiveRain>(true) == null)
         {
@@ -89,6 +103,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         friction = new PhysicsMaterial("Fluid friction") { dynamicFriction = 0f, staticFriction = 0f, bounciness = 0f,
             frictionCombine = PhysicsMaterialCombine.Minimum, bounceCombine = PhysicsMaterialCombine.Minimum };
         for (int i = 0; i < maximumDroplets; i++) pool.Push(CreateDroplet());
+        if (world == null) return;
         world.TerrainChanged += Invalidate;
         world.ErosionApplied += EmitDebris;
         var particles = new GameObject("Erosion Debris"); particles.transform.SetParent(transform, false);
@@ -124,6 +139,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     // Creature death is permanent and eating destroys the object, so such droplets are replaced.
     private void Return(ErosiveFluidDroplet droplet)
     {
+        ReflectionSpotlight.Forget(droplet);
         if (droplet != null && !droplet.IsDead) { droplet.Recycle(); pool.Push(droplet); return; }
         if (droplet != null) Destroy(droplet.gameObject);
         // No new objects while this system is being disabled or torn down.
@@ -136,8 +152,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     }
     private void FixedUpdate()
     {
-        if (sources == null || !world.LayoutReady) return;
-        if (world.LastUpdateError != null) { SetEmitting(false); ClearDroplets(); return; }
+        if (sources == null || (world != null && !world.LayoutReady)) return;
+        if (world != null && world.LastUpdateError != null) { SetEmitting(false); ClearDroplets(); return; }
         using (SimulationMarker.Auto())
         {
             float dt = Time.fixedDeltaTime;
@@ -153,7 +169,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
             for (int i = 0; i < sources.Length; i++) if (sources[(i + firstSource) % sources.Length] != null) sources[(i + firstSource) % sources.Length].Emit(dt);
             if (sources.Length > 0) firstSource = (firstSource + 1) % sources.Length;
             sampleTimer += dt;
-            if (sampleTimer >= sampleInterval)
+            if (world != null && sampleTimer >= sampleInterval)
             {
                 foreach (Request request in requests.Values) world.Erode(request.point, request.radius, request.amount);
                 requests.Clear(); sampleTimer = 0f;
@@ -236,6 +252,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     }
     internal bool InBounds(Vector3 point)
     {
+        if (world == null) return point.y > -3f && point.x * point.x + point.z * point.z <= reflectionRadius * reflectionRadius;
         if (!world.LayoutReady) return false;
         // The fixed volume contains solid bedrock; recycle escaped droplets instead of endless falling.
         Bounds bounds = world.VolumeBounds;
@@ -272,7 +289,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         {
             if (droplet == null || !droplet.TryGetEffectContact(out Vector3 point, out Vector3 normal) || !bounds.Contains(point)) continue;
             float reach = Mathf.Max(0.5f, world.CellSize);
-            if (Physics.Raycast(point + normal * reach, -normal, out surface, reach * 2f, mask, QueryTriggerInteraction.Ignore)
+            if (ReflectionPhysics.Raycast(point + normal * reach, -normal, out surface, reach * 2f, mask, QueryTriggerInteraction.Ignore)
                 && world.OwnsCollider(surface.collider)) return true;
         }
         // Fixed digging has no droplet contact. Search outward from the changed volume for
@@ -281,7 +298,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         for (int axis = 0; axis < 3; axis++) for (int sign = -1; sign <= 1; sign += 2)
         {
             Vector3 direction = Vector3.zero; direction[axis] = sign;
-            if (Physics.Raycast(bounds.center, direction, out RaycastHit candidate, bounds.extents[axis] + world.CellSize,
+            if (ReflectionPhysics.Raycast(bounds.center, direction, out RaycastHit candidate, bounds.extents[axis] + world.CellSize,
                 mask, QueryTriggerInteraction.Ignore) && world.OwnsCollider(candidate.collider) && candidate.distance < nearest)
             { surface = candidate; nearest = candidate.distance; }
         }
@@ -301,7 +318,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     public void SetEmitting(bool value) { if (sources != null) foreach (ErosiveFluidSource source in sources) if (source != null) source.SetEmitting(value); }
     public void ClearDroplets()
     { foreach (ErosiveFluidDroplet droplet in active) Return(droplet); active.Clear(); requests.Clear(); soaked.Clear(); sampleTimer = 0f; }
-    private void OnDisable() { Creature.Activated -= ActorActivated; ErosionTarget.SurfacesChanged -= TargetChanged; ClearDroplets(); }
+    private void OnDisable() { Creature.Activated -= ActorActivated; ErosionTarget.SurfacesChanged -= TargetChanged; if (!ReflectionPhysics.SwitchingWorldRoots) ClearDroplets(); }
     private void OnDestroy()
     { if (world != null) { world.TerrainChanged -= Invalidate; world.ErosionApplied -= EmitDebris; } if (friction != null) Destroy(friction); }
 }

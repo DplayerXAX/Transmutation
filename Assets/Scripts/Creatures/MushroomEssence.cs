@@ -82,7 +82,7 @@ public sealed class MushroomEssence : Creature
         if (!Resting(this)) return;
 
         var group = new List<MushroomEssence> { this };
-        int count = Physics.OverlapSphereNonAlloc(transform.position, condenseRadius, nearby, ~0, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(transform.position, condenseRadius, nearby, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++)
         {
             var other = nearby[i].GetComponentInParent<MushroomEssence>();

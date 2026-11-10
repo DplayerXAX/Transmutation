@@ -1,82 +1,37 @@
-# Meditation and the Reflection Space
+# Mind Palace
 
-Press **M** to sit down. The world (sky, then terrain and creatures) is slowly erased into blank paper, and
-the player wakes in the **reflection space**: a pale floor in a paper void with a ring of black stone steles
-and tablets to draw on, and casts of every creature met so far. Press **M** again to return.
+On the ground, aim at a resting creature and left-click to sit. A second left click enters the
+Reflection Space. Right-click or Space stands. Pick up and move a resting creature with the usual
+right-click carry controls. Left click has no effect while carrying one.
 
-## Setup
+The central resting place in the theater works the same way and sends you back to your world seat.
+The giant slab opens drawing on left click. Draw with left click, erase with right click, and
+step back with Space. Drawings and learned glyphs are visible on separate parts of the slab.
 
-**Tools > Capstone > Meditation > Add Meditation To Open Scene** creates the materials in
-`Assets/Materials/Meditation/` and a `Meditation` object with all five components below.
+A world seat records eligible families within 10 metres when you enter. To adjust or preview this
+range in the editor, select a resting creature in Play Mode and use its Discovery Radius and Show
+Discovery Range fields. The theater places exhibits in the order they were discovered. Click a
+frozen member or the light switch to release the group. Use the fixture to turn the beam back on.
+Only its own members freeze when they enter a lit beam. The room resets every visit.
 
-Other menu items:
+## Authoring exhibits
 
-- **Open Saved Drawings Folder**
-- **Clear Saved Drawings And Journal**
+Edit the **ReflectionCatalog** asset under **Assets/Resources**. For a typical new creature:
 
-## Components (all on the `Meditation` object)
+1. Add an exhibit with a permanent, unique ID and the creature's exact C# type name.
+2. Select the **Prefab** recipe and assign the creature prefab. Set its count.
+3. Set the radius and height to fit the entire starting composition. Allow space for the natural
+   size, movement, and any supporting pieces. Placement and beam dimensions follow these values.
+4. Test a clean visit and a release. If the creature needs a habitat or a special group, add a
+   recipe in ReflectionSpace. Keep products such as eggs and webs out of the discovery catalog
+   unless they are intended to get their own exhibits.
 
-| Script | Job |
-| --- | --- |
-| `MeditationController` | Runs the whole sequence: enter, inside, leave. |
-| `ReflectionSpace` | Builds the space once at runtime and moves it to where the player meditates. |
-| `CreatureJournal` | Remembers each creature type the first time the player is near it. |
-| `ReflectionVisitor` | Player control inside the space: walk, look, draw, move casts. |
-| `MeditationHUD` | Hints, "Remembered: ..." toasts, and the full-screen paper blank. |
+Each visit has its own scene and physics. Runtime queries that previously used the global physics
+scene should use the owner's PhysicsScene or ReflectionPhysics. Spawn supports and descendants
+in the owner's scene so the whole visit is cleaned up together.
 
-Helpers (no component): `MeditationVeil` (the erasing sphere), `InkSurface` (a drawable face),
-`CreatureCast` (frozen copy of a creature's meshes), `ReflectionCast` (a cast standing in the space),
-`MeditationShapes` (procedural meshes), `ReflectionStorage` (files).
+Discoveries use Reflection/exhibits-v1.json under Unity's persistent data directory. The slab
+uses Reflection/drawings/amphitheater-slab-v1.png. Old journals, casts, and drawings stay on disk.
 
-## The sequence
-
-1. **Enter** (only on the ground, otherwise a "Find still ground" toast): the player's controller, body,
-   carrier, interactor, climber and prompt HUD are paused and creatures are frozen. The view sinks
-   (`sinkDepth`) and look slows (`settleLook`).
-2. **Erase:** the sky fades, then `MeditationVeil` (an inside-out paper sphere) shrinks around the player,
-   hiding everything beyond it.
-3. **Jump:** behind the paper blank, the space is placed `spaceHeight` (3000 m) above the spot and revealed.
-4. **Inside:** `ReflectionVisitor` drives the player and camera.
-5. **Leave:** drawings are saved, the space is erased, the player returns to the exact spot and the world
-   is revealed from near to far. Control is handed back.
-
-Timing: `settleTime`, `skyEraseTime`, `worldEraseTime`, `spaceRevealTime`, `spaceEraseTime`,
-`worldRevealTime`, all scaled by `transitionSpeed` (2 = twice as fast).
-
-## Inside the space
-
-| Input | Action |
-| --- | --- |
-| WASD + mouse | Slow walk (`walkSpeed` 2.4) and look |
-| LMB on a stele / tablet | Walk the camera up to the face and start drawing |
-| LMB / RMB while drawing | Draw / erase (`brushPixels`, `eraserPixels`) |
-| E or Esc while drawing | Step back |
-| E on a cast | Pick it up / set it down |
-| M | Return to the world |
-
-Layout (`ReflectionSpace`): `seed`, `floorRadius`, `walkRadius`, `steleCount`, `tabletCount`,
-`steleDistance`, `tabletDistance`. **Changing the seed changes every stele shape, so saved drawings no
-longer fit.**
-
-## Creature journal
-
-Every `scanInterval` it checks creatures within `encounterDistance` (6 m) that are on screen
-(`requireInView`). The first of each type (by class; all Fuzz Creatures share one entry) is recorded and a
-`CreatureCast` is copied from its renderers at real size, capped at `castMaxSize`. Nothing is recorded while
-meditating. New casts appear in the space next time; where the player put them is saved too.
-
-## Saved files
-
-Under `Application.persistentDataPath/Reflection/`:
-
-- `journal.json` — met creatures and cast positions
-- `drawings/<id>.png` — one ink texture per face
-- `casts/<key>.mesh` — cast meshes (materials are found again by name)
-- `landmarks.json` — seeds and glyphs, written by the Landmarks system
-
-## Links to other systems
-
-- **Player:** pauses and restores the movement scripts in `Scripts/Movement`.
-- **Creatures:** the journal reads any `Creature`; casts are frozen while meditating.
-- **Landmarks:** `SteleInscriptions` (on the same object) carves learned glyphs high on the steles.
-- Shaders: `Assets/Shaders/Meditation` (`MeditationVeil`, `MeditationInk`).
+Outside Play Mode, use **Tools > Capstone > Meditation > Unlock All Exhibits** or
+**Clear Exhibit Unlocks** to change discovery progress without affecting drawings or glyphs.

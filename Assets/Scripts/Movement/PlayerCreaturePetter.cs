@@ -55,7 +55,7 @@ public sealed class PlayerCreaturePetter : MonoBehaviour
 
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) { Stop(); return; }
+        if (BoneAwakeningCutscene.Playing || RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick) { Stop(); return; }
         if (Petted != null && Petted.IsDead) Stop();
         Mouse mouse = Mouse.current;
         bool held = mouse != null && mouse.leftButton.isPressed && Application.isFocused && BoneRide.Mount == null

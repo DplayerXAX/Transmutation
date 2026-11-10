@@ -50,6 +50,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void Update()
     {
+        if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick) return;
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
         if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); return; }
         // Daniel: Disable interaction during cutscenes,
@@ -263,6 +264,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     /// <summary>Uses the held creature, or interacts with the first creature under the crosshair.</summary>
     public void TryInteract()
     {
+        if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick) return;
         if (interactionCamera == null)
             return;
 

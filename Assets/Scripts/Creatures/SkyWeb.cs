@@ -190,13 +190,13 @@ public sealed class SkyWeb : Creature
     private void ScanForCaptures()
     {
         Vector3 center = transform.position;
-        int count = Physics.OverlapSphereNonAlloc(center, MaximumRadius + 2f, overlapBuffer,
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(center, MaximumRadius + 2f, overlapBuffer,
             trappingLayers, QueryTriggerInteraction.Ignore);
         if (count == overlapBuffer.Length)
         {
             // Expand on exceptional dense frames; do not allocate continuously at the same saturation.
             Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);
-            count = Physics.OverlapSphereNonAlloc(center, MaximumRadius + 2f, overlapBuffer,
+            count = ReflectionPhysics.OverlapSphereNonAlloc(center, MaximumRadius + 2f, overlapBuffer,
                 trappingLayers, QueryTriggerInteraction.Ignore);
         }
         bodyBounds.Clear();
@@ -276,7 +276,7 @@ public sealed class SkyWeb : Creature
     protected override void OnDisable()
     {
         base.OnDisable();
-        ReleaseCaptures();
+        if (!ReflectionPhysics.SwitchingWorldRoots) ReleaseCaptures();
     }
 
     protected override void OnDeath() => ReleaseCaptures();
