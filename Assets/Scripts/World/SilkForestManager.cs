@@ -7,60 +7,123 @@ using UnityEngine.Rendering;
 [DisallowMultipleComponent]
 public sealed class SilkForestManager : MonoBehaviour
 {
-    [Header("Forest / 森林")]
+    [Header("森林整体设置")]
+    [InspectorName("随机种子"), Tooltip("相同种子和参数会生成相同的树林。")]
     public int seed = 73421;
+    [InspectorName("森林范围（米）"), Tooltip("X 为横向宽度，Y 为纵向长度。")]
     public Vector2 forestSize = new Vector2(32, 28);
-    [Tooltip("Trees per 100 square metres / 每100平方米的树数")]
+    [InspectorName("树林密度"), Tooltip("每 100 平方米的目标树数；受最小间距和数量上限约束。")]
     [Range(0, 12)] public float treeDensity = 3.2f;
+    [InspectorName("树木数量上限"), Tooltip("限制最多生成多少棵树。")]
     [Min(1)] public int maximumTrees = 180;
+    [InspectorName("最小树间距（米）"), Tooltip("两棵树干之间允许的最小水平距离。")]
     [Min(0.1f)] public float minimumSpacing = 3.2f;
-    [Tooltip("Keep a walkable corridor through the centre / 中央通道宽度")]
+    [InspectorName("中央通道宽度（米）"), Tooltip("在树林中央留出通道；设为 0 取消。")]
     [Min(0)] public float clearingWidth = 2.4f;
+    [InspectorName("启动时生成"), Tooltip("运行时尚无生成内容时，自动生成树林。")]
     public bool generateOnStart = true;
+    [InspectorName("树干碰撞体"), Tooltip("为树干添加简单的胶囊碰撞体。")]
     public bool trunkColliders = true;
-    [Tooltip("Optional terrain projection. Only these layers are raycast before generation.")]
+    [InspectorName("贴合地面"), Tooltip("向下探测地面，将树根放置在地形或带碰撞体的表面上。")]
     public bool projectToGround;
+    [InspectorName("地面图层"), Tooltip("只在这些图层中寻找可放置树根的地面。")]
     public LayerMask groundLayers = 1;
+    [InspectorName("地面探测高度（米）"), Tooltip("从种植平面上方指定高度向下探测地面。")]
     [Min(1)] public float groundProbeHeight = 100;
 
-    [Header("Tree ranges / 树的随机范围")]
-    [Tooltip("Min/max stalk height to the upper crown attachment. Overall height also includes the crown. / X最小、Y最大；树冠另计高度")]
+    [Header("树木随机范围与形态")]
+    [InspectorName("树干高度范围（米）"), Tooltip("到顶部树冠连接位置的高度；整体高度还包含树冠。")]
     public Vector2 heightRange = new Vector2(9, 16);
+    [InspectorName("顶部球冠数量范围"), Tooltip("每棵树顶部球冠的随机数量，支持 1 至 5 个。")]
     public Vector2Int crownCountRange = new Vector2Int(1, 3);
-    [Tooltip("Crown radius, not diameter / 树冠半径（米）")]
+    [InspectorName("顶部球冠半径范围（米）"), Tooltip("主要球冠的半径范围；附属球冠会额外缩小。")]
     public Vector2 crownRadiusRange = new Vector2(1.15f, 2.05f);
+    [InspectorName("树干小球冠数量范围"), Tooltip("树干中段长出的小球冠数量，支持 0 至 6 个。")]
     public Vector2Int trunkCrownCountRange = new Vector2Int(0, 2);
+    [InspectorName("树干小球冠半径范围（米）"), Tooltip("树干中段小球冠的随机半径。")]
     public Vector2 trunkCrownRadiusRange = new Vector2(0.35f, 0.8f);
-    [Tooltip("Radius of the entire strand bundle / 整束树干半径")]
-    public Vector2 trunkRadiusRange = new Vector2(0.065f, 0.13f);
-    [Range(0, 0.6f)] public float crownAsymmetry = 0.22f;
+    [InspectorName("树干腰部半宽范围（米）"), Tooltip("中段蛛丝束展开时的参考半宽。")]
+    public Vector2 trunkRadiusRange = new Vector2(0.12f, 0.19f);
+    [InspectorName("球冠形状不规则程度"), Tooltip("控制球冠轮廓的轻微起伏；0 为标准球形。")]
+    [Range(0, 0.6f)] public float crownAsymmetry = 0.06f;
+    [InspectorName("丝股交错程度"), Tooltip("控制各股蛛丝沿长度方向侧移和交错的幅度。")]
+    [Range(0, 1)] public float trunkIrregularity = 0.85f;
+    [InspectorName("树干扭转幅度（度）"), Tooltip("每棵树在此范围内随机扭转，沿高度平滑变化。")]
+    [Range(0, 120)] public float trunkTwist = 65;
+    [InspectorName("树冠孔缘包边厚度")]
+    [Tooltip("相对树冠半径的比例，0 关闭隆起包边。")]
+    [Range(0, 0.06f)] public float crownRimHeight = 0.018f;
 
-    [Header("Silk / 蛛丝与黏膜")]
-    [Range(0, 1)] public float tornWebAmount = 0.32f;
-    [Range(0, 1)] public float membraneCoverage = 0.2f;
-    [Range(0.02f, 0.4f)] public float crownWebThickness = 0.12f;
-    [Range(4, 14)] public int trunkStrands = 8;
+    [Header("网膜与孔洞")]
+    [InspectorName("树干开孔程度")]
+    [Tooltip("控制丝束疏密：越大，各股越分开、细膜越少，形成更通透的长缝。")]
+    [Range(0, 1)] public float trunkOpenness = 0.94f;
+    [InspectorName("树冠开孔程度")]
+    [Tooltip("同时调整外壳与内部黏膜的开孔；越大越通透。")]
+    [Range(0, 1)] public float crownOpenness = 0.92f;
+    [InspectorName("丝束分流比例"), Tooltip("控制丝束局部分开后形成的长缝；保留原参数值。")]
+    [Range(0, 1)] public float trunkPairedHoleChance = 0.72f;
+    [InspectorName("斜向牵丝比例"), Tooltip("控制跨过相邻丝股的斜向连接比例，形成拉长的三角空隙。")]
+    [Range(0, 1)] public float trunkTriangleHoleChance = 0.32f;
+    [InspectorName("根部额外镂空程度"), Tooltip("提高后，根部丝股展开得更明显；不铺成连续裙边。")]
+    [Range(0, 1)] public float rootOpenness = 0.9f;
+    [HideInInspector, Range(0, 1)] public float tornWebAmount = 0.32f;
+    [HideInInspector, Range(0, 1)] public float membraneCoverage = 0.2f;
+    [HideInInspector, Range(0.02f, 0.4f)] public float crownWebThickness = 0.24f;
+    [InspectorName("树冠内部黏膜层数"), Tooltip("树冠内部交错的破布状黏膜数量。")]
+    [Range(0, 8)] public int interiorSheetCount = 3;
+    [InspectorName("树干膜片厚度（米）"), Tooltip("树干各张网膜的实际厚度。")]
+    [Range(0.003f, 0.04f)] public float trunkMembraneThickness = 0.014f;
+    [InspectorName("球冠黏膜材质"), Tooltip("球冠外壳与内部破布状黏膜使用的材质。")]
     public Material silkMaterial;
+    [InspectorName("银白蛛丝材质"), Tooltip("树干、根、分支与藤蔓使用的银白丝束材质。")]
+    public Material strandMaterial;
+    [InspectorName("半透明膜材质"), Tooltip("备用的半透明膜材质。")]
     public Material membraneMaterial;
 
-    [Header("Canopy connections / 树冠间的蛛丝藤蔓")]
+    [Header("根部分叉与侧向支枝")]
+    [InspectorName("根部分叉数量范围"), Tooltip("根部拆成独立的网膜根；支持 2 至 8 条，至少两条接地。")]
+    public Vector2Int rootCountRange = new Vector2Int(3, 5);
+    [InspectorName("根部展开距离范围（米）"), Tooltip("各条根从树干向外延伸的距离。")]
+    public Vector2 rootSpreadRange = new Vector2(0.7f, 1.35f);
+    [InspectorName("根部分叉高度范围（米）"), Tooltip("树干在离地多高的位置分成几条根；分叉之间保持开放。")]
+    public Vector2 rootForkHeightRange = new Vector2(0.65f, 1.15f);
+    [InspectorName("根梢上翘比例"), Tooltip("部分根梢向上弯曲而不接地；始终保留至少两条接地根。")]
+    [Range(0, 1)] public float rootCurlChance = 0.3f;
+    [InspectorName("回接丝束数量范围"), Tooltip("两端接回主干、中间向外拱开的侧向丝束数量。")]
+    public Vector2Int sideBranchCountRange = new Vector2Int(2, 4);
+    [InspectorName("回接丝束展开范围（米）"), Tooltip("控制侧向丝束向外拱开的幅度；实际最大偏移约为此值的一半。")]
+    public Vector2 sideBranchLengthRange = new Vector2(0.75f, 1.7f);
+    [InspectorName("回接丝束复股比例"), Tooltip("增加一股较细的平行回接丝束的概率，仍然两端连接主干。")]
+    [Range(0, 1)] public float sideBranchForkChance = 0.45f;
+
+    [Header("树间藤蔓与 Y 形连接")]
+    [InspectorName("藤蔓连接密度"), Tooltip("邻近树之间尝试生成连接的概率。")]
     [Range(0, 1)] public float vineDensity = 0.48f;
+    [InspectorName("藤蔓最大连接距离（米）"), Tooltip("超过此树间距离时，不生成连接。")]
     [Min(0)] public float maximumVineDistance = 11;
+    [InspectorName("每树连接数量上限"), Tooltip("一棵树最多参与的连接组数；Y 形连接也计入。")]
     [Range(1, 4)] public int maximumVinesPerTree = 2;
+    [InspectorName("藤蔓下垂深度范围（米）"), Tooltip("连接膜带随机下垂的深度。")]
     public Vector2 vineSagRange = new Vector2(0.8f, 2.6f);
-    [Range(0.02f, 0.65f)] public float vineWebWidth = 0.24f;
+    [InspectorName("藤蔓网膜展开宽度（米）"), Tooltip("控制膜带在连接处展开的宽度。")]
+    [Range(0.05f, 2f)] public float vineWebWidth = 0.65f;
+    [InspectorName("Y 字连接比例"), Tooltip("0 仅生成双树连接；越大越优先尝试三树共享的 Y 形连接。")]
+    [Range(0, 1)] public float yJunctionChance = 0.55f;
 
     [SerializeField, HideInInspector] private Transform generatedRoot;
     [SerializeField, HideInInspector] private int generatedTreeCount;
     [SerializeField, HideInInspector] private int generatedVineCount;
     [SerializeField, HideInInspector] private int generatedCrownCount;
+    [SerializeField, HideInInspector] private int generatedYJunctionCount;
     public int GeneratedTreeCount => generatedTreeCount;
     public int GeneratedVineCount => generatedVineCount;
     public int GeneratedCrownCount => generatedCrownCount;
+    public int GeneratedYJunctionCount => generatedYJunctionCount;
     public Transform GeneratedRoot => generatedRoot;
 
-    private struct Crown { public Vector3 centre; public float radius; }
-    private sealed class Tree { public Vector3 foot; public float height; public readonly List<Crown> crowns = new List<Crown>(); }
+    private struct Crown { public Vector3 centre; public float radius; public List<Vector3> sockets; }
+    private sealed class Tree { public Vector3 foot; public float height; public int canopyCount; public readonly List<Crown> crowns = new List<Crown>(); }
     private System.Random random;
     private readonly List<Mesh> ownedMeshes = new List<Mesh>();
     private readonly List<Material> ownedMaterials = new List<Material>();
@@ -71,12 +134,6 @@ public sealed class SilkForestManager : MonoBehaviour
         int lo = Mathf.Clamp(Mathf.Min(range.x, range.y), minimum, maximum);
         return random.Next(lo, Mathf.Clamp(Mathf.Max(range.x, range.y), lo, maximum) + 1);
     }
-    private Vector3 Direction()
-    {
-        float y = R(-1, 1), a = R(0, Mathf.PI * 2), s = Mathf.Sqrt(1 - y * y);
-        return new Vector3(Mathf.Cos(a) * s, y, Mathf.Sin(a) * s);
-    }
-
     private void Start() { if (generateOnStart && generatedRoot == null) Regenerate(); }
 
     [ContextMenu("Generate forest / 生成树林")]
@@ -117,6 +174,17 @@ public sealed class SilkForestManager : MonoBehaviour
 
     private void EnsureMaterials()
     {
+#if UNITY_EDITOR
+        if (strandMaterial == null)
+            strandMaterial = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/SilkForest/MAT_TensionedSilk.mat");
+#endif
+        if (strandMaterial == null)
+        {
+            strandMaterial = new Material(Shader.Find("Capstone/Silk Forest/Pearlescent Silk")) { name = "Tensioned silver silk" };
+            strandMaterial.SetColor("_BaseColor", new Color(0.88f,0.93f,1));
+            strandMaterial.SetFloat("_Iridescence",0.12f);
+            ownedMaterials.Add(strandMaterial);
+        }
         if (silkMaterial == null)
         {
             var shader = Shader.Find("Capstone/Silk Forest/Pearlescent Silk");
@@ -142,35 +210,38 @@ public sealed class SilkForestManager : MonoBehaviour
     {
         var silk = new SilkForestGeometry.MeshBuffer();
         var film = new SilkForestGeometry.MeshBuffer();
+        var strands = new SilkForestGeometry.MeshBuffer();
         float trunkRadius = Mathf.Clamp(R(trunkRadiusRange), 0.02f, 0.4f);
-        int strands = Mathf.Clamp(trunkStrands, 4, 14);
-        // Separate tapering threads, with wide buttress webs at ground level.
-        for (int s = 0; s < strands; s++)
-        {
-            float phase = s * Mathf.PI * 2 / strands;
-            var path = new Vector3[29];
-            for (int k = 0; k < path.Length; k++)
-            {
-                float t = k / (float)(path.Length - 1);
-                float spread = trunkRadius * (0.75f + 0.3f * Mathf.Sin(t * 13 + phase)) + Mathf.Pow(1 - t, 12) * R(0.45f, 0.95f);
-                float a = phase + t * 3.2f;
-                path[k] = Spine(tree, t) + new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * spread;
-            }
-            silk.Tube(path, trunkRadius * R(0.12f, 0.24f), 5, new Color(0.9f, 0.96f, 1));
-            var second = new Vector3[path.Length];
-            for (int k = 0; k < second.Length; k++) second[k] = Spine(tree, k / (float)(second.Length - 1));
-            WebStrip(silk, film, path, second, 0.58f);
-        }
-        silk.Tube(Curve(Spine(tree, 0), Spine(tree, 1), tree.height * 0.018f, 25), trunkRadius * 0.26f, 6, Color.white);
-        int count = Count(crownCountRange, 1, 5);
         float mainRadius = Mathf.Clamp(R(crownRadiusRange), 0.2f, 5);
+        Vector3 mainCentre = Spine(tree, 1) + Vector3.up * mainRadius * 0.55f;
+        Vector3 contactDirection = (Spine(tree, 0.75f) - mainCentre).normalized;
+        Vector3 contact = SilkForestGeometry.CrownPoint(mainCentre, mainRadius, contactDirection, crownAsymmetry)-contactDirection*mainRadius*0.1f;
+        float stemEndT = Mathf.Clamp01((contact.y-tree.foot.y)/tree.height);
+        Vector3 correction = contact - Spine(tree, stemEndT);
+        Vector3 RawStem(float t) => Spine(tree, t*stemEndT) + correction*Mathf.Pow(t,4);
+        float rootHeight=Mathf.Clamp(R(rootForkHeightRange),0.2f,tree.height*0.22f);
+        float baseT=Mathf.Clamp(rootHeight/Mathf.Max(1,contact.y-tree.foot.y),0.025f,0.24f);
+        Vector3 Stem(float t)=>RawStem(Mathf.Lerp(baseT,1,t));
+        var roots=SilkForestGeometry.RootLayout(tree.foot,Stem(0),Count(rootCountRange,2,8),rootSpreadRange,rootCurlChance,random);
+        if(projectToGround)
+            for(int i=0;i<roots.Length;i++)
+                if(roots[i].grounded&&Physics.Raycast(transform.TransformPoint(roots[i].end)+Vector3.up*groundProbeHeight,Vector3.down,out var rootHit,groundProbeHeight*2,groundLayers,QueryTriggerInteraction.Ignore))
+                    roots[i].end=transform.InverseTransformPoint(rootHit.point);
+        SilkForestGeometry.ForkedRoots(strands,roots,trunkRadius,trunkMembraneThickness,trunkOpenness<=0?0:Mathf.Lerp(trunkOpenness,1,rootOpenness),
+            trunkIrregularity,trunkTwist,trunkPairedHoleChance,trunkTriangleHoleChance,random);
+        SilkForestGeometry.SilkBundle(strands,Stem,trunkRadius,trunkRadius*1.05f,mainRadius*0.23f,
+            trunkMembraneThickness,tornWebAmount,random,trunkOpenness,trunkIrregularity,trunkTwist,trunkPairedHoleChance,trunkTriangleHoleChance,rootOpenness,9,false,true);
+        int count = Count(crownCountRange, 1, 5);
+        tree.canopyCount=count;
         for (int c = 0; c < count; c++)
         {
             float radius = c == 0 ? mainRadius : Mathf.Clamp(R(crownRadiusRange), 0.2f, 5) * R(0.55f, 0.88f);
             float a = c * 2.4f + R(-0.35f, 0.35f);
-            Vector3 centre = Spine(tree, 1) + (c == 0 ? Vector3.up * radius * 0.55f : new Vector3(Mathf.Cos(a) * mainRadius * 1.02f, R(-0.55f, 0.5f) * mainRadius, Mathf.Sin(a) * mainRadius * 1.02f));
-            AddCrown(silk, film, tree, centre, radius);
-            AddBranch(silk, film, Spine(tree, c == 0 ? 0.84f : R(0.72f, 0.9f)), centre - Vector3.up * radius * 0.65f, trunkRadius);
+            Vector3 centre = c == 0 ? mainCentre : Spine(tree,1) + new Vector3(Mathf.Cos(a)*mainRadius*1.02f,R(-0.55f,0.5f)*mainRadius,Mathf.Sin(a)*mainRadius*1.02f);
+            Vector3 branchStart=Stem(c==0?0.86f:R(0.74f,0.91f));
+            Vector3 attachDirection=c==0?contactDirection:(branchStart-centre).normalized;
+            AddCrown(silk,film,tree,centre,radius,attachDirection);
+            if(c>0)AddBranch(strands,branchStart,centre,radius,attachDirection,trunkRadius);
         }
         int buds = Count(trunkCrownCountRange, 0, 6);
         for (int b = 0; b < buds; b++)
@@ -178,12 +249,26 @@ public sealed class SilkForestManager : MonoBehaviour
             float t = R(0.28f, 0.74f), radius = Mathf.Clamp(R(trunkCrownRadiusRange), 0.12f, 2);
             float a = R(0, Mathf.PI * 2);
             Vector3 centre = Spine(tree, t) + new Vector3(Mathf.Cos(a), 0.15f, Mathf.Sin(a)) * radius * 0.9f;
-            AddCrown(silk, film, tree, centre, radius);
-            AddBranch(silk, film, Spine(tree, t - 0.09f), centre, trunkRadius * 0.65f);
+            Vector3 branchStart=Stem(Mathf.Clamp01(t-0.1f));
+            Vector3 attachDirection=(branchStart-centre).normalized;
+            AddCrown(silk,film,tree,centre,radius,attachDirection);
+            AddBranch(strands,branchStart,centre,radius,attachDirection,trunkRadius*0.55f);
+        }
+        int loops=Count(sideBranchCountRange,0,8);
+        for(int branch=0;branch<loops;branch++)
+        {
+            float low=R(0.13f,0.65f),angle=R(0,Mathf.PI*2),reach=Mathf.Clamp(R(sideBranchLengthRange),0.2f,4)*0.48f;
+            float high=Mathf.Min(0.94f,low+R(0.15f,0.32f));
+            Vector3 outward=new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
+            AddReturningBranch(strands,Stem(low),Stem(high),outward,reach,trunkRadius);
+            if(R(0,1)<sideBranchForkChance)
+                AddReturningBranch(strands,Stem(Mathf.Lerp(low,high,0.15f)),Stem(Mathf.Lerp(low,high,0.85f)),
+                    Quaternion.AngleAxis(R(-25,25),Vector3.up)*outward,reach*0.65f,trunkRadius*0.55f);
         }
         var holder = new GameObject($"Silk tree {index + 1:00} · {count} crowns + {buds} buds");
         holder.transform.SetParent(generatedRoot, false);
-        MakeMesh(holder.transform, "Silk skeleton", silk, silkMaterial);
+        MakeMesh(holder.transform, "Crown membranes", silk, silkMaterial);
+        MakeMesh(holder.transform, "Tensioned silk strands", strands, strandMaterial);
         MakeMesh(holder.transform, "Sticky thin films", film, membraneMaterial);
         if (trunkColliders)
         {
@@ -194,88 +279,100 @@ public sealed class SilkForestManager : MonoBehaviour
         }
     }
 
-    private void AddBranch(SilkForestGeometry.MeshBuffer silk, SilkForestGeometry.MeshBuffer film, Vector3 start, Vector3 end, float width)
+    private void AddReturningBranch(SilkForestGeometry.MeshBuffer silk,Vector3 start,Vector3 end,Vector3 outward,float reach,float radius)
     {
-        for (int s = 0; s < 5; s++)
-        {
-            float a = s * Mathf.PI * 2 / 5;
-            Vector3 fan = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * width * 1.8f;
-            var path = Curve(start + fan * 0.3f, end + fan, -0.12f, 13);
-            silk.Tube(path, width * R(0.12f, 0.2f), 5, Color.white);
-            if (s % 2 == 0) WebStrip(silk, film, path, Curve(start, end, -0.07f, 13), 0.45f);
-        }
+        SilkForestGeometry.SilkBundle(silk,t=>SilkForestGeometry.ReturningStrandPoint(start,end,outward,reach,t),
+            radius*0.3f,0.004f,0.004f,trunkMembraneThickness*0.6f,tornWebAmount,random,trunkOpenness,
+            trunkIrregularity,trunkTwist*0.3f,trunkPairedHoleChance,trunkTriangleHoleChance,0,6);
     }
 
-    private void AddCrown(SilkForestGeometry.MeshBuffer silk, SilkForestGeometry.MeshBuffer film, Tree tree, Vector3 centre, float radius)
+    private void AddBranch(SilkForestGeometry.MeshBuffer silk, Vector3 start, Vector3 centre, float radius, Vector3 direction, float width)
     {
-        tree.crowns.Add(new Crown { centre = centre, radius = radius });
+        Vector3 contact=SilkForestGeometry.CrownPoint(centre,radius,direction,crownAsymmetry)-direction*radius*0.1f;
+        Vector3 Branch(float t)=>Vector3.Lerp(start,contact,t)-Vector3.up*Mathf.Sin(t*Mathf.PI)*0.08f;
+        SilkForestGeometry.SilkBundle(silk,Branch,Mathf.Max(0.028f,width*0.45f),width*1.3f,radius*0.22f,
+            trunkMembraneThickness*0.7f,tornWebAmount,random,trunkOpenness,trunkIrregularity,trunkTwist,trunkPairedHoleChance,trunkTriangleHoleChance,rootOpenness);
+    }
+
+    private void AddCrown(SilkForestGeometry.MeshBuffer silk, SilkForestGeometry.MeshBuffer film, Tree tree, Vector3 centre, float radius, Vector3 attachmentDirection)
+    {
+        var sockets=SilkForestGeometry.Crown(silk, film, centre, radius, crownAsymmetry, crownWebThickness,
+            tornWebAmount, membraneCoverage, random, attachmentDirection, interiorSheetCount,crownOpenness,crownRimHeight);
+        tree.crowns.Add(new Crown { centre=centre,radius=radius,sockets=sockets });
         generatedCrownCount++;
-        SilkForestGeometry.Crown(silk, film, centre, radius, crownAsymmetry, crownWebThickness,
-            tornWebAmount, membraneCoverage, random);
     }
 
-    private Vector3[] Curve(Vector3 start, Vector3 end, float sag, int samples)
+    private Vector3 VineSocket(Crown crown,Vector3 target)
     {
-        var points = new Vector3[samples];
-        for (int i = 0; i < samples; i++)
+        Vector3 direction=(target-crown.centre).normalized;
+        Vector3 best=crown.centre+direction*crown.radius;float score=-2;
+        foreach(var socket in crown.sockets)
         {
-            float t = i / (float)(samples - 1);
-            points[i] = Vector3.Lerp(start, end, t) - Vector3.up * (Mathf.Sin(t * Mathf.PI) * sag);
+            float value=Vector3.Dot((socket-crown.centre).normalized,direction);
+            if(value>score){score=value;best=socket;}
         }
-        return points;
-    }
-
-    private void WebStrip(SilkForestGeometry.MeshBuffer silk, SilkForestGeometry.MeshBuffer film, Vector3[] a, Vector3[] b, float keep)
-    {
-        for (int i = 1; i < a.Length; i++)
-        {
-            if (R(0, 1) > keep) continue;
-            // Irregular transverse threads; the missing quads are actual open holes.
-            silk.Tube(new[] { a[i], b[Mathf.Max(0, i - 1)] }, R(0.003f, 0.008f), 4, Color.white);
-            if (R(0, 1) < membraneCoverage)
-                film.Quad(a[i - 1], a[i], b[i], b[i - 1], new Color(1, 1, 1, R(0.25f, 0.75f)));
-        }
+        return best-(best-crown.centre).normalized*crown.radius*0.22f;
     }
 
     private void BuildVines(List<Tree> trees)
     {
-        var silk = new SilkForestGeometry.MeshBuffer();
-        var film = new SilkForestGeometry.MeshBuffer();
-        var degrees = new int[trees.Count];
-        // One sample per nearby pair, stable under a fixed seed, with a strict degree cap.
-        for (int a = 0; a < trees.Count; a++)
-        for (int b = a + 1; b < trees.Count; b++)
+        // Connection sampling should not depend on the number of random draws
+        // used for roots, twigs, or other mesh details.
+        random = new System.Random(unchecked(seed + 104729));
+        var degrees=new int[trees.Count];
+        var pairs=new HashSet<long>();
+        int cap=Mathf.Clamp(maximumVinesPerTree,1,4);
+        long Key(int a,int b)=>((long)Mathf.Min(a,b)<<32)|(uint)Mathf.Max(a,b);
+        bool Near(int a,int b)=>Vector3.Distance(trees[a].foot,trees[b].foot)<=maximumVineDistance;
+        Crown Canopy(int t)=>trees[t].crowns[random.Next(trees[t].canopyCount)];
+        var holder=new GameObject("Canopy silk membranes and shared Y junctions");
+        holder.transform.SetParent(generatedRoot,false);
+        // A Y is one shared three-arm connection, with a single physical junction.
+        for(int a=0;a<trees.Count;a++)
         {
-            if (degrees[a] >= Mathf.Clamp(maximumVinesPerTree, 1, 4) || degrees[b] >= Mathf.Clamp(maximumVinesPerTree, 1, 4)) continue;
-            if (Vector3.Distance(trees[a].foot, trees[b].foot) > maximumVineDistance || R(0, 1) > vineDensity) continue;
-            // Prefer top crowns; occasional connection to a stem bud.
-            Crown ca = trees[a].crowns[random.Next(trees[a].crowns.Count)];
-            Crown cb = trees[b].crowns[random.Next(trees[b].crowns.Count)];
-            Vector3 direction = (cb.centre - ca.centre).normalized;
-            Vector3 start = ca.centre + direction * ca.radius * 0.85f;
-            Vector3 end = cb.centre - direction * cb.radius * 0.85f;
-            float distance = Vector3.Distance(start, end);
-            if (distance < 0.7f) continue;
-            float sag = Mathf.Min(Mathf.Max(0, R(vineSagRange)), distance * 0.32f);
-            // Never sag below the local ground at either endpoint.
-            sag = Mathf.Min(sag, Mathf.Max(0, Mathf.Min(start.y - trees[a].foot.y, end.y - trees[b].foot.y) - 0.9f));
-            Vector3 side = Vector3.Cross(direction, Vector3.up).normalized;
-            if (side.sqrMagnitude < 0.01f) side = Vector3.right;
-            var upper = Curve(start, end, sag, 25);
-            var lower = Curve(start, end, sag + Mathf.Max(0.02f, vineWebWidth) * R(1.3f, 2.5f), 25);
-            for (int s = 0; s < 4; s++)
+            if(degrees[a]>=cap||R(0,1)>vineDensity||R(0,1)>yJunctionChance)continue;
+            var neighbours=new List<int>();
+            for(int n=0;n<trees.Count;n++)if(n!=a&&degrees[n]<cap&&Near(a,n)&&!pairs.Contains(Key(a,n)))neighbours.Add(n);
+            neighbours.Sort((x,y)=>(trees[x].foot-trees[a].foot).sqrMagnitude.CompareTo((trees[y].foot-trees[a].foot).sqrMagnitude));
+            int b=-1,c=-1;
+            for(int i=0;i<neighbours.Count&&b<0;i++)for(int j=i+1;j<neighbours.Count;j++)
             {
-                var strand = Curve(start, end, sag + s * vineWebWidth * 0.4f, 25);
-                for (int p = 1; p < strand.Length - 1; p++) strand[p] += side * Mathf.Sin(p * 0.45f + s) * vineWebWidth * 0.2f;
-                silk.Tube(strand, R(0.008f, 0.018f), 5, Color.white);
+                int x=neighbours[i],y=neighbours[j];
+                if(!Near(x,y)||pairs.Contains(Key(x,y)))continue;
+                var ab=trees[x].foot-trees[a].foot;var ac=trees[y].foot-trees[a].foot;
+                if(Vector3.Cross(ab,ac).magnitude<minimumSpacing*minimumSpacing*0.45f)continue;
+                b=x;c=y;break;
             }
-            WebStrip(silk, film, upper, lower, 1 - tornWebAmount);
-            degrees[a]++; degrees[b]++; generatedVineCount++;
+            if(b<0)continue;
+            Crown ca=Canopy(a),cb=Canopy(b),cc=Canopy(c);
+            Vector3 middle=(ca.centre+cb.centre+cc.centre)/3;
+            float ground=Mathf.Max(trees[a].foot.y,Mathf.Max(trees[b].foot.y,trees[c].foot.y));
+            middle.y=Mathf.Max(ground+1.5f,Mathf.Min(ca.centre.y,Mathf.Min(cb.centre.y,cc.centre.y))-Mathf.Max(0,R(vineSagRange))*0.5f);
+            var mesh=new SilkForestGeometry.MeshBuffer();
+            foreach(Crown crown in new[]{ca,cb,cc})
+            {
+                Vector3 socket=VineSocket(crown,middle);
+                SilkForestGeometry.WebBridge(mesh,socket,middle,Mathf.Min(Mathf.Max(0.05f,vineWebWidth),crown.radius*0.4f),0.25f,random,true);
+            }
+            MakeMesh(holder.transform,$"Y junction {generatedYJunctionCount+1:00} - trees {a+1}, {b+1}, {c+1}",mesh,strandMaterial);
+            degrees[a]++;degrees[b]++;degrees[c]++;
+            pairs.Add(Key(a,b));pairs.Add(Key(a,c));pairs.Add(Key(b,c));
+            generatedYJunctionCount++;generatedVineCount++;
         }
-        var holder = new GameObject("Canopy silk · sparse hanging connections");
-        holder.transform.SetParent(generatedRoot, false);
-        MakeMesh(holder.transform, "Tension strands", silk, silkMaterial);
-        MakeMesh(holder.transform, "Torn hanging membranes", film, membraneMaterial);
+        var silk=new SilkForestGeometry.MeshBuffer();
+        for(int a=0;a<trees.Count;a++)for(int b=a+1;b<trees.Count;b++)
+        {
+            if(degrees[a]>=cap||degrees[b]>=cap||!Near(a,b)||pairs.Contains(Key(a,b))||R(0,1)>vineDensity)continue;
+            Crown ca=Canopy(a),cb=Canopy(b);
+            Vector3 start=VineSocket(ca,cb.centre),end=VineSocket(cb,ca.centre);
+            float distance=Vector3.Distance(start,end);if(distance<0.7f)continue;
+            float sag=Mathf.Min(Mathf.Max(0,R(vineSagRange)),distance*0.3f);
+            sag=Mathf.Min(sag,Mathf.Max(0,Mathf.Min(start.y-trees[a].foot.y,end.y-trees[b].foot.y)-1));
+            float width=Mathf.Min(Mathf.Max(0.05f,vineWebWidth),Mathf.Min(ca.radius,cb.radius)*0.4f);
+            SilkForestGeometry.WebBridge(silk,start,end,width,sag,random);
+            degrees[a]++;degrees[b]++;generatedVineCount++;
+        }
+        MakeMesh(holder.transform,"Paired tensioned silk bundles",silk,strandMaterial);
     }
 
     private void MakeMesh(Transform parent, string label, SilkForestGeometry.MeshBuffer data, Material material)
@@ -311,7 +408,7 @@ public sealed class SilkForestManager : MonoBehaviour
         generatedRoot = null;
         foreach (var mesh in meshes) if (mesh != null) Release(mesh);
         ownedMeshes.Clear();
-        generatedTreeCount = generatedVineCount = generatedCrownCount = 0;
+        generatedTreeCount = generatedVineCount = generatedCrownCount = generatedYJunctionCount = 0;
     }
 
     private static void Release(UnityEngine.Object obj)

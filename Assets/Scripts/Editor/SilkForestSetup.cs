@@ -45,6 +45,20 @@ public static class SilkForestSetup
     {
         Directory.CreateDirectory(MaterialFolder);
         manager.silkMaterial = MaterialAsset(MaterialFolder + "/MAT_SilkPearl.mat", "Capstone/Silk Forest/Pearlescent Silk");
+        manager.strandMaterial = manager.silkMaterial;
+        foreach(var silk in new[]{manager.silkMaterial,manager.strandMaterial})
+        {
+            silk.SetColor("_BaseColor",new Color(0.82f,0.89f,0.97f));
+            silk.SetColor("_ShadowColor",new Color(0.085f,0.105f,0.145f));
+            silk.SetFloat("_Iridescence",0.16f);
+            silk.SetFloat("_Smoothness",0.68f);
+            silk.SetFloat("_Emission",0.06f);
+            silk.SetFloat("_SilkSheen",0.45f);
+            silk.SetFloat("_FibreStrength",0.2f);
+            silk.SetFloat("_VertexTint",1);
+            silk.SetFloat("_SilkStyle",0);
+            EditorUtility.SetDirty(silk);
+        }
         manager.membraneMaterial = MaterialAsset(MaterialFolder + "/MAT_SilkMembrane.mat", "Capstone/Silk Forest/Thin Film");
     }
 
@@ -110,7 +124,10 @@ public static class SilkForestSetup
         fill.color = new Color(0.35f, 0.7f, 0.9f);
         fill.transform.rotation = Quaternion.Euler(22, 155, 0);
         var manager = new GameObject("黏菌蛛丝树林 · Silk Forest Manager").AddComponent<SilkForestManager>();
-        AssignMaterials(manager); manager.Regenerate();
+        AssignMaterials(manager);
+        var previousPrefab=AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        if(previousPrefab!=null)manager.treeDensity=previousPrefab.GetComponent<SilkForestManager>().treeDensity;
+        manager.Regenerate();
         SaveForestPrefab(manager, PrefabPath);
         var floorMaterial = MaterialAsset(MaterialFolder + "/MAT_ForestGround.mat", "Universal Render Pipeline/Lit");
         floorMaterial.SetColor("_BaseColor", new Color(0.075f, 0.105f, 0.115f));

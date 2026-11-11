@@ -2,8 +2,8 @@ Shader "Capstone/Silk Forest/Thin Film"
 {
     Properties
     {
-        [MainColor] _BaseColor("Thin translucent slime", Color) = (0.42,0.77,0.7,0.18)
-        _Iridescence("Film interference", Range(0,1)) = 0.8
+        [MainColor] _BaseColor("半透明黏膜颜色与透明度", Color) = (0.42,0.77,0.7,0.18)
+        _Iridescence("薄膜干涉虹彩强度", Range(0,1)) = 0.8
     }
     SubShader
     {

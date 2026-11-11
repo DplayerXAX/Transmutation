@@ -1,5 +1,6 @@
-PASS: 29 checks
-Trees: 29
-Crowns: 89
-Vine connections: 21
-Vertices: 1376510
+PASS: 74 checks
+Trees: 25
+Crowns: 75
+Vine connections: 16
+Y junctions: 6
+Vertices: 3259156

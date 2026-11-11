@@ -26,10 +26,14 @@ Material:
     m_Ints: []
     m_Floats:
     - _Emission: 0.06
-    - _Iridescence: 0.6
-    - _Smoothness: 0.84
+    - _FibreStrength: 0.2
+    - _Iridescence: 0.16
+    - _SilkSheen: 0.45
+    - _SilkStyle: 0
+    - _Smoothness: 0.68
+    - _VertexTint: 1
     m_Colors:
-    - _BaseColor: {r: 0.67, g: 0.78, b: 0.74, a: 1}
-    - _ShadowColor: {r: 0.08499997, g: 0.10499997, b: 0.14499995, a: 1}
+    - _BaseColor: {r: 0.82, g: 0.89, b: 0.97, a: 1}
+    - _ShadowColor: {r: 0.085, g: 0.105, b: 0.145, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
