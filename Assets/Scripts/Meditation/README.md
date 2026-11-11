@@ -8,11 +8,13 @@ The central resting place in the theater works the same way and sends you back t
 Left-click the giant slab to open the field journal. Use its physical left and right arrows to
 turn pages while standing nearby or while editing. The right arrow adds a page at the end.
 Use **T** for writing, the **pen** to draw with left click, or the **eraser** to erase with
-left click. Right click also erases while using the pen. Esc steps back from the slab.
+left click. Click the selected tool again to return to neutral mode, where clicks can move
+stickers without typing or drawing. Right click also erases while using the pen. Esc steps back
+from the slab.
 
 The black satchel on the right shows in-game creature cutouts for unlocked families in two columns.
 Scroll to browse, click a sticker
-to pick up a copy, and click the page to place it. In Type mode, click a placed sticker to move it.
+to pick up a copy, and click the page to place it. Click a placed sticker to move it in any mode.
 Right-click or click the satchel to discard a held sticker. Press Esc to cancel a move and
 put the sticker back.
 
@@ -25,6 +27,58 @@ range in the editor, select a resting creature in Play Mode and use its Discover
 Discovery Range fields. The theater places exhibits in the order they were discovered. Click a
 frozen member or the light switch to release the group. Use the fixture to turn the beam back on.
 Only its own members freeze when they enter a lit beam. The room resets every visit.
+
+## Implemented roster and grouping
+
+The current catalogs contain **29 unlock families and 37 stickers**. Each row is one unlock
+and one exhibit beam. The discovery type must be inside the world resting creature's scan range
+when entering. Every sticker in that row becomes available with the same unlock.
+
+| Unlock ID | Discovery type | Initial exhibit | Stickers sharing this unlock |
+| --- | --- | --- | --- |
+| `birds` | `BirdCreature` | 6 birds | Bird, Bird Bones |
+| `bat-bugs` | `CeilingBatBug` | 5 adults, a perch, and a habitat that supports eggs | Ceiling Bat Bug, Bat Bug Egg |
+| `sky-spider` | `SkySpider` | 1 spider and its web | Sky Spider, Sky Web |
+| `glow-bees` | `GlowBee` | 1 colony with 4 bees, a nest, and nectar flowers | Glow Bee, Glow Bee Nest, Glow Honey |
+| `squirrel` | `Squirrel` | 1 squirrel, a nest, 3 starting food items, tree anchors, and a manager | Squirrel |
+| `mushroom-tree` | `MushroomTree` | 1 young tree and 1 grown bouncy-cap tree | Grown Mushroom Tree, Young Mushroom Tree |
+| `bounce-shroom` | `BounceShroom` | 1 compact specimen that expands through its normal interaction | Bounce Shroom, Expanded Bounce Shroom |
+| `water` | `ErosiveFluidDroplet` | 30 droplets | Water |
+| `general-asura` | `GeneralAsura` | 1 General that can produce its Blast Core | General Asura, Blast Core |
+| `melee-asura` | `MeleeAsura` | 1 specimen | Melee Asura |
+| `ranged-asura` | `RangedAsura` | 1 specimen | Ranged Asura |
+| `rolling-asura` | `RollingAsura` | 1 specimen | Rolling Asura |
+| `fuzz` | `FuzzCreature` | 1 specimen | Fuzz Creature |
+| `bellows` | `BellowsCreature` | 1 specimen | Bellows Creature |
+| `chameleon` | `ChameleonCreature` | 1 specimen | Chameleon |
+| `compost` | `CompostCreature` | 1 specimen | Compost Creature |
+| `cistern-snail` | `CisternSnail` | 1 specimen | Cistern Snail |
+| `geode-larva` | `GeodeLarva` | 1 specimen | Geode Larva |
+| `ore-colossus` | `OreColossus` | 1 natural-size Colossus with its ore and Geode Larva lifecycle | Ore Colossus |
+| `goo` | `GooCreature` | 1 specimen | Goo Creature |
+| `tentacle` | `TentacleCreature` | 1 specimen | Tentacle Creature |
+| `fire-eater` | `FireEater` | 1 specimen | Fire Eater |
+| `recycle-flower` | `RecycleFlower` | 1 specimen | Recycle Flower |
+| `light-moth` | `LightMoth` | 1 specimen | Light Moth |
+| `flash-bloom` | `FlashBloom` | 1 specimen | Flash Bloom |
+| `afterglow-pod` | `AfterglowPod` | 1 specimen | Afterglow Pod |
+| `corrupt-seed` | `CorruptSeed` | 1 specimen | Corrupt Seed |
+| `fire-flower` | `FireFlower` | 1 specimen | Fire Flower |
+| `bubble-flower` | `BubbleFlower` | 1 specimen | Bubble Flower |
+
+Supporting objects can appear through the parent creature's behavior without their own unlock.
+Webs, bat eggs, bird bones, bee nests and honey, squirrel nests and food, Mushroom Essence,
+Fire Bubbles, Trapping Bubbles, Blast Cores, and projectiles have no independent exhibit entry.
+Their presence alone does not unlock a parent family. Some have stickers, as listed above.
+
+Geode Larva, Bounce Shroom, Recycle Flower, and Corrupt Seed each have their own unlock even
+though another creature can produce them. Detect that creature itself to unlock its exhibit.
+The central resting creature is always present. Fire sources and cave harvest items are
+outside the current exhibit roster.
+
+Use [ReflectionCatalog](../../Resources/ReflectionCatalog.asset) and
+[SlabStickerCatalog](../../Resources/SlabStickerCatalog.asset) as the source of truth when changing
+the roster. Update this table when adding a family, changing an exhibit group, or adding a variant.
 
 ## Adding a creature exhibit
 
