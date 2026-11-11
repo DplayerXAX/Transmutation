@@ -1,0 +1,5 @@
+PASS: 29 checks
+Trees: 29
+Crowns: 89
+Vine connections: 21
+Vertices: 1376510
