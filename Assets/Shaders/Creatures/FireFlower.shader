@@ -14,6 +14,13 @@ Shader "Capstone/Creature/FireFlower"
         _StaticSpeed("Static Speed", Range(1, 60)) = 24
         _StaticContrast("Static Contrast", Range(0.25, 4)) = 1.6
         _BaseAlpha("Opacity", Range(0, 1)) = 1
+        [Header(Heat Colours)]
+        _Heat("Heat (0 cold .. 1 ready to bloom)", Range(0, 1)) = 0
+        _AshColor("Ash (cold dark grain)", Color) = (0.05, 0.035, 0.035, 1)
+        _EmberColor("Ember", Color) = (0.55, 0.06, 0.02, 1)
+        _FlameColor("Flame", Color) = (1, 0.42, 0.05, 1)
+        _CoreColor("Core (hottest grain)", Color) = (1, 0.93, 0.6, 1)
+        _ColdReach("Cold: how far the grain reaches up the ramp", Range(0, 1)) = 0.3
     }
 
     SubShader
@@ -53,6 +60,12 @@ Shader "Capstone/Creature/FireFlower"
                 float _StaticSpeed;
                 float _StaticContrast;
                 float _BaseAlpha;
+                float _Heat;
+                half4 _AshColor;
+                half4 _EmberColor;
+                half4 _FlameColor;
+                half4 _CoreColor;
+                float _ColdReach;
             CBUFFER_END
 
             struct Attributes
@@ -98,6 +111,15 @@ Shader "Capstone/Creature/FireFlower"
                 wave += detail * SmoothNoise(position * 2.03 + float3(7.1, 3.7, 9.2));
                 wave += fineWeight * SmoothNoise(position * 4.11 + float3(13.4, 17.2, 5.8));
                 return wave / (1.0 + detail + fineWeight);
+            }
+
+            // Ash -> ember -> flame -> core, in thirds.
+            half3 FireRamp(float t)
+            {
+                t = saturate(t) * 3.0;
+                half3 low = lerp(_AshColor.rgb, _EmberColor.rgb, saturate(t));
+                half3 mid = lerp(low, _FlameColor.rgb, saturate(t - 1.0));
+                return lerp(mid, _CoreColor.rgb, saturate(t - 2.0));
             }
 
             Varyings Vert(Attributes input)
@@ -146,7 +168,13 @@ Shader "Capstone/Creature/FireFlower"
                 float noise = RandomValue(cell, frame);
 
                 noise = saturate((noise - 0.5) * _StaticContrast + 0.5);
-                return half4(lerp(noise.xxx, half3(1,0.08,0.06), _CreatureHurt*0.8), _BaseAlpha);
+
+                // The grain is read as temperature. Cold, it only reaches from ash to a dull ember glint;
+                // as Heat rises the whole range shifts up until the brightest grains are white-hot.
+                float heat = saturate(_Heat);
+                float temperature = noise * lerp(_ColdReach, 1.0, heat) + heat * 0.2;
+                half3 color = FireRamp(temperature);
+                return half4(lerp(color, half3(1,0.08,0.06), _CreatureHurt*0.8), _BaseAlpha);
             }
             ENDHLSL
         }

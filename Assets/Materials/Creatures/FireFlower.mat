@@ -27,7 +27,10 @@ Material:
     m_Ints: []
     m_Floats:
     - _BaseAlpha: 1
+    - _ColdReach: 0.3
+    - _CreatureHurt: 0
     - _Growth: 0.556
+    - _Heat: 0
     - _LineStretch: 100
     - _LineWarp: 1.1
     - _StaticContrast: 4
@@ -37,6 +40,10 @@ Material:
     - _WaveDetail: 0.5
     - _WaveSpeed: 0.59
     m_Colors:
+    - _AshColor: {r: 0.049999982, g: 0.035, b: 0.035, a: 1}
+    - _CoreColor: {r: 1, g: 0.93, b: 0.6, a: 1}
+    - _EmberColor: {r: 0.54999995, g: 0.059999965, b: 0.02, a: 1}
+    - _FlameColor: {r: 1, g: 0.41999996, b: 0.049999982, a: 1}
     - _GrowthDirection: {r: 0, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

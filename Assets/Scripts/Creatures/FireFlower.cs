@@ -51,6 +51,20 @@ public sealed class FireFlower : Creature
     [Min(0.01f)]
     [SerializeField] private float spreadOutDuration = 0.35f;
 
+    [Header("Petal Crown")]
+    [Tooltip("On: the density shapes are petals in an even crown round the bud, each one turned to point along " +
+             "its own direction, opening from upright to leaning out as Heat rises. Off: they drift out in random directions.")]
+    [SerializeField] private bool petalCrown;
+    [Tooltip("Petal lean from straight up while closed (degrees).")]
+    [Range(0f, 90f)] [SerializeField] private float crownClosedAngle = 12f;
+    [Tooltip("Petal lean from straight up when fully open (degrees).")]
+    [Range(0f, 120f)] [SerializeField] private float crownOpenAngle = 62f;
+    [Tooltip("How far each petal's centre sits out from the crown pivot while closed, in local units (about half a petal).")]
+    [Min(0f)] [SerializeField] private float petalReach = 1.3f;
+    [Tooltip("Random turn of the whole crown at the start of each heating cycle (degrees), so blooms are not identical.")]
+    [Range(0f, 180f)] [SerializeField] private float crownJitter = 25f;
+    private float crownYaw;
+
     [Header("Body Cylinder")]
     [Tooltip("This flower's own cylinder DensityShape. Radius grows with Heat and shrinks while recovering.")]
     [SerializeField] private DensityShapeOverlay bodyCylinder;
@@ -74,7 +88,11 @@ public sealed class FireFlower : Creature
     [SerializeField] private Renderer flowerRenderer;
 
     private static readonly int GrowthId = Shader.PropertyToID("_Growth");
+    private static readonly int HeatId = Shader.PropertyToID("_Heat");
     private MaterialPropertyBlock visualProperties;
+    // What is actually drawn: the marching-cubes chunks built under this flower at runtime, all using the flower material.
+    private readonly List<Renderer> heatRenderers = new List<Renderer>();
+    private float nextRendererScan;
 
     [Header("Runtime State (Read Only)")]
     [SerializeField] private FireFlowerState currentState = FireFlowerState.Closed;
@@ -247,18 +265,35 @@ public sealed class FireFlower : Creature
         stateTime = 0f;
     }
 
+    /// <summary>
+    /// Pushes the flower's heat to every renderer drawing it. Heat colours the grain from ash to white-hot and
+    /// stretches it upward into flame lines; while blooming and releasing it stays at full heat.
+    /// </summary>
     private void UpdatePresentation(float deltaTime)
     {
-        if (flowerRenderer == null)
+        // Chunks appear and are rebuilt while the shapes spread, so look for new ones now and then.
+        if (Time.time >= nextRendererScan || heatRenderers.Exists(r => r == null))
         {
-            return;
+            nextRendererScan = Time.time + 0.5f;
+            heatRenderers.Clear();
+            foreach (Renderer candidate in GetComponentsInChildren<Renderer>(true))
+                if (candidate.sharedMaterial != null && candidate.sharedMaterial.HasProperty(HeatId) && CreatureBounds.BelongsTo(candidate.transform, transform))
+                    heatRenderers.Add(candidate);
+            if (flowerRenderer != null && !heatRenderers.Contains(flowerRenderer)) heatRenderers.Add(flowerRenderer);
         }
 
         float heatRatio = Mathf.Clamp01(Heat / Mathf.Max(0.01f, bloomHeatThreshold));
+        float heat = Mathf.Max(heatRatio, bloomAmount);
         visualProperties ??= new MaterialPropertyBlock();
-        flowerRenderer.GetPropertyBlock(visualProperties);
-        visualProperties.SetFloat(GrowthId, heatRatio * 0.5f);
-        flowerRenderer.SetPropertyBlock(visualProperties);
+        foreach (Renderer target in heatRenderers)
+        {
+            if (target == null) continue;
+            // Keep whatever else is in the block (the shared hurt tint writes there too).
+            target.GetPropertyBlock(visualProperties);
+            visualProperties.SetFloat(HeatId, heat);
+            visualProperties.SetFloat(GrowthId, Mathf.Lerp(0.25f, 0.8f, heat));
+            target.SetPropertyBlock(visualProperties);
+        }
     }
 
     private void InitializeVisuals()
@@ -320,6 +355,13 @@ public sealed class FireFlower : Creature
     /// <summary>Picks a fresh unit direction in local space for every shape (called at the start of each heating cycle).</summary>
     private void RerollSpreadDirections()
     {
+        if (petalCrown)
+        {
+            // An even crown; only its turn changes from one cycle to the next.
+            crownYaw = Random.Range(-crownJitter, crownJitter);
+            return;
+        }
+
         for (int index = 0; index < densityShapes.Count; index++)
         {
             ShapeSlot slot = densityShapes[index];
@@ -385,6 +427,12 @@ public sealed class FireFlower : Creature
         float amount = Mathf.Clamp01(spread);
         float distance = amount * maxSpreadDistance;
 
+        if (petalCrown)
+        {
+            ApplyCrown(amount, distance);
+            return;
+        }
+
         for (int index = 0; index < densityShapes.Count; index++)
         {
             ShapeSlot slot = densityShapes[index];
@@ -394,6 +442,30 @@ public sealed class FireFlower : Creature
             }
 
             slot.shape.transform.localPosition = slot.startLocalPosition + slot.spreadDirection * distance;
+        }
+    }
+
+    /// <summary>
+    /// Petals pivot on their start position (inside the top of the bud). Each leans out along its own heading,
+    /// from upright when closed to the open angle, and slides further out as the flower heats; the shape is
+    /// turned so its long axis (local Y) points along the petal.
+    /// </summary>
+    private void ApplyCrown(float amount, float distance)
+    {
+        int count = CountValidShapes();
+        if (count == 0) return;
+        float lean = Mathf.Lerp(crownClosedAngle, crownOpenAngle, amount);
+        int slotIndex = 0;
+        for (int index = 0; index < densityShapes.Count; index++)
+        {
+            ShapeSlot slot = densityShapes[index];
+            if (slot == null || slot.shape == null || !slot.initialized) continue;
+            float heading = crownYaw + slotIndex * 360f / count;
+            slotIndex++;
+            Vector3 direction = Quaternion.Euler(0f, heading, 0f) * Quaternion.Euler(lean, 0f, 0f) * Vector3.up;
+            slot.spreadDirection = direction;
+            slot.shape.transform.localPosition = slot.startLocalPosition + direction * (petalReach + distance);
+            slot.shape.transform.localRotation = Quaternion.FromToRotation(Vector3.up, direction);
         }
     }
 
@@ -443,5 +515,6 @@ public sealed class FireFlower : Creature
         spreadOutDuration = Mathf.Max(0.01f, spreadOutDuration);
         bodyRadiusMin = Mathf.Max(0.01f, bodyRadiusMin);
         bodyRadiusMax = Mathf.Max(0.01f, bodyRadiusMax);
+        petalReach = Mathf.Max(0f, petalReach);
     }
 }
