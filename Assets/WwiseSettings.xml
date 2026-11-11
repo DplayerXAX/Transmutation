@@ -13,7 +13,7 @@
   <ShowSpatialAudioWarningMsg>true</ShowSpatialAudioWarningMsg>
   <WwiseInstallationPathMac />
   <WwiseInstallationPathWindows>C:\Audiokinetic\Wwise2025.1.6.9117</WwiseInstallationPathWindows>
-  <WwiseProjectPath></WwiseProjectPath>
+  <WwiseProjectPath>../CapstoneTeams_WwiseProject/CapstoneTeams_WwiseProject.wproj</WwiseProjectPath>
   <UseWaapi>false</UseWaapi>
   <WaapiPort>8080</WaapiPort>
   <WaapiIP>127.0.0.1</WaapiIP>

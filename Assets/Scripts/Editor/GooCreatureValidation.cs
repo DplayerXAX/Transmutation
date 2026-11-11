@@ -30,7 +30,7 @@ public static class GooCreatureValidation
         Check(prefab != null && prefab.GetComponent<GooCreature>() != null, "goo prefab exists");
         Check(prefab.GetComponent<Collider>() != null && !prefab.GetComponent<Collider>().isTrigger, "blob has solid pickup collider");
         Check(prefab.GetComponent<Rigidbody>() != null, "blob supports shared carry physics");
-        var player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
         Check(player.GetComponentsInChildren<PlayerGooCoating>(true).Length == 1, "shared prefab has exactly one goo supply");
         foreach (FirstPersonBody body in player.GetComponentsInChildren<FirstPersonBody>(true))
             Check(new SerializedObject(body).FindProperty("gooMaterial").objectReferenceValue != null, "arm coating material assigned");
@@ -54,7 +54,7 @@ public static class GooCreatureValidation
         GameObject wall = null;
         try
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
             rig = Object.Instantiate(prefab, staging.transform);
             var controller = rig.GetComponentInChildren<SmoothFirstPersonController>(true);
             var coating = controller.GetComponent<PlayerGooCoating>();

@@ -8,9 +8,9 @@ using Object = UnityEngine.Object;
 /// <summary>Repeatable goo asset creation and scene placement; existing art and tuning are retained.</summary>
 public static class GooCreatureSetup
 {
-    public const string PrefabPath = "Assets/Prefabs/Creatures/GooCreature.prefab";
+    public const string PrefabPath = "Assets/Prefabs/Creatures/Traversal/GooCreature.prefab";
     public const string CoatingMaterialPath = "Assets/Materials/Creatures/MAT_Goo_Coating.mat";
-    private const string PlayerPath = "Assets/Prefabs/PlayerObjects.prefab";
+    private const string PlayerPath = "Assets/Prefabs/Player/PlayerObjects.prefab";
     private const string ScenePath = "Assets/Scenes/Scene_Yoyo.unity";
 
     [MenuItem("Tools/Creatures/Goo/Create Assets And Configure Player")]

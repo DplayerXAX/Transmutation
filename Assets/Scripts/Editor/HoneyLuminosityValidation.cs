@@ -73,7 +73,7 @@ public static class HoneyLuminosityValidation
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(honeyObject, stats.gameObject.scene);
             var honey = honeyObject.AddComponent<GlowHoney>();
             Check(carrier.TryCarryFromInteraction(honey) && honey.TryUse(GlowHoney.Use.Coat), "held honey coats the player and is consumed");
-            var body = (Light)typeof(PlayerHoneyEffects).GetField("bodyLight", Private).GetValue(effects);
+            var body = effects.GetComponent<PlayerLuminosityVisuals>().Lamp;
             Check(body.gameObject.activeInHierarchy && body.range == 5f, "coating provides a five metre light");
             Check(Mathf.Abs(LuminosityLighting.PointIntensity(stats.Luminosity) - body.intensity) < 0.0001f &&
                 stats.Luminosity == 50f, "coating gives 50 luminosity with matching light strength");

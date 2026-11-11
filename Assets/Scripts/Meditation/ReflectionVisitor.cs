@@ -1,229 +1,120 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-/// <summary>
-/// Player control inside the reflection space: a slow walk, mouse look, drawing on
-/// steles and tablets, and moving creature casts. The normal player controller is
-/// switched off while this runs, so it drives the player transform and camera itself.
-/// </summary>
+/// <summary>Drawing and exhibit fixtures use the same click as normal creature interaction.</summary>
+[DefaultExecutionOrder(-40)]
 [DisallowMultipleComponent]
 public sealed class ReflectionVisitor : MonoBehaviour
 {
-    [Header("Walk")]
-    [Min(0.1f)] [SerializeField] private float walkSpeed = 2.4f;
-    [SerializeField] private float lookSensitivity = 0.12f;
-
-    [Header("Reach")]
-    [Min(0.5f)] [SerializeField] private float reach = 3.5f;
-    [SerializeField] private Key interactKey = Key.E;
-
-    [Header("Drawing")]
-    [Min(0.5f)] [SerializeField] private float brushPixels = 3.2f;
-    [Min(0.5f)] [SerializeField] private float eraserPixels = 14f;
-    [Tooltip("Seconds to walk the camera up to a face or back.")]
-    [Min(0.05f)] [SerializeField] private float focusTime = 0.6f;
-
-    private ReflectionSpace space;
-    private CreatureJournal journal;
+    [SerializeField] private float reach = 3.5f;
+    [SerializeField] private float brushPixels = 3.2f;
+    [SerializeField] private float eraserPixels = 14f;
+    [SerializeField] private float focusTime = 0.6f;
     private MeditationHUD hud;
-    private Transform player;
-    private Rigidbody body;
+    private SmoothFirstPersonController controller;
     private Transform cameraHolder;
     private Camera viewCamera;
-    private Vector3 bodyToCamera;
-
-    private float yaw, pitch;
-    private bool active;
-    private bool frozen;
-
-    // Drawing focus.
     private InkSurface focusSurface;
+    private SlabJournal focusJournal;
+    private bool openJournal, suppressRightInk;
+    private SlabJournalButton.Action initialTool;
+    private readonly List<Renderer> hiddenPlayerVisuals = new();
+    private Vector3 focusPosition, normalPosition;
+    private Quaternion focusRotation, normalRotation;
     private float focusBlend;
-    private bool focusLeaving;
-    private Vector3 focusPosition;
-    private Quaternion focusRotation;
-    private bool hasLastUv;
-    private Vector2 lastUv;
-    private Vector2 lastMouse;
-
-    // Cast being moved.
-    private ReflectionCast heldCast;
-
+    private bool active, focusLeaving, hasLastUv;
+    private Vector2 lastUv, lastMouse;
+    private static int ConsumedFrame = -1;
+    public static bool ConsumedClick => ConsumedFrame == Time.frameCount;
     public bool IsDrawing => focusSurface != null;
 
-    public void Begin(ReflectionSpace reflectionSpace, CreatureJournal creatureJournal, MeditationHUD meditationHud,
-        Transform playerTransform, Rigidbody playerBody, Transform holder, Camera cam, Vector3 cameraOffset,
-        float startYaw, float startPitch)
+    public void Begin(MeditationHUD display, SmoothFirstPersonController movement, Transform holder, Camera view)
     {
-        space = reflectionSpace;
-        journal = creatureJournal;
-        hud = meditationHud;
-        player = playerTransform;
-        body = playerBody;
+        hud = display;
+        controller = movement;
         cameraHolder = holder;
-        viewCamera = cam;
-        bodyToCamera = cameraOffset;
-        yaw = startYaw;
-        pitch = Mathf.Clamp(startPitch, -60f, 60f);
-        focusSurface = null;
-        heldCast = null;
-        frozen = false;
+        viewCamera = view;
         active = true;
-        PlaceCamera();
-    }
-
-    /// <summary>Stops input but keeps the camera where it is (used while leaving).</summary>
-    public void Freeze()
-    {
-        EndFocusNow();
-        DropCast();
-        frozen = true;
-        hud?.SetHint(null, null);
     }
 
     public void End()
     {
-        Freeze();
+        EndFocusNow();
         active = false;
+        hud.SetHint(null, null);
     }
-
-    public Vector3 CameraPosition => cameraHolder != null ? cameraHolder.position : player.position + bodyToCamera;
 
     private void Update()
     {
-        if (!active || frozen) return;
-        if (focusSurface != null)
-        {
-            UpdateDrawing();
-            return;
-        }
+        if (!active || GetComponent<MeditationController>().Transitioning) return;
+        if (IsDrawing) { UpdateJournal(); return; }
+        if (RestSpotSystem.BlocksInteraction || Mouse.current == null) { hud.SetHint(null, null); return; }
+        var carrier = controller.GetComponentInChildren<PlayerCreatureCarrier>();
+        if (carrier != null && (carrier.CarriedCreature != null || carrier.PendingCreature != null))
+        { hud.SetHint(null, null); return; }
 
-        Look();
-        Walk();
-        UpdateAim();
+        Ray aim = viewCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
+        var hits = ReflectionPhysics.RaycastAll(aim.origin, aim.direction, reach, ~(1 << 2), QueryTriggerInteraction.Ignore);
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+        foreach (RaycastHit hit in hits)
+        {
+            if (hit.collider.transform.IsChildOf(controller.transform.root)) continue;
+            var control = hit.collider.GetComponent<SlabJournalButton>();
+            if (control != null)
+            {
+                hud.SetHint(null, "[LMB] " + control.Command);
+                if (Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    ConsumedFrame = Time.frameCount;
+                    switch (control.Command)
+                    {
+                        case SlabJournalButton.Action.Previous: control.Journal.Turn(-1); break;
+                        case SlabJournalButton.Action.Next: control.Journal.Turn(1); break;
+                        default: StartFocus(control.Journal.GetComponent<InkSurface>(), control.Command); break;
+                    }
+                }
+                return;
+            }
+            var ink = hit.collider.GetComponent<InkSurface>();
+            var beam = hit.collider.GetComponentInParent<ReflectionSpotlight>();
+            var creature = hit.collider.GetComponentInParent<Creature>();
+            if (beam == null && creature != null) beam = ReflectionSpotlight.ForFrozen(creature);
+            if (ink != null || beam != null)
+            {
+                hud.SetHint(null, ink != null ? "[LMB] Open journal" : beam.IsLit ? "[LMB] Release exhibit" : "[LMB] Turn on light");
+                if (Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    ConsumedFrame = Time.frameCount;
+                    if (ink != null) StartFocus(ink);
+                    else beam.Toggle();
+                }
+                return;
+            }
+            break;
+        }
+        hud.SetHint(null, null);
     }
 
     private void LateUpdate()
     {
-        if (!active) return;
-        if (focusSurface != null) UpdateFocusCamera();
-        else if (!frozen) PlaceCamera();
-        if (heldCast != null) CarryCast();
+        if (IsDrawing) UpdateFocusCamera();
     }
 
-    private void Look()
+    private void StartFocus(InkSurface surface, SlabJournalButton.Action tool = SlabJournalButton.Action.Type)
     {
-        if (Mouse.current == null) return;
-        Vector2 delta = Mouse.current.delta.ReadValue();
-        yaw += delta.x * lookSensitivity;
-        pitch = Mathf.Clamp(pitch - delta.y * lookSensitivity, -80f, 80f);
-    }
-
-    private void Walk()
-    {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-        float x = (keyboard.dKey.isPressed ? 1f : 0f) - (keyboard.aKey.isPressed ? 1f : 0f);
-        float z = (keyboard.wKey.isPressed ? 1f : 0f) - (keyboard.sKey.isPressed ? 1f : 0f);
-        Quaternion heading = Quaternion.Euler(0f, yaw, 0f);
-        Vector3 move = heading * new Vector3(x, 0f, z);
-        if (move.sqrMagnitude > 1f) move.Normalize();
-        Vector3 next = space.Constrain(player.position + move * walkSpeed * Time.deltaTime, 0.3f);
-        player.position = next;
-        if (body != null) body.position = next;
-    }
-
-    private void PlaceCamera()
-    {
-        if (cameraHolder == null) return;
-        cameraHolder.position = player.position + bodyToCamera;
-        cameraHolder.rotation = Quaternion.Euler(pitch, yaw, 0f);
-    }
-
-    // What the crosshair is on, and the E / LMB actions for it.
-    private void UpdateAim()
-    {
-        Keyboard keyboard = Keyboard.current;
-        Mouse mouse = Mouse.current;
-
-        if (heldCast != null)
-        {
-            hud?.SetHint(heldCast.Entry?.displayName, "[" + interactKey + "]  Set down");
-            if (keyboard != null && keyboard[interactKey].wasPressedThisFrame) DropCast();
-            return;
-        }
-
-        if (!AimAtSpace(out RaycastHit hit))
-        {
-            hud?.SetHint(null, null);
-            return;
-        }
-
-        var surface = hit.collider.GetComponent<InkSurface>();
-        if (surface != null)
-        {
-            hud?.SetHint(null, "[LMB]  Draw");
-            if (mouse != null && mouse.leftButton.wasPressedThisFrame) StartFocus(surface);
-            return;
-        }
-
-        var cast = hit.collider.GetComponentInParent<ReflectionCast>();
-        if (cast != null)
-        {
-            string title = cast.Entry != null ? cast.Entry.displayName + "   ·   met " + cast.Entry.firstSeen : null;
-            hud?.SetHint(title, "[" + interactKey + "]  Move");
-            if (keyboard != null && keyboard[interactKey].wasPressedThisFrame) heldCast = cast;
-            return;
-        }
-        hud?.SetHint(null, null);
-    }
-
-    // Nearest hit that belongs to the reflection space (skips the player's own colliders).
-    private bool AimAtSpace(out RaycastHit best)
-    {
-        best = default;
-        Ray ray = new Ray(viewCamera.transform.position, viewCamera.transform.forward);
-        RaycastHit[] hits = Physics.RaycastAll(ray, reach, ~0, QueryTriggerInteraction.Ignore);
-        float nearest = float.MaxValue;
-        foreach (RaycastHit hit in hits)
-        {
-            if (hit.distance >= nearest || !hit.collider.transform.IsChildOf(space.Root)) continue;
-            nearest = hit.distance;
-            best = hit;
-        }
-        return nearest < float.MaxValue;
-    }
-
-    private void CarryCast()
-    {
-        Vector3 forward = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
-        Vector3 floor = space.Root.position;
-        var box = heldCast.GetComponent<BoxCollider>();
-        float reachOut = 1f + (box != null ? Mathf.Max(box.size.x, box.size.z) * 0.6f : 0.3f);
-        Vector3 target = player.position + forward * reachOut;
-        target = space.Constrain(target, 0f);
-        target.y = floor.y + 0.35f + Mathf.Sin(Time.time * 2.2f) * 0.03f;
-        heldCast.transform.position = Vector3.Lerp(heldCast.transform.position, target, 1f - Mathf.Exp(-10f * Time.deltaTime));
-        Quaternion facing = Quaternion.Euler(0f, yaw + 180f, 0f);
-        heldCast.transform.rotation = Quaternion.Slerp(heldCast.transform.rotation, facing, 1f - Mathf.Exp(-6f * Time.deltaTime));
-    }
-
-    private void DropCast()
-    {
-        if (heldCast == null) return;
-        Vector3 position = heldCast.transform.position;
-        position.y = space.Root.position.y;
-        heldCast.transform.position = position;
-        space.StoreCast(heldCast);
-        journal?.Save();
-        heldCast = null;
-    }
-
-    // ---------- Drawing ----------
-
-    private void StartFocus(InkSurface surface)
-    {
+        normalPosition = cameraHolder.position;
+        normalRotation = cameraHolder.rotation;
+        controller.SetRestricted(true);
+        controller.enabled = false;
         focusSurface = surface;
+        focusJournal = surface.GetComponent<SlabJournal>();
+        openJournal = false;
+        initialTool = tool;
+        suppressRightInk = false;
+        HidePlayerVisuals(controller.transform.root);
+        var firstPerson = FindFirstObjectByType<FirstPersonBody>();
+        if (firstPerson != null) HidePlayerVisuals(firstPerson.VisualRoot);
         focusBlend = 0f;
         focusLeaving = false;
         hasLastUv = false;
@@ -234,31 +125,51 @@ public sealed class ReflectionVisitor : MonoBehaviour
         float halfFov = viewCamera.fieldOfView * 0.5f * Mathf.Deg2Rad;
         float fitHeight = surface.Size.y * 0.5f * 1.2f / Mathf.Tan(halfFov);
         float fitWidth = surface.Size.x * 0.5f * 1.2f / (Mathf.Tan(halfFov) * viewCamera.aspect);
-        float distance = Mathf.Max(fitHeight, fitWidth, 0.6f);
+        float distance = Mathf.Min(14f, Mathf.Max(fitHeight, fitWidth, 0.6f));
         Vector3 normal = face.forward;
         focusPosition = bounds.center + normal * distance;
         focusRotation = Quaternion.LookRotation(-normal, Vector3.up);
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        hud?.SetHint(null, "[LMB]  Draw     [RMB]  Erase     [" + interactKey + "]  Step back");
+        hud?.SetHint(null, null);
     }
 
-    private void UpdateDrawing()
+    private void UpdateJournal()
     {
         Keyboard keyboard = Keyboard.current;
         Mouse mouse = Mouse.current;
         if (focusLeaving) return;
 
-        if (keyboard != null && (keyboard[interactKey].wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame))
+        if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame)
         {
+            if (focusJournal != null && focusJournal.CancelSticker()) return;
             LeaveFocus();
             return;
         }
-        if (mouse == null || focusBlend < 0.95f) return;
+        if (!openJournal && focusBlend >= 1f)
+        {
+            focusJournal?.BeginEditing(initialTool, viewCamera);
+            openJournal = true;
+            hud?.SetCorner("[Esc] Step back");
+        }
+        if (mouse != null && !mouse.rightButton.isPressed) suppressRightInk = false;
+        if (openJournal && focusJournal != null && mouse?.rightButton.wasPressedThisFrame == true &&
+            focusJournal.DiscardHeldSticker())
+        {
+            suppressRightInk = true;
+            hasLastUv = false;
+            return;
+        }
+        if (mouse == null || !openJournal || focusJournal == null ||
+            !focusJournal.AcceptsInk(mouse.position.ReadValue()))
+        {
+            hasLastUv = false;
+            return;
+        }
 
         bool drawing = mouse.leftButton.isPressed;
-        bool erasing = mouse.rightButton.isPressed;
+        bool erasing = (!suppressRightInk && mouse.rightButton.isPressed) || (drawing && focusJournal.Erasing);
         Vector2 mousePosition = mouse.position.ReadValue();
         if (!drawing && !erasing)
         {
@@ -268,7 +179,7 @@ public sealed class ReflectionVisitor : MonoBehaviour
         }
 
         Ray ray = viewCamera.ScreenPointToRay(mousePosition);
-        if (!focusSurface.Collider.Raycast(ray, out RaycastHit hit, 10f))
+        if (!focusSurface.Collider.Raycast(ray, out RaycastHit hit, 30f))
         {
             hasLastUv = false;
             return;
@@ -279,6 +190,7 @@ public sealed class ReflectionVisitor : MonoBehaviour
         float speed = (mousePosition - lastMouse).magnitude / Mathf.Max(Time.deltaTime, 0.001f);
         float radius = erasing ? eraserPixels : brushPixels * Mathf.Lerp(1.25f, 0.55f, Mathf.Clamp01(speed / 2500f));
         focusSurface.Stroke(hasLastUv ? lastUv : uv, uv, radius, erasing);
+        focusJournal.MarkInkDirty();
         lastUv = uv;
         hasLastUv = true;
         lastMouse = mousePosition;
@@ -288,8 +200,8 @@ public sealed class ReflectionVisitor : MonoBehaviour
     {
         focusBlend = Mathf.MoveTowards(focusBlend, focusLeaving ? 0f : 1f, Time.deltaTime / focusTime);
         float t = Mathf.SmoothStep(0f, 1f, focusBlend);
-        Vector3 walkPosition = player.position + bodyToCamera;
-        Quaternion walkRotation = Quaternion.Euler(pitch, yaw, 0f);
+        Vector3 walkPosition = normalPosition;
+        Quaternion walkRotation = normalRotation;
         cameraHolder.position = Vector3.Lerp(walkPosition, focusPosition, t);
         cameraHolder.rotation = Quaternion.Slerp(walkRotation, focusRotation, t);
 
@@ -299,7 +211,8 @@ public sealed class ReflectionVisitor : MonoBehaviour
     private void LeaveFocus()
     {
         focusLeaving = true;
-        focusSurface.Save();
+        focusJournal?.EndEditing();
+        hud?.SetCorner(null);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         hud?.SetHint(null, null);
@@ -307,18 +220,46 @@ public sealed class ReflectionVisitor : MonoBehaviour
 
     private void FinishFocus()
     {
+        RestorePlayerVisuals();
+        controller.enabled = true;
+        controller.SetRestricted(false);
+        ConsumedFrame = Time.frameCount;
         focusSurface = null;
+        focusJournal = null;
         focusLeaving = false;
     }
 
     private void EndFocusNow()
     {
         if (focusSurface == null) return;
-        focusSurface.Save();
+        focusJournal?.EndEditing();
+        hud?.SetCorner(null);
         focusSurface = null;
+        focusJournal = null;
         focusLeaving = false;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        PlaceCamera();
+        cameraHolder.SetPositionAndRotation(normalPosition, normalRotation);
+        RestorePlayerVisuals();
     }
+
+    private void HidePlayerVisuals(Transform visuals)
+    {
+        if (visuals == null) return;
+        foreach (Renderer renderer in visuals.GetComponentsInChildren<Renderer>(true))
+        {
+            if (renderer.forceRenderingOff) continue;
+            renderer.forceRenderingOff = true;
+            hiddenPlayerVisuals.Add(renderer);
+        }
+    }
+
+    private void RestorePlayerVisuals()
+    {
+        foreach (Renderer renderer in hiddenPlayerVisuals)
+            if (renderer != null) renderer.forceRenderingOff = false;
+        hiddenPlayerVisuals.Clear();
+    }
+
+    private void OnDisable() => RestorePlayerVisuals();
 }

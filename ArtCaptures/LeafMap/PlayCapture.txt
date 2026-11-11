@@ -1,0 +1,1 @@
+Bubbles alive after 40 s: 65

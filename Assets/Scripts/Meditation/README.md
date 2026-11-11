@@ -1,82 +1,85 @@
-# Meditation and the Reflection Space
+# Mind Palace
 
-Press **M** to sit down. The world (sky, then terrain and creatures) is slowly erased into blank paper, and
-the player wakes in the **reflection space**: a pale floor in a paper void with a ring of black stone steles
-and tablets to draw on, and casts of every creature met so far. Press **M** again to return.
+On the ground, aim at a resting creature and left-click to sit. A second left click enters the
+Reflection Space. Right-click or Space stands. Pick up and move a resting creature with the usual
+right-click carry controls. Left click has no effect while carrying one.
 
-## Setup
+The central resting place in the theater works the same way and sends you back to your world seat.
+Left-click the giant slab to open the field journal. Use its physical left and right arrows to
+turn pages while standing nearby or while editing. The right arrow adds a page at the end.
+Use **T** for writing, the **pen** to draw with left click, or the **eraser** to erase with
+left click. Right click also erases while using the pen. Esc steps back from the slab.
 
-**Tools > Capstone > Meditation > Add Meditation To Open Scene** creates the materials in
-`Assets/Materials/Meditation/` and a `Meditation` object with all five components below.
+The black satchel on the right shows in-game creature cutouts for unlocked families in two columns.
+Scroll to browse, click a sticker
+to pick up a copy, and click the page to place it. In Type mode, click a placed sticker to move it.
+Right-click or click the satchel to discard a held sticker. Press Esc to cancel a move and
+put the sticker back.
 
-Other menu items:
+To add a sticker, add its transparent texture and an entry to **SlabStickerCatalog** in
+**Assets/Resources**. Use a unique sticker ID, the parent's exhibit ID as **Family Id**, and
+a short display name. Several sticker entries can share the same unlock.
 
-- **Open Saved Drawings Folder**
-- **Clear Saved Drawings And Journal**
+A world seat records eligible families within 10 metres when you enter. To adjust or preview this
+range in the editor, select a resting creature in Play Mode and use its Discovery Radius and Show
+Discovery Range fields. The theater places exhibits in the order they were discovered. Click a
+frozen member or the light switch to release the group. Use the fixture to turn the beam back on.
+Only its own members freeze when they enter a lit beam. The room resets every visit.
 
-## Components (all on the `Meditation` object)
+## Adding a creature exhibit
 
-| Script | Job |
-| --- | --- |
-| `MeditationController` | Runs the whole sequence: enter, inside, leave. |
-| `ReflectionSpace` | Builds the space once at runtime and moves it to where the player meditates. |
-| `CreatureJournal` | Remembers each creature type the first time the player is near it. |
-| `ReflectionVisitor` | Player control inside the space: walk, look, draw, move casts. |
-| `MeditationHUD` | Hints, "Remembered: ..." toasts, and the full-screen paper blank. |
+Most creatures need one prefab and one entry in [ReflectionCatalog](../../Resources/ReflectionCatalog.asset).
+The theater places the exhibit automatically.
 
-Helpers (no component): `MeditationVeil` (the erasing sphere), `InkSurface` (a drawable face),
-`CreatureCast` (frozen copy of a creature's meshes), `ReflectionCast` (a cast standing in the space),
-`MeditationShapes` (procedural meshes), `ReflectionStorage` (files).
+1. **Start with a working prefab.** The root needs the creature script and its interaction
+   collider. Assign the same materials, shader assets, and required references as the world
+   creature. If the creature currently exists only in a scene, make a prefab from a configured
+   specimen. The Fuzz Creature and Tentacle Creature are examples.
+2. **Add an entry in the catalog Inspector.** Use a unique, permanent **Id** such as
+   `light-moth`, and set **Creature Type** to the exact C# class name, such as `LightMoth`.
+   The type controls discovery and the ID is what the save stores. Keep the ID stable when
+   renaming the prefab or script. If the class name changes, update the catalog type.
+3. **Set up the exhibit.** Select **Prefab**, assign the prefab, and set **Count** (usually 1).
+   **Radius** and **Height** are in metres and define the beam volume. The radius also reserves
+   space in the spiral. Allow room for the full group, including its supports, at natural size.
+4. **Decide what grants the unlock.** Give the main creature a catalog entry. Supporting
+   objects like eggs, webs, bones, and honey can appear or spawn as part of an exhibit without
+   a separate entry.
 
-## The sequence
+### Creatures with special setup
 
-1. **Enter** (only on the ground, otherwise a "Find still ground" toast): the player's controller, body,
-   carrier, interactor, climber and prompt HUD are paused and creatures are frozen. The view sinks
-   (`sinkDepth`) and look slows (`settleLook`).
-2. **Erase:** the sky fades, then `MeditationVeil` (an inside-out paper sphere) shrinks around the player,
-   hiding everything beyond it.
-3. **Jump:** behind the paper blank, the space is placed `spaceHeight` (3000 m) above the spot and revealed.
-4. **Inside:** `ReflectionVisitor` drives the player and camera.
-5. **Leave:** drawings are saved, the space is erased, the player returns to the exact spot and the world
-   is revealed from near to far. Control is handed back.
+Use [ReflectionSpace.cs](ReflectionSpace.cs) for exhibits that need a habitat, multiple forms,
+or a manager. Existing examples include the five Bat Bugs and their perch, the young and grown
+Mushroom Trees, and the Sky Spider and its web. Give new recipe values explicit numbers so
+existing catalog assets keep their recipe assignments.
 
-Timing: `settleTime`, `skyEraseTime`, `worldEraseTime`, `spaceRevealTime`, `spaceEraseTime`,
-`worldRevealTime`, all scaled by `transitionSpeed` (2 = twice as fast).
+- Set up required materials and dependencies before the creature builds its visuals. Adding
+  the script to an empty object skips the prefab's Inspector assignments. That produced pink
+  fur and a missing membrane in the original Fuzz and Tentacle exhibits.
+- Build any first-frame geometry before registering the creature with the spotlight. The
+  spotlight pauses simulation immediately, so visuals that normally appear on the first update
+  need an initial setup step. Register each starting group member and any supporting creatures
+  that should freeze with it.
+- Spawn supports, managers, and descendants in the exhibit's scene so exiting removes them.
+  Use the owner's `PhysicsScene` for physics queries. Existing reflection-aware queries can
+  also use `ReflectionPhysics`.
 
-## Inside the space
+### Verify in Play Mode
 
-| Input | Action |
-| --- | --- |
-| WASD + mouse | Slow walk (`walkSpeed` 2.4) and look |
-| LMB on a stele / tablet | Walk the camera up to the face and start drawing |
-| LMB / RMB while drawing | Draw / erase (`brushPixels`, `eraserPixels`) |
-| E or Esc while drawing | Step back |
-| E on a cast | Pick it up / set it down |
-| M | Return to the world |
+1. Outside Play Mode, choose **Tools > Capstone > Meditation > Unlock All Exhibits** to preview
+   the new exhibit. Check its materials, pose, footprint, and frozen state when you enter.
+2. Click its fixture or a frozen member. Check normal movement and interactions. Turn the beam
+   back on and check that only its own members freeze inside it.
+3. Leave and re-enter. Check that the exhibit resets under its beam and any spawned objects from
+   the previous visit are gone.
+4. To verify discovery, choose **Clear Exhibit Unlocks** outside Play Mode. Enter from a seat
+   with the eligible creature within 10 metres. Check that its exhibit appears and persists
+   on a later visit. For grouped exhibits, also check that a supporting object alone does
+   not grant the unlock.
 
-Layout (`ReflectionSpace`): `seed`, `floorRadius`, `walkRadius`, `steleCount`, `tabletCount`,
-`steleDistance`, `tabletDistance`. **Changing the seed changes every stele shape, so saved drawings no
-longer fit.**
+Discoveries use Reflection/exhibits-v1.json under Unity's persistent data directory. The slab
+journal uses Reflection/slab-journal-v1.json with a PNG per page in Reflection/drawings.
+An existing amphitheater-slab-v1.png is copied into the first page when the journal is first opened.
 
-## Creature journal
-
-Every `scanInterval` it checks creatures within `encounterDistance` (6 m) that are on screen
-(`requireInView`). The first of each type (by class; all Fuzz Creatures share one entry) is recorded and a
-`CreatureCast` is copied from its renderers at real size, capped at `castMaxSize`. Nothing is recorded while
-meditating. New casts appear in the space next time; where the player put them is saved too.
-
-## Saved files
-
-Under `Application.persistentDataPath/Reflection/`:
-
-- `journal.json` — met creatures and cast positions
-- `drawings/<id>.png` — one ink texture per face
-- `casts/<key>.mesh` — cast meshes (materials are found again by name)
-- `landmarks.json` — seeds and glyphs, written by the Landmarks system
-
-## Links to other systems
-
-- **Player:** pauses and restores the movement scripts in `Scripts/Movement`.
-- **Creatures:** the journal reads any `Creature`; casts are frozen while meditating.
-- **Landmarks:** `SteleInscriptions` (on the same object) carves learned glyphs high on the steles.
-- Shaders: `Assets/Shaders/Meditation` (`MeditationVeil`, `MeditationInk`).
+Outside Play Mode, use **Tools > Capstone > Meditation > Unlock All Exhibits** or
+**Clear Exhibit Unlocks** to change discovery progress without affecting drawings or glyphs.

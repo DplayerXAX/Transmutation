@@ -97,7 +97,7 @@ public static class LandmarkSetup
             m.SetFloat("_ScriptChanceInside", 0f);
             m.SetFloat("_GlitchAmount", 0.6f);
         });
-        landmark.SetGlaze(glaze, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/BounceShroom.prefab"));
+        landmark.SetGlaze(glaze, AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Traversal/BounceShroom.prefab"));
         var serialized = new SerializedObject(landmark);
         serialized.FindProperty("world").objectReferenceValue = world;
         serialized.ApplyModifiedProperties();

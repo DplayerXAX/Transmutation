@@ -24,7 +24,9 @@ public static class ClimbTestLauncher
     {
         // Real shaders in captured frames, not the placeholder used while shaders compile.
         EditorSettings.asyncShaderCompilation = false;
-        EditorSceneManager.OpenScene("Assets/Scenes/Scene_Daniel.unity");
+        string[] args = System.Environment.GetCommandLineArgs();
+        int sceneArg = System.Array.IndexOf(args, "-climbTestScene");
+        EditorSceneManager.OpenScene(sceneArg >= 0 && sceneArg + 1 < args.Length ? args[sceneArg + 1] : "Assets/Scenes/Scene_Daniel.unity");
         // The crown seed copies a scene object named Colorful. If this copy of the scene has none, stand one in
         // (two parts under a parent) so the copying is still tested.
         if (GameObject.Find("Colorful") == null)

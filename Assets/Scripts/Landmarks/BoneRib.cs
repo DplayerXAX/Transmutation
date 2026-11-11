@@ -67,7 +67,11 @@ public sealed class BoneRib : MonoBehaviour
     private readonly float[] lastLift = new float[3], lastWrithe = new float[3], lastSway = new float[3];
 
     /// <summary>Eases the lift towards target. A rib does not come down while its gap is occupied.</summary>
-    public void Drive(float target, float deltaTime)
+    /// <summary>
+    /// Moves the rib towards target. Without checks the rib still moves every frame, but skips the physics
+    /// queries (ground and gap) this frame, keeping their last answer: far away they are run only now and then.
+    /// </summary>
+    public void Drive(float target, float deltaTime, bool checks = true)
     {
         if (unfolding > 0f && segments != null)
             for (int k = 0; k < segments.Length && k < 3; k++) transportRotations[k] = segments[k].localRotation;
@@ -77,12 +81,10 @@ public sealed class BoneRib : MonoBehaviour
             if (wedged.IsCarried || wedged.IsPetted || !wedged.isActiveAndEnabled) Release();
             else target = Mathf.Max(target, open);
         }
-        propped = false;
-        if (!free && target < open - 0.001f && GapOccupied())
-            propped = true;
-        else
-            open = Mathf.Lerp(open, target, 1f - Mathf.Exp(-followRates.x * deltaTime));
-        Pose(Time.time, deltaTime);
+        if (checks) propped = !free && target < open - 0.001f && GapOccupied();
+        else if (propped && target >= open - 0.001f) propped = false;
+        if (!propped) open = Mathf.Lerp(open, target, 1f - Mathf.Exp(-followRates.x * deltaTime));
+        Pose(Time.time, deltaTime, checks);
         if (unfolding > 0f && segments != null)
         {
             for (int k = 0; k < segments.Length && k < 3; k++)
@@ -91,7 +93,7 @@ public sealed class BoneRib : MonoBehaviour
         }
     }
 
-    private void Pose(float time, float deltaTime)
+    private void Pose(float time, float deltaTime, bool checks = true)
     {
         if (segments == null) return;
         if (!placed) Place();
@@ -123,6 +125,7 @@ public sealed class BoneRib : MonoBehaviour
         // Stop rather than pass through the ground: keep the last clear pose until the rib's own motion
         // carries it somewhere clear again. (If it is already touching, as when the body crawls into a
         // slope, it keeps moving, since moving is the only way out.)
+        if (!checks) return;
         bool clear = ClearOfGround();
         if (!clear && wasClear)
         {

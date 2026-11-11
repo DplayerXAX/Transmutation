@@ -448,7 +448,7 @@ public sealed partial class ProceduralWorld
     public void Generate(bool blockUntilDone)
     {
         Clear();
-        if (!UseSavedLayout()) { PrepareLayout(); field = new DensityField(this); }
+        if (!UseSavedLayout()) { PrepareLayout(); field = new DensityField(this); ApplyLeafScale(); }
         PrepareGrid(SculptHeadroom);
         LoadSculpt();
         string currentFingerprint = JsonUtility.ToJson(field);
@@ -467,11 +467,14 @@ public sealed partial class ProceduralWorld
             (blockUntilDone || distance <= blockingRadius ? near : far).Add(coord);
         }
         chunksTotal = chunks.Count;
+        // Saved chunk meshes (when they still match) replace the whole sampling phase.
+        if (LoadChunkCache()) return;
         // Blocking startup also uses frozen data; it is the only unbudgeted loading phase.
         var snapshots = new Dictionary<Vector3Int, Dictionary<Vector3Int, float>>();
         foreach (Vector3Int coord in near) snapshots[coord] = CopyModifications(coord);
-        // The edit mode preview may use every core; in Play Mode the worker budget applies.
-        int parallel = Application.isPlaying ? workerCount : SystemInfo.processorCount;
+        // The main thread waits for this blocking phase anyway, so it may use every core (the worker budget
+        // applies to the chunks streamed in afterwards). With only the budget, large maps took many seconds.
+        int parallel = Mathf.Max(workerCount, SystemInfo.processorCount - 1);
         Parallel.ForEach(near, new ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, parallel) },
             coord => finished.Enqueue(BuildChunk(field, gridMin, coord, epoch, 0, snapshots[coord], cancellation.Token)));
         var built = new List<ChunkResult>();
@@ -525,7 +528,9 @@ public sealed partial class ProceduralWorld
         field = null; chunksBuilt = 0; chunksTotal = 0; erosionTimer = 0f; generating = false; LastUpdateError = null;
     }
     private void OnDestroy() => Clear();
-    private void OnDisable() { if (cancellation != null) Clear(); }
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots && cancellation != null) Clear(); }
+    // The leaf terrain is sampled from static code, so it reads the active layout's scale.
+    private void ApplyLeafScale() { if (field != null && field.leafMap) LeafMapTerrain.Scale = field.leafScale > 0f ? field.leafScale : 1f; }
     private void OnEnable() { if (Application.isPlaying && fingerprint != null && !LayoutReady) Generate(false); }
     private static void DestroySafe(UnityEngine.Object target)
     { if (target == null) return; if (Application.isPlaying) Destroy(target); else DestroyImmediate(target); }

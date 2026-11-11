@@ -12,7 +12,7 @@ public static class YoTutorialSetup
 {
     private const string ScenePath = "Assets/Scenes/Scene_YoTutorial.unity";
     private const string Generated = "Assets/Generated/YoTutorial";
-    private const string TriggerPath = "Assets/Prefabs/Gameplay/InteractionHintsTrigger.prefab";
+    private const string TriggerPath = "Assets/Prefabs/Gameplay/UI/InteractionHintsTrigger.prefab";
     private static Material stone, ground, darkStone, towerStone;
     private static Mesh rock;
 
@@ -31,8 +31,8 @@ public static class YoTutorialSetup
         ground = ReadableMaterial("Assets/Materials/World/MAT_Decor_Organic.mat", "Ground", new Color(0.65f, 0.67f, 0.6f));
         darkStone = ReadableMaterial("Assets/Materials/World/MAT_Realm_Basalt.mat", "DipStone", new Color(0.35f, 0.38f, 0.4f));
         towerStone = ReadableMaterial("Assets/Materials/Landmarks/MAT_Landmark_SpireStone.mat", "TowerStone", new Color(0.78f, 0.8f, 0.76f));
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
-        var shroomPrefab = AssetDatabase.LoadAssetAtPath<BounceShroom>("Assets/Prefabs/Creatures/BounceShroom.prefab");
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
+        var shroomPrefab = AssetDatabase.LoadAssetAtPath<BounceShroom>("Assets/Prefabs/Creatures/Traversal/BounceShroom.prefab");
         if (stone == null || ground == null || darkStone == null || towerStone == null || playerPrefab == null || shroomPrefab == null)
             throw new InvalidOperationException("The tutorial needs the existing world materials, player and BounceShroom prefabs.");
 

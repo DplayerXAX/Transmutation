@@ -26,6 +26,13 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Range(8, 48)] [SerializeField] private int chunkCells = 24;
     [SerializeField] private int seed = 1;
 
+    [Tooltip("Authored leaf-shaped exploration layout. Off preserves the original terrain generator.")]
+    [SerializeField] private bool leafMap;
+    [Tooltip("Horizontal growth of the leaf layout around the tutorial exit (1 = first layout).")]
+    [Min(0.5f)] [SerializeField] private float leafScale = 1f;
+    [Tooltip("Authored combined world (Scene_World, WorldMapTerrain): crack, regions and grafted teammate scenes.")]
+    [SerializeField] private bool worldMap;
+
     [Header("Generation Recipe")]
     [Tooltip("Original preserves existing worlds. Other recipes supply shape data to the same sculpting, erosion and meshing system.")]
     [SerializeField] private TerrainGenerationRecipe generationRecipe = new TerrainGenerationRecipe();
@@ -145,6 +152,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         yMin = -f.crustThickness - f.innerGap - f.surfaceAmplitude * (1f + f.ridges) * Mathf.Max(f.innerInvert, f.ceilingMirror) - f.innerDetail - f.caveDepth - 4f;
 
         if (f.erosionTestCourse) { yMin = -14f; yMax = 14f; }
+        if (f.worldMap) { yMin = WorldMapTerrain.GridBottom; yMax = WorldMapTerrain.GridTop + headroom; }
         if (f.IsVolumeRecipe) { yMin = f.recipe.verticalBounds.x; yMax = f.recipe.verticalBounds.y + headroom; }
         float chunkSize = f.chunkCells * f.cellSize;
         chunkCount = new Vector3Int(
@@ -164,6 +172,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public float cellSize;
         public int chunkCells;
         public int seed;
+        public bool leafMap;
+        public float leafScale;
+        public bool worldMap;
         public float surfaceAmplitude;
         public float surfaceFrequency;
         public float ridges;
@@ -204,6 +215,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         {
             worldSize = world.worldSize;
             seed = world.seed;
+            leafMap = world.leafMap;
+            leafScale = world.leafScale;
+            worldMap = world.worldMap;
             surfaceAmplitude = world.surfaceAmplitude;
             surfaceFrequency = world.surfaceFrequency;
             ridges = world.ridges;
@@ -246,6 +260,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     public float SurfaceHeight(float x, float z)
     {
         if (IsVolumeRecipe) return volume.Height(x,z);
+        if (leafMap) return LeafMapTerrain.Height(x, z);
+        if (worldMap) return WorldMapTerrain.Height(x, z);
         if (erosionTestCourse) return CourseHeight(x, z);
         Vector2 p = new Vector2(x, z) * surfaceFrequency + noiseOffset;
         // Domain warp so hills do not line up on a grid.
@@ -276,10 +292,12 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         return height;
     }
 
-    public float CeilingHeight(float h) => -crustThickness - h * ceilingMirror;
+    public float CeilingHeight(float h) => leafMap || worldMap ? -32f - Mathf.Max(0f, h) * 0.15f : -crustThickness - h * ceilingMirror;
 
     public float InnerGroundHeight(float x, float z, float h)
     {
+        if (worldMap) return WorldMapTerrain.InnerGround + Mathf.PerlinNoise(x * 0.025f + 71f, z * 0.025f + 31f) * 2f;
+        if (leafMap) return -65f + Mathf.PerlinNoise(x * 0.025f + 71f, z * 0.025f + 31f) * 2f;
         Vector2 p = new Vector2(x, z) * surfaceFrequency * 2.3f + noiseOffset * 1.37f;
         float detail = Fbm2(p, 4) * innerDetail;
         float ground = -crustThickness - innerGap - h * innerInvert + detail;
@@ -326,6 +344,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             }
         }
 
+        // The combined world cuts its crack before the sinkholes, so the shafts stay open through the mother's ledge.
+        if (worldMap) density = WorldMapTerrain.ShapeDensity(p, density);
+
         // Sinkholes: wobbly shafts through the crust, stopping above the inner ground.
         if (p.y > floor + 1.5f)
         {
@@ -337,7 +358,7 @@ public sealed partial class ProceduralWorld : MonoBehaviour
                 density = Mathf.Min(density, shaft);
             }
         }
-        return density;
+        return leafMap ? LeafMapTerrain.ShapeDensity(p, density) : density;
     }
 
     }

@@ -111,6 +111,7 @@ public sealed partial class SquirrelSystemManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (ReflectionPhysics.SwitchingWorldRoots) return;
         foreach (var fight in fights) FinishFight(fight, false);
         fights.Clear();
     }
@@ -120,6 +121,16 @@ public sealed partial class SquirrelSystemManager : MonoBehaviour
     private bool initialized;
     public bool IsInitialized => initialized;
     private void Start() => InitializeSystem();
+
+    internal void ConfigureReflection(GameObject nest, GameObject food)
+    {
+        autoDiscoverScene = false;
+        population = 1;
+        initialFoodCount = 0;
+        sizeRange = Vector2.one;
+        nestPrefab = nest;
+        foodPrefab = food;
+    }
 
     public void InitializeSystem()
     {

@@ -1,0 +1,163 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea5b4e5fb7ce4399a69aeee8cb39f0f8, type: 3}
+  m_Name: SlabStickerCatalog
+  m_EditorClassIdentifier:
+  stickers:
+  - id: bird
+    familyId: birds
+    displayName: Bird
+    image: {fileID: 2800000, guid: cec717d0a8824c1ba32096308003f82f, type: 3}
+  - id: bird-bones
+    familyId: birds
+    displayName: Bird Bones
+    image: {fileID: 2800000, guid: 44a4e0d4c00248a2bc111acdb6e98f54, type: 3}
+  - id: bat-bug
+    familyId: bat-bugs
+    displayName: Ceiling Bat Bug
+    image: {fileID: 2800000, guid: c566d15f37164fbe9b5da0f6699a7ce0, type: 3}
+  - id: bat-bug-egg
+    familyId: bat-bugs
+    displayName: Bat Bug Egg
+    image: {fileID: 2800000, guid: a15705c608f845549be0368d65c5de11, type: 3}
+  - id: sky-spider
+    familyId: sky-spider
+    displayName: Sky Spider
+    image: {fileID: 2800000, guid: 5d9f840281dd48c696fcb93e484a91af, type: 3}
+  - id: sky-web
+    familyId: sky-spider
+    displayName: Sky Web
+    image: {fileID: 2800000, guid: 41661423b75541db80fc49bf2bf8286c, type: 3}
+  - id: glow-bee
+    familyId: glow-bees
+    displayName: Glow Bee
+    image: {fileID: 2800000, guid: cbd01fccd72e4065a464c9188907b46c, type: 3}
+  - id: glow-bee-nest
+    familyId: glow-bees
+    displayName: Glow Bee Nest
+    image: {fileID: 2800000, guid: 2b3b888b749d47b8a4b71b0c03d261c4, type: 3}
+  - id: glow-honey
+    familyId: glow-bees
+    displayName: Glow Honey
+    image: {fileID: 2800000, guid: 687d2c448af04e80b2cb4b6ebe76ec21, type: 3}
+  - id: squirrel
+    familyId: squirrel
+    displayName: Squirrel
+    image: {fileID: 2800000, guid: 706660c01848452b960670b325a55a7f, type: 3}
+  - id: mushroom-tree
+    familyId: mushroom-tree
+    displayName: Grown Mushroom Tree
+    image: {fileID: 2800000, guid: e13c5380271f41e9bab9bd22ccbe9e76, type: 3}
+  - id: young-mushroom-tree
+    familyId: mushroom-tree
+    displayName: Young Mushroom Tree
+    image: {fileID: 2800000, guid: 6d8d3a251f3541e1b1fbf55374ea7daa, type: 3}
+  - id: bounce-shroom
+    familyId: bounce-shroom
+    displayName: Bounce Shroom
+    image: {fileID: 2800000, guid: ed3572c961794b2ba898d07c0c42cca8, type: 3}
+  - id: expanded-bounce-shroom
+    familyId: bounce-shroom
+    displayName: Expanded Bounce Shroom
+    image: {fileID: 2800000, guid: d0cee5da6a8d4a82a0d58ddae99fce19, type: 3}
+  - id: water
+    familyId: water
+    displayName: Water
+    image: {fileID: 2800000, guid: f508369a796d4acb9eb378c8b37bc87f, type: 3}
+  - id: general-asura
+    familyId: general-asura
+    displayName: General Asura
+    image: {fileID: 2800000, guid: 9e4579e9e3d14c52b161bc2cef15f9ce, type: 3}
+  - id: blast-core
+    familyId: general-asura
+    displayName: Blast Core
+    image: {fileID: 2800000, guid: 8e32f00ef82e42c6925acdc4d89471ba, type: 3}
+  - id: melee-asura
+    familyId: melee-asura
+    displayName: Melee Asura
+    image: {fileID: 2800000, guid: 551a8bf89cc146e8af6b571a2bce997e, type: 3}
+  - id: ranged-asura
+    familyId: ranged-asura
+    displayName: Ranged Asura
+    image: {fileID: 2800000, guid: 64728b134b8d4224b9113317fec6bc87, type: 3}
+  - id: rolling-asura
+    familyId: rolling-asura
+    displayName: Rolling Asura
+    image: {fileID: 2800000, guid: 612c6d1522be42a3b48e1ad09abf93e7, type: 3}
+  - id: fuzz
+    familyId: fuzz
+    displayName: Fuzz Creature
+    image: {fileID: 2800000, guid: 013f065dfb8c40668639fe32896ca141, type: 3}
+  - id: bellows
+    familyId: bellows
+    displayName: Bellows Creature
+    image: {fileID: 2800000, guid: 645e20b036eb41f6af0eb0905fd0861a, type: 3}
+  - id: chameleon
+    familyId: chameleon
+    displayName: Chameleon
+    image: {fileID: 2800000, guid: 0bc2bf3b2b4741d5ace7a53ce049db43, type: 3}
+  - id: compost
+    familyId: compost
+    displayName: Compost Creature
+    image: {fileID: 2800000, guid: c9e53cd2914e437f87e548547a6a361a, type: 3}
+  - id: cistern-snail
+    familyId: cistern-snail
+    displayName: Cistern Snail
+    image: {fileID: 2800000, guid: 726b586c049f4324b42faf7c8eb05c1c, type: 3}
+  - id: geode-larva
+    familyId: geode-larva
+    displayName: Geode Larva
+    image: {fileID: 2800000, guid: 2746b341f1fd4a3e9771bf54da9c4c81, type: 3}
+  - id: ore-colossus
+    familyId: ore-colossus
+    displayName: Ore Colossus
+    image: {fileID: 2800000, guid: 6b879fc7b065476d8a02d3042d66503b, type: 3}
+  - id: goo
+    familyId: goo
+    displayName: Goo Creature
+    image: {fileID: 2800000, guid: 275247ed18594f33b82b83cb46dbd32a, type: 3}
+  - id: tentacle
+    familyId: tentacle
+    displayName: Tentacle Creature
+    image: {fileID: 2800000, guid: 141b0230f39e4652855567290035b74f, type: 3}
+  - id: fire-eater
+    familyId: fire-eater
+    displayName: Fire Eater
+    image: {fileID: 2800000, guid: 2bf97c20f07842b1b9c323c4c202640d, type: 3}
+  - id: recycle-flower
+    familyId: recycle-flower
+    displayName: Recycle Flower
+    image: {fileID: 2800000, guid: 6699c4804e774d5da5e6e090f9cf4f47, type: 3}
+  - id: light-moth
+    familyId: light-moth
+    displayName: Light Moth
+    image: {fileID: 2800000, guid: db696897d66a412a887e3114148bc9b6, type: 3}
+  - id: flash-bloom
+    familyId: flash-bloom
+    displayName: Flash Bloom
+    image: {fileID: 2800000, guid: a9a504b9a6a847f1ba9a5296de32a503, type: 3}
+  - id: afterglow-pod
+    familyId: afterglow-pod
+    displayName: Afterglow Pod
+    image: {fileID: 2800000, guid: 056b6269726e4063b9f835c708cc962d, type: 3}
+  - id: corrupt-seed
+    familyId: corrupt-seed
+    displayName: Corrupt Seed
+    image: {fileID: 2800000, guid: 6fa9c66b7ebb4eb399b7828c1f4d3f23, type: 3}
+  - id: fire-flower
+    familyId: fire-flower
+    displayName: Fire Flower
+    image: {fileID: 2800000, guid: 9b9433b5f5174079ace576094c5fa2a7, type: 3}
+  - id: bubble-flower
+    familyId: bubble-flower
+    displayName: Bubble Flower
+    image: {fileID: 2800000, guid: 3b76048111414430ad4b415e3e265939, type: 3}

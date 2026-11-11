@@ -72,6 +72,7 @@ public static class HabitatBlockSetup
             // "refresh" imports changed scripts first; the build then runs on the next request.
             if (command.Contains("refresh")) { File.WriteAllText(Status, "OK: refresh"); AssetDatabase.Refresh(); return; }
             if (command.Contains("dump")) { Dump(); File.WriteAllText(Status, "OK: dump"); return; }
+            if (command.Contains("audio-sfx")) { File.WriteAllText(Status, "OK: audio-sfx " + AudioSetup.AddSoundEffects()); return; }
             if (command.Contains("optics")) RefineOpticsInScene();
             if (command.Contains("build")) BuildAndSave(false);
             if (command.Contains("capture")) Capture();

@@ -295,7 +295,7 @@ public static class BubbleFlowerValidation
         Check(flower.LastShot == groundShot, "automatic firing stops while carried");
         Destroy(groundShot.gameObject);
         // Place an interactive shroom on the crosshair, then verify held use wins even on cooldown.
-        var shroom = Spawn(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/BounceShroom.prefab"), Origin + Vector3.forward * 4f - Vector3.up * 0.25f).GetComponent<BounceShroom>();
+        var shroom = Spawn(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Traversal/BounceShroom.prefab"), Origin + Vector3.forward * 4f - Vector3.up * 0.25f).GetComponent<BounceShroom>();
         Physics.SyncTransforms();
         Check(interactor.FindCreature() == shroom, "test crosshair actually targets the shroom");
         interactor.TryInteract();

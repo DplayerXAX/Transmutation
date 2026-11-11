@@ -117,7 +117,7 @@ public sealed class ErosiveFluidDroplet : Creature
         for (int i = 0; i < touchCount; i++)
         {
             float speed = Vector3.ProjectOnPlane(velocity, touches[i].normal).magnitude;
-            float strength = source.Rate * fluid.World.Erodibility * source.MotionMultiplier(speed);
+            float strength = source.Rate * (fluid.World != null ? fluid.World.Erodibility : 1f) * source.MotionMultiplier(speed);
             activity += strength;
             float amount = strength * dt / touchCount;
             if (touches[i].isTarget) touches[i].target.Erode(touches[i].point, amount);
@@ -139,7 +139,7 @@ public sealed class ErosiveFluidDroplet : Creature
     private void ProbeHeldContacts(Vector3 position)
     {
         touchCount = 0;
-        int count = Physics.OverlapSphereNonAlloc(position, source.Radius, overlaps, 1 << fluid.World.TerrainLayer, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(position, source.Radius, overlaps, 1 << fluid.TerrainLayer, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count && touchCount < touches.Length; i++)
         {
             Collider terrain = overlaps[i];
@@ -169,8 +169,8 @@ public sealed class ErosiveFluidDroplet : Creature
     // Creature bodies ignore droplet collisions, so touching is an overlap with a thin margin.
     private void ProbeCreatures(Vector3 position)
     {
-        int mask = Physics.AllLayers & ~(1 << gameObject.layer) & ~(1 << fluid.World.TerrainLayer);
-        int count = Physics.OverlapSphereNonAlloc(position, source.Radius + 0.05f, creatureOverlaps, mask, QueryTriggerInteraction.Ignore);
+        int mask = Physics.AllLayers & ~(1 << gameObject.layer) & ~(1 << fluid.TerrainLayer);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(position, source.Radius + 0.05f, creatureOverlaps, mask, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++)
         {
             Creature creature = CreatureSpatialQuery.Owner(creatureOverlaps[i]);

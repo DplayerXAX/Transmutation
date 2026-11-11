@@ -1,0 +1,50 @@
+Enter Play Mode until the first frame: 40.56 s
+  ExitingEditMode at 0.0 s
+  BeforeAssemblyReload at 0.1 s
+  AfterAssemblyReload at 24.5 s
+  EnteredPlayMode at 40.4 s
+Terrain ready after: 1.5 s
+Frames over 80 ms in the first 30 s: 4
+  1.5 s: 8680 ms
+  2.2 s: 1163 ms
+  2.3 s: 750 ms
+  2.4 s: 135 ms
+Camera to mother: 118 m
+Ribs: 34, watched 435 frames
+Rib root turn per frame: largest 1.27 deg, mean 0.210 deg
+Share of rib-frames that moved: 47%
+Mother warmth 0.20, awake False, fire bubbles bound to her 3; creatures at her heart: 
+  Vertebra 19/Rib 2 moved 39%, open 0.41; touches: 
+  Vertebra 30/Rib 24 moved 42%, open 0.79; touches: 
+  Vertebra 24/Rib 13 moved 57%, open 0.21; touches: 
+  Vertebra 27/Rib 18 moved 54%, open 0.29; touches: 
+  Vertebra 31/Rib 26 moved 44%, open 0.50; touches: 
+  Vertebra 26/Rib 17 moved 56%, open 0.28; touches: 
+  Vertebra 26/Rib 16 moved 59%, open 0.23; touches: 
+  Vertebra 19/Rib 3 moved 43%, open 0.64; touches: 
+  Vertebra 29/Rib 22 moved 42%, open 0.70; touches: 
+  Vertebra 25/Rib 14 moved 58%, open 0.21; touches: 
+  Vertebra 28/Rib 21 moved 40%, open 0.64; touches: World Chunk (8, 2, 9) (terrain) L7, World Chunk (7, 2, 9) (terrain) L7
+  Vertebra 20/Rib 4 moved 37%, open 0.70; touches: 
+  Vertebra 20/Rib 5 moved 44%, open 0.81; touches: 
+  Vertebra 30/Rib 25 moved 38%, open 0.56; touches: World Chunk (8, 2, 9) (terrain) L7
+  Vertebra 24/Rib 12 moved 53%, open 0.20; touches: 
+  Vertebra 18/Rib 1 moved 44%, open 0.38; touches: World Chunk (7, 2, 9) (terrain) L7
+  Vertebra 32/Rib 28 moved 43%, open 0.20; touches: 
+  Vertebra 27/Rib 19 moved 49%, open 0.38; touches: 
+  Vertebra 29/Rib 23 moved 39%, open 0.81; touches: World Chunk (8, 2, 9) (terrain) L7, World Chunk (7, 2, 9) (terrain) L7
+  Vertebra 32/Rib 29 moved 43%, open 0.20; touches: 
+  Vertebra 22/Rib 8 moved 38%, open 0.50; touches: 
+  Vertebra 28/Rib 20 moved 49%, open 0.41; touches: 
+  Vertebra 33/Rib 30 moved 51%, open 0.20; touches: 
+  Vertebra 23/Rib 10 moved 40%, open 0.20; touches: 
+  Vertebra 21/Rib 7 moved 44%, open 0.56; touches: 
+  Vertebra 34/Rib 33 moved 56%, open 0.23; touches: 
+  Vertebra 31/Rib 27 moved 38%, open 0.21; touches: 
+  Vertebra 21/Rib 6 moved 36%, open 0.79; touches: World Chunk (8, 2, 9) (terrain) L7, World Chunk (8, 2, 8) (terrain) L7
+  Vertebra 23/Rib 11 moved 51%, open 0.20; touches: 
+  Vertebra 25/Rib 15 moved 59%, open 0.23; touches: 
+  Vertebra 18/Rib 0 moved 55%, open 0.29; touches: 
+  Vertebra 33/Rib 31 moved 52%, open 0.21; touches: 
+  Vertebra 22/Rib 9 moved 43%, open 0.21; touches: 
+  Vertebra 34/Rib 32 moved 58%, open 0.21; touches: 

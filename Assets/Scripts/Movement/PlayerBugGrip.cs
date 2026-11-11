@@ -114,9 +114,9 @@ public sealed class PlayerBugGrip : MonoBehaviour
         float half = Mathf.Max(radius, capsule.height * transform.lossyScale.y * 0.5f);
         Vector3 center = transform.TransformVector(capsule.center), delta = to - from;
         Vector3 a = from + center + Vector3.up * (half - radius), b = from + center - Vector3.up * (half - radius);
-        int count = delta.sqrMagnitude > 0.000001f ? Physics.CapsuleCastNonAlloc(a, b, radius, delta.normalized, hits, delta.magnitude, (1 << 7) | (1 << 8), QueryTriggerInteraction.Ignore) : 0;
+        int count = delta.sqrMagnitude > 0.000001f ? ReflectionPhysics.CapsuleCastNonAlloc(a, b, radius, delta.normalized, hits, delta.magnitude, (1 << 7) | (1 << 8), QueryTriggerInteraction.Ignore) : 0;
         for (int i = 0; i < count; i++) if (hits[i].collider.GetComponentInParent<Creature>() != ignore && Vector3.Dot(delta, hits[i].normal) < -0.001f && hits[i].distance < delta.magnitude - 0.015f) return false;
-        count = Physics.OverlapCapsuleNonAlloc(a + delta, b + delta, radius, overlaps, (1 << 7) | (1 << 8), QueryTriggerInteraction.Ignore);
+        count = ReflectionPhysics.OverlapCapsuleNonAlloc(a + delta, b + delta, radius, overlaps, (1 << 7) | (1 << 8), QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++) if (overlaps[i].GetComponentInParent<Creature>() != ignore && Physics.ComputePenetration(capsule, to, transform.rotation,
             overlaps[i], overlaps[i].transform.position, overlaps[i].transform.rotation, out _, out float depth) && depth > 0.04f) return false;
         return true;

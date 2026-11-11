@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 public static class SquirrelSystemValidation
 {
-    private const string PrefabPath = "Assets/Prefabs/Systems/SquirrelSystemManager.prefab";
+    private const string PrefabPath = "Assets/Prefabs/Systems/Squirrels/SquirrelSystemManager.prefab";
     [MenuItem("Tools/Creatures/Validate Squirrel System Prefab (Play Mode)")]
     public static void Validate()
     {

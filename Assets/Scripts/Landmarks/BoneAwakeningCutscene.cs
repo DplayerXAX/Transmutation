@@ -78,8 +78,14 @@ public sealed class BoneAwakeningCutscene : MonoBehaviour
         if (settled >= 2f || elapsed > 60f) Finish();
     }
 
+    // A far, still shot that keeps the whole launch in view (her flight straight up out of the hole). Off = the old close orbit.
+    public static bool longShot = true;
+    private Vector3 longShotSpot;
+    private bool longShotChosen;
+
     private void PoseCamera(float deltaTime, bool immediate)
     {
+        if (longShot && mother.Launching || longShot && longShotChosen) { PoseLongShot(deltaTime, immediate); return; }
         Bounds frame = mother.AwakeningFrame();
         Vector3 focus = frame.center + Vector3.up * 2f;
         // Follow a close section of the animal rather than retreating to fit the entire long skeleton.
@@ -88,14 +94,52 @@ public sealed class BoneAwakeningCutscene : MonoBehaviour
         Vector3 direction = Quaternion.AngleAxis(orbit, Vector3.up) * mother.ExitDirection;
         Vector3 desired = focus + (direction + Vector3.up * 0.32f).normalized * distance;
         desired = BoneFlightCollision.Move(focus, desired, 0.4f, mother.Root);
-        shot.transform.position = immediate ? desired : Vector3.SmoothDamp(shot.transform.position, desired,
+        Vector3 smoothed = immediate ? desired : Vector3.SmoothDamp(shot.transform.position, desired,
             ref cameraVelocity, 0.7f, float.PositiveInfinity, deltaTime);
+        // Smoothing can cut a corner through rock; collide the eased position from the focus as well.
+        shot.transform.position = BoneFlightCollision.Move(focus, smoothed, 0.4f, mother.Root);
         Vector3 sight = focus - shot.transform.position;
         if (sight.sqrMagnitude > 0.01f)
         {
             Quaternion rotation = Quaternion.LookRotation(sight, Vector3.up);
             shot.transform.rotation = immediate ? rotation : Quaternion.Slerp(shot.transform.rotation, rotation, 1f - Mathf.Exp(-3f * deltaTime));
         }
+    }
+
+    /// <summary>
+    /// A fixed camera far off to the side and low, looking up past the mouth, that only turns to follow her as she
+    /// shoots into the sky and arcs away.
+    /// </summary>
+    private void PoseLongShot(float deltaTime, bool immediate)
+    {
+        Vector3 mouth = mother.MouthPoint;
+        if (!longShotChosen)
+        {
+            longShotChosen = true;
+            Vector3 side = Vector3.Cross(Vector3.up, mother.ExitDirection);
+            side.y = 0f;
+            side = side.sqrMagnitude > 0.01f ? side.normalized : Vector3.right;
+            // Pick the clearest of a few far spots, preferring the side the player stood on.
+            Vector3 playerSide = gameplayCamera != null ? gameplayCamera.transform.position - mouth : side;
+            if (Vector3.Dot(playerSide, side) < 0f) side = -side;
+            float best = -1f;
+            for (int k = -2; k <= 2; k++)
+            {
+                Vector3 dir = Quaternion.AngleAxis(k * 25f, Vector3.up) * side;
+                Vector3 wanted = mouth + dir * 85f + Vector3.up * 14f;
+                Vector3 got = BoneFlightCollision.Move(mouth + Vector3.up * 20f, wanted, 0.5f, mother.Root);
+                float reach = Vector3.Distance(mouth, got);
+                if (reach > best) { best = reach; longShotSpot = got; }
+            }
+            shot.transform.position = longShotSpot;
+            shot.fieldOfView = 50f;
+        }
+        // Look at a point between the mouth and her head, so the column she leaves is in frame too.
+        Vector3 focus = Vector3.Lerp(mouth + Vector3.up * 10f, mother.Head, 0.6f);
+        Vector3 sight = focus - shot.transform.position;
+        if (sight.sqrMagnitude < 0.01f) return;
+        Quaternion rotation = Quaternion.LookRotation(sight, Vector3.up);
+        shot.transform.rotation = immediate ? rotation : Quaternion.Slerp(shot.transform.rotation, rotation, 1f - Mathf.Exp(-2.5f * deltaTime));
     }
 
     public void Finish()

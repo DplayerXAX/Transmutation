@@ -13,9 +13,16 @@ namespace AK
 {
     namespace EVENTS
     {
+        static const AkUniqueID PLAY_BUBBLEPOP = 1532331005U;
         static const AkUniqueID PLAY_CLIMB_REACH = 1169957417U;
+        static const AkUniqueID PLAY_DROP = 2007351433U;
         static const AkUniqueID PLAY_FOOTSTEP_LEFT = 2837114212U;
         static const AkUniqueID PLAY_FOOTSTEP_RIGHT = 1110411331U;
+        static const AkUniqueID PLAY_LMB = 2490201179U;
+        static const AkUniqueID PLAY_PICKUP = 3860455926U;
+        static const AkUniqueID PLAY_SHOOTTENTACLE = 2973966097U;
+        static const AkUniqueID PLAY_TENTACLENEAR = 3181405346U;
+        static const AkUniqueID PLAY_TUTORIAL = 283731184U;
         static const AkUniqueID PLAYBGM = 2542411811U;
     } // namespace EVENTS
 
@@ -28,6 +35,11 @@ namespace AK
         static const AkUniqueID BGM_FUZZY = 721355700U;
         static const AkUniqueID BGM_LANDMARK = 4101327976U;
         static const AkUniqueID BGM_TIMESPIDER = 1599936364U;
+        static const AkUniqueID TUTORIAL_1 = 4230282115U;
+        static const AkUniqueID TUTORIAL_2 = 4230282112U;
+        static const AkUniqueID TUTORIAL_3 = 4230282113U;
+        static const AkUniqueID TUTORIAL_4 = 4230282118U;
+        static const AkUniqueID TUTORIAL_5 = 4230282119U;
     } // namespace GAME_PARAMETERS
 
     namespace BANKS

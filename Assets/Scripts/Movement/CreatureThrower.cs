@@ -197,7 +197,8 @@ public sealed class CreatureThrower : MonoBehaviour
                 // Return movement ownership before user callbacks can consume, destroy, or capture either body.
                 flights.Remove(f);
                 Land(f, next, caught: false);
-                CreatureImpactRelay.Dispatch(thrown, outgoing);
+                try { thrown.ReceiveThrownImpact(outgoing); }
+                catch (System.Exception exception) { Debug.LogException(exception, thrown); }
                 CreatureImpactRelay.Dispatch(struck, incoming);
                 continue;
             }
@@ -239,11 +240,11 @@ public sealed class CreatureThrower : MonoBehaviour
         nearest = default;
         Vector3 step = to - from;
         if (step.sqrMagnitude < 1e-8f) return false;
-        int count = Physics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Collide);
+        int count = ReflectionPhysics.SphereCastNonAlloc(from, 0.25f, step.normalized, flightHits, step.magnitude, Solid, QueryTriggerInteraction.Collide);
         RaycastHit[] results = flightHits;
         if (count == flightHits.Length)
         {
-            results = Physics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Collide);
+            results = ReflectionPhysics.SphereCastAll(from, 0.25f, step.normalized, step.magnitude, Solid, QueryTriggerInteraction.Collide);
             count = results.Length;
         }
         float distance = float.PositiveInfinity;

@@ -9,8 +9,8 @@ using Object = UnityEngine.Object;
 /// <summary>Creates simple prototype assets without replacing existing Inspector tuning.</summary>
 public static class BubbleFlowerSetup
 {
-    public const string FlowerPath = "Assets/Prefabs/Creatures/BubbleFlower.prefab";
-    public const string BubblePath = "Assets/Prefabs/Creatures/TrappingBubble.prefab";
+    public const string FlowerPath = "Assets/Prefabs/Creatures/Bubbles/BubbleFlower.prefab";
+    public const string BubblePath = "Assets/Prefabs/Creatures/Bubbles/TrappingBubble.prefab";
     public const string ScenePath = "Assets/Scenes/Scene_Yoyo.unity";
     private const string PendingSetup = "Library/BubbleFlowerSetup.pending";
 

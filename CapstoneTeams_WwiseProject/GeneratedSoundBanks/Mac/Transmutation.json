@@ -10,11 +10,19 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{297173EA-D9E6-0BE5-0A4D-26CF2841DB9E}",
+    "Hash": "{8211AF03-51BC-3252-8B75-B8DA2585DB6A}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
     "Media": [
+     {
+      "Id": "11987434",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "drop_RMB.wav",
+      "CachePath": "9C/{9C017071-B9D6-F281-C5AB-FABF30D696C9}.wem"
+     },
      {
       "Id": "95100673",
       "Language": "SFX",
@@ -32,12 +40,60 @@
       "CachePath": "1B/{1BAB8EDB-9C67-6357-B4EC-174E310319D1}.wem"
      },
      {
+      "Id": "121921526",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_loop.wav",
+      "CachePath": "1A/{1A83BD9D-8B18-30B2-995D-7B545BBB26DE}.wem"
+     },
+     {
       "Id": "221012135",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "fuzzy.wav",
       "CachePath": "A6/{A6895E12-D410-F1C3-D644-78BC34C9CC35}.wem"
+     },
+     {
+      "Id": "226587581",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_5.wav",
+      "CachePath": "67/{67698BD0-C399-96EF-E185-A7CB3B4BF824}.wem"
+     },
+     {
+      "Id": "277055219",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_3.wav",
+      "CachePath": "E0/{E0613339-ADCC-466D-C63B-80B8891D2E16}.wem"
+     },
+     {
+      "Id": "306202188",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_1.wav",
+      "CachePath": "2F/{2F2D1BAC-052E-E52F-71A2-ED7E29F98D71}.wem"
+     },
+     {
+      "Id": "352086038",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "bubble_pop.wav",
+      "CachePath": "39/{399C02EC-05CE-B5B3-226A-BC4D0F9E9A85}.wem"
+     },
+     {
+      "Id": "453822448",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_4.wav",
+      "CachePath": "90/{903CA6A5-DB7A-C299-42BE-0EEF964F14B2}.wem"
      },
      {
       "Id": "454687851",
@@ -64,6 +120,14 @@
       "CachePath": "A5/{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem"
      },
      {
+      "Id": "557442941",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "pickUp_RMB.wav",
+      "CachePath": "80/{809E59EA-E327-0511-923A-6F8019F07C0B}.wem"
+     },
+     {
       "Id": "631985183",
       "Language": "SFX",
       "Streaming": "false",
@@ -72,15 +136,70 @@
       "CachePath": "BF/{BF9BEA1A-BD53-8DD5-C8BA-5E72D4A45552}.wem"
      },
      {
+      "Id": "688926031",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "LMB.wav",
+      "CachePath": "8B/{8BBC56C1-A803-1A48-F49B-F8CF1059E37E}.wem"
+     },
+     {
+      "Id": "689415382",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "shootTenacles_F2.wav",
+      "CachePath": "CE/{CEDA67B0-1F22-69AA-88A0-4C7E27C70314}.wem"
+     },
+     {
+      "Id": "766320165",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "shootTenacles_D2.wav",
+      "CachePath": "9E/{9ECB7F44-CC6F-650A-3632-DAB5FEE9F63B}.wem"
+     },
+     {
       "Id": "773018024",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "time spider.wav",
       "CachePath": "B6/{B6F4A03D-CFD5-C551-C09A-35C7E44B9E8C}.wem"
+     },
+     {
+      "Id": "849763107",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "tenacles.wav",
+      "CachePath": "DD/{DDC8DF5A-AE4E-EDA1-DDB6-3AD2DC310D4F}.wem"
+     },
+     {
+      "Id": "1017687414",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "intro_2.wav",
+      "CachePath": "7C/{7CD0348D-7A3F-8D96-E461-D3B78284F225}.wem"
      }
     ],
     "Events": [
+     {
+      "Id": "1532331005",
+      "Name": "Play_BubblePop",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_BubblePop",
+      "GUID": "{D4BC598C-865F-44DE-9A15-BAD751981A83}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "352086038"
+       }
+      ]
+     },
      {
       "Id": "1169957417",
       "Name": "Play_Climb_Reach",
@@ -89,6 +208,20 @@
       "DurationType": "OneShot",
       "DurationMin": "0",
       "DurationMax": "0"
+     },
+     {
+      "Id": "2007351433",
+      "Name": "Play_Drop",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Drop",
+      "GUID": "{9F9A4CCA-07C8-4279-9DBE-080CF20F3857}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "11987434"
+       }
+      ]
      },
      {
       "Id": "2837114212",
@@ -115,6 +248,91 @@
       "MediaRefs": [
        {
         "Id": "481382044"
+       }
+      ]
+     },
+     {
+      "Id": "2490201179",
+      "Name": "Play_LMB",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_LMB",
+      "GUID": "{9838F8BC-F7E4-4F21-B214-7408FD250FD7}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "688926031"
+       }
+      ]
+     },
+     {
+      "Id": "3860455926",
+      "Name": "Play_PickUp",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_PickUp",
+      "GUID": "{3E76E931-6BCE-4335-8F07-641FE1E0A76B}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "557442941"
+       }
+      ]
+     },
+     {
+      "Id": "2973966097",
+      "Name": "Play_ShootTentacle",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_ShootTentacle",
+      "GUID": "{61816451-2FCD-4328-AFE6-4627921E06D3}",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "689415382"
+       },
+       {
+        "Id": "766320165"
+       }
+      ]
+     },
+     {
+      "Id": "3181405346",
+      "Name": "Play_TentacleNear",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_TentacleNear",
+      "GUID": "{FB444205-6D6B-4D10-8E27-78C6A98B0B26}",
+      "MaxAttenuation": "14",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "849763107"
+       }
+      ]
+     },
+     {
+      "Id": "283731184",
+      "Name": "Play_Tutorial",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Tutorial",
+      "GUID": "{E9FA5187-5530-4DB3-A3A1-AA8E1CFF345C}",
+      "DurationType": "Infinite",
+      "MediaRefs": [
+       {
+        "Id": "121921526"
+       },
+       {
+        "Id": "226587581"
+       },
+       {
+        "Id": "277055219"
+       },
+       {
+        "Id": "306202188"
+       },
+       {
+        "Id": "453822448"
+       },
+       {
+        "Id": "1017687414"
        }
       ]
      },
@@ -182,10 +400,40 @@
       "Name": "BGM_bird",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
       "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
+     },
+     {
+      "Id": "4230282112",
+      "Name": "Tutorial_2",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_2",
+      "GUID": "{62D558F1-5257-475F-BC26-76F496D5E99F}"
+     },
+     {
+      "Id": "4230282113",
+      "Name": "Tutorial_3",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_3",
+      "GUID": "{00BCFA34-B2A8-4256-9B17-1AF6E107D8A1}"
+     },
+     {
+      "Id": "4230282115",
+      "Name": "Tutorial_1",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_1",
+      "GUID": "{70F9897C-4DAA-4419-9807-DF34CC6152EF}"
+     },
+     {
+      "Id": "4230282118",
+      "Name": "Tutorial_4",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_4",
+      "GUID": "{4D82FAC9-96E2-4026-BBE1-DE3676BEC8B2}"
+     },
+     {
+      "Id": "4230282119",
+      "Name": "Tutorial_5",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_5",
+      "GUID": "{F45F7410-E9F8-4B9D-8A43-CF872791FBA2}"
      }
     ]
    }
   ],
-  "FileHash": "{6CD8DC5E-DB74-ED55-3FFD-3C0E0AF1B459}"
+  "FileHash": "{212654DE-93AC-AC17-8A50-72C0A2DB688D}"
  }
 }

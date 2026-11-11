@@ -477,7 +477,7 @@ public sealed class HandClimber : MonoBehaviour
             float length = delta.magnitude;
             if (length < 1e-4f) break;
             Vector3 dir = delta / length;
-            if (!Physics.CapsuleCast(low + moved, high + moved, radius, dir, out RaycastHit hit, length + skin, climbLayers, QueryTriggerInteraction.Ignore)
+            if (!ReflectionPhysics.CapsuleCast(low + moved, high + moved, radius, dir, out RaycastHit hit, length + skin, climbLayers, QueryTriggerInteraction.Ignore)
                 || hit.collider.attachedRigidbody == body)
             {
                 moved += delta;
@@ -959,7 +959,7 @@ public sealed class HandClimber : MonoBehaviour
                 // Room to stand: a body-sized capsule above the spot touches nothing.
                 Vector3 low = hit.point + Vector3.up * (radius + 0.2f);
                 Vector3 high = hit.point + Vector3.up * Mathf.Max(radius + 0.3f, halfHeight * 2f - radius);
-                ok = !Physics.CheckCapsule(low, high, radius, climbLayers, QueryTriggerInteraction.Ignore);
+                ok = !ReflectionPhysics.CheckCapsule(low, high, radius, climbLayers, QueryTriggerInteraction.Ignore);
             }
             if (drawDebug)
                 Debug.DrawLine(origin, ok ? hit.point : origin + Vector3.down * (height + 1f), ok ? Color.green : Color.red, 0.1f);
@@ -996,7 +996,7 @@ public sealed class HandClimber : MonoBehaviour
         float length = path.magnitude;
         if (length < 1e-3f) return false;
         // Starting against the wall itself: judge by a thin line instead.
-        if (Physics.CheckSphere(from, radius, climbLayers, QueryTriggerInteraction.Ignore)) return Physics.Linecast(from, to, climbLayers, QueryTriggerInteraction.Ignore);
+        if (ReflectionPhysics.CheckSphere(from, radius, climbLayers, QueryTriggerInteraction.Ignore)) return ReflectionPhysics.Linecast(from, to, climbLayers, QueryTriggerInteraction.Ignore);
         return ClimbSphereCast(from, radius, path / length, out _, length, climbLayers, QueryTriggerInteraction.Ignore);
     }
 
@@ -1052,7 +1052,7 @@ public sealed class HandClimber : MonoBehaviour
         for (float d = 0f; d <= 2.8f; d += 0.2f)
         {
             Vector3 p = target + outward * d;
-            if (!Physics.CheckCapsule(p + Vector3.up * reach, p - Vector3.up * reach, core, climbLayers, QueryTriggerInteraction.Ignore))
+            if (!ReflectionPhysics.CheckCapsule(p + Vector3.up * reach, p - Vector3.up * reach, core, climbLayers, QueryTriggerInteraction.Ignore))
                 return p;
         }
         return target;

@@ -2594,7 +2594,7 @@ MonoBehaviour:
   floorMaterial: {fileID: 2100000, guid: 01a49b39f3b9115458e155745e29ad28, type: 2}
   stoneMaterial: {fileID: 2100000, guid: 27702e042556bd24ba704d5d1ae6fa52, type: 2}
   faceMaterial: {fileID: 2100000, guid: a05e2ead4811f7b44bc7689233a72fe7, type: 2}
-  castMaterial: {fileID: 2100000, guid: b9072a2b9df33494483f05f1c7b87f4c, type: 2}
+  spotlightShader: {fileID: 4800000, guid: a78701036d5e4b4eac9a72a6d2b4b6d7, type: 3}
   seed: 7
   floorRadius: 14
   walkRadius: 11

@@ -10,6 +10,47 @@ using UnityEngine;
 public static class MeditationSetup
 {
     private const string Folder = "Assets/Materials/Meditation/";
+    private const string UnlockAllMenu = "Tools/Capstone/Meditation/Unlock All Exhibits";
+    private const string ClearUnlocksMenu = "Tools/Capstone/Meditation/Clear Exhibit Unlocks";
+
+    [MenuItem(UnlockAllMenu)]
+    private static void UnlockAll()
+    {
+        var catalog = ReflectionCatalog.Load();
+        if (catalog == null)
+        {
+            Debug.LogError("Reflection catalog is missing.");
+            return;
+        }
+
+        try
+        {
+            int count = ReflectionProgress.UnlockAllForEditor(catalog);
+            Debug.Log($"Saved {count} Reflection exhibit unlocks.");
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError("Could not unlock Reflection exhibits: " + exception.Message);
+        }
+    }
+
+    [MenuItem(ClearUnlocksMenu)]
+    private static void ClearUnlocks()
+    {
+        try
+        {
+            ReflectionProgress.ClearForEditor();
+            Debug.Log("Cleared Reflection exhibit unlocks.");
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogError("Could not clear Reflection exhibit unlocks: " + exception.Message);
+        }
+    }
+
+    [MenuItem(UnlockAllMenu, true)]
+    [MenuItem(ClearUnlocksMenu, true)]
+    private static bool CanEditUnlocks() => !EditorApplication.isPlayingOrWillChangePlaymode;
 
     [MenuItem("Tools/Capstone/Meditation/Add Meditation To Open Scene")]
     private static void Add()
@@ -30,18 +71,8 @@ public static class MeditationSetup
             m.SetFloat("_RimInk", 0f);
         });
         Material stone = GetOrCreate("MAT_Reflection_Stone", "Capstone/Meditation/Ink", ReflectionSpace.MakeBlackStone);
-        Material face = GetOrCreate("MAT_Reflection_Face", "Capstone/Meditation/Ink", m =>
-        {
-            m.SetFloat("_EdgeRagged", 0.12f);
-            m.SetFloat("_HatchStrength", 0f);
-            m.SetFloat("_RimInk", 0f);
-            m.SetColor("_PaperColor", new Color(0.95f, 0.94f, 0.91f, 1f));
-        });
-        Material cast = GetOrCreate("MAT_Reflection_Cast", "Capstone/Meditation/Ink", m =>
-        {
-            m.SetFloat("_Breath", 0.006f);
-        });
-        if (veil == null || floor == null)
+        Shader spotlight = Shader.Find("Capstone/Meditation/Spotlight");
+        if (veil == null || floor == null || stone == null || spotlight == null)
         {
             EditorUtility.DisplayDialog("Meditation", "Meditation shaders not found. Let Unity finish compiling and try again.", "OK");
             return;
@@ -49,8 +80,7 @@ public static class MeditationSetup
 
         var go = new GameObject("Meditation");
         Undo.RegisterCreatedObjectUndo(go, "Add Meditation");
-        go.AddComponent<ReflectionSpace>().SetMaterials(floor, stone, face, cast);
-        go.AddComponent<CreatureJournal>();
+        go.AddComponent<ReflectionSpace>().SetMaterials(floor, stone, spotlight);
         go.AddComponent<ReflectionVisitor>();
         go.AddComponent<MeditationHUD>();
         var controller = go.AddComponent<MeditationController>();
@@ -60,7 +90,7 @@ public static class MeditationSetup
 
         EditorSceneManager.MarkSceneDirty(go.scene);
         Selection.activeGameObject = go;
-        Debug.Log("Meditation added. Press M in Play mode. Save the scene to keep it.");
+        Debug.Log("Meditation added. Look at a resting creature and click to sit, then click again to enter. Save the scene to keep it.");
     }
 
     [MenuItem("Tools/Capstone/Meditation/Open Saved Drawings Folder")]
@@ -70,11 +100,11 @@ public static class MeditationSetup
         EditorUtility.RevealInFinder(ReflectionStorage.Root);
     }
 
-    [MenuItem("Tools/Capstone/Meditation/Clear Saved Drawings And Journal")]
+    [MenuItem("Tools/Capstone/Meditation/Clear Saved Drawings And Discoveries")]
     private static void Clear()
     {
         if (!Directory.Exists(ReflectionStorage.Root)) return;
-        if (!EditorUtility.DisplayDialog("Meditation", "Delete all saved drawings, creature casts and the journal?", "Delete", "Cancel"))
+        if (!EditorUtility.DisplayDialog("Meditation", "Delete all saved drawings, creature casts, journals and reflection discoveries?", "Delete", "Cancel"))
             return;
         Directory.Delete(ReflectionStorage.Root, true);
         Debug.Log("Cleared " + ReflectionStorage.Root);

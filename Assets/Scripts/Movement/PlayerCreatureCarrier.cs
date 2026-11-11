@@ -37,6 +37,22 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     [Range(0f, 30f)] [SerializeField] private float clearBelowCrosshair = 8f;
     [Tooltip("Degrees right of the crosshair the left side of a held creature is kept.")]
     [Range(0f, 30f)] [SerializeField] private float clearRightOfCrosshair = 6f;
+    [Tooltip("A carried flower is held close, low in the bottom right of the view, like a tool in hand. Off = held out in front like other creatures.")]
+    [SerializeField] private bool flowerInCorner = true;
+    [Tooltip("Where a carried flower is held, from the camera (right, up, forward). Up is for the top of the flower.")]
+    [SerializeField] private Vector3 flowerCorner = new Vector3(0.62f, -0.24f, 0.95f);
+    [Header("Adaptive Hold")]
+    [Tooltip("Any creature (not tentacles) is held by its visual middle, in front of the right hand, further out the bigger it is, and pulled back towards the camera when it would go into a wall or the ground. Off = the older fixed hold points below.")]
+    [SerializeField] private bool adaptiveHold = true;
+    [Tooltip("Where the right hand rests, from the camera (right, up, forward). The held creature's near side sits just beyond it.")]
+    [SerializeField] private Vector3 handRest = new Vector3(0.28f, -0.3f, 0.45f);
+    [Tooltip("Direction a bigger creature is moved out along (from the hand, camera space): forward, a little right and down.")]
+    [SerializeField] private Vector3 holdOutward = new Vector3(0.35f, -0.25f, 1f);
+    private Vector3 heldCentreLocal;
+    private float heldRadius;
+
+    [Tooltip("Where a carried Bellows is held (its middle, from the camera): out to the right, only a little low, so it is not dropped into the ground.")]
+    [SerializeField] private Vector3 bellowsHold = new Vector3(0.9f, -0.45f, 2.1f);
 
     public Creature CarriedCreature { get; private set; }
     public Camera CarryCamera => carryCamera;
@@ -109,7 +125,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) return;
+        if (BoneAwakeningCutscene.Playing || RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput)
+        { CancelRightMouse(); return; }
         if (!Application.isFocused && !Application.isBatchMode)
         {
             CancelRightMouse();
@@ -171,7 +188,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
                 bool shouldThrow = IsChargingThrow;
                 float charge = ThrowCharge01;
                 CancelRightMouse();
-                if (shouldThrow) thrower.Throw(charge);
+                if (shouldThrow) { thrower.Throw(charge); AudioManager.PostEvent("Play_Drop", gameObject); }
                 else Drop();
             }
             else if (!held) CancelRightMouse();
@@ -230,17 +247,21 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     {
         if (carryCamera == null) return null;
         Ray ray = carryCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        // Ignore heat-volume triggers: pick the visible creature's solid body.
-Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, pickupRange, pickupLayers, this, out _);
+        // The same forgiving aim as left click (CreatureAim): skips the player's own body and what is held, ignores
+        // heat-volume triggers, and when the thin centre ray just misses a small creature, a slightly wider cast finds it
+        // (never round a wall). A plain single ray used to miss small or thin colliders, so the prompt flickered.
+        Creature creature = CreatureAim.Find(gameObject.scene.GetPhysicsScene(), ray, pickupRange, pickupLayers, this, out _);
+        if (creature == null) return null;
 
 if (creature == null || creature.IsBubbleCaptured || !creature.isActiveAndEnabled)
     return null;
 
 if (!string.IsNullOrEmpty(creature.PickupActionPrompt)) return creature;
-if (!creature.CanBeCarried) return null;
+if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return null;
 
 // Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
-if (!(creature is TentacleCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
+// A Bellows can always be picked up, however full it is: it is a bag of air, and carrying it is how its stream is aimed.
+if (!(creature is TentacleCreature) && !(creature is BellowsCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
     return null;
 
 return creature;
@@ -268,6 +289,30 @@ private void FitCarryPoint(Creature creature)
     if (carryPoint == null) return;
 
     MeasureCreature(creature, out float above, out float sideways);
+    heldCentreLocal = Vector3.zero;
+    heldRadius = 0f;
+    if (adaptiveHold && !(creature is TentacleCreature) && CreatureBounds.TryMeasure(creature.transform, out Bounds seen))
+    {
+        // Held by its visual middle (many pivots sit at the feet or off to one side), in front of the right hand.
+        heldCentreLocal = Quaternion.Inverse(creature.transform.rotation) * (seen.center - creature.transform.position);
+        heldRadius = Mathf.Max(seen.extents.x, Mathf.Max(seen.extents.y, seen.extents.z));
+        // Small ones sit right at the hand; big ones go out far enough not to fill the view.
+        carryPoint.localPosition = handRest + holdOutward.normalized * Mathf.Max(heldRadius * 0.9f + 0.05f, heldRadius * 2f - 0.3f);
+        return;
+    }
+    if (creature is BellowsCreature bellows)
+    {
+        // A swollen one is held further out and to the side, so it does not fill the view.
+        float extra = Mathf.Max(0f, bellows.Radius - 0.6f);
+        carryPoint.localPosition = bellowsHold + new Vector3(extra * 0.5f, -extra * 0.2f, extra * 1.2f);
+        return;
+    }
+    if (flowerInCorner && creature is BubbleFlower)
+    {
+        // The flower's top sits at the corner point, so the whole flower stays in the lower right.
+        carryPoint.localPosition = new Vector3(flowerCorner.x, flowerCorner.y - above, flowerCorner.z);
+        return;
+    }
 
     Vector3 home = carryPointHome;
     float z = Mathf.Max(home.z, home.z + sideways * 0.8f);
@@ -292,7 +337,7 @@ private void FitCarryPoint(Creature creature)
             creature.ReceivePickupAttempt(this);
             return;
         }
-        if (!creature.CanBeCarried) return;
+        if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return;
         if (carryPoint == null) return;
         if (creature.TryGetComponent<CompostAbsorption>(out var absorption)) absorption.CancelForPickup();
         FitCarryPoint(creature);
@@ -302,11 +347,13 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
+        AudioManager.PostEvent("Play_PickUp", gameObject);
         CancelRightMouse();
         if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
-        carryPoint.position = creature.transform.position;
+        carryPoint.position = creature.transform.position + creature.transform.rotation * heldCentreLocal;
+        heldPull = 0f;
         bringingIn = true;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
         carriedColliders = creature.GetComponentsInChildren<Collider>();
@@ -367,9 +414,49 @@ private void FitCarryPoint(Creature creature)
     private void SnapHeld()
     {
         if (carryPoint == null) return;
-        CarriedCreature.transform.SetPositionAndRotation(carryPoint.position, CarryYaw() * heldYawOffset);
-        if (heldBody != null) heldBody.position = carryPoint.position;
+        Quaternion rotation = CarryYaw() * heldYawOffset;
+        Vector3 centre = carryPoint.position;
+        if (adaptiveHold && heldRadius > 0f && !bringingIn) centre = KeepOutOfWalls(centre);
+        // The carry point is where the creature's middle goes, not its pivot.
+        Vector3 position = centre - rotation * heldCentreLocal;
+        CarriedCreature.transform.SetPositionAndRotation(position, rotation);
+        if (heldBody != null) heldBody.position = position;
     }
+
+    private readonly RaycastHit[] holdHits = new RaycastHit[16];
+
+    /// <summary>
+    /// If the held creature would sink into a wall, the ground or anything solid, it comes back along the line from
+    /// the camera until it is clear (never closer than just past the hand), and goes out again when there is room.
+    /// </summary>
+    private Vector3 KeepOutOfWalls(Vector3 wanted)
+    {
+        if (carryCamera == null) return wanted;
+        Vector3 eye = carryCamera.transform.position;
+        Vector3 toward = wanted - eye;
+        float distance = toward.magnitude;
+        if (distance < 0.01f) return wanted;
+        Vector3 dir = toward / distance;
+        float radius = Mathf.Max(0.05f, heldRadius * 1.1f); // the whole creature must stay clear, not just its middle
+        int count = ReflectionPhysics.SphereCastNonAlloc(eye, radius, dir, holdHits, distance, ~((1 << 2) | (1 << 6)), QueryTriggerInteraction.Ignore);
+        float clear = distance;
+        for (int i = 0; i < count; i++)
+        {
+            Collider c = holdHits[i].collider;
+            if (c == null || holdHits[i].distance <= 0f) continue;
+            if (CarriedCreature != null && c.transform.IsChildOf(CarriedCreature.transform)) continue;
+            if (c.attachedRigidbody != null && (c.attachedRigidbody == PlayerBody || !c.attachedRigidbody.isKinematic)) continue;
+            if (System.Array.IndexOf(playerColliders, c) >= 0) continue;
+            clear = Mathf.Min(clear, holdHits[i].distance);
+        }
+        float minimum = Mathf.Min(distance, 0.35f);
+        float target = Mathf.Max(minimum, clear);
+        // Ease the change, so it slides back and out instead of jumping.
+        heldPull = Mathf.MoveTowards(heldPull, distance - target, Time.deltaTime * (distance - target > heldPull ? 12f : 3f));
+        return eye + dir * Mathf.Max(minimum, distance - heldPull);
+    }
+
+    private float heldPull;
 
     private Quaternion CarryYaw()
     {
@@ -384,6 +471,7 @@ private void FitCarryPoint(Creature creature)
         if (TentacleLockedForRide) return;
         Creature dropped = CarriedCreature;
         Release();
+        if (dropped != null) AudioManager.PostEvent("Play_Drop", gameObject);
         if (dropped == null || carryCamera == null) return;
 
         Rigidbody body = dropped.GetComponent<Rigidbody>();

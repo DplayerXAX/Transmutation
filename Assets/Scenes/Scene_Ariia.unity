@@ -539,7 +539,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0dfa071372f549cbb11a55723431ef48, type: 2}
+  - {fileID: 2100000, guid: 9c2c8745ff234557a7da4b494f931ff8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3245,6 +3245,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  hintsVisible: 1
   carrier: {fileID: 0}
   interactor: {fileID: 0}
   traversal: {fileID: 0}
@@ -3255,11 +3256,13 @@ MonoBehaviour:
   titleColor: {r: 1, g: 1, b: 1, a: 0.55}
   hintColor: {r: 1, g: 1, b: 1, a: 0.92}
   fadeTime: 0.12
+  showText: 0
+  iconOffset: {x: 0, y: -38}
+  iconScale: 0.8
   showCreatureName: 1
-  carryHint: '[Hold RMB]  Carry'
-  releaseHint: '[Release RMB]  Drop'
-  pickUpKeyHintFormat: '[{0}]  Pick up'
-  dropKeyHintFormat: '[{0}]  Drop'
+  pickUpHint: '[RMB] Pick up'
+  putDownThrowHint: "Tap RMB: Put down \xB7 Hold RMB: Throw"
+  throwChargeHintFormat: "Throw {0}% \xB7 Release RMB to throw"
   interactHintFormat: '[LMB]  {0}'
   petHint: '[Hold LMB]  Pet'
   pettingHint: Petting...
@@ -3282,11 +3285,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 77149edcf0c144bbb96b12309d7acb0b, type: 3}
---- !u!4 &2100000501 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 400000, guid: 77149edcf0c144bbb96b12309d7acb0b, type: 3}
-  m_PrefabInstance: {fileID: 2100000500}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2100000600
 GameObject:
   m_ObjectHideFlags: 0
@@ -3329,12 +3327,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 293e9b2225ba437daa16cc6bae2173b1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GlowBeeColony
   nestCount: 3
   beesPerNest: 4
   flowersPerNest: 5
   seed: 814
+  nestAnchors: []
   groundLayers:
     serializedVersion: 2
     m_Bits: 128
@@ -3376,5 +3375,5 @@ SceneRoots:
   - {fileID: 2100000224}
   - {fileID: 2100000400}
   - {fileID: 2100000411}
-  - {fileID: 2100000501}
+  - {fileID: 2100000500}
   - {fileID: 2100000601}

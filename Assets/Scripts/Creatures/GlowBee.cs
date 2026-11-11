@@ -102,7 +102,7 @@ public sealed class GlowBee : Creature
             State = Activity.CirclingPlayer;
             float angle = Time.time * 1.6f + Mathf.Abs(GetInstanceID() % 100) * 0.63f;
             destination = player.transform.position + new Vector3(Mathf.Cos(angle) * 1.8f,
-                1.25f + Mathf.Sin(angle * 1.7f) * 0.3f, Mathf.Sin(angle) * 1.8f);
+                0.55f + Mathf.Sin(angle * 1.7f) * 0.2f, Mathf.Sin(angle) * 1.8f);
             nextOrbit = orbitUntil + 8f;
             return;
         }
@@ -143,7 +143,7 @@ public sealed class GlowBee : Creature
         Vector3 offset = destination - body.position;
         Vector3 desired = Vector3.ClampMagnitude(offset * 3f, flightSpeed * (State == Activity.Fleeing ? 1.5f : 1f));
         // Steer around physical scenery. Silk remains catchable, including while fleeing.
-        if (desired.sqrMagnitude > 0.1f && Physics.SphereCast(body.position, 0.16f, desired.normalized,
+        if (desired.sqrMagnitude > 0.1f && ReflectionPhysics.SphereCast(body.position, 0.16f, desired.normalized,
                 out RaycastHit hit, 0.75f, colony.SceneryLayers, QueryTriggerInteraction.Ignore))
             desired = Vector3.ProjectOnPlane(desired, hit.normal) + hit.normal * 0.6f + Vector3.up * 0.8f;
         SetCreatureVelocity(Vector3.MoveTowards(body.linearVelocity, desired, 10f * Time.fixedDeltaTime));

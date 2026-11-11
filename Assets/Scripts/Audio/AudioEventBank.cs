@@ -47,8 +47,19 @@ public class CreatureChannel
     [Min(0.1f)] public float outerRadius = 20f;
 }
 
+[Serializable]
+public class CreatureSound
+{
+    [Tooltip("Class name of a Creature subclass, e.g. TentacleCreature.")]
+    public string creatureType;
+    [Tooltip("Looping Sound event played on the creature while the listener is within the radius.")]
+    public string eventName;
+    [Min(0.5f)] public float radius = 14f;
+}
+
 /// <summary>
 /// All audio events by name, plus which creature types play which music layer.
+/// With the Wwise backend every event goes to Wwise; clips here are only for the Unity backend.
 /// Event names are meant to match Wwise event names later.
 /// </summary>
 [CreateAssetMenu(menuName = "Capstone/Audio Event Bank", fileName = "AudioEvents")]
@@ -65,6 +76,8 @@ public class AudioEventBank : ScriptableObject
 
     public List<AudioEventDef> events = new List<AudioEventDef>();
     public List<CreatureChannel> creatureChannels = new List<CreatureChannel>();
+    [Tooltip("Creature types that play a looping sound on themselves while the listener is near.")]
+    public List<CreatureSound> creatureSounds = new List<CreatureSound>();
 
     public float LoopSeconds => bars * beatsPerBar * 60f / bpm;
 

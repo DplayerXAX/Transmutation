@@ -66,11 +66,19 @@ public sealed class AudioManager : MonoBehaviour
         public CreatureChannel channel;
     }
 
+    private struct CreatureSoundEmitter
+    {
+        public Creature creature;
+        public CreatureSound sound;
+    }
+
     private static readonly List<MusicChannel> channels = new List<MusicChannel>();
 
     private readonly Dictionary<string, AudioClip> placeholders = new Dictionary<string, AudioClip>();
     private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
     private readonly List<CreatureEmitter> creatures = new List<CreatureEmitter>();
+    private readonly List<CreatureSoundEmitter> creatureSoundEmitters = new List<CreatureSoundEmitter>();
+    private readonly Dictionary<Creature, CreatureSound> creatureSoundsPlaying = new Dictionary<Creature, CreatureSound>();
     private readonly List<Voice> voices = new List<Voice>();
     private readonly Stack<AudioSource> pool = new Stack<AudioSource>();
 
@@ -380,6 +388,8 @@ public sealed class AudioManager : MonoBehaviour
         src.transform.position = emitter != null ? emitter.transform.position : transform.position;
 
         var voice = new Voice { def = def, source = src, emitter = emitter, followEmitter = emitter != null };
+        // Loops fade in, so a sound that starts near a creature does not jump in.
+        if (def.loop) { voice.fade = 0f; voice.fadeSpeed = 1f / Mathf.Max(0.01f, def.fadeIn); }
         src.volume = SoundVolume(voice);
         src.Play();
         voices.Add(voice);
@@ -430,6 +440,7 @@ public sealed class AudioManager : MonoBehaviour
         }
 
         float dt = Time.unscaledDeltaTime;
+        UpdateCreatureSounds();
         UpdateMusic(dt);
         UpdateSounds(dt);
         UpdateGrid();
@@ -438,13 +449,48 @@ public sealed class AudioManager : MonoBehaviour
     private void ScanCreatures()
     {
         creatures.Clear();
-        if (bank.creatureChannels.Count == 0) return;
+        creatureSoundEmitters.Clear();
+        if (bank.creatureChannels.Count == 0 && bank.creatureSounds.Count == 0) return;
         Creature[] found = FindObjectsByType<Creature>(FindObjectsSortMode.None);
         foreach (Creature c in found)
         {
             string type = c.GetType().Name;
             foreach (CreatureChannel ch in bank.creatureChannels)
                 if (ch.creatureType == type) creatures.Add(new CreatureEmitter { creature = c, channel = ch });
+            foreach (CreatureSound s in bank.creatureSounds)
+                if (s.creatureType == type) creatureSoundEmitters.Add(new CreatureSoundEmitter { creature = c, sound = s });
+        }
+    }
+
+    // A creature's own loop plays on it while the listener is within its radius, and fades out when left.
+    private void UpdateCreatureSounds()
+    {
+        if (listener == null) return;
+        Vector3 p = listener.position;
+        foreach (CreatureSoundEmitter e in creatureSoundEmitters)
+        {
+            if (e.creature == null) continue;
+            bool playing = creatureSoundsPlaying.ContainsKey(e.creature);
+            bool alive = e.creature.isActiveAndEnabled && !e.creature.IsDead;
+            float d = Vector3.Distance(p, e.creature.transform.position);
+            if (!playing && alive && d < e.sound.radius)
+            {
+                Post(e.sound.eventName, e.creature.gameObject);
+                creatureSoundsPlaying[e.creature] = e.sound;
+            }
+            else if (playing && (!alive || d > e.sound.radius * 1.15f))
+            {
+                AudioEventDef def = bank.Find(e.sound.eventName);
+                Stop(e.sound.eventName, e.creature.gameObject, def != null ? def.fadeOut : 1f);
+                creatureSoundsPlaying.Remove(e.creature);
+            }
+        }
+        // Destroyed creatures: their voices fade on their own; forget them.
+        if (creatureSoundsPlaying.Count > 0)
+        {
+            var gone = new List<Creature>();
+            foreach (Creature c in creatureSoundsPlaying.Keys) if (c == null) gone.Add(c);
+            foreach (Creature c in gone) creatureSoundsPlaying.Remove(c);
         }
     }
 

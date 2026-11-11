@@ -170,6 +170,7 @@ public sealed class WorldDecorator : MonoBehaviour
 
     private void OnEnable()
     {
+        if (ReflectionPhysics.SwitchingWorldRoots) return;
         world = GetComponent<ProceduralWorld>();
         world.ChunkCreated += Decorate;
         world.ChunkUpdated += Redecorate;
@@ -177,6 +178,7 @@ public sealed class WorldDecorator : MonoBehaviour
 
     private void OnDisable()
     {
+        if (ReflectionPhysics.SwitchingWorldRoots) return;
         foreach (PendingCollider pending in pendingColliders) pending.bake?.Wait();
         foreach (PendingCollider pending in pendingColliders) if (pending.retired) DestroySafe(pending.mesh);
         if (world != null) world.ChunkCreated -= Decorate;
