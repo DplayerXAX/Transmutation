@@ -15,7 +15,9 @@ float _Mapped, _Coverage;
 float4 SurfaceAt(float2 p)
 {
     if(_Mapped<0.5) return float4(_Garden.y,0,0,1);
-    return _Surface.SampleLevel(sampler_Surface,saturate((p-_SurfaceRect.xy)/_SurfaceRect.zw),0);
+    uint w,h; _Surface.GetDimensions(w,h);
+    float2 uv=(saturate((p-_SurfaceRect.xy)/_SurfaceRect.zw)*(float2(w,h)-1)+0.5)/float2(w,h);
+    return _Surface.SampleLevel(sampler_Surface,uv,0);
 }
 float hash(uint n) { n ^= n >> 16; n *= 0x7feb352d; n ^= n >> 15; n *= 0x846ca68b; n ^= n >> 16; return (n & 0x00ffffff) / 16777216.0; }
 [numthreads(128,1,1)]

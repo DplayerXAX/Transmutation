@@ -203,10 +203,13 @@ public sealed partial class ProceduralWorld : MonoBehaviour
         public TerrainGenerationRecipe recipe;
         [System.NonSerialized] private MountainDensity volume;
         [System.NonSerialized] private GoldenMeadowDensity meadow;
+        [System.NonSerialized] private BasiltDensity basilt;
         public bool IsVolumeRecipe => recipe != null && recipe.kind != TerrainRecipeKind.Original;
         public void InitializeRecipe()
         {
             if (!IsVolumeRecipe) return;
+            if (recipe.kind == TerrainRecipeKind.Basilt || recipe.kind == TerrainRecipeKind.BasiltVines)
+            { basilt = new BasiltDensity(seed, recipe.kind == TerrainRecipeKind.BasiltVines); return; }
             if (recipe.kind == TerrainRecipeKind.GoldenMeadow) { meadow = new GoldenMeadowDensity(seed, worldSize); return; }
             if (recipe.kind != TerrainRecipeKind.AmplifiedMountains) throw new System.InvalidOperationException("Unknown terrain recipe: " + recipe.kind);
             volume = new MountainDensity(seed, worldSize, recipe);
@@ -261,7 +264,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     /// <summary>Surface height above this transform at a local column.</summary>
     public float SurfaceHeight(float x, float z)
     {
-        if (IsVolumeRecipe) return meadow != null ? meadow.Height(x,z) : volume.Height(x,z);
+        if (basilt == null && recipe != null && (recipe.kind == TerrainRecipeKind.Basilt || recipe.kind == TerrainRecipeKind.BasiltVines)) InitializeRecipe();
+        if (IsVolumeRecipe) return basilt != null ? basilt.Height(x,z) : meadow != null ? meadow.Height(x,z) : volume.Height(x,z);
         if (leafMap) return LeafMapTerrain.Height(x, z);
         if (worldMap) return WorldMapTerrain.Height(x, z);
         if (erosionTestCourse) return CourseHeight(x, z);
@@ -310,7 +314,8 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     /// <summary>Positive inside rock.</summary>
     public float Density(Vector3 p, float h, float ceiling, float floor)
     {
-        if (IsVolumeRecipe) return meadow != null ? meadow.Sample(p) : volume.Sample(p);
+        if (basilt == null && recipe != null && (recipe.kind == TerrainRecipeKind.Basilt || recipe.kind == TerrainRecipeKind.BasiltVines)) InitializeRecipe();
+        if (IsVolumeRecipe) return basilt != null ? basilt.Sample(p) : meadow != null ? meadow.Sample(p) : volume.Sample(p);
         if (erosionTestCourse)
         {
             float tunnel = Mathf.Max(Mathf.Abs(p.x - 9f) - 3f, Mathf.Max(Mathf.Abs(p.y + 3f) - 3f, 4f - p.z));

@@ -43,7 +43,9 @@ Shader "Transmutation/Golden Leaf Garden"
                 float3 normal=float3(0,1,0);
                 if(_Mapped>0.5)
                 {
-                    float4 ground=_Surface.SampleLevel(sampler_Surface,saturate((p.home.xz-_SurfaceRect.xy)/_SurfaceRect.zw),0);
+                    uint w,h; _Surface.GetDimensions(w,h);
+                    float2 uv=(saturate((p.home.xz-_SurfaceRect.xy)/_SurfaceRect.zw)*(float2(w,h)-1)+0.5)/float2(w,h);
+                    float4 ground=_Surface.SampleLevel(sampler_Surface,uv,0);
                     normal=normalize(lerp(float3(ground.g,sqrt(saturate(1-ground.g*ground.g-ground.b*ground.b)),ground.b),float3(0,1,0),p.velocity.w));
                 }
                 float3 world = GroundAligned(Rotate(vertex*p.position.w,p.rotation.xyz),normal)+p.position.xyz;

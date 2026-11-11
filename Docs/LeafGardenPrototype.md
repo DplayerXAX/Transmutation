@@ -1,8 +1,12 @@
 # Leaf Garden prototype
 
-Open `Assets/Scenes/Scene_LeafGarden.unity` and enter Play Mode. The first tornado begins after five seconds. The showcase starts in the distant overview so the entire 80-meter leaf column is visible.
+Open `Assets/Scenes/Scene_LeafGarden.unity` and enter Play Mode. The scene starts on a bare cliff overlooking a rolling golden-leaf meadow. Three independent leaf creatures cover the meadow, with 100,000 GPU leaf slots each (300,000 total; organic gaps and cliff exclusion hide some slots). The first automatic tornado starts after 15-25 seconds so the prototype demonstrates the effect without waiting several minutes.
+
+The 384 x 448-meter landscape uses the project's shared `ProceduralWorld` Marching Cubes generation and sculpting tools, with a real overhang. Its ground uses `MAT_World_Surface`. The sky is assigned `MAT_Sky_Black`, selected once from the current World scene. There is no ongoing synchronization with that scene.
 
 ## Controls
+
+The meadow stays in normal player view. Tab, F1/F2/F3, and Escape do not switch cameras there. Camera shortcuts below apply only to the older flat showcase arena.
 
 | Key | Action |
 | --- | --- |
@@ -17,11 +21,13 @@ Open `Assets/Scenes/Scene_LeafGarden.unity` and enter Play Mode. The first torna
 | H | Hide/show development controls |
 | Escape | Return from player view to overview |
 
-Player view uses the project's existing movement bindings. Walk/run through the leaves or enter the active tornado to be launched. The three teal demonstration creatures cross the carpet at different speeds; loose brown seedpods demonstrate upward launches.
+Player view uses the project's existing movement bindings. Walk/run through the meadow leaves or enter an active tornado to be launched. The landscape has no artificial walking demonstration creatures or loose launch props.
 
 ## Behavior
 
-The carpet covers 96 x 96 meters. One anchored `LeafGarden` creature controls the entire organism. After a 25-45 second rest, one local section gathers for five seconds, stays active for twelve, and settles over eight. The automatic source can change between events. The default source radius is twelve meters: approximately 5% of the carpet area. The visible tornado consists only of leaves.
+Three anchored `LeafGarden` creatures each control a 100 x 280-meter strip. Each permits one tornado at a time, so up to three can overlap. After an event, each creature rests 540-900 seconds. Across all three, this produces a small tornado about every five minutes on average, with random gaps and possible overlaps. The middle colony's first delay is 15-25 seconds; the other two start after 90-600 seconds.
+
+Automatic sizes are weighted: 82% small (8-18 meters), 13% medium (24-40 meters), and 5% large (55-80 meters). A large event averages roughly once every 80 minutes across the meadow after the introductory events; this is a probability, not a fixed schedule. Each event gathers for five seconds, stays active for twelve, and settles over eight. Sources move between events and avoid the bare overlook. The visible tornado consists only of leaves.
 
 The same persistent leaves lie on the ground, scatter, join the spiral, and return to their home positions. No separate permanent gold ground texture remains underneath a gathered section. Exact redistribution is intentionally guided back to the stored positions; this is designed animation rather than a physics pile simulation.
 
@@ -31,7 +37,9 @@ The launch volume follows current growth and a tapered radius profile. Launch sp
 
 Drag `Assets/Prefabs/Creatures/LeafGarden.prefab` into the scene. Place its root at the surface height of a flat floor, keep rotation and scale at their defaults, and edit `LeafGarden.Area` to set the footprint. `LeafGardenPresentation.LeafCount` sets visual density. It uses the enabled Main Camera automatically; assign `ViewCamera` explicitly if the scene uses a different camera setup. The scene needs its own ground collider, lighting, and player. The garden prefab does not include the showcase's floor, cameras, demonstration creatures, props, or keyboard controls.
 
-The prefab can also be created with `Tools > Creatures > Leaf Garden > Create Reusable Prefab`; `Add Garden to Current Scene` adds an instance at the origin without saving or replacing the current scene. The first prefab event waits 25-45 seconds. Only the showcase forces the first event after five seconds. Walking scatters leaves and does not trigger the tornado. Disable `Automatic` to keep a carpet without timed tornadoes, or call `TriggerTornado()` / `TriggerAt(position)` from an authored event.
+The prefab can also be created with `Tools > Creatures > Leaf Garden > Create Reusable Prefab`; `Add Garden to Current Scene` adds an instance at the origin without saving or replacing the current scene. The prefab's natural timing defaults are 60-300 seconds for the first event and 180-270 seconds between events; the three landscape instances override these to avoid tripling the meadow's event frequency. Walking scatters leaves and does not trigger the tornado. Disable `Automatic` to keep a carpet without timed tornadoes, or call `TriggerTornado()` / `TriggerAt(position)` from an authored event.
+
+For this meadow, the shared `LeafGardenSurface` asset supplies baked collider heights, normals, and a leaf-coverage mask. The cliff and its approach have zero coverage while retaining valid terrain heights. After changing terrain geometry, rebake the support map with `LeafGardenLandscapeSetup.BakeSurface(world)` and rebuild leaf buffers. Flat scenes can leave `Surface` unset. Other uneven levels need their own support map and world bounds; do not reuse this meadow's map at unrelated coordinates.
 
 | Part | Responsibility |
 | --- | --- |
@@ -54,11 +62,11 @@ The prototype uses a small compute shader and one indirect mesh draw instead of 
 - Tornado shape and gameplay parameters share the creature controller. One broadphase query and a radius test handle launches independently of leaf population.
 - Rendering bounds include the full huge tornado. Ground home positions remain stable when the camera moves.
 
-The first implementation uses one bounded GPU population rather than streamed tiles. This keeps the ground-to-tornado transition coherent; it still simulates the full selected population when most leaves are outside the camera. Distant density currently changes at the detail-distance boundary. Streaming, smooth LOD transitions, terrain-height placement, and world-wide integration remain follow-up work if needed.
+Each creature uses one bounded GPU population rather than streamed tiles. This keeps its ground-to-tornado transition coherent; it still simulates the full selected population when most leaves are outside the camera. Distant density currently changes at the detail-distance boundary. Streaming, smooth LOD transitions, and world-wide integration remain follow-up work if needed.
 
 ## Authoring and verification
 
-`Tools > Creatures > Leaf Garden > Create and Open Showcase` regenerates this dedicated scene and its local assets. It does not alter the other game scenes. Save unrelated scene edits before using the command.
+`Tools > Creatures > Leaf Garden > Create Golden Meadow Landscape` regenerates this dedicated landscape scene and its local assets. It does not alter the other game scenes or shared world materials. Save unrelated scene edits before using the command. `Create and Open Showcase` is the older flat benchmark arena and replaces the same scene, so use the meadow command for the current landscape.
 
 `LeafGardenVerification` accepts explicit JSON requests in `Temp/LeafGardenRequest.json`, and writes a matching result to `Temp/LeafGardenResult.json`. Supported actions include setup, play/stop, status, trigger, size, density, view, reset, sample, capture, validate, benchmark, and build. It is an Editor-only development tool; it executes only its fixed action list. Play-mode ticking is enabled only by an explicit play request and stopped by stop.
 
@@ -68,11 +76,13 @@ The first implementation uses one bounded GPU population rather than streamed ti
 
 ## Limits of this prototype
 
-This is a flat-ground desktop showcase requiring compute-shader and instanced-rendering support. It does not place leaves on arbitrary cliffs or moving geometry. The garden is anchored, invulnerable, and cannot be carried/captured. Tornadoes launch bodies without damage, suction, or a separate wind simulation. Fast bodies that cross the entire launch volume between physics steps may need a future swept-volume test; ordinary player traversal is the current target. Measured performance applies to the recorded hardware, view, and resolution, not every scene or device.
+This desktop prototype requires compute-shader and instanced-rendering support. Mapped ground support is baked, so terrain edits need a rebake; moving geometry is not supported. A top-down map supports one exposed surface at each horizontal coordinate. The garden is anchored, invulnerable, and cannot be carried/captured. Tornadoes launch bodies without damage, suction, or a separate wind simulation. Fast bodies that cross the entire launch volume between physics steps may need a future swept-volume test; ordinary player traversal is the current target. Measured performance applies to the recorded hardware, view, and resolution, not every scene or device.
 
 Selected clean captures, the full-cycle animation, runtime-check output, and benchmark data belong in `ArtCaptures/LeafGarden/`. Raw capture frames and development builds are temporary files under `Temp/`.
 
 ## Recorded validation
+
+The measurements below are from the earlier flat arena, not the new rolling landscape. Current landscape checks are recorded separately in `ArtCaptures/LeafGarden/landscape-checks.txt`.
 
 The prototype passed 24 Play Mode checks, including moving-creature scattering, finite GPU positions, the selected tornado height, local source selection, compound-body launch deduplication, re-entry, momentum preservation, actual project-player launches, anchored-garden protection, and settling. The actual player reached a first apex 91.26 meters above the garden floor against an 80-meter tornado, targeting 92 meters. The golden-leaf shader reported no shader errors. A 200k-leaf GPU snapshot measured 9,833 source leaves, 9,148 above two meters during the tornado, a peak height of 80.21 meters, and zero invalid positions. Disturbances outside the tornado source are possible from the walking actors.
 

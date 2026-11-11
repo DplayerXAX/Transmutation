@@ -105,10 +105,14 @@ public sealed class LeafGardenShowcase : MonoBehaviour
         if(k.digit3Key.wasPressedThisFrame) SelectSize(2);
         if(k.gKey.wasPressedThisFrame) Trigger();
         if(k.rKey.wasPressedThisFrame) ResetShowcase();
-        if(k.tabKey.wasPressedThisFrame) SetView((View+1)%3);
-        if(k.f1Key.wasPressedThisFrame) SetView(0);
-        if(k.f2Key.wasPressedThisFrame) SetView(1);
-        if(k.f3Key.wasPressedThisFrame) SetView(2);
+        if(!Landscape)
+        {
+            if(k.tabKey.wasPressedThisFrame) SetView((View+1)%3);
+            if(k.f1Key.wasPressedThisFrame) SetView(0);
+            if(k.f2Key.wasPressedThisFrame) SetView(1);
+            if(k.f3Key.wasPressedThisFrame) SetView(2);
+            if(k.escapeKey.wasPressedThisFrame && View==0) SetView(2);
+        }
         if(k.pKey.wasPressedThisFrame)
         {
             Garden.Automatic=!Garden.Automatic;
@@ -119,7 +123,6 @@ public sealed class LeafGardenShowcase : MonoBehaviour
         if(k.digit4Key.wasPressedThisFrame) SetDensity(50000);
         if(k.digit5Key.wasPressedThisFrame) SetDensity(100000);
         if(k.digit6Key.wasPressedThisFrame) SetDensity(200000);
-        if(k.escapeKey.wasPressedThisFrame && View==0) SetView(2);
     }
     private void OnGUI()
     {
@@ -133,7 +136,7 @@ public sealed class LeafGardenShowcase : MonoBehaviour
         GUI.Label(new Rect(34,27,550,32),"LEAF GARDEN",titleStyle);
         GUI.Label(new Rect(34,62,550,24),$"{Garden.Phase}  /  {Garden.Height:0} m  /  {Leaves.Capacity:N0} leaves  /  {Launch.LaunchCount} launches  /  {averageFrame*1000:0.0} ms",bodyStyle);
         GUI.Label(new Rect(34,87,550,24),"1 / 2 / 3  tornado size     G  awaken     R  reset     P  automatic cycle",bodyStyle);
-        GUI.Label(new Rect(34,111,550,24),"TAB  camera     4 / 5 / 6  density     L  leaves on/off     H  clean view",bodyStyle);
+        GUI.Label(new Rect(34,111,550,24),(Landscape?"":"TAB  camera     ")+"4 / 5 / 6  density     L  leaves on/off     H  clean view",bodyStyle);
     }
     private void OnDestroy() { Application.runInBackground=previousBackground; Cursor.lockState=CursorLockMode.None; Cursor.visible=true; }
 }

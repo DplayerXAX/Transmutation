@@ -20,13 +20,8 @@ public static class LeafGardenLandscapeSetup
         Directory.CreateDirectory(Folder); AssetDatabase.Refresh();
         var terrainMaterial=AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_World_Surface.mat");
         if(terrainMaterial==null) throw new InvalidOperationException("The shared world terrain material is missing.");
-        var sky=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/MeadowSky.mat");
-        if(sky==null)
-        {
-            sky=new Material(Shader.Find("Skybox/Procedural")); sky.SetColor("_SkyTint",new Color(0.62f,0.76f,0.95f));
-            sky.SetFloat("_AtmosphereThickness",0.9f); sky.SetFloat("_Exposure",1.1f); sky.SetColor("_GroundColor",new Color(0.42f,0.39f,0.28f));
-            AssetDatabase.CreateAsset(sky,Folder+"/MeadowSky.mat");
-        }
+        var sky=AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_Sky_Black.mat");
+        if(sky==null) throw new InvalidOperationException("The selected sky material is missing.");
         var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive); SceneManager.SetActiveScene(scene);
         bool oldClosed=false;
         try
@@ -61,7 +56,7 @@ public static class LeafGardenLandscapeSetup
             world.ChunkCache=AssetDatabase.LoadAssetAtPath<TextAsset>(cachePath); world.Generate(true);
             var surface=BakeSurface(world);
             var show=new GameObject("Leaf Garden meadow controls").AddComponent<LeafGardenShowcase>();
-            show.Landscape=true; show.ShowControls=false; show.DemoBodies=new Rigidbody[0]; show.Gardens=new LeafGarden[4];
+            show.Landscape=true; show.ShowControls=false; show.DemoBodies=new Rigidbody[0]; show.Gardens=new LeafGarden[3];
             var prefab=LeafGardenShowcaseSetup.EnsurePrefab();
             var prefabRoot=PrefabUtility.LoadPrefabContents(LeafGardenShowcaseSetup.PrefabPath);
             try
@@ -73,12 +68,13 @@ public static class LeafGardenLandscapeSetup
             }
             finally { PrefabUtility.UnloadPrefabContents(prefabRoot); }
             prefab=AssetDatabase.LoadAssetAtPath<GameObject>(LeafGardenShowcaseSetup.PrefabPath);
-            for(int i=0;i<4;i++)
+            for(int i=0;i<3;i++)
             {
                 var patch=(GameObject)PrefabUtility.InstantiatePrefab(prefab,scene); patch.name="Meadow leaf colony "+(i+1);
-                Vector3 p=new Vector3(i%2==0?-75:75,0,i<2?-70:70); p.y=surface.HeightAt(p); patch.transform.position=p;
-                var garden=patch.GetComponent<LeafGarden>(); garden.Area=new Vector2(150,140); garden.Surface=surface; garden.Seed=8123+i*1437;
-                garden.RandomizeEventSizes=true; garden.RandomizeFirstDelay=true; garden.RestSeconds=new Vector2(720,1200); garden.FirstDelaySeconds=new Vector2(60,1000);
+                Vector3 p=new Vector3((i-1)*100,0,0); p.y=surface.HeightAt(p); patch.transform.position=p;
+                var garden=patch.GetComponent<LeafGarden>(); garden.Area=new Vector2(100,280); garden.Surface=surface; garden.Seed=8123+i*1437;
+                garden.RandomizeEventSizes=true; garden.RandomizeFirstDelay=true; garden.RestSeconds=new Vector2(540,900);
+                garden.FirstDelaySeconds=i==1?new Vector2(15,25):new Vector2(90,600);
                 var leaves=patch.GetComponent<LeafGardenPresentation>(); leaves.LeafCount=100000; leaves.Coverage=0.95f; leaves.DetailDistance=48; leaves.DistantDensity=0.6f;
                 show.Gardens[i]=garden;
             }
@@ -104,7 +100,7 @@ public static class LeafGardenLandscapeSetup
             if(!EditorSceneManager.SaveScene(scene,LeafGardenShowcaseSetup.ScenePath)) throw new IOException("Could not save the meadow scene.");
             AssetDatabase.SaveAssets();
             Directory.CreateDirectory("ArtCaptures/LeafGarden");
-            File.WriteAllText("ArtCaptures/LeafGarden/landscape-build.txt",$"Sculptable meadow 384x448m; 4 colonies, 100000 leaves each; ground map {surface.Map.width}x{surface.Map.height}; terrain heights {surface.HeightRange}; mesh cache {world.UsedChunkCache}; spawn {spawn}.");
+            File.WriteAllText("ArtCaptures/LeafGarden/landscape-build.txt",$"Sculptable meadow 384x448m; 3 colonies, 100000 leaves each; shared world terrain and sky materials; bare cliff; ground map {surface.Map.width}x{surface.Map.height}; terrain heights {surface.HeightRange}; mesh cache {world.UsedChunkCache}; spawn {spawn}.");
         }
         catch { if(!oldClosed) { EditorSceneManager.CloseScene(scene,true); if(previous.IsValid()) SceneManager.SetActiveScene(previous); } throw; }
     }
@@ -123,7 +119,9 @@ public static class LeafGardenLandscapeSetup
             int count=Physics.RaycastNonAlloc(p,Vector3.down,hits,180,1<<7,QueryTriggerInteraction.Ignore);
             bool found=false; RaycastHit best=default;
             for(int i=0;i<count;i++) if(world.OwnsCollider(hits[i].collider) && (!found || hits[i].point.y>best.point.y)) {found=true;best=hits[i];}
-            pixels[z*resolution+x]=found?new Color(best.point.y,best.normal.x,best.normal.z,1):new Color(0,0,0,0);
+            // Keep the overlook and its approach bare; A controls leaves independently of ground support.
+            bool bareCliff=p.z<-80 && (Mathf.Abs(p.x)<36 || found && best.point.y>24);
+            pixels[z*resolution+x]=found?new Color(best.point.y,best.normal.x,best.normal.z,bareCliff?0:1):new Color(0,0,0,0);
             if(found) { min=Mathf.Min(min,best.point.y);max=Mathf.Max(max,best.point.y); }
         }
         map.SetPixels(pixels);map.Apply(false,false);surface.Map=map;surface.WorldRect=new Vector4(-192,-224,384,448);surface.HeightRange=new Vector2(min,max);

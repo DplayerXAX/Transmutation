@@ -65,9 +65,24 @@ public sealed class LeafGarden : Creature
     {
         if(Phase!=GardenPhase.Resting) return;
         if(RandomizeEventSizes) eventHeight=RollAutomaticHeight();
-        TriggerAt(transform.position + new Vector3(
-        ((float)random.NextDouble() - 0.5f) * Mathf.Max(0, Area.x - SourceRadius * 2 - 8), 0,
-        ((float)random.NextDouble() - 0.5f) * Mathf.Max(0, Area.y - SourceRadius * 2 - 8)));
+        for(int attempt=0;attempt<64;attempt++)
+        {
+            Vector3 center=transform.position + new Vector3(
+                ((float)random.NextDouble() - 0.5f) * Mathf.Max(0, Area.x - SourceRadius * 2 - 8), 0,
+                ((float)random.NextDouble() - 0.5f) * Mathf.Max(0, Area.y - SourceRadius * 2 - 8));
+            if(!HasLeafSupport(center)) continue;
+            TriggerAt(center); return;
+        }
+        Elapsed=0;ChooseRest();
+    }
+    private bool HasLeafSupport(Vector3 center)
+    {
+        if(Surface==null) return true;
+        return Surface.Sample(center).a>0.99f &&
+            Surface.Sample(center+Vector3.right*SourceRadius).a>0.99f &&
+            Surface.Sample(center-Vector3.right*SourceRadius).a>0.99f &&
+            Surface.Sample(center+Vector3.forward*SourceRadius).a>0.99f &&
+            Surface.Sample(center-Vector3.forward*SourceRadius).a>0.99f;
     }
     public void TriggerAt(Vector3 center)
     {
@@ -77,6 +92,7 @@ public sealed class LeafGarden : Creature
         float z = Mathf.Max(0, Area.y * 0.5f - SourceRadius - 2);
         TornadoCenter = origin + new Vector3(Mathf.Clamp(center.x - origin.x, -x, x), 0,
             Mathf.Clamp(center.z - origin.z, -z, z));
+        if(!HasLeafSupport(TornadoCenter)) return;
         if(Surface!=null) TornadoCenter=new Vector3(TornadoCenter.x,Surface.HeightAt(TornadoCenter),TornadoCenter.z);
         EventNumber++; Elapsed = Blend = 0; Phase = GardenPhase.Gathering;
     }
