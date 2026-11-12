@@ -16,6 +16,8 @@ using UnityEngine.UI;
 /// </summary>
 public sealed class CrosshairHUD : MonoBehaviour
 {
+    private bool actionCuesVisible = true;
+    public void SetActionCuesVisible(bool visible) => actionCuesVisible = visible;
     private enum Mode { Idle, Target, Climb, Throw, Flower, Tentacle, Ride, Hidden }
 
     [SerializeField] private Color ink = new Color(1f, 1f, 1f, 0.85f);
@@ -149,6 +151,7 @@ public sealed class CrosshairHUD : MonoBehaviour
         }
 
         Mode mode = Choose(out bool active, out bool valid);
+        if (!actionCuesVisible && mode != Mode.Hidden) mode = Mode.Idle;
         CurrentMode = mode.ToString();
         // Target shape for each mode.
         float r = 0f, len = 0f, count = 0f, rot = 0f, size = 4f, a = 1f;

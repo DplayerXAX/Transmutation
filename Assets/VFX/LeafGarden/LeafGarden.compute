@@ -11,7 +11,7 @@ float _Delta, _EffectTime, _Blend, _Height, _SourceRadius, _TopRadius;
 Texture2D<float4> _Surface;
 SamplerState sampler_Surface;
 float4 _SurfaceRect;
-float _Mapped, _Coverage;
+float _Mapped, _Coverage, _OrganicEdge;
 float4 SurfaceAt(float2 p)
 {
     if(_Mapped<0.5) return float4(_Garden.y,0,0,1);
@@ -33,7 +33,11 @@ void Initialize(uint3 thread : SV_DispatchThreadID)
     p.home.y=ground.r+0.035+hash(n+13)*0.035;
     p.position = float4(p.home.xyz, 0.7 + hash(n+17)*0.85);
     float patch=0.55+0.25*sin(p.home.x*0.071+sin(p.home.z*0.039)*2)+0.2*cos(p.home.z*0.09+p.home.x*0.018);
-    if(ground.a<0.5 || (ground.g*ground.g+ground.b*ground.b)>0.4 || hash(n+37)>lerp(1,saturate(patch)*_Coverage,_Mapped)) p.position.w=0;
+    float2 radial=(uv-0.5)*2;
+    float wobble=0.10*sin(p.home.x*0.083+sin(p.home.z*0.049)*2)+0.08*cos(p.home.z*0.071-p.home.x*0.037);
+    float softEdge=1-smoothstep(0.58,1.03,length(radial)+wobble);
+    float density=lerp(1,saturate(patch)*_Coverage,_Mapped)*lerp(1,softEdge,_OrganicEdge);
+    if(ground.a<0.5 || (ground.g*ground.g+ground.b*ground.b)>0.4 || hash(n+37)>density) p.position.w=0;
     p.velocity = 0;
     p.rotation = float4(0, seed * 6.283185, 0, hash(n+29));
     _Leaves[id] = p;

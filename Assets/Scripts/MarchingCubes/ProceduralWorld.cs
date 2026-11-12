@@ -321,6 +321,9 @@ public sealed partial class ProceduralWorld : MonoBehaviour
             float tunnel = Mathf.Max(Mathf.Abs(p.x - 9f) - 3f, Mathf.Max(Mathf.Abs(p.y + 3f) - 3f, 4f - p.z));
             return Mathf.Min(h - p.y, tunnel);
         }
+        // Deep world-map basins need a real crust below their floor. The fixed inner-cave
+        // ceiling otherwise rises above the mushroom floor and erases that entire surface.
+        if (worldMap) ceiling = Mathf.Min(ceiling, h - 10f);
         float top = h - p.y;
         float under = p.y - ceiling;
         float crust = Mathf.Min(top, under);

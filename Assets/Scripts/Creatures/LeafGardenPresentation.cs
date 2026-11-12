@@ -18,6 +18,7 @@ public sealed class LeafGardenPresentation : MonoBehaviour
     public bool SimulateLeaves = true;
     [Tooltip("Organic gaps and thinner leaf coverage on mapped terrain.")]
     [Range(0.1f,1)] public float Coverage = 1;
+    [Range(0f, 1f)] public float OrganicEdge;
     public int Capacity { get; private set; }
     public string Status { get; private set; } = "Not initialized";
     public ComputeBuffer StateBuffer => leaves;
@@ -68,6 +69,7 @@ public sealed class LeafGardenPresentation : MonoBehaviour
             Vector4 rect=garden.Surface!=null?garden.Surface.WorldRect:new Vector4(-1,-1,2,2);
             compute.SetTexture(init,"_Surface",surface); compute.SetTexture(step,"_Surface",surface);
             compute.SetVector("_SurfaceRect",rect); compute.SetFloat("_Mapped",garden.Surface!=null?1:0); compute.SetFloat("_Coverage",Coverage);
+            compute.SetFloat("_OrganicEdge", OrganicEdge);
             material.SetTexture("_Surface",surface); material.SetVector("_SurfaceRect",rect); material.SetFloat("_Mapped",garden.Surface!=null?1:0);
             compute.SetBuffer(init, "_Leaves", leaves); compute.Dispatch(init, (Capacity + 127) / 128, 1, 1);
             compute.SetBuffer(step, "_Leaves", leaves); compute.SetBuffer(step, "_Visible", visible);

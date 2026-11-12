@@ -356,6 +356,11 @@ public sealed class RestSpotSystem : MonoBehaviour
     {
         if (!spawnSeatAdded)
         {
+            // Scene World authors its first seat outside the tutorial cave.
+            if (FindFirstObjectByType<WorldMapRestSites>() != null) spawnSeatAdded = true;
+        }
+        if (!spawnSeatAdded)
+        {
             ProceduralWorld world = FindFirstObjectByType<ProceduralWorld>();
             HangingSpire spire = FindFirstObjectByType<HangingSpire>();
             if ((world == null || world.LayoutReady) && Physics.Raycast(body.position + Vector3.up, Vector3.down, 6f, 1 << 7))

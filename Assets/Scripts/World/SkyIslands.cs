@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Floating stones over the flower field that climb in a slow spiral, each a little higher than the last (one jump
-/// apart), up to a wider island at the top with a meditation altar (a resting place: sit there, then meditate).
+/// Floating stones over the flower field form a broad ascent with some gaps bridged by bubble flowers,
+/// up to a wider island at the top with a meditation altar (a resting place: sit there, then meditate).
 /// Each stone is a flat-topped shard of the ground with a crystal-dark underside tapering to a point, a few growths
 /// on top and veils hanging below. The positions are set by Tools > Capstone > World > Add Sky Islands Over Flower Field
 /// (Editor/SkyIslandsSetup.cs); the stones are built from them in the Scene view and in Play mode (never saved).

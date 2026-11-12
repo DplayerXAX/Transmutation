@@ -127,7 +127,7 @@ public sealed partial class ProceduralWorld
         foreach (Rigidbody body in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None))
             if (body.gameObject.scene == gameObject.scene && body.GetComponent<SmoothFirstPersonController>() != null) playerBody = body;
         if (playerBody != null) spawnPosition = playerBody.position;
-        if (!LayoutReady) Generate(false);
+        if (!LayoutReady || chunkCount == Vector3Int.zero || chunksTotal == 0) Generate(false);
         if (placePlayerOnSurface) PlacePlayerOnSurface();
     }
     private void PlacePlayerOnSurface()

@@ -89,9 +89,10 @@ public static class WorldMapPlaceholders
     private static bool ForestAt(float x, float z, System.Random random)
     {
         var p = new Vector2(x, z);
-        if (Vector2.Distance(p, WorldMapTerrain.Spawn) < 17f) return false;
-        // The forest grows over the buried cave; only its mouth stays clear.
-        if (Vector2.Distance(p, WorldMapTerrain.CaveMouth) < WorldMapTerrain.GooMouthRadius + 6f) return false;
+        if (Vector2.Distance(p, WorldMapTerrain.Spawn) < 23f) return false;
+        if (WorldMapTerrain.Distance(p, WorldMapTerrain.Spawn, WorldMapTerrain.Spawn + new Vector2(13f, 8f), out _) < 11f) return false;
+        if (WorldMapTerrain.Distance(p, WorldMapTerrain.Spawn + new Vector2(13f, 8f), WorldMapTerrain.SpawnExit, out _) < 11f) return false;
+        if (WorldMapTerrain.InGooExterior(x, z)) return false;
         if (Vector2.Distance(p, WorldMapTerrain.MushroomCentre) < 118f) return false;
         if (new Vector2((x - WorldMapTerrain.FlowerCentre.x) / 100f, (z - WorldMapTerrain.FlowerCentre.y) / 92f).magnitude < 0.85f) return false;
         if (WorldMapTerrain.CrackDistance(p, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 10f) return false;

@@ -86,7 +86,8 @@ public enum FoodTag
     public float MaxHealth => maxHealth;
     public float Health => health;
     public CreaturePolarity Polarity => polarity;
-    public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    public virtual bool IsInPhysicalWorld => true;
+    public bool CanBeAITargeted => IsInPhysicalWorld && Polarity != CreaturePolarity.None;
     /// <summary>Structural or unique creatures ignore incidental harm: projectile, melee and blast damage,
     /// and water-contact ageing. Direct lifecycle calls (Die, SetRemainingAge, consumption) are unaffected.</summary>
     public virtual bool Invulnerable => false;
@@ -116,7 +117,7 @@ public enum FoodTag
 
     public bool ApplyDamage(float amount, Creature source = null)
     {
-        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable || ReflectionSpotlight.IsFrozen(this)) return false;
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || !IsInPhysicalWorld || isDead || consumptionPending || Invulnerable || ReflectionSpotlight.IsFrozen(this)) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
         if (!TryGetComponent<CreatureHurtResponse>(out var hurt)) hurt = gameObject.AddComponent<CreatureHurtResponse>();
