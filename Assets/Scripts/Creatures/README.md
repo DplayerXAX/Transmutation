@@ -253,6 +253,56 @@ frame. Tentacles reach for and stick to nearby surfaces and step when stretched.
 them. **While carried**, if at least `minGripsToClimb` tentacles hold a surface, the player can climb:
 **Space** up, **Ctrl** down (shown through `CarriedPrompt`).
 
+**Droplet Choir** (`DropletChoir` + `GlyphDroplet`, glyph shapes in `DropletGlyphs`) — a cloud of small floating
+water beads that every 12-20 s (after 5 s when the player is within 10 m) gathers in the air and *writes* a glyph,
+holds it about 9 s with a faint shimmer running along the strokes, then lets it go in reverse order.
+Each `GlyphDroplet` is its own Creature: a code-built bead (`Capstone/Creature/WaterDroplet` shader, material
+`Assets/Materials/Creatures/Droplets/MAT_GlyphDroplet.mat`), a kinematic body and a collider that touches nothing
+but can be aimed at. It eases toward the goal the choir gives it on a critically damped spring
+(`Vector3.SmoothDamp`, its own smooth time 0.9-1.8 s, top speed 2.2 m/s) and stretches a little along its motion,
+so nothing snaps or jitters. It can be picked up; once let go it floats back to its place (or the cloud).
+The choir samples the glyph's strokes every 0.16 m; in pen order each point calls the nearest free droplet, which
+sets off after `order * writeDuration` (5 s) and glides there over 2.4 s on a small arc, so the glyph appears
+stroke by stroke. Spare droplets keep behind the glyph plane. The glyph turns slowly to face the camera.
+**Glyphs:** the `glyphs` list is shown in turn. Text uses a placeholder stroke font (A-Z, 0-9, `. ! ? - :`,
+`\n` for a new line, 4 x 6 cell, letter height `glyphHeight` 1.6 m, wider than 9 m is scaled down); `@circle`,
+`@spiral`, `@wave`, `@star`, `@eye` are figures. To plug in another script (the planet's glyph language), put a
+component implementing `IDropletGlyphSource.TryGetStrokes(key, strokes)` on the **Glyph Source** field: strokes
+are 2D polylines in writing order, y up, any units (a one-point stroke is a dot); it is asked first, the test font is
+the fallback. Code can call `Show(key)`, `Release()` and listen to `GlyphFormed`.
+**Test scene:** `Scene_Droplets` (one choir of words in front of the spawn, one of figures to the left), built by
+`Editor/DropletSceneBuilder.Build()` (no menu). `DropletSceneBuilder.BuildAndTest` with `-dropletTest` runs
+`Dev/DropletTestDriver`: five glyphs placed within 5 cm, a pushed droplet returning, the choir starting by itself,
+and smoothness (top speed, 99th-percentile acceleration).
+
+**Glyph creatures: look, merging and summoning.** The creatures are liquid gold glass: shader
+`Capstone/Creature/GoldenGlyph`, material `Assets/Resources/GlyphCreatures/MAT_GlyphGold.mat` (set by
+`DropletSceneBuilder`): the scene behind is bent through the URP opaque texture and stained amber, a molten core
+and drifting threads of light glow inside, a gold rim, a sharp sun glint and sparse glitter sit on top (HDR, so
+bloom catches them). The earlier looks stay available: `WaterDroplet` shader / `MAT_GlyphDroplet` (dark ink with
+`_Iridescence` thin-film rainbow and `_Motes` sparks; both 0 = plain clear water).
+With **Merge Surface** on, the choir hides the beads and draws all free droplets as one metaball surface
+(`DropletSurface`: Burst Marching Cubes in 6-cell bricks round the droplets, parallel per brick, `surfaceCell`
+0.034 m, `influence` 2.6 radii, gradient normals, glow in vertex colour), so droplets that come close reach out
+with a neck, flow together, and tear apart again; moving ones stretch into teardrops. Droplets in a hand show
+their own bead. **Stickiness** (surface tension) leans a drifting droplet's goal toward any droplet within
+`clingReach` diameters, so touching ones drift together for a while. Cost in the tests: 56k vertices for a full
+150-droplet word, about 6 ms per rebuild at the 95th percentile in a batch editor (2-11 ms in Scene_World).
+`DropletChoir.SummonTitle(view, key, source, material, height, distance, hold, raise)` makes a region title like
+a game's area title, fixed to the screen but made of real creatures: the choir becomes a child of the camera at
+(0, raise, distance) in camera space, its glyph plane is the camera's own rotation, and the merged surface is
+built in the choir's local space, so turning the view moves it with no lag. Creature count comes from the
+glyph's stroke length (spacing 0.045 m, 6 cm beads, flowing into solid strokes); writes in ~2.4 s, holds `hold`
+seconds. Title creatures have no active collider and cannot be carried.
+`DropletChoir.Summon(groundPoint, key, source, material, count, height, hover, hold)` makes a one-off choir:
+its creatures condense out of the air (staggered fade-in), write the key once, the unneeded ones dissolve, the
+glyph holds, scatters, everything evaporates and the object removes itself.
+`PlanetGlyphSource` (an `IDropletGlyphSource`) writes the planet's script from `LandmarkGlyphs` / `GlyphLexicon`:
+a key is space-separated tokens, e.g. `flower grow _`; `~id` = flipped (opposite), `spire@0.9` = spire with its
+height bar, and place marks `_` (bar under = land), `^` (bar over = under the ground), `U` (bowl = hollow).
+Region titles (constants on `PlanetGlyphSource`): flower field `flower grow _`, cave `~door ^`, mushroom basin
+`shroom shroom U`, tower `spire@0.95 _`. `World/RegionTitles` summons them (see World README).
+
 **CaveHarvestItem** (in `Scripts/World`) — fruit and flowers. Not alive; uses `Creature` only so pickup,
 prompts and carry work.
 

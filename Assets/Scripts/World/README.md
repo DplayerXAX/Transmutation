@@ -70,6 +70,23 @@ them and switches the decorator back on. Bake again after moving a landmark or a
 Landmarks show in the Scene view too (see `Landmarks/README.md`). Spawned flora and creatures still appear only in
 Play Mode.
 
+## RegionTitles (region names in the planet's script)
+
+`RegionTitles` (needs `PlanetGlyphSource` on the same object) watches the player. Regions are upright cylinders
+(centre, radius, height range); after `settleTime` (1.2 s) inside a new region, its title appears like an area
+title fixed to the screen, upper middle (`DropletChoir.SummonTitle`): the choir is a child of the camera,
+`distanceAhead` 4 m ahead and `raise` 0.95 m up in camera space, glyphs `glyphHeight` 0.75 m tall, so it stays
+put on screen however the view turns, yet is made of real 3D creatures. Written in ~2.5 s, held `holdTime` 6 s,
+gone after ~16 s. Each region at most once per `cooldown` (90 s). Things between the eyes and the title are
+not avoided.
+**Scene_World is not edited:** on loading a scene named `Scene_World`, RegionTitles makes a
+"Region Titles (runtime)" object with `WorldMapRegions()` (from `WorldMapTerrain`: Flower Field r 50, Cave = the
+Goo graft at heights -64..-6 only so the forest above does not count, Mushroom Basin r 72, Tower = spire ruins
+r 55 at heights 8..170), unless the scene already has a RegionTitles, so there is never a second copy. The
+material is loaded from `Resources/GlyphCreatures/MAT_GlyphGold` when none is assigned. Any other scene can use
+it by adding the component and filling in its regions. Check: `Editor/WorldRegionTitlesSetup.PlayAndTest` with
+`-regionTitleTest` (opens Scene_World without saving, teleports the player into each region).
+
 ## CaveHarvest
 
 Also listens to `ChunkCreated`, Play Mode only. In the inner world it hangs fruit bunches on thin stalks
