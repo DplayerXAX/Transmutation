@@ -8,12 +8,13 @@ public sealed class LeafGarden : Creature
     [Header("Garden")]
     public Vector2 Area = new Vector2(96, 96);
     public int Seed = 731;
+    [Tooltip("Start cycling automatically when creature simulation begins.")]
     public bool Automatic = true;
     public LeafGardenSurface Surface;
     [Header("Natural variation")]
     public bool RandomizeEventSizes;
     public bool RandomizeFirstDelay;
-    public Vector2 FirstDelaySeconds = new Vector2(60,1000);
+    public Vector2 FirstDelaySeconds = new Vector2(20,20);
     public Vector2 SmallHeightRange = new Vector2(8,18);
     public Vector2 MediumHeightRange = new Vector2(24,40);
     public Vector2 LargeHeightRange = new Vector2(55,80);
@@ -21,7 +22,7 @@ public sealed class LeafGarden : Creature
     [Range(0,1)] public float LargeChance = 0.05f;
     [Header("Event")]
     [Range(0, 2)] public int SizePreset = 2;
-    public Vector2 RestSeconds = new Vector2(25, 45);
+    public Vector2 RestSeconds = new Vector2(60, 180);
     [Min(0.1f)] public float GatherSeconds = 5;
     [Min(0.1f)] public float ActiveSeconds = 12;
     [Min(0.1f)] public float SettleSeconds = 8;
@@ -51,7 +52,9 @@ public sealed class LeafGarden : Creature
         Elapsed = EffectTime = Blend = 0; EventNumber = 0;
         eventHeight = 0;
         TornadoCenter = transform.position; ChooseRest();
-        if(RandomizeFirstDelay) nextRest=Mathf.Lerp(FirstDelaySeconds.x,FirstDelaySeconds.y,(float)random.NextDouble());
+        nextRest=RandomizeFirstDelay
+            ? Mathf.Lerp(FirstDelaySeconds.x,FirstDelaySeconds.y,(float)random.NextDouble())
+            : Mathf.Max(0,FirstDelaySeconds.x);
     }
     private void ChooseRest() => nextRest = Mathf.Lerp(Mathf.Max(0, RestSeconds.x),
         Mathf.Max(RestSeconds.x, RestSeconds.y), (float)random.NextDouble());
@@ -63,7 +66,8 @@ public sealed class LeafGarden : Creature
     }
     public void TriggerTornado()
     {
-        if(Phase!=GardenPhase.Resting) return;
+        if(!isActiveAndEnabled || !SimulationEnabled || IsDead || Phase!=GardenPhase.Resting) return;
+        if(random==null) ResetGarden();
         if(RandomizeEventSizes) eventHeight=RollAutomaticHeight();
         for(int attempt=0;attempt<64;attempt++)
         {

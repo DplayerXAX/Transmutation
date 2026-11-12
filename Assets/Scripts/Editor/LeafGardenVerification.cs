@@ -46,6 +46,43 @@ public static class LeafGardenVerification
     {
         switch(r.action)
         {
+            case "refresh": AssetDatabase.Refresh(); Done(r,"Asset refresh requested."); break;
+            case "world-status":
+                var active=EditorSceneManager.GetActiveScene();
+                var gardens=active.GetRootGameObjects().SelectMany(g=>g.GetComponentsInChildren<LeafGarden>(true)).OrderBy(g=>g.Seed).ToArray();
+                Done(r,$"scene={active.path}; dirty={active.isDirty}; playing={EditorApplication.isPlaying}; frame={Time.frameCount}; time={Time.time:F2}; errors={errors}; lastError={lastError}; " +
+                    string.Join("; ",gardens.Select(g=>$"{g.name}: automatic={g.Automatic}, first={g.FirstDelaySeconds}, randomFirst={g.RandomizeFirstDelay}, rest={g.RestSeconds}, phase={g.Phase}, elapsed={g.Elapsed:F2}, events={g.EventNumber}, simulation={g.SimulationEnabled}, render={g.GetComponent<LeafGardenPresentation>().Status}")) +
+                    $"; showcases={active.GetRootGameObjects().SelectMany(g=>g.GetComponentsInChildren<LeafGardenShowcase>(true)).Count()}; " +
+                    string.Join("; ",active.GetRootGameObjects().SelectMany(g=>g.GetComponentsInChildren<Camera>(true)).Select(c=>$"camera={c.name}, enabled={c.enabled}, tag={c.tag}"))); break;
+            case "cleanup-world":
+                if(EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before editing the world.");
+                var scene=EditorSceneManager.GetActiveScene();
+                if(scene.path!=LeafGardenShowcaseSetup.ScenePath) throw new InvalidOperationException("Open Scene_LeafGarden before cleanup.");
+                var roots=scene.GetRootGameObjects();
+                foreach(var garden in roots.SelectMany(g=>g.GetComponentsInChildren<LeafGarden>(true)))
+                {
+                    Undo.RecordObject(garden,"Leaf Garden cycle timing");
+                    garden.Automatic=true; garden.RandomizeFirstDelay=false;
+                    garden.FirstDelaySeconds=new Vector2(20,20); garden.RestSeconds=new Vector2(60,180);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(garden);
+                    var leaves=garden.GetComponent<LeafGardenPresentation>();
+                    Undo.RecordObject(leaves,"Use player camera"); leaves.ViewCamera=null;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(leaves);
+                }
+                foreach(var showcase in roots.SelectMany(g=>g.GetComponentsInChildren<LeafGardenShowcase>(true)).ToArray())
+                {
+                    var observer=showcase.Observer;
+                    Undo.DestroyObjectImmediate(showcase.gameObject);
+                    if(observer!=null) Undo.DestroyObjectImmediate(observer.gameObject);
+                }
+                EditorSceneManager.MarkSceneDirty(scene);
+                if(!EditorSceneManager.SaveScene(scene)) throw new IOException("Could not save Leaf Garden cleanup.");
+                Done(r,"Saved world: removed showcase controls and observer camera; all colonies use a 20-second initial delay and 60-180-second rests."); break;
+            case "trigger-garden":
+                var colony=UnityEngine.Object.FindObjectsByType<LeafGarden>(FindObjectsSortMode.None).OrderBy(g=>g.Seed).ElementAt(r.value);
+                int before=colony.EventNumber;
+                colony.TriggerTornado();
+                Done(r,$"{colony.name}: {colony.Phase}; events {before}->{colony.EventNumber}"); break;
             case "landscape": LeafGardenLandscapeSetup.Create(); Done(r,"Replaced Leaf Garden with the golden meadow landscape."); break;
             case "prefab":
                 var prefab=LeafGardenShowcaseSetup.EnsurePrefab();

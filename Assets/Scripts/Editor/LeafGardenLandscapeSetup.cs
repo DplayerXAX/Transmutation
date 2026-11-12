@@ -55,15 +55,13 @@ public static class LeafGardenLandscapeSetup
             if(!File.Exists(cachePath)) { File.WriteAllBytes(cachePath,world.BuildChunkCache()); AssetDatabase.ImportAsset(cachePath); }
             world.ChunkCache=AssetDatabase.LoadAssetAtPath<TextAsset>(cachePath); world.Generate(true);
             var surface=BakeSurface(world);
-            var show=new GameObject("Leaf Garden meadow controls").AddComponent<LeafGardenShowcase>();
-            show.Landscape=true; show.ShowControls=false; show.DemoBodies=new Rigidbody[0]; show.Gardens=new LeafGarden[3];
             var prefab=LeafGardenShowcaseSetup.EnsurePrefab();
             var prefabRoot=PrefabUtility.LoadPrefabContents(LeafGardenShowcaseSetup.PrefabPath);
             try
             {
                 var defaults=prefabRoot.GetComponent<LeafGarden>();
-                defaults.RandomizeEventSizes=true;defaults.RandomizeFirstDelay=true;
-                defaults.RestSeconds=new Vector2(180,270);defaults.FirstDelaySeconds=new Vector2(60,300);
+                defaults.Automatic=true;defaults.RandomizeEventSizes=true;defaults.RandomizeFirstDelay=false;
+                defaults.RestSeconds=new Vector2(60,180);defaults.FirstDelaySeconds=new Vector2(20,20);
                 PrefabUtility.SaveAsPrefabAsset(prefabRoot,LeafGardenShowcaseSetup.PrefabPath);
             }
             finally { PrefabUtility.UnloadPrefabContents(prefabRoot); }
@@ -73,18 +71,13 @@ public static class LeafGardenLandscapeSetup
                 var patch=(GameObject)PrefabUtility.InstantiatePrefab(prefab,scene); patch.name="Meadow leaf colony "+(i+1);
                 Vector3 p=new Vector3((i-1)*100,0,0); p.y=surface.HeightAt(p); patch.transform.position=p;
                 var garden=patch.GetComponent<LeafGarden>(); garden.Area=new Vector2(100,280); garden.Surface=surface; garden.Seed=8123+i*1437;
-                garden.RandomizeEventSizes=true; garden.RandomizeFirstDelay=true; garden.RestSeconds=new Vector2(540,900);
-                garden.FirstDelaySeconds=i==1?new Vector2(15,25):new Vector2(90,600);
+                garden.Automatic=true; garden.RandomizeEventSizes=true; garden.RandomizeFirstDelay=false;
+                garden.RestSeconds=new Vector2(60,180); garden.FirstDelaySeconds=new Vector2(20,20);
                 var leaves=patch.GetComponent<LeafGardenPresentation>(); leaves.LeafCount=100000; leaves.Coverage=0.95f; leaves.DetailDistance=48; leaves.DistantDensity=0.6f;
-                show.Gardens[i]=garden;
             }
-            show.Garden=show.Gardens[0]; show.Leaves=show.Garden.GetComponent<LeafGardenPresentation>(); show.Launch=show.Garden.GetComponent<LeafTornadoLaunchVolume>();
-            var observer=new GameObject("Meadow observation camera").AddComponent<Camera>(); observer.tag="MainCamera";
-            observer.clearFlags=CameraClearFlags.Skybox; observer.farClipPlane=750; observer.nearClipPlane=0.08f; observer.enabled=false;
-            observer.transform.position=new Vector3(6,39.5f,-108); observer.transform.LookAt(new Vector3(8,9,35)); observer.gameObject.AddComponent<AudioListener>(); show.Observer=observer;
             var player=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab"),scene);
-            show.Player=player.GetComponentInChildren<SmoothFirstPersonController>();
-            Vector3 spawn=new Vector3(0,0,-112); spawn.y=surface.HeightAt(spawn)+1.25f; show.PlayerSpawn=spawn; show.Player.transform.position=spawn;
+            var controller=player.GetComponentInChildren<SmoothFirstPersonController>();
+            Vector3 spawn=new Vector3(0,0,-112); spawn.y=surface.HeightAt(spawn)+1.25f; controller.transform.position=spawn;
             var playerCamera=player.GetComponentInChildren<Camera>(true);
             foreach(var camera in player.GetComponentsInChildren<Camera>(true)) { camera.enabled=true; camera.farClipPlane=750; camera.clearFlags=CameraClearFlags.Skybox; }
             foreach(var component in player.GetComponentsInChildren<MonoBehaviour>(true))

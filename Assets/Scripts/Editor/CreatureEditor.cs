@@ -28,6 +28,28 @@ public sealed class CreatureEditor : Editor
         state.Add(kill);
         state.Add(new HelpBox("Death keeps the body and stops its abilities. Simulation pause and pickup eligibility are separate. Kill is available for active scene creatures in Play Mode.", HelpBoxMessageType.Info));
         root.Add(state);
+        if (targets.All(t => t is LeafGarden))
+        {
+            var tornado = new Button(() =>
+            {
+                foreach (var garden in targets.OfType<LeafGarden>())
+                    if (Application.IsPlaying(garden)) garden.TriggerTornado();
+            }) { text = "Start Tornado (Test)", name = "start-leaf-tornado" };
+            var phase = new Label();
+            root.Add(tornado);
+            root.Add(phase);
+            void RefreshTornado()
+            {
+                var gardens = targets.OfType<LeafGarden>().Where(g => g != null).ToArray();
+                tornado.SetEnabled(gardens.Any(g => Application.IsPlaying(g) && g.isActiveAndEnabled &&
+                    g.SimulationEnabled && !g.IsDead && g.Phase == LeafGarden.GardenPhase.Resting));
+                phase.text = Application.isPlaying
+                    ? string.Join("; ", gardens.Select(g => $"{g.name}: {g.Phase} / events {g.EventNumber}"))
+                    : "Enter Play Mode to test a tornado on this creature.";
+            }
+            RefreshTornado();
+            root.schedule.Execute(RefreshTornado).Every(100);
+        }
         InspectorElement.FillDefaultInspector(root, serializedObject, this);
 
         void Refresh()

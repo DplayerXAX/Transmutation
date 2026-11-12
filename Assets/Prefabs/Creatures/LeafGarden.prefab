@@ -73,15 +73,15 @@ MonoBehaviour:
   Automatic: 1
   Surface: {fileID: 0}
   RandomizeEventSizes: 1
-  RandomizeFirstDelay: 1
-  FirstDelaySeconds: {x: 60, y: 300}
+  RandomizeFirstDelay: 0
+  FirstDelaySeconds: {x: 20, y: 20}
   SmallHeightRange: {x: 8, y: 18}
   MediumHeightRange: {x: 24, y: 40}
   LargeHeightRange: {x: 55, y: 80}
   MediumChance: 0.13
   LargeChance: 0.05
   SizePreset: 2
-  RestSeconds: {x: 180, y: 270}
+  RestSeconds: {x: 60, y: 180}
   GatherSeconds: 5
   ActiveSeconds: 12
   SettleSeconds: 8
