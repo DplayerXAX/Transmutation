@@ -137,3 +137,23 @@ An existing amphitheater-slab-v1.png is copied into the first page when the jour
 
 Outside Play Mode, use **Tools > Capstone > Meditation > Unlock All Exhibits** or
 **Clear Exhibit Unlocks** to change discovery progress without affecting drawings or glyphs.
+
+
+## Creature unlock sphere
+
+A shattered black sphere above the tablet follows the same creature-family unlocks as the exhibits.
+Tune it on ReflectionSpace > Unlock Sphere. The inspector has save-free previews for shattered,
+partial, whole, and animated restoration states, plus an isolated editor preview window.
+See Docs/ReflectionUnlockSphere.md for geometry, lifecycle, tuning, and verification details.
+
+Resting creatures now ensure the shared Resources/ReflectionRig prefab exists at runtime when
+no MeditationController is present in their scene. Adding a RestSpot is sufficient; the normal
+player/camera and floor are still required for interaction. Existing authored rigs are reused.
+World seats stay invulnerable and can be carried; only the reflection return seat is fixed.
+The seat is a simple slab/block without the old decorative ring, frame, or hood.
+Creature > Ignore Carry Size Limit lets other creatures opt out of the pickup size cap.
+Resting creatures, Bellows, and Tentacle creatures use this override by default.
+
+The unlock sphere restores bottom-to-top. Each valid discovery restores the next lowest group
+of chunks, leaving a broken-egg rim and a missing upper cap. Existing saves reconstruct the
+same lower portion immediately. Dense and one-fragment modes both follow this order.

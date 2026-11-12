@@ -29,7 +29,7 @@ public sealed class ReflectionCatalog : ScriptableObject
     public IReadOnlyList<Definition> Exhibits => exhibits;
     public static ReflectionCatalog Load() => Resources.Load<ReflectionCatalog>("ReflectionCatalog");
 
-    public Definition Find(string id) => Array.Find(exhibits, item => item.id == id);
+    public Definition Find(string id) => exhibits == null ? null : Array.Find(exhibits, item => item != null && item.id == id);
 
     private void OnValidate()
     {
@@ -54,6 +54,7 @@ public sealed class ReflectionProgress
     [SerializeField] private int version = 1;
     [SerializeField] private List<string> unlocked = new();
     public IReadOnlyList<string> Unlocked => unlocked;
+    public event Action Changed;
     private static string SavePath => Path.Combine(ReflectionStorage.Root, "exhibits-v1.json");
 
     public static ReflectionProgress Load()
@@ -87,9 +88,21 @@ public sealed class ReflectionProgress
 
         var discoveries = new List<string>();
         foreach (var exhibit in catalog.Exhibits)
-            if (observed.Contains(exhibit.creatureType) && !unlocked.Contains(exhibit.id))
+            if (exhibit != null && observed.Contains(exhibit.creatureType) && !unlocked.Contains(exhibit.id))
                 discoveries.Add(exhibit.id);
         if (discoveries.Count == 0) return;
+        Unlock(catalog, discoveries);
+    }
+
+    /// <summary>Grant current catalog identities and notify active views once per batch.</summary>
+    public int Unlock(ReflectionCatalog catalog, IEnumerable<string> ids)
+    {
+        if (catalog == null || ids == null) return 0;
+        var discoveries = new List<string>();
+        var known = new HashSet<string>(unlocked, StringComparer.Ordinal);
+        foreach (string id in ids)
+            if (!string.IsNullOrWhiteSpace(id) && catalog.Find(id) != null && known.Add(id)) discoveries.Add(id);
+        if (discoveries.Count == 0) return 0;
         discoveries.Sort(StringComparer.Ordinal);
         unlocked.AddRange(discoveries);
         try
@@ -100,6 +113,8 @@ public sealed class ReflectionProgress
         {
             Debug.LogWarning("Could not save reflection discoveries: " + exception.Message);
         }
+        Changed?.Invoke();
+        return discoveries.Count;
     }
 
     private void Save()

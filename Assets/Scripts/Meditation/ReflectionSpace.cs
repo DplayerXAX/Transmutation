@@ -8,14 +8,20 @@ public sealed class ReflectionSpace : MonoBehaviour
     [SerializeField] private Material floorMaterial;
     [SerializeField] private Material stoneMaterial;
     [SerializeField] private Shader spotlightShader;
+    [SerializeField] private ReflectionUnlockSphereSettings unlockSphere = new();
+    public ReflectionUnlockSphereSettings SphereSettings => unlockSphere;
+    public ReflectionUnlockSphere UnlockSphere { get; private set; }
     private readonly List<Object> resources = new();
     private SlabJournal slab;
     private Transform root;
     public Transform Root => root;
     public float FloorRadius { get; private set; }
+    public float ViewRadius => Mathf.Max(FloorRadius * 1.6f, UnlockSphere == null ? 0f :
+        UnlockSphere.Settings.position.magnitude + UnlockSphere.MaximumExtent + 4f);
 
     public void BuildVisit(ReflectionCatalog catalog, ReflectionProgress progress)
     {
+        if (root != null) Hide();
         root = new GameObject("Reflection Amphitheater").transform;
         var occupied = new List<(Vector3 position, float radius)>();
         var slots = new List<(ReflectionCatalog.Definition definition, Vector3 position)>();
@@ -69,6 +75,10 @@ public sealed class ReflectionSpace : MonoBehaviour
         seat.MakeFixed();
         seat.SetNew(false);
         BuildSlab(stone, pale, progress.Unlocked);
+        var sphere = new GameObject("Creature Unlock Sphere");
+        sphere.transform.SetParent(root, false);
+        UnlockSphere = sphere.AddComponent<ReflectionUnlockSphere>();
+        UnlockSphere.Initialize(catalog, progress, unlockSphere, stone);
 
         ErosiveFluidSystem fluid = null;
         ErosiveFluidSource source = null;
@@ -292,6 +302,8 @@ public sealed class ReflectionSpace : MonoBehaviour
     public void Hide()
     {
         SaveDrawings();
+        if (root != null) { root.gameObject.SetActive(false); Destroy(root.gameObject); }
+        UnlockSphere = null;
         slab = null;
         root = null;
         foreach (Object resource in resources) if (resource != null) Destroy(resource);

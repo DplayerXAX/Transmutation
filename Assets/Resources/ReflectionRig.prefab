@@ -1,0 +1,126 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6658164374449602211
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1807642691123894454}
+  - component: {fileID: 3288210931445886682}
+  - component: {fileID: 727250340595421000}
+  - component: {fileID: 6373905013484882108}
+  - component: {fileID: 6290305910651400395}
+  m_Layer: 0
+  m_Name: ReflectionRig
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1807642691123894454
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6658164374449602211}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3288210931445886682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6658164374449602211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb6a1c44a30a48469270637ed0e7c31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReflectionSpace
+  floorMaterial: {fileID: 2100000, guid: 01a49b39f3b9115458e155745e29ad28, type: 2}
+  stoneMaterial: {fileID: 2100000, guid: 27702e042556bd24ba704d5d1ae6fa52, type: 2}
+  spotlightShader: {fileID: 4800000, guid: a78701036d5e4b4eac9a72a6d2b4b6d7, type: 3}
+  unlockSphere:
+    position: {x: 0, y: 19, z: 25}
+    radius: 2.3
+    fractureSeed: 17041
+    fragmentMode: 0
+    fragmentCount: 232
+    surfaceSubdivisions: 4
+    scatterDistance: 3.6
+    scatterRotation: 48
+    motion: 1
+    driftAmount: 0.055
+    driftSpeed: 0.5
+    rotationAmount: 7
+    rotationSpeed: 0.23
+    restorationDuration: 1.65
+    stagger: 0.045
+    material: {fileID: 0}
+--- !u!114 &727250340595421000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6658164374449602211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e9b8c24891ee11448b169c6a705a11b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ReflectionVisitor
+  reach: 3.5
+  brushPixels: 3.2
+  eraserPixels: 14
+  focusTime: 0.6
+--- !u!114 &6373905013484882108
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6658164374449602211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae887eebfa6bd1e468989eca61ccbdb7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeditationHUD
+  paperColor: {r: 0.86, g: 0.85, b: 0.82, a: 1}
+  worldTextColor: {r: 1, g: 1, b: 1, a: 0.9}
+  spaceTextColor: {r: 0.08, g: 0.08, b: 0.09, a: 0.9}
+  toastSeconds: 3
+--- !u!114 &6290305910651400395
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6658164374449602211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e024146885486de4bb933a88f1b669ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeditationController
+  veilMaterial: {fileID: 2100000, guid: 1c24e9cc11346664286cd7b1156ee39e, type: 2}
+  settleTime: 1.5
+  skyEraseTime: 1.8
+  worldEraseTime: 4
+  spaceRevealTime: 2.5
+  spaceEraseTime: 2
+  worldRevealTime: 3.5
+  transitionSpeed: 2
+  sinkDepth: 0.5
+  settleLook: 0.3
+  lookSensitivity: 0.12
+  spaceVeilRadius: 26
+  spaceEyeHeight: 1.6

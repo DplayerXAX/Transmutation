@@ -13,6 +13,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public sealed class BellowsCreature : Creature
 {
+    public override bool IgnoreCarrySizeLimit => true;
     [Header("Heat")]
     [Tooltip("Heat that fills it completely (charge 1).")]
     [Min(1f)] [SerializeField] private float heatToFull = 30f;

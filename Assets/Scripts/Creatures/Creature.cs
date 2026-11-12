@@ -346,6 +346,9 @@ public enum FoodTag
     public bool IsCarried => Carrier != null;
 
     /// <summary>Whether this creature can currently be picked up.</summary>
+    [Tooltip("Allow pickup even when the visible bounds exceed the carrier's maximum size. Carry permissions still apply.")]
+    [SerializeField] private bool ignoreCarrySizeLimit;
+    public virtual bool IgnoreCarrySizeLimit => ignoreCarrySizeLimit;
     public virtual bool CanBeCarried => true;
 
     /// <summary>Rooted organisms and attached organs cannot be displaced by capture systems.</summary>

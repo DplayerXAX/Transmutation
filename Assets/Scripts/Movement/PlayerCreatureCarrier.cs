@@ -261,7 +261,7 @@ if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return nul
 
 // Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
 // A Bellows can always be picked up, however full it is: it is a bag of air, and carrying it is how its stream is aimed.
-if (!(creature is TentacleCreature) && !(creature is BellowsCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
+if (!creature.IgnoreCarrySizeLimit && MeasureCreature(creature, out _, out _) > maxCarrySize)
     return null;
 
 return creature;

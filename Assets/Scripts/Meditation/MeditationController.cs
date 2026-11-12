@@ -174,7 +174,7 @@ public sealed class MeditationController : MonoBehaviour
         visitor.Begin(hud, controller, cameraHolder, viewCamera);
         hud.SetInSpace(true);
         Vector3 centre = new Vector3(0f, spaceEyeHeight, -2f);
-        float revealRadius = Mathf.Max(spaceVeilRadius, space.FloorRadius * 1.6f);
+        float revealRadius = Mathf.Max(spaceVeilRadius, space.ViewRadius / (1f - veil.Wobble));
         for (float time = 0f; time < spaceRevealTime; time += Time.deltaTime * transitionSpeed)
         {
             float t = time / spaceRevealTime;
@@ -205,7 +205,7 @@ public sealed class MeditationController : MonoBehaviour
 
         float nearRadius = MinimumRadius();
         Vector3 spaceCentre = space.Root.position + Vector3.up * spaceEyeHeight;
-        float revealRadius = Mathf.Max(spaceVeilRadius, space.FloorRadius * 1.6f);
+        float revealRadius = Mathf.Max(spaceVeilRadius, space.ViewRadius / (1f - veil.Wobble));
         for (float time = 0f; time < spaceEraseTime; time += Time.deltaTime * transitionSpeed)
         {
             float t = Mathf.SmoothStep(0f, 1f, time / spaceEraseTime);
@@ -274,7 +274,8 @@ public sealed class MeditationController : MonoBehaviour
         var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (carrier != null && carrier.CarriedCreature != null) carrier.Drop();
 
-        wasKinematic = body.isKinematic;
+        wasKinematic = RestSpotSystem.Instance != null && RestSpotSystem.Instance.Sitting
+            ? RestSpotSystem.Instance.PlayerWasKinematic : body.isKinematic;
         wasInterpolation = body.interpolation;
         PausePlayer();
 
@@ -364,7 +365,6 @@ public sealed class MeditationController : MonoBehaviour
         worldScene = player.gameObject.scene;
         playerRoot = player.root.gameObject;
         RestSpotSystem.Instance?.BeginVisit();
-        wasKinematic = body.isKinematic;
         body.isKinematic = true;
         visitScene = SceneManager.CreateScene("Reflection Visit", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
         SceneManager.MoveGameObjectToScene(playerRoot, visitScene);

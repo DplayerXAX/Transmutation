@@ -65,6 +65,7 @@ public sealed class RestSpotSystem : MonoBehaviour
     public IReadOnlyList<RestSpot> Spots => spots;
     public bool Sitting => sittingAt != null;
     internal RestSpot SeatedAt => sittingAt;
+    internal bool PlayerWasKinematic => wasKinematic;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterSceneSetup()
@@ -100,7 +101,32 @@ public sealed class RestSpotSystem : MonoBehaviour
         stone = MakeRestMaterial(new Color(0.88f, 0.87f, 0.84f));
         ink = MakeRestMaterial(new Color(0.06f, 0.06f, 0.07f));
         glow = MakeRestMaterial(new Color(0.55f, 0.95f, 1f));
+        EnsureReflection();
     }
+
+    // A resting creature is sufficient to enable reflection, even in scenes without a procedural world.
+    internal static void EnsureInScene(Scene scene)
+    {
+        if (!Application.isPlaying || scene == ReflectionPhysics.Visit) return;
+        if (Instance == null || Instance.gameObject.scene != scene) Create(scene);
+        else Instance.EnsureReflection();
+    }
+
+    private void EnsureReflection()
+    {
+        if (meditation != null) return;
+        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
+        {
+            meditation = root.GetComponentInChildren<MeditationController>();
+            if (meditation != null) return;
+        }
+        var prefab = Resources.Load<GameObject>("ReflectionRig");
+        if (prefab == null) { Debug.LogError("Missing Resources/ReflectionRig prefab.", this); return; }
+        var rig = Instantiate(prefab);
+        SceneManager.MoveGameObjectToScene(rig, gameObject.scene);
+        meditation = rig.GetComponent<MeditationController>();
+    }
+
 
     private void OnDestroy()
     {
@@ -498,8 +524,8 @@ public sealed class RestSpotSystem : MonoBehaviour
 }
 
 /// <summary>
-/// One resting place: a low stone seat in an etched ring, shaped a little by its kind (a lookout has an empty
-/// frame standing before it, a hollow a low hood of stone). A small glyph hovers over it while its kind is new.
+/// One resting place: a portable low stone seat. Kind affects its scenic view, not pickup size.
+/// A small visual glyph can hover over it while its kind is new.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 public sealed class RestSpot : Creature
@@ -513,6 +539,7 @@ public sealed class RestSpot : Creature
         (GetComponent<Rigidbody>().linearVelocity.sqrMagnitude < 0.25f &&
         ReflectionPhysics.Raycast(Seat, Vector3.down, 0.8f, 1 << 7, QueryTriggerInteraction.Ignore)));
     public override bool CanBeCarried => !Fixed && !(RestSpotSystem.Instance != null && RestSpotSystem.Instance.Sitting);
+    public override bool IgnoreCarrySizeLimit => true;
     public override bool CanBeConsumed => false;
     public override bool Invulnerable => true;
     public override bool CanUseWhileCarried => true;
@@ -531,6 +558,7 @@ public sealed class RestSpot : Creature
 
     protected override void InitializeCreature()
     {
+        RestSpotSystem.EnsureInScene(gameObject.scene);
         SetCreatureName("Resting Creature");
         Rigidbody body = GetComponent<Rigidbody>();
         body.constraints = RigidbodyConstraints.FreezeRotation;
@@ -557,28 +585,6 @@ public sealed class RestSpot : Creature
         // The seat: a flat slab on a short block, slightly askew.
         Block(new Vector3(0f, 0.2f, 0f), new Vector3(0.9f, 0.4f, 0.7f), stone, solid: true, tilt: 3f);
         Block(new Vector3(0f, 0.43f, 0f), new Vector3(1.2f, 0.08f, 0.9f), stone, solid: true, tilt: 2f);
-        // An etched ring round it on the ground.
-        for (int i = 0; i < 24; i++)
-        {
-            float a = i * Mathf.PI * 2f / 24f;
-            Block(new Vector3(Mathf.Cos(a), 0.02f, Mathf.Sin(a)) * 1.8f, new Vector3(0.45f, 0.03f, 0.05f), ink, solid: false, yaw: -a * Mathf.Rad2Deg + 90f);
-        }
-        if (kind == "Lookout")
-        {
-            // An empty picture frame on two posts, framing the view ahead.
-            Vector3 f = new Vector3(0f, 0f, 2.6f);
-            Block(f + new Vector3(-0.9f, 1.1f, 0f), new Vector3(0.06f, 2.2f, 0.06f), ink, false);
-            Block(f + new Vector3(0.9f, 1.1f, 0f), new Vector3(0.06f, 2.2f, 0.06f), ink, false);
-            Block(f + new Vector3(0f, 2.2f, 0f), new Vector3(1.86f, 0.06f, 0.06f), ink, false);
-            Block(f + new Vector3(0f, 1.1f, 0f), new Vector3(1.86f, 0.06f, 0.06f), ink, false);
-        }
-        else if (kind == "Hollow")
-        {
-            // A low hood of stone over the seat.
-            Block(new Vector3(0f, 1.6f, -0.3f), new Vector3(1.8f, 0.15f, 1.2f), stone, true, tilt: -12f);
-            Block(new Vector3(-0.85f, 0.8f, -0.4f), new Vector3(0.15f, 1.6f, 0.8f), stone, true);
-            Block(new Vector3(0.85f, 0.8f, -0.4f), new Vector3(0.15f, 1.6f, 0.8f), stone, true);
-        }
         // The new-kind glyph: a small slowly turning diamond.
         GameObject m = GameObject.CreatePrimitive(PrimitiveType.Cube);
         Destroy(m.GetComponent<Collider>());
