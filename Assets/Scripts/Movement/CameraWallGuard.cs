@@ -59,7 +59,7 @@ public sealed class CameraWallGuard : MonoBehaviour
 
         // Nearest blocking hit between the safe point and the eye.
         float allowed = distance;
-        int count = Physics.SphereCastNonAlloc(anchor, probeRadius, direction, hits, distance, blockingLayers, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.SphereCastNonAlloc(anchor, probeRadius, direction, hits, distance, blockingLayers, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++)
         {
             Collider other = hits[i].collider;

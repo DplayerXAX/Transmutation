@@ -121,7 +121,7 @@ public sealed class BounceShroom : Creature
         if (expansionPushForce <= 0f) return;
         Vector3 centre = platform.position;
         float radius = Mathf.Max(0.01f, expansionPushRadius);
-        Collider[] nearby = Physics.OverlapSphere(centre, radius, ~0, QueryTriggerInteraction.Ignore);
+        Collider[] nearby = ReflectionPhysics.OverlapSphere(centre, radius, ~0, QueryTriggerInteraction.Ignore);
         Rigidbody ownBody = GetComponent<Rigidbody>();
         var pushedBodies = new HashSet<Rigidbody>();
         foreach (Collider nearbyCollider in nearby)
@@ -236,9 +236,9 @@ public sealed class BounceShroom : Creature
             }
             if (direction.sqrMagnitude < 0.01f) continue;
             // Checked a little above the body, so a gentle uphill slope does not count as a wall.
-            if (Physics.Raycast(from + Vector3.up * 0.5f, direction, reach, ~0, QueryTriggerInteraction.Ignore)) continue;
+            if (ReflectionPhysics.Raycast(from + Vector3.up * 0.5f, direction, reach, ~0, QueryTriggerInteraction.Ignore)) continue;
             Vector3 landing = from + direction * reach + Vector3.up * 0.5f;
-            if (Physics.Raycast(landing, Vector3.down, 0.5f + compactSize.y * 0.5f + maxHopDrop, ~0, QueryTriggerInteraction.Ignore))
+            if (ReflectionPhysics.Raycast(landing, Vector3.down, 0.5f + compactSize.y * 0.5f + maxHopDrop, ~0, QueryTriggerInteraction.Ignore))
                 return true;
         }
         direction = Vector3.zero;
@@ -246,7 +246,7 @@ public sealed class BounceShroom : Creature
     }
 
     private bool Grounded() =>
-        Physics.Raycast(platform.position, Vector3.down, platform.localScale.y * 0.5f + 0.12f, ~0, QueryTriggerInteraction.Ignore);
+        ReflectionPhysics.Raycast(platform.position, Vector3.down, platform.localScale.y * 0.5f + 0.12f, ~0, QueryTriggerInteraction.Ignore);
 
     private void SetSquash(Vector3 value)
     {

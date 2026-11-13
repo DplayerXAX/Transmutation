@@ -86,7 +86,8 @@ public enum FoodTag
     public float MaxHealth => maxHealth;
     public float Health => health;
     public CreaturePolarity Polarity => polarity;
-    public bool CanBeAITargeted => Polarity != CreaturePolarity.None;
+    public virtual bool IsInPhysicalWorld => true;
+    public bool CanBeAITargeted => IsInPhysicalWorld && Polarity != CreaturePolarity.None;
     /// <summary>Structural or unique creatures ignore incidental harm: projectile, melee and blast damage,
     /// and water-contact ageing. Direct lifecycle calls (Die, SetRemainingAge, consumption) are unaffected.</summary>
     public virtual bool Invulnerable => false;
@@ -116,7 +117,7 @@ public enum FoodTag
 
     public bool ApplyDamage(float amount, Creature source = null)
     {
-        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || isDead || consumptionPending || Invulnerable) return false;
+        if (float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f || !IsInPhysicalWorld || isDead || consumptionPending || Invulnerable || ReflectionSpotlight.IsFrozen(this)) return false;
         float applied = Mathf.Min(health, amount);
         health = Mathf.Max(0f, health - amount);
         if (!TryGetComponent<CreatureHurtResponse>(out var hurt)) hurt = gameObject.AddComponent<CreatureHurtResponse>();
@@ -256,7 +257,7 @@ public enum FoodTag
     /// <summary>Records death once, releases active ownership, and retains the original body.</summary>
     public virtual void Die()
     {
-        if (isDead) return;
+        if (isDead || ReflectionSpotlight.IsFrozen(this)) return;
         if (deathCause == CreatureDeathCause.None) deathCause = CreatureDeathCause.Direct;
         InitializeDeadRemains();
         CreatureThrower.ReleaseFlight(this);
@@ -321,7 +322,7 @@ public enum FoodTag
     /// <summary>Completes a species-approved physical meal without imposing ordinary diet rules.</summary>
     internal bool CompleteConsumption(Creature consumer)
     {
-        if (consumptionPending || !CanBeConsumed) return false;
+        if (consumptionPending || !CanBeConsumed || ReflectionSpotlight.IsFrozen(this)) return false;
         if (TryGetComponent<CompostAbsorption>(out var recycling) && recycling.HasClaim) return false;
         consumptionPending = true;
         CreatureRegistry.Unregister(this);
@@ -346,6 +347,9 @@ public enum FoodTag
     public bool IsCarried => Carrier != null;
 
     /// <summary>Whether this creature can currently be picked up.</summary>
+    [Tooltip("Allow pickup even when the visible bounds exceed the carrier's maximum size. Carry permissions still apply.")]
+    [SerializeField] private bool ignoreCarrySizeLimit;
+    public virtual bool IgnoreCarrySizeLimit => ignoreCarrySizeLimit;
     public virtual bool CanBeCarried => true;
 
     /// <summary>Rooted organisms and attached organs cannot be displaced by capture systems.</summary>
@@ -381,7 +385,7 @@ public enum FoodTag
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
     {
-        if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried) return false;
+        if (carrier == null || target == null || IsCarried || IsBubbleCaptured || !isActiveAndEnabled || !CanBeCarried || ReflectionSpotlight.IsFrozen(this)) return false;
         CreatureThrower.ReleaseFlight(this);
         // Silk must release its movement claim before carry physics takes ownership.
         if (TryGetComponent<WebCapture>(out WebCapture webCapture)) webCapture.Release();
@@ -486,6 +490,7 @@ public enum FoodTag
     {
         CreatureRegistry.Unregister(this);
         LuminosityQuery.Unregister(this);
+        if (ReflectionPhysics.SwitchingWorldRoots) return;
         if (IsCarried) Carrier.Release();
         if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
@@ -565,7 +570,7 @@ public enum FoodTag
     /// </summary>
     internal void SetRemainingAge(float value)
     {
-        if (isDead || consumptionPending) return;
+        if (isDead || consumptionPending || ReflectionSpotlight.IsFrozen(this)) return;
         age = Mathf.Max(0f, value);
         if (age > 0f) return;
         DieWithCause(CreatureDeathCause.Age);

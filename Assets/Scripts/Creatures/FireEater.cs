@@ -79,6 +79,8 @@ public sealed class FireEater : Creature
     private Vector3 preferredMoveDirection;
     private float fleeSideSign = 1f;
 
+    internal void SetFlowerPrefab(FireFlower flower) => fireFlowerPrefab = flower;
+
     protected override void InitializeCreature()
     {
         eaterBody = GetComponent<Rigidbody>();
@@ -221,7 +223,7 @@ public sealed class FireEater : Creature
 
     private void FindNearestPlayer()
     {
-        int hitCount = Physics.OverlapSphereNonAlloc(
+        int hitCount = ReflectionPhysics.OverlapSphereNonAlloc(
             transform.position,
             playerAwarenessRadius,
             overlapHits,
@@ -252,7 +254,7 @@ public sealed class FireEater : Creature
 
     private void FindNearestBubble()
     {
-        int hitCount = Physics.OverlapSphereNonAlloc(
+        int hitCount = ReflectionPhysics.OverlapSphereNonAlloc(
             transform.position,
             detectionRadius,
             overlapHits,
@@ -351,7 +353,7 @@ public sealed class FireEater : Creature
     private Vector3 SteerAroundObstacles(Vector3 desiredDirection)
     {
         Vector3 origin = transform.position + groundNormal * groundRayOriginHeight;
-        if (!Physics.SphereCast(
+        if (!ReflectionPhysics.SphereCast(
                 origin,
                 0.25f,
                 desiredDirection,
@@ -424,7 +426,7 @@ public sealed class FireEater : Creature
     private void UpdateGroundNormal(float deltaTime)
     {
         Vector3 origin = transform.position + Vector3.up * groundRayOriginHeight;
-        int hitCount = Physics.RaycastNonAlloc(
+        int hitCount = ReflectionPhysics.RaycastNonAlloc(
             origin,
             Vector3.down,
             groundHits,

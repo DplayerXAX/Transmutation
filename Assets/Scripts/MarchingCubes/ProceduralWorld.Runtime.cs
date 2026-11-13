@@ -127,7 +127,7 @@ public sealed partial class ProceduralWorld
         foreach (Rigidbody body in FindObjectsByType<Rigidbody>(FindObjectsSortMode.None))
             if (body.gameObject.scene == gameObject.scene && body.GetComponent<SmoothFirstPersonController>() != null) playerBody = body;
         if (playerBody != null) spawnPosition = playerBody.position;
-        if (!LayoutReady) Generate(false);
+        if (!LayoutReady || chunkCount == Vector3Int.zero || chunksTotal == 0) Generate(false);
         if (placePlayerOnSurface) PlacePlayerOnSurface();
     }
     private void PlacePlayerOnSurface()
@@ -528,7 +528,7 @@ public sealed partial class ProceduralWorld
         field = null; chunksBuilt = 0; chunksTotal = 0; erosionTimer = 0f; generating = false; LastUpdateError = null;
     }
     private void OnDestroy() => Clear();
-    private void OnDisable() { if (cancellation != null) Clear(); }
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots && cancellation != null) Clear(); }
     // The leaf terrain is sampled from static code, so it reads the active layout's scale.
     private void ApplyLeafScale() { if (field != null && field.leafMap) LeafMapTerrain.Scale = field.leafScale > 0f ? field.leafScale : 1f; }
     private void OnEnable() { if (Application.isPlaying && fingerprint != null && !LayoutReady) Generate(false); }

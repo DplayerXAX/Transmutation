@@ -1,0 +1,94 @@
+#pragma kernel Initialize
+#pragma kernel Simulate
+struct Leaf { float4 home; float4 position; float4 velocity; float4 rotation; };
+RWStructuredBuffer<Leaf> _Leaves;
+AppendStructuredBuffer<uint> _Visible;
+uint _Count, _Seed;
+float4 _Garden, _Area, _Center, _Camera, _LOD;
+float4 _Planes[6], _ActorStarts[16], _ActorEnds[16];
+int _ActorCount;
+float _Delta, _EffectTime, _Blend, _Height, _SourceRadius, _TopRadius;
+Texture2D<float4> _Surface;
+SamplerState sampler_Surface;
+float4 _SurfaceRect;
+float _Mapped, _Coverage, _OrganicEdge;
+float4 SurfaceAt(float2 p)
+{
+    if(_Mapped<0.5) return float4(_Garden.y,0,0,1);
+    uint w,h; _Surface.GetDimensions(w,h);
+    float2 uv=(saturate((p-_SurfaceRect.xy)/_SurfaceRect.zw)*(float2(w,h)-1)+0.5)/float2(w,h);
+    return _Surface.SampleLevel(sampler_Surface,uv,0);
+}
+float hash(uint n) { n ^= n >> 16; n *= 0x7feb352d; n ^= n >> 15; n *= 0x846ca68b; n ^= n >> 16; return (n & 0x00ffffff) / 16777216.0; }
+[numthreads(128,1,1)]
+void Initialize(uint3 thread : SV_DispatchThreadID)
+{
+    uint id = thread.x; if (id >= _Count) return;
+    uint n = id + _Seed * 7919; float seed = hash(n);
+    uint columns = (uint)_Area.z, rows = (_Count + columns - 1) / columns;
+    float2 uv = (float2(id % columns, id / columns) + float2(hash(n+3),hash(n+7))) / float2(columns,rows);
+    Leaf p;
+    p.home = float4(_Garden.xyz + float3((uv.x-0.5)*_Area.x, 0.025+hash(n+13)*0.07, (uv.y-0.5)*_Area.y), seed);
+    float4 ground=SurfaceAt(p.home.xz);
+    p.home.y=ground.r+0.035+hash(n+13)*0.035;
+    p.position = float4(p.home.xyz, 0.7 + hash(n+17)*0.85);
+    float patch=0.55+0.25*sin(p.home.x*0.071+sin(p.home.z*0.039)*2)+0.2*cos(p.home.z*0.09+p.home.x*0.018);
+    float2 radial=(uv-0.5)*2;
+    float wobble=0.10*sin(p.home.x*0.083+sin(p.home.z*0.049)*2)+0.08*cos(p.home.z*0.071-p.home.x*0.037);
+    float softEdge=1-smoothstep(0.58,1.03,length(radial)+wobble);
+    float density=lerp(1,saturate(patch)*_Coverage,_Mapped)*lerp(1,softEdge,_OrganicEdge);
+    if(ground.a<0.5 || (ground.g*ground.g+ground.b*ground.b)>0.4 || hash(n+37)>density) p.position.w=0;
+    p.velocity = 0;
+    p.rotation = float4(0, seed * 6.283185, 0, hash(n+29));
+    _Leaves[id] = p;
+}
+[numthreads(128,1,1)]
+void Simulate(uint3 thread : SV_DispatchThreadID)
+{
+    uint id = thread.x; if (id >= _Count) return;
+    Leaf p = _Leaves[id]; float seed = p.home.w;
+    if(p.position.w<=0) return;
+    float2 deltaHome = p.home.xz - _Center.xz;
+    float source = 1 - smoothstep(_SourceRadius * 0.86, _SourceRadius, length(deltaHome));
+    float influence = source * _Blend;
+    float h = frac(seed * 43.137);
+    float angle = seed * 137.0 + _EffectTime * (2.3 - h*1.1) + h * 15.0;
+    float radius = lerp(_SourceRadius * 0.22, _TopRadius, pow(h, 1.25));
+    radius *= 0.65 + frac(seed * 79.23) * 0.35;
+    radius *= lerp(0.25, 1, _Blend);
+    float2 sway = float2(sin(_EffectTime*0.32+h*3.8),cos(_EffectTime*0.27+h*4.1)) * h*h*3*_Blend;
+    float3 target = _Center.xyz + float3(cos(angle)*radius+sway.x,
+        _Height*h*_Blend + sin(_EffectTime*2+seed*67)*0.3*_Blend, sin(angle)*radius+sway.y);
+    target.y = max(p.home.y, target.y);
+    target = lerp(p.home.xyz, target, influence);
+    float dt = _Delta;
+    if (dt > 0)
+    {
+        // Damped tracking gives designed collective motion, without leaf-to-leaf physics.
+        p.velocity.xyz += (target - p.position.xyz) * (influence > 0.01 ? 22 : 10) * dt;
+        for (int i=0; i<_ActorCount; i++)
+        {
+            float3 a = _ActorStarts[i].xyz, b = _ActorEnds[i].xyz, segment = b-a;
+            float t = saturate(dot(p.position.xyz-a,segment)/max(dot(segment,segment),0.0001));
+            float3 diff = p.position.xyz - lerp(a,b,t);
+            float dist = length(diff.xz);
+            float kick = (1-smoothstep(0,_ActorEnds[i].w,dist)) * (1-smoothstep(0.5,2.0,abs(diff.y)));
+            float2 dir = (diff.xz + float2(0.001,0.001)) / max(dist,0.05);
+            p.velocity.xyz += float3(dir.x,0.9,dir.y) * kick * _ActorStarts[i].w * 85 * dt;
+        }
+        p.velocity.xyz *= exp(-5.0*dt);
+        p.position.xyz += p.velocity.xyz * dt;
+        p.position.y = max(SurfaceAt(p.position.xz).r+0.025,p.position.y);
+        float airborne = saturate((p.position.y-p.home.y)*2 + length(p.velocity.xyz)*0.12);
+        float3 resting = float3(0,seed*6.283185,0);
+        float3 tumbling = float3(sin(seed*70+_EffectTime*3)*1.4,angle,sin(seed*39+_EffectTime*4)*1.1);
+        p.rotation.xyz = lerp(resting,tumbling,airborne);
+        p.velocity.w = airborne;
+        _Leaves[id] = p;
+    }
+    bool draw = true;
+    for (int j=0; j<6; j++) if (dot(_Planes[j].xyz,p.position.xyz)+_Planes[j].w < -1.2) draw=false;
+    float distCam = distance(p.position.xyz,_Camera.xyz);
+    if (influence < 0.01 && distCam > _LOD.x && frac(seed*113.17) > _LOD.y) draw=false;
+    if (draw) _Visible.Append(id);
+}

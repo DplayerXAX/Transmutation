@@ -13,6 +13,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public sealed class BellowsCreature : Creature
 {
+    public override bool IgnoreCarrySizeLimit => true;
     [Header("Heat")]
     [Tooltip("Heat that fills it completely (charge 1).")]
     [Min(1f)] [SerializeField] private float heatToFull = 30f;
@@ -332,7 +333,7 @@ public sealed class BellowsCreature : Creature
     private void Absorb(float deltaTime)
     {
         if (Charge >= maxCharge) return;
-        int count = Physics.OverlapSphereNonAlloc(transform.position, Radius + absorbReach, hits, ~0, QueryTriggerInteraction.Collide);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(transform.position, Radius + absorbReach, hits, ~0, QueryTriggerInteraction.Collide);
         var seen = new HashSet<Creature>();
         for (int i = 0; i < count; i++)
         {
@@ -354,7 +355,7 @@ public sealed class BellowsCreature : Creature
         body.useGravity = false;
         body.linearDamping = 1.2f; // the air holds a floating bladder back
         float ground = transform.position.y - 50f;
-        if (Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 50f, ~0, QueryTriggerInteraction.Ignore) && hit.rigidbody != body)
+        if (ReflectionPhysics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 50f, ~0, QueryTriggerInteraction.Ignore) && hit.rigidbody != body)
             ground = hit.point.y;
         float target = ground + hoverHeight.x + hoverHeight.y * (Charge - floatAbove) / Mathf.Max(0.01f, maxCharge - floatAbove) + Radius;
         float lift = (target - transform.position.y) * 1.6f - body.linearVelocity.y * 1.4f;
@@ -396,7 +397,7 @@ public sealed class BellowsCreature : Creature
         Vector3 mouth = Spout + forward * 0.3f;
         float range = gustRange * Mathf.Lerp(0.6f, 1.1f, Mathf.Clamp01(charge));
         float spread = Mathf.Tan(gustAngle * Mathf.Deg2Rad);
-        int count = Physics.OverlapCapsuleNonAlloc(mouth, mouth + forward * range, range * spread, hits, ~0, QueryTriggerInteraction.Collide);
+        int count = ReflectionPhysics.OverlapCapsuleNonAlloc(mouth, mouth + forward * range, range * spread, hits, ~0, QueryTriggerInteraction.Collide);
         pushed.Clear();
         var bubbles = new HashSet<TrappingBubble>();
         for (int i = 0; i < count; i++)
@@ -503,7 +504,7 @@ public sealed class BellowsCreature : Creature
     private void PushOutOfGeometry()
     {
         float r = Radius;
-        int count = Physics.OverlapSphereNonAlloc(transform.position, r * 0.95f, hits, ~0, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.OverlapSphereNonAlloc(transform.position, r * 0.95f, hits, ~0, QueryTriggerInteraction.Ignore);
         bool blocked = false;
         for (int i = 0; i < count && !blocked; i++)
             blocked = !hits[i].transform.IsChildOf(transform) && hits[i].attachedRigidbody != body &&
@@ -511,7 +512,7 @@ public sealed class BellowsCreature : Creature
         if (!blocked) return;
         Vector3 at = transform.position;
         // Up onto whatever it went into.
-        if (Physics.SphereCast(at + Vector3.up * (r * 2f + 3f), r * 0.9f, Vector3.down, out RaycastHit top, r * 2f + 6f, ~0, QueryTriggerInteraction.Ignore)
+        if (ReflectionPhysics.SphereCast(at + Vector3.up * (r * 2f + 3f), r * 0.9f, Vector3.down, out RaycastHit top, r * 2f + 6f, ~0, QueryTriggerInteraction.Ignore)
             && !top.transform.IsChildOf(transform))
             at = top.point + top.normal * (r + 0.05f);
         else at += Vector3.up * (r * 2f);

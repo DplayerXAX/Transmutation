@@ -52,45 +52,14 @@ public static class WorldMapDress
         so.FindProperty("surfaceMaterial").objectReferenceValue = ground;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        // The mushroom basin floor uses the same ground shader (so it reads as the same land), more strongly tinted.
-        var basinFloor = Variant("Assets/Generated/LeafMap/Leaf_InkStone.mat", "World_FungalFloor", m =>
-        {
-            m.SetFloat("_IridescentAmount", 0f); m.SetFloat("_IridescentLines", 0f); m.SetFloat("_IridescentScale", 0.015f);
-        });
-        var basin = root.Find("06 Mushroom basin — Scene_FungalHollow (marcus)");
-        int walls = 0;
-        if (basin != null)
-        {
-            foreach (var r in basin.GetComponentsInChildren<MeshRenderer>(true))
-            {
-                if (r.name == "Cavern Floor") { r.sharedMaterial = basinFloor; continue; }
-                if (r.GetComponent<SlipperySurface>() != null || r.name.StartsWith("Rough Chimney"))
-                {
-                    var src = r.sharedMaterial;
-                    bool rough = r.name.StartsWith("Rough");
-                    r.sharedMaterial = Variant(AssetDatabase.GetAssetPath(src), rough ? "World_FungalRoughDark" : "World_FungalSlimeDark", m =>
-                    {
-                        // Near-black with a coloured gloss, instead of the bright green walls.
-                        Color tint = rough ? new Color(0.07f, 0.05f, 0.09f) : new Color(0.03f, 0.07f, 0.08f);
-                        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", tint);
-                        if (m.HasProperty("_Color")) m.SetColor("_Color", tint);
-                        if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", rough ? 0.2f : 0.85f);
-                        if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", rough ? 0f : 0.6f);
-                        if (m.HasProperty("_EmissionColor")) { m.EnableKeyword("_EMISSION"); m.SetColor("_EmissionColor", rough ? new Color(0.05f, 0.02f, 0.08f) : new Color(0.0f, 0.06f, 0.07f)); }
-                    });
-                    walls++;
-                }
-            }
-        }
-        log.Add("Colourful black: terrain World_InkStone, basin floor World_FungalFloor, " + walls + " basin walls darkened.");
+        log.Add("Colourful black: the continuous world terrain also forms the mushroom floor and walls.");
     }
 
     // ---------------- Floating stones ----------------
 
     /// <summary>
-    /// A wandering climb from the flower field to the crystal island's west edge: easy, wide stones close together at
-    /// the bottom; small, far-apart stones with big height changes near the top (bubble flowers help there).
-    /// Decoy stones float round the route. Uses the leaf map's SkyIslands component and bubble flowers.
+    /// A wide, wandering climb from the flower field to the island, mixing small steps with broad resting platforms.
+    /// More outlying islands break up the single tight column of stones.
     /// </summary>
     private static void Stones(Transform root, List<string> log)
     {
@@ -100,8 +69,9 @@ public static class WorldMapDress
         islands.transform.position = Vector3.zero;
         islands.name = "07 Floating stones — flower field up to the crystal island";
 
-        float top = IslandTop(new Vector3(-92f, 0f, 22f));
-        Vector3 altar = WorldMapTerrain.IslandOffset + new Vector3(-104f, top + 0.4f, 26f);
+        float edgeX = -WorldMapTerrain.IslandRadius + 6f;
+        float top = IslandTop(new Vector3(edgeX, 0f, 26f));
+        Vector3 altar = WorldMapTerrain.IslandOffset + new Vector3(edgeX - 8f, top + 0.4f, 26f);
         var random = new System.Random(20261110);
         float R(float a, float b) => Mathf.Lerp(a, b, (float)random.NextDouble());
         Vector2 island = new Vector2(WorldMapTerrain.IslandOffset.x, WorldMapTerrain.IslandOffset.z);
@@ -111,83 +81,99 @@ public static class WorldMapDress
         Vector3 at = new Vector3(start2.x, WorldMapTerrain.Height(start2.x, start2.y) + 1.6f, start2.y);
         float startY = at.y;
         stones.Add(at); radii.Add(3.4f); scenery.Add(false);
-        // An irregular, wobbling spiral round a column of air west of the island: its radius breathes, it sometimes
-        // turns back on itself, steps go up and now and then down. Easy (wide, close, low) at the bottom; small, far
-        // and steep near the top. Every hop stays within the player's reach (gap + 1.4 x rise <= 5.4 m, rise <= 1.7 m).
-        Vector2 column = new Vector2(-140f, 80f);
-        float angle = Mathf.Atan2(at.z - column.y, at.x - column.x), ring = Mathf.Clamp(Vector2.Distance(new Vector2(at.x, at.z), column), 10f, 24f);
-        float turn = 1f;
-        int guard = 0;
-        float stopAt = altar.y - 7f;
-        while (at.y < stopAt && guard++ < 600)
+        // The broad landings are pauses; some smaller gaps deliberately need a bubble flower.
+        // The bends make the ascent visible across the field rather than as one narrow stack.
+        Vector3[] bends = {
+            new Vector3(-185f, 0.13f, 45f), new Vector3(-215f, 0.25f, 62f),
+            new Vector3(-185f, 0.37f, 115f), new Vector3(-140f, 0.49f, 120f),
+            new Vector3(-116f, 0.60f, 96f), new Vector3(-160f, 0.71f, 70f),
+            new Vector3(-128f, 0.82f, 30f), new Vector3(-104f, 0.92f, 42f),
+            new Vector3(altar.x, 1f, altar.z) };
+        foreach (Vector3 bend in bends)
         {
-            float t = Mathf.Clamp01((at.y - startY) / (altar.y - startY));
-            float d = Mathf.Pow(t, 1.15f);
-            float radius = Mathf.Lerp(3.1f, 1.35f, d) * R(0.8f, 1.2f);
-            float gap = Mathf.Lerp(0.8f, 3.3f, d) + R(0f, Mathf.Lerp(0.8f, 1.3f, d));
-            float rise = random.NextDouble() < Mathf.Lerp(0.18f, 0.1f, d) ? R(-1.6f, -0.4f) : R(0.3f, Mathf.Lerp(1.1f, 1.7f, d));
-            if (gap + Mathf.Max(0f, rise) * 1.4f > 5.4f) rise = Mathf.Max(0.2f, (5.4f - gap) / 1.4f);
-            rise = Mathf.Min(rise, 1.7f);
-            if (random.NextDouble() < 0.12) turn = -turn;
-            ring = Mathf.Clamp(ring + R(-5f, 5f), 9f, 26f);
-            float hop = radii[radii.Count - 1] + gap + radius;
-            float nextAngle = angle + turn * hop / ring * R(0.85f, 1.15f);
-            Vector3 next = new Vector3(column.x + Mathf.Cos(nextAngle) * ring, at.y + rise, column.y + Mathf.Sin(nextAngle) * ring);
-            // Keep the real hop length (the ring may have changed) within reach.
-            Vector2 flatStep = new Vector2(next.x - at.x, next.z - at.z);
-            float edgeGap = flatStep.magnitude - radii[radii.Count - 1] - radius;
-            if (edgeGap > 4.6f || edgeGap < 0.4f || edgeGap + Mathf.Max(0f, rise) * 1.4f > 5.6f) continue;
-            float ground = WorldMapTerrain.Height(next.x, next.z);
-            if (next.y < ground + 1.2f) next.y = Mathf.Min(ground + 1.2f, at.y + 1.7f);
-            if (next.y < ground + 0.6f) continue;
-            if (stones.Any(s => Vector3.Distance(s, next) < radius + 2.6f)) continue;
-            at = next; angle = nextAngle;
-            stones.Add(at); radii.Add(radius); scenery.Add(false);
+            Vector3 target = new Vector3(bend.x, Mathf.Lerp(startY, altar.y, bend.y), bend.z);
+            int steps = Mathf.CeilToInt(Mathf.Max(Vector2.Distance(new Vector2(at.x, at.z), new Vector2(target.x, target.z)) / 14f,
+                Mathf.Abs(target.y - at.y) / 1.8f));
+            Vector3 from = at;
+            for (int step = 1; step <= steps; step++)
+            {
+                Vector3 next = Vector3.Lerp(from, target, step / (float)steps);
+                if (bend.y < 1f) next += new Vector3(Mathf.Sin(stones.Count * 1.7f) * 0.4f, 0f,
+                    Mathf.Cos(stones.Count * 1.3f) * 0.4f);
+                float radius = stones.Count % 7 == 0 ? R(7f, 10f) :
+                    stones.Count % 3 == 0 ? R(4f, 6f) : R(2.4f, 3.6f);
+                if (bend.y >= 1f && step == steps) { next = altar; radius = 5.5f; }
+                stones.Add(next); radii.Add(radius); scenery.Add(false);
+            }
+            at = target;
         }
-        log.Add("Floating stones: spiral reached " + at.y.ToString("0") + " m (" + stones.Count + " stones, " + guard + " tries).");
-        // Last small, far hops across to the altar stone at the island's edge, still climbing.
-        while (guard++ < 700)
+        // Leave deliberate open-air crossings between otherwise close stepping stones.
+        // A guided bubble occupies each gap; the broad islands remain as safe pauses.
+        int thinned = 0;
+        for (int i = stones.Count - 3; i >= 3; i--)
         {
-            Vector3 step = altar - at; step.y = 0f;
-            float left = step.magnitude - radii[radii.Count - 1] - 5.5f;
-            if (left <= 4.4f && altar.y - at.y <= 1.7f) break;
-            float radius = R(1.3f, 1.7f);
-            float hop = radii[radii.Count - 1] + Mathf.Min(R(2.6f, 3.6f), Mathf.Max(0.6f, left - radius * 2f)) + radius;
-            at += step.normalized * Mathf.Min(hop, step.magnitude - 6f);
-            at.y = Mathf.Min(at.y + R(0.6f, 1.5f), altar.y - 0.3f);
-            at += new Vector3(R(-1.2f, 1.2f), 0f, R(-1.2f, 1.2f));
-            stones.Add(at); radii.Add(radius); scenery.Add(false);
+            if (i % 3 != 1 || i % 7 == 0) continue;
+            float gap = Vector2.Distance(new Vector2(stones[i - 1].x, stones[i - 1].z),
+                new Vector2(stones[i + 1].x, stones[i + 1].z)) - radii[i - 1] - radii[i + 1];
+            float rise = stones[i + 1].y - stones[i - 1].y;
+            if (gap < 6f || gap > 16f || rise > 3.8f) continue;
+            stones.RemoveAt(i); radii.RemoveAt(i); scenery.RemoveAt(i); thinned++;
         }
-        stones.Add(altar); radii.Add(5.5f); scenery.Add(false);
+        log.Add("Floating stones: wide route reached " + at.y.ToString("0") + " m across " + stones.Count +
+            " platforms; " + thinned + " intermediary stones removed for bubble crossings.");
         int path = stones.Count;
         float maxRise = 0f, maxGap = 0f;
+        var bridgeIndices = new List<int>();
         for (int i = 1; i < path; i++)
         {
-            maxRise = Mathf.Max(maxRise, stones[i].y - stones[i - 1].y);
-            maxGap = Mathf.Max(maxGap, Vector2.Distance(new Vector2(stones[i].x, stones[i].z), new Vector2(stones[i - 1].x, stones[i - 1].z)) - radii[i] - radii[i - 1]);
+            float rise = stones[i].y - stones[i - 1].y;
+            float gap = Vector2.Distance(new Vector2(stones[i].x, stones[i].z), new Vector2(stones[i - 1].x, stones[i - 1].z)) - radii[i] - radii[i - 1];
+            maxRise = Mathf.Max(maxRise, rise);
+            maxGap = Mathf.Max(maxGap, gap);
+            if (gap > 5.4f || rise > 1.7f) bridgeIndices.Add(i - 1);
         }
-        log.Add("Floating stones: largest rise " + maxRise.ToString("0.0") + " m, widest gap " + maxGap.ToString("0.0") + " m.");
+        log.Add("Floating stones: largest rise " + maxRise.ToString("0.0") + " m, widest gap " + maxGap.ToString("0.0") +
+            " m, " + bridgeIndices.Count + " bubble-assisted crossings.");
 
-        // Decoys: drifting stones round the route at every height, some almost reachable.
-        for (int i = 0; i < 45; i++)
+        // Outlying islands of several sizes spread across the air between flowers and the main island.
+        for (int i = 0; i < 95; i++)
         {
             Vector3 near = stones[random.Next(path - 1)];
-            Vector3 decoy = near + new Vector3(R(-14f, 14f), R(-6f, 7f), R(-14f, 14f));
-            if (decoy.y < WorldMapTerrain.Height(decoy.x, decoy.z) + 3f) continue;
-            if (stones.Any(s => Vector3.Distance(s, decoy) < 6f)) continue;
-            stones.Insert(stones.Count - 1, decoy); radii.Insert(radii.Count - 1, R(1.2f, 3.2f)); scenery.Insert(scenery.Count - 1, true);
+            float radius = random.NextDouble() < 0.22 ? R(7f, 11f) : random.NextDouble() < 0.5 ? R(3.5f, 6.5f) : R(1.5f, 3f);
+            Vector3 decoy = near + new Vector3(R(-42f, 42f), R(-8f, 10f), R(-40f, 40f));
+            // Southern outliers sit on the ground instead of hanging over the Goo approach.
+            if (decoy.z < 35f) decoy.y = WorldMapTerrain.Height(decoy.x, decoy.z) + radius * 1.95f;
+            if (decoy.y < WorldMapTerrain.Height(decoy.x, decoy.z) + Mathf.Min(radius * 1.6f, 12f)) continue;
+            if (WorldMapBuild.IslandRadial(decoy.x - island.x, decoy.z - island.y) < WorldMapTerrain.IslandRadius + 5f &&
+                decoy.y < WorldMapTerrain.IslandOffset.y - 8f) continue;
+            if (stones.Any(s => Vector3.Distance(s, decoy) < radius + 5f)) continue;
+            stones.Insert(stones.Count - 1, decoy); radii.Insert(radii.Count - 1, radius); scenery.Insert(scenery.Count - 1, true);
         }
         islands.stones = stones.ToArray(); islands.radii = radii.ToArray(); islands.scenery = scenery.ToArray();
+        islands.Rebuild();
+        HangingTentacles(root, islands, stones, radii, log);
 
-        // Bubble flowers on the hardest stones (top half), each aiming its bubbles at the gap to the next stone.
+        // Every gap beyond a normal jump gets a flower on its departure island and a guided bubble in the gap.
         var flowers = islands.GetComponentsInChildren<BubbleFlower>(true);
+        if (flowers.Length > 0)
+            while (flowers.Length < bridgeIndices.Count)
+            {
+                Object.Instantiate(flowers[0].gameObject, islands.transform).name = "Bridge bubble flower";
+                flowers = islands.GetComponentsInChildren<BubbleFlower>(true);
+            }
         var guide = islands.GetComponentInChildren<SkyIslandBubbleGuide>(true);
         if (guide != null) guide.lanes.Clear();
-        var hard = Enumerable.Range(0, path - 1).Where(i => !scenery[i] && (stones[i].y - startY) / (altar.y - startY) > 0.35f).ToList();
+        var flowerStones = new List<int>(bridgeIndices);
+        var upper = Enumerable.Range(0, path - 1)
+            .Where(i => !flowerStones.Contains(i) && (stones[i].y - startY) / (altar.y - startY) > 0.35f).ToList();
+        for (int f = flowerStones.Count; f < flowers.Length && upper.Count > 0; f++)
+            flowerStones.Add(upper[Mathf.Min(upper.Count - 1,
+                (f - bridgeIndices.Count) * upper.Count / Mathf.Max(1, flowers.Length - bridgeIndices.Count))]);
         for (int f = 0; f < flowers.Length; f++)
         {
-            if (hard.Count == 0) { flowers[f].gameObject.SetActive(false); continue; }
-            int i = hard[Mathf.Min(hard.Count - 1, f * hard.Count / Mathf.Max(1, flowers.Length))];
+            if (f >= flowerStones.Count) { flowers[f].gameObject.SetActive(false); continue; }
+            flowers[f].gameObject.SetActive(true);
+            int i = flowerStones[f];
             int next = i + 1; while (next < stones.Count && scenery[next]) next++;
             flowers[f].transform.position = stones[i] + new Vector3(radii[i] * 0.3f, 0.12f, 0f);
             if (flowers[f].GetComponent<SettleWhenGroundReady>() == null) flowers[f].gameObject.AddComponent<SettleWhenGroundReady>().lift = 0.12f;
@@ -195,7 +181,38 @@ public static class WorldMapDress
                 guide.lanes.Add(new SkyIslandBubbleGuide.Lane { flower = flowers[f], target = Vector3.Lerp(stones[i], stones[next], 0.55f) });
         }
         EditorUtility.SetDirty(islands); if (guide != null) EditorUtility.SetDirty(guide);
-        log.Add("Floating stones: " + path + " on the route (" + startY.ToString("0") + " m to " + altar.y.ToString("0") + " m), " + (stones.Count - path) + " decoys, " + flowers.Length + " bubble flowers on the upper half.");
+        log.Add("Floating stones: " + path + " on the route (" + startY.ToString("0") + " m to " + altar.y.ToString("0") + " m), " +
+            (stones.Count - path) + " outlying islands, " + flowers.Length + " bubble flowers, each assisted crossing guided.");
+    }
+
+    private static void HangingTentacles(Transform root, SkyIslands islands, List<Vector3> stones,
+        List<float> radii, List<string> log)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/TentacleCreature.prefab");
+        if (prefab == null) { log.Add("Hanging tentacles: prefab missing."); return; }
+        var old = root.Find("07b Tentacles hanging from sky stones");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        var group = new GameObject("07b Tentacles hanging from sky stones").transform;
+        group.SetParent(root, false);
+        int[] preferred = { 12, 19, 26, 33, 40, 46 };
+        int count = 0;
+        foreach (int index in preferred)
+        {
+            if (index >= stones.Count - 1 || index >= islands.Built.childCount) continue;
+            Vector3 p = stones[index]; float radius = radii[index];
+            var stone = islands.Built.GetChild(index);
+            var collider = stone.GetComponent<Collider>();
+            if (collider == null || collider.bounds.min.y < WorldMapTerrain.Height(p.x, p.z) + 4f) continue;
+            var made = (GameObject)PrefabUtility.InstantiatePrefab(prefab, root.gameObject.scene);
+            made.name = "Hanging tentacle — sky stone " + index;
+            made.transform.SetParent(group, true);
+            made.transform.SetPositionAndRotation(new Vector3(p.x, collider.bounds.min.y - 1.35f, p.z),
+                Quaternion.Euler(180f, index * 47f, 0f));
+            var anchor = made.AddComponent<WorldMapHangingTentacle>();
+            anchor.Islands = islands; anchor.StoneIndex = index;
+            count++;
+        }
+        log.Add("Sky islands: " + count + " tentacle creatures authored beneath generated stone undersides.");
     }
 
     private static float IslandTop(Vector3 local)
@@ -239,6 +256,7 @@ public static class WorldMapDress
                 if (random.NextDouble() > chance) continue;
                 var p2 = new Vector2(px, pz);
                 if (Vector2.Distance(p2, WorldMapTerrain.Spawn) < 14f) continue;
+                if (WorldMapTerrain.InGooExterior(px, pz)) continue;
                 if (WorldMapTerrain.CrackDistance(p2, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 3f) continue;
                 if (Vector2.Distance(p2, WorldMapTerrain.MushroomCentre) < WorldMapTerrain.MushroomRadius + 6f) continue;
                 float h = WorldMapTerrain.Height(px, pz);
@@ -379,6 +397,7 @@ public static class WorldMapDress
             {
                 var p = new Vector2(R(-250f, 250f), R(-280f, 300f));
                 if (!region.where(p)) continue;
+                if (WorldMapTerrain.InGooExterior(p.x, p.y)) continue;
                 if (Vector2.Distance(p, WorldMapTerrain.Spawn) < 12f || Vector2.Distance(p, WorldMapTerrain.CaveMouth) < WorldMapTerrain.GooMouthRadius + 4f) continue;
                 if (WorldMapTerrain.CrackDistance(p, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 1.5f) continue;
                 if (Vector2.Distance(p, WorldMapTerrain.MushroomCentre) < WorldMapTerrain.MushroomRadius + 2f) continue;

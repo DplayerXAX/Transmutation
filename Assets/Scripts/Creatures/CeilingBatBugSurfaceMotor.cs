@@ -29,6 +29,15 @@ public sealed class CeilingBatBugSurfaceMotor : MonoBehaviour
     }
     public void ConfigureHome(Vector3 position, float radius, CeilingBatBugHabitat bounds)
     { home = position; roamRadius = radius; habitat = bounds; homeConfigured = true; }
+    internal void StartOnPerch(RaycastHit hit)
+    {
+        Attached = true;
+        SurfaceNormal = hit.normal;
+        body.position = hit.point + hit.normal * bodyOffset;
+        transform.SetPositionAndRotation(body.position, Quaternion.LookRotation(Vector3.forward, hit.normal));
+        body.useGravity = false;
+    }
+
     public void Detach()
     {
         bool wasAttached = Attached; Attached = false;
@@ -99,7 +108,7 @@ public sealed class CeilingBatBugSurfaceMotor : MonoBehaviour
     private bool Probe(Vector3 origin, Vector3 direction, float distance, out RaycastHit nearest)
     {
         nearest = default;
-        int count = Physics.RaycastNonAlloc(origin, direction, hits, distance, surfaces, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.RaycastNonAlloc(origin, direction, hits, distance, surfaces, QueryTriggerInteraction.Ignore);
         float best = float.PositiveInfinity;
         for (int i = 0; i < count; i++)
         {

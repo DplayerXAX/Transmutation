@@ -75,7 +75,7 @@ public sealed class GooCreature : Creature
     {
         Camera view = Camera.main;
         if (view == null) return null;
-        foreach (RaycastHit hit in Physics.RaycastAll(view.transform.position, view.transform.forward, 4f, ~0, QueryTriggerInteraction.Ignore))
+        foreach (RaycastHit hit in ReflectionPhysics.RaycastAll(view.transform.position, view.transform.forward, 4f, ~0, QueryTriggerInteraction.Ignore))
         {
             FuzzCreature fuzz = hit.collider.GetComponentInParent<FuzzCreature>();
             if (fuzz != null && !fuzz.IsDead) return fuzz;
@@ -122,7 +122,7 @@ public sealed class GooCreature : Creature
         Vector3 center = solid != null ? solid.bounds.center : transform.position;
         float reach = (solid != null ? solid.bounds.extents.y : 0.25f) + 0.2f;
         float best = float.PositiveInfinity;
-        foreach (RaycastHit hit in Physics.RaycastAll(center + Vector3.up * 0.05f, Vector3.down, reach,
+        foreach (RaycastHit hit in ReflectionPhysics.RaycastAll(center + Vector3.up * 0.05f, Vector3.down, reach,
                      ~0, QueryTriggerInteraction.Ignore))
         {
             if (hit.distance >= best || hit.normal.y < 0.5f || SameSurface(hit.collider, striker) ||

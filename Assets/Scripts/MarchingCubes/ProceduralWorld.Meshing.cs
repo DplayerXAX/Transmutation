@@ -111,6 +111,13 @@ public sealed partial class ProceduralWorld
                 // The leaf's open-air gorge remains part of the surface world, including its deep floor.
                 bool openRift=field.leafMap && LeafMapTerrain.IsOpenRiftSurface(origin+centre) || field.worldMap && WorldMapTerrain.IsOpenCrackSurface(origin+centre);
                 List<int> triangles = field.IsVolumeRecipe || openRift || origin.y + centre.y >= (tops[col] + ceilings[col]) * 0.5f ? surface : inner;
+                // Basilt reuses the existing two material slots: open ground and raised basalt.
+                // All other recipes retain their surface/inner-world classification.
+                if (field.recipe != null && field.recipe.kind == TerrainRecipeKind.Basilt)
+                {
+                    Vector3 p = origin + centre;
+                    triangles = p.y > BasiltDensity.GroundHeight(p.x, p.z) + 0.5f ? inner : surface;
+                }
                 triangles.Add(a); triangles.Add(b); triangles.Add(c);
             }
         }

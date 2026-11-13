@@ -1,0 +1,1 @@
+Meadow_Resting_80m_0: 1 frames, requested interval 0.1s; GPU NVIDIA GeForce RTX 4090; 100000 live leaves. Capture readback affects frame timing; do not benchmark these frames.

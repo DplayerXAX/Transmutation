@@ -170,7 +170,7 @@ public sealed class FuzzCreature : Creature
             Vector3 above = Rope[index - 1].transform.position;
             Vector3 target = above + Vector3.down * ropeSpacing + Vector3.ProjectOnPlane(position - above, Vector3.up) * 0.15f;
             // Rests on the ground below rather than going into it.
-            if (Physics.Raycast(above, Vector3.down, out RaycastHit hit, ropeSpacing + radius, groundLayers, QueryTriggerInteraction.Ignore)
+            if (ReflectionPhysics.Raycast(above, Vector3.down, out RaycastHit hit, ropeSpacing + radius, groundLayers, QueryTriggerInteraction.Ignore)
                 && hit.collider.GetComponentInParent<Creature>() == null && (ropeGrip == null || !hit.collider.transform.IsChildOf(ropeGrip.transform)))
                 target.y = Mathf.Max(target.y, hit.point.y + radius);
             // Sways a little.
@@ -216,7 +216,7 @@ public sealed class FuzzCreature : Creature
     protected override void OnDisable()
     {
         base.OnDisable();
-        LeaveChain();
+        if (!ReflectionPhysics.SwitchingWorldRoots) LeaveChain();
     }
 
     private void OnDestroy()
@@ -269,7 +269,7 @@ public sealed class FuzzCreature : Creature
         // Let go over a drop: it sticks there and the chain hangs from it.
         if (wasCarried && !IsCarried && Chain.Count > 0)
         {
-            bool drop = !Physics.Raycast(transform.position, Vector3.down, out _, ropeDrop + radius, groundLayers, QueryTriggerInteraction.Ignore);
+            bool drop = !ReflectionPhysics.Raycast(transform.position, Vector3.down, out _, ropeDrop + radius, groundLayers, QueryTriggerInteraction.Ignore);
             if (drop) Anchor();
         }
         wasCarried = IsCarried;
@@ -427,7 +427,7 @@ public sealed class FuzzCreature : Creature
     private void StickToGround(float deltaTime)
     {
         Vector3 origin = transform.position + Vector3.up * 3f;
-        int count = Physics.RaycastNonAlloc(origin, Vector3.down, Hits, 10f, groundLayers, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.RaycastNonAlloc(origin, Vector3.down, Hits, 10f, groundLayers, QueryTriggerInteraction.Ignore);
         float best = float.MaxValue;
         Vector3 ground = Vector3.zero;
         for (int i = 0; i < count; i++)

@@ -1,0 +1,1 @@
+NVIDIA GeForce RTX 4090; CPU AMD Ryzen 9 9900X 12-Core Processor ; 2560x1440; Unity 6000.3.6f1; development=True; platform=WindowsEditor; fixed overview; vsync off; warmup 2s, sample 4s; frame timing GPU=0 means unavailable.

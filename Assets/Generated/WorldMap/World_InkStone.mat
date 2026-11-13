@@ -25,9 +25,6 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _IridescentAmount: 0
-    - _IridescentLines: 0
-    - _IridescentScale: 0.008
     - _FakeLightAmount: 0.15
     - _FloorBlendWidth: 9.08
     - _FloorFreq: 1.5
@@ -41,6 +38,9 @@ Material:
     - _HatchWidth: 1.1
     - _HazeEnd: 80
     - _HazeStart: 10
+    - _IridescentAmount: 0
+    - _IridescentLines: 0
+    - _IridescentScale: 0.008
     - _MainLightAmount: 1.2
     - _PolarScale: 0.02
     - _RayPhaseProximityBoost: 0

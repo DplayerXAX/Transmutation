@@ -157,6 +157,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         }
     }
 
+    internal Transform VisualRoot => root;
+
     private void OnDestroy()
     {
         if (root != null) Destroy(root.gameObject);

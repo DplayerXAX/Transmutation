@@ -153,7 +153,7 @@ public sealed class MushroomTree : Creature
     private void TryRoot(float deltaTime)
     {
         bool resting = body.isKinematic || body.linearVelocity.sqrMagnitude < 0.04f;
-        bool onGround = Physics.Raycast(transform.position + Vector3.up * 0.3f, Vector3.down, out RaycastHit hit, 0.8f, GroundMask,
+        bool onGround = ReflectionPhysics.Raycast(transform.position + Vector3.up * 0.3f, Vector3.down, out RaycastHit hit, 0.8f, GroundMask,
             QueryTriggerInteraction.Ignore) && hit.collider.GetComponentInParent<MushroomTree>() != this;
         restTimer = resting && onGround ? restTimer + deltaTime : 0f;
         if (restTimer < rootDelay) return;

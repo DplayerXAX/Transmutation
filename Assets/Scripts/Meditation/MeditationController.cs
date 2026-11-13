@@ -2,21 +2,16 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Press the meditate key to sit down and slowly erase the world (terrain, creatures, sky)
-/// into blank paper. The player then wakes in the reflection space to draw on steles and
-/// arrange casts of creatures they have met. Press the key again to return.
-/// Needs a ReflectionSpace, CreatureJournal, ReflectionVisitor and MeditationHUD next to it.
-/// </summary>
+/// <summary>Transitions between a world resting place and an isolated reflection visit.</summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(ReflectionSpace), typeof(CreatureJournal), typeof(ReflectionVisitor))]
+[RequireComponent(typeof(ReflectionSpace), typeof(ReflectionVisitor))]
 [RequireComponent(typeof(MeditationHUD))]
 public sealed class MeditationController : MonoBehaviour
 {
     private enum Phase { World, Entering, Inside, Leaving }
 
-    [SerializeField] private Key meditateKey = Key.M;
     [SerializeField] private Material veilMaterial;
 
     [Header("Timing (seconds)")]
@@ -37,12 +32,13 @@ public sealed class MeditationController : MonoBehaviour
     [SerializeField] private float lookSensitivity = 0.12f;
     [Tooltip("Veil radius around the reflection space.")]
     [Min(10f)] [SerializeField] private float spaceVeilRadius = 26f;
-    [Tooltip("Height above the meditation spot where the reflection space is placed.")]
-    [SerializeField] private float spaceHeight = 3000f;
     [SerializeField] private float spaceEyeHeight = 1.6f;
 
     private ReflectionSpace space;
-    private CreatureJournal journal;
+    private Scene worldScene, visitScene;
+    private GameObject playerRoot;
+    private readonly List<GameObject> suspendedRoots = new();
+    private ReflectionProgress progress;
     private ReflectionVisitor visitor;
     private MeditationHUD hud;
     private MeditationVeil veil;
@@ -57,7 +53,6 @@ public sealed class MeditationController : MonoBehaviour
     private readonly List<Behaviour> pausedBehaviours = new List<Behaviour>();
     private readonly List<GameObject> hiddenObjects = new List<GameObject>();
     private readonly List<Renderer> hiddenRenderers = new List<Renderer>();
-    private readonly List<Creature> pausedCreatures = new List<Creature>();
     private bool wasKinematic;
     private RigidbodyInterpolation wasInterpolation;
 
@@ -68,60 +63,76 @@ public sealed class MeditationController : MonoBehaviour
 
     public bool IsMeditating => phase != Phase.World;
 
-    /// <summary>
-    /// Optional rule for when meditation may start (RestSpotSystem: only at a new kind of resting place).
-    /// Returns null to allow it, or a short message to show instead.
-    /// </summary>
-    public static System.Func<string> Gate;
-    /// <summary>Raised once the player has actually started to meditate.</summary>
-    public static event System.Action Entered;
+    public bool Inside => phase == Phase.Inside;
+    public bool Transitioning => phase == Phase.Entering || phase == Phase.Leaving;
+    internal static bool BlocksPlayerInput => active != null && (active.Transitioning || (active.visitor != null && active.visitor.IsDrawing));
+    private static MeditationController active;
 
     private void Awake()
     {
         space = GetComponent<ReflectionSpace>();
-        journal = GetComponent<CreatureJournal>();
+        if (TryGetComponent(out CreatureJournal legacyJournal)) legacyJournal.enabled = false;
+        active = this;
+        RestSpotSystem.EnsureFor(this);
         visitor = GetComponent<ReflectionVisitor>();
         hud = GetComponent<MeditationHUD>();
-        veil = new MeditationVeil(veilMaterial, null);
-        journal.CreatureRecorded += entry => hud.Toast("Remembered:  " + entry.displayName);
+        veil = new MeditationVeil(veilMaterial, transform);
+
     }
 
     private void OnDestroy()
     {
+        if (active == this) active = null;
         veil?.Destroy();
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        Keyboard keyboard = Keyboard.current;
-        if (keyboard == null || !keyboard[meditateKey].wasPressedThisFrame) return;
-        if (phase == Phase.World)
+        if (phase == Phase.World || body == null) return;
+        visitor.End();
+        StopAllCoroutines();
+        if (visitScene.IsValid() && worldScene.isLoaded) RestoreScene();
+        MovePlayer(worldBodyPosition);
+        cameraHolder.SetPositionAndRotation(worldCameraPosition, worldCameraRotation);
+        controller.SetLook(worldCameraRotation.eulerAngles.y, NormalizeAngle(worldCameraRotation.eulerAngles.x));
+        controller.SetLook(worldCameraRotation.eulerAngles.y, NormalizeAngle(worldCameraRotation.eulerAngles.x));
+        ResumeWorld();
+        RestSpotSystem.Instance?.EndVisit();
+        hud.SetBlank(0f);
+        hud.SetInSpace(false);
+        veil.Visible = false;
+        phase = Phase.World;
+    }
+
+    public void RequestEntry(RestSpot seat)
+    {
+        if (phase != Phase.World || seat == null || RestSpotSystem.Instance?.SeatedAt != seat || !FindPlayer()) return;
+        ReflectionCatalog catalog = ReflectionCatalog.Load();
+        if (catalog == null)
         {
-            string blocked = Gate?.Invoke();
-            if (blocked != null) { hud.Toast(blocked); return; }
-            StartCoroutine(Enter());
+            Debug.LogError("Reflection catalog is missing.", this);
+            return;
         }
-        else if (phase == Phase.Inside) StartCoroutine(Leave());
+        progress ??= ReflectionProgress.Load();
+        progress.Discover(catalog, seat);
+        StartCoroutine(Enter());
+    }
+
+    public void RequestReturn()
+    {
+        if (Inside) StartCoroutine(Leave());
+    }
+
+    private void FixedUpdate()
+    {
+        if (visitScene.IsValid() && visitScene.isLoaded) visitScene.GetPhysicsScene().Simulate(Time.fixedDeltaTime);
     }
 
     // ---------- Entering ----------
 
     private IEnumerator Enter()
     {
-        if (!FindPlayer())
-        {
-            Debug.LogWarning("MeditationController: no SmoothFirstPersonController / camera found.");
-            yield break;
-        }
-        if (!controller.Grounded)
-        {
-            hud.Toast("Find still ground to meditate");
-            yield break;
-        }
-
         phase = Phase.Entering;
-        Entered?.Invoke();
-        journal.Scanning = false;
         worldBodyPosition = body.position;
         worldCameraPosition = cameraHolder.position;
         worldCameraRotation = cameraHolder.rotation;
@@ -156,29 +167,27 @@ public sealed class MeditationController : MonoBehaviour
         hud.SetBlank(1f);
         yield return null;
 
-        // Jump to the reflection space behind the blank.
-        Vector3 anchor = worldBodyPosition + Vector3.up * spaceHeight;
-        float spaceYaw = yaw;
-        space.Place(anchor, spaceYaw);
-        space.SyncCasts(journal);
-        // Keep the body's own camera offset so the hidden capsule stands on the floor.
-        float cameraAboveBody = worldCameraPosition.y - worldBodyPosition.y;
-        Vector3 bodyToCamera = Vector3.up * cameraAboveBody;
-        MovePlayer(anchor + Vector3.up * (spaceEyeHeight - cameraAboveBody));
-        visitor.Begin(space, journal, hud, player, body, cameraHolder, viewCamera, bodyToCamera, spaceYaw, 0f);
+        if (!TryBuildVisit()) yield break;
+        MovePlayer(new Vector3(0f, 1.05f, -2f));
+        controller.SetLook(0f, 0f);
+        cameraHolder.SetPositionAndRotation(new Vector3(0f, spaceEyeHeight, -2f), Quaternion.identity);
+        visitor.Begin(hud, controller, cameraHolder, viewCamera);
         hud.SetInSpace(true);
-        hud.SetCorner("[" + meditateKey + "]  Return");
-
-        Vector3 centre = anchor + Vector3.up * spaceEyeHeight;
+        Vector3 centre = new Vector3(0f, spaceEyeHeight, -2f);
+        float revealRadius = Mathf.Max(spaceVeilRadius, space.ViewRadius / (1f - veil.Wobble));
         for (float time = 0f; time < spaceRevealTime; time += Time.deltaTime * transitionSpeed)
         {
             float t = time / spaceRevealTime;
-            veil.Set(centre, LogLerp(nearRadius, spaceVeilRadius, Mathf.SmoothStep(0f, 1f, t)), 1f);
+            veil.Set(centre, LogLerp(nearRadius, revealRadius, Mathf.SmoothStep(0f, 1f, t)), 1f);
             hud.SetBlank(1f - Mathf.Clamp01(t * 4f));
             yield return null;
         }
-        veil.Set(centre, spaceVeilRadius, 1f);
+        veil.Set(centre, revealRadius, 1f);
         hud.SetBlank(0f);
+        ResumePlayer();
+        body.isKinematic = wasKinematic;
+        body.interpolation = wasInterpolation;
+        RestorePlayerPresentation();
         phase = Phase.Inside;
     }
 
@@ -187,20 +196,23 @@ public sealed class MeditationController : MonoBehaviour
     private IEnumerator Leave()
     {
         phase = Phase.Leaving;
-        visitor.Freeze();
+        visitor.End();
+        FindFirstObjectByType<PlayerCreatureCarrier>()?.Release();
+        RestSpotSystem.Instance?.StandForReturn();
+        PausePlayer();
         space.SaveDrawings();
-        journal.Save();
         hud.SetCorner(null);
 
         float nearRadius = MinimumRadius();
         Vector3 spaceCentre = space.Root.position + Vector3.up * spaceEyeHeight;
+        float revealRadius = Mathf.Max(spaceVeilRadius, space.ViewRadius / (1f - veil.Wobble));
         for (float time = 0f; time < spaceEraseTime; time += Time.deltaTime * transitionSpeed)
         {
             float t = Mathf.SmoothStep(0f, 1f, time / spaceEraseTime);
-            float radius = LogLerp(spaceVeilRadius, nearRadius, t);
+            float radius = LogLerp(revealRadius, nearRadius, t);
             // Drift the centre onto the camera as the veil closes so the camera stays inside.
-            Vector3 eye = visitor.CameraPosition;
-            float keep = (radius - nearRadius) / (spaceVeilRadius - nearRadius) * 0.4f;
+            Vector3 eye = cameraHolder.position;
+            float keep = (radius - nearRadius) / (revealRadius - nearRadius) * 0.4f;
             veil.Set(eye + (spaceCentre - eye) * keep, radius, 1f);
             hud.SetBlank(Mathf.InverseLerp(0.8f, 1f, t));
             yield return null;
@@ -208,10 +220,8 @@ public sealed class MeditationController : MonoBehaviour
         hud.SetBlank(1f);
         yield return null;
 
-        visitor.End();
-        space.Hide();
+        RestoreScene();
         hud.SetInSpace(false);
-        MovePlayer(worldBodyPosition);
         Vector3 sunk = worldCameraPosition + Vector3.down * sinkDepth;
         cameraHolder.SetPositionAndRotation(sunk, worldCameraRotation);
 
@@ -231,17 +241,16 @@ public sealed class MeditationController : MonoBehaviour
                 cameraHolder.position = Vector3.Lerp(sunk, worldCameraPosition, stand);
                 if (t >= 0.45f)
                 {
-                    ResumeWorld();
                     resumed = true;
                 }
             }
             veil.Set(cameraHolder.position, LogLerp(nearRadius, farRadius, open), cover);
             yield return null;
         }
-        if (!resumed) ResumeWorld();
+        ResumeWorld();
+        RestSpotSystem.Instance?.EndVisit();
         hud.SetBlank(0f);
         veil.Visible = false;
-        journal.Scanning = true;
         phase = Phase.World;
     }
 
@@ -265,13 +274,10 @@ public sealed class MeditationController : MonoBehaviour
         var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         if (carrier != null && carrier.CarriedCreature != null) carrier.Drop();
 
-        pausedBehaviours.Clear();
-        foreach (MonoBehaviour behaviour in player.GetComponentsInChildren<MonoBehaviour>())
-            Pause(behaviour);
-        Pause(FindFirstObjectByType<FirstPersonBody>());
-        Pause(carrier);
-        Pause(FindFirstObjectByType<PlayerCreatureInteractor>());
-        Pause(FindFirstObjectByType<HandClimber>());
+        wasKinematic = RestSpotSystem.Instance != null && RestSpotSystem.Instance.Sitting
+            ? RestSpotSystem.Instance.PlayerWasKinematic : body.isKinematic;
+        wasInterpolation = body.interpolation;
+        PausePlayer();
 
         hiddenObjects.Clear();
         Hide(GameObject.Find("First Person Body"));
@@ -287,21 +293,6 @@ public sealed class MeditationController : MonoBehaviour
             hiddenRenderers.Add(renderer);
         }
 
-        pausedCreatures.Clear();
-        foreach (Creature creature in FindObjectsByType<Creature>(FindObjectsSortMode.None))
-        {
-            if (!creature.SimulationEnabled) continue;
-            creature.SetSimulationEnabled(false);
-            pausedCreatures.Add(creature);
-        }
-
-        wasKinematic = body.isKinematic;
-        wasInterpolation = body.interpolation;
-        if (!body.isKinematic)
-        {
-            body.linearVelocity = Vector3.zero;
-            body.angularVelocity = Vector3.zero;
-        }
         body.interpolation = RigidbodyInterpolation.None;
         body.isKinematic = true;
     }
@@ -312,21 +303,117 @@ public sealed class MeditationController : MonoBehaviour
         body.interpolation = wasInterpolation;
         if (!body.isKinematic) body.linearVelocity = Vector3.zero;
 
-        foreach (Behaviour behaviour in pausedBehaviours)
-            if (behaviour != null) behaviour.enabled = true;
-        pausedBehaviours.Clear();
+        ResumePlayer();
+        RestorePlayerPresentation();
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    private void RestorePlayerPresentation()
+    {
         foreach (GameObject go in hiddenObjects)
             if (go != null) go.SetActive(true);
         hiddenObjects.Clear();
         foreach (Renderer renderer in hiddenRenderers)
             if (renderer != null) renderer.enabled = true;
         hiddenRenderers.Clear();
-        foreach (Creature creature in pausedCreatures)
-            if (creature != null) creature.SetSimulationEnabled(true);
-        pausedCreatures.Clear();
+    }
 
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+    private void PausePlayer()
+    {
+        foreach (MonoBehaviour behaviour in player.GetComponentsInChildren<MonoBehaviour>())
+            Pause(behaviour);
+        Pause(controller);
+        Pause(FindFirstObjectByType<FirstPersonBody>());
+        Pause(FindFirstObjectByType<PlayerCreatureCarrier>());
+        Pause(FindFirstObjectByType<PlayerCreatureInteractor>());
+        Pause(FindFirstObjectByType<HandClimber>());
+        body.isKinematic = true;
+    }
+
+    private void ResumePlayer()
+    {
+        foreach (Behaviour behaviour in pausedBehaviours)
+            if (behaviour != null) behaviour.enabled = true;
+        pausedBehaviours.Clear();
+    }
+
+    private bool TryBuildVisit()
+    {
+        try
+        {
+            BeginScene();
+            space.BuildVisit(ReflectionCatalog.Load(), progress);
+            return true;
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogException(exception, this);
+            if (visitScene.IsValid()) RestoreScene();
+            ResumeWorld();
+            RestSpotSystem.Instance?.EndVisit();
+            cameraHolder.SetPositionAndRotation(worldCameraPosition, worldCameraRotation);
+            hud.SetBlank(0f);
+            veil.Visible = false;
+            phase = Phase.World;
+            return false;
+        }
+    }
+
+    private void BeginScene()
+    {
+        worldScene = player.gameObject.scene;
+        playerRoot = player.root.gameObject;
+        RestSpotSystem.Instance?.BeginVisit();
+        body.isKinematic = true;
+        visitScene = SceneManager.CreateScene("Reflection Visit", new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+        SceneManager.MoveGameObjectToScene(playerRoot, visitScene);
+        SceneManager.SetActiveScene(visitScene);
+        ReflectionPhysics.Visit = visitScene;
+        ReflectionPhysics.SwitchingWorldRoots = true;
+        try
+        {
+            foreach (GameObject root in worldScene.GetRootGameObjects())
+            {
+                if (root == transform.root.gameObject ||
+                    (RestSpotSystem.Instance != null && root == RestSpotSystem.Instance.transform.root.gameObject)) continue;
+                SuspendRoot(root);
+            }
+            if (RestSpotSystem.Instance != null)
+                foreach (RestSpot seat in RestSpotSystem.Instance.Spots)
+                    if (seat != null) SuspendRoot(seat.gameObject);
+        }
+        finally { ReflectionPhysics.SwitchingWorldRoots = false; }
+    }
+
+    private void SuspendRoot(GameObject root)
+    {
+        if (!root.activeSelf) return;
+        suspendedRoots.Add(root);
+        root.SetActive(false);
+    }
+
+    private void RestoreScene()
+    {
+        SceneManager.SetActiveScene(worldScene);
+        ReflectionPhysics.Visit = default;
+        if (playerRoot != null && playerRoot.scene == visitScene)
+            SceneManager.MoveGameObjectToScene(playerRoot, worldScene);
+        if (body != null) MovePlayer(worldBodyPosition);
+        ReflectionPhysics.SwitchingWorldRoots = true;
+        try
+        {
+            foreach (GameObject root in suspendedRoots)
+                if (root != null) root.SetActive(true);
+        }
+        finally
+        {
+            suspendedRoots.Clear();
+            ReflectionPhysics.SwitchingWorldRoots = false;
+        }
+        space.Hide();
+        SceneManager.UnloadSceneAsync(visitScene);
+        visitScene = default;
     }
 
     private void Pause(Behaviour behaviour)

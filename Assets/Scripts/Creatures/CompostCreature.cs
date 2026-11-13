@@ -95,6 +95,14 @@ public sealed class CompostCreature : Creature
         InitializeNewIndividual();
     }
 
+    internal void PrepareReflection()
+    {
+        if (!SurfaceGeometry.Probe(gameObject.scene, transform.position + Vector3.up, Vector3.down, 3f, false, out seedAnchor)) return;
+        seedConfigured = true;
+        geometry.Initialize(seedAnchor, seed, startingStrands);
+        geometry.Advance(0.1f);
+    }
+
     protected override void TickCreature(float deltaTime) => AdvanceProcessing(deltaTime);
     internal void AdvanceProcessing(float dt)
     {
@@ -110,7 +118,7 @@ public sealed class CompostCreature : Creature
                 seedConfigured = true;
             }
             if (!seedAnchor.Resolve(out _, out _)) return;
-            world = seedAnchor.Support.GetComponent<ProceduralWorldChunk>().Owner;
+            world = seedAnchor.Support.GetComponent<ProceduralWorldChunk>()?.Owner;
             geometry.Initialize(seedAnchor, seed, startingStrands);
         }
         if (world != null && !world.IsRegionReady(rootedPosition, 1f)) return;

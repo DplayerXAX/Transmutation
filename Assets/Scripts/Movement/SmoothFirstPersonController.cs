@@ -45,8 +45,6 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Range(0.2f, 2f)] [SerializeField] private float moveSpeedScale = 0.75f;
     [SerializeField] private float slopeIncreaseMultiplier = 2.5f;
     [SerializeField] private float groundDrag = 4f;
-    [Tooltip("Offer a pair of skate shoes beside the player's starting position.")]
-    [SerializeField] private bool spawnSkateShoes = true;
     private PlayerSkateShoes skateShoes;
     public bool WearingSkateShoes => skateShoes != null && skateShoes.Equipped;
 
@@ -160,7 +158,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private BubbleCapture bubbleCapture;
     private bool bubbleMovementLocked;
     private int suppressedJumpFrame = -1;
-    public bool BubbleMovementBlocked => BoneRide.Busy || bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
+    public FishingPoleCreature FishingInputOwner { get; set; }
+    public bool IsFishingBlockedExternally => BoneRide.Busy || bubbleMovementLocked || (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
+    public bool BubbleMovementBlocked => FishingInputOwner != null || BoneRide.Busy || bubbleMovementLocked || suppressedJumpFrame == Time.frameCount ||
         (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
 
     public bool IsContainingBubble(Collider collider) => bubbleCapture != null && bubbleCapture.IsCaptured &&
@@ -263,13 +263,13 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             foreach (Collider own in GetComponents<Collider>()) if (!own.isTrigger) own.sharedMaterial = slick;
         }
         skateShoes = GetComponent<PlayerSkateShoes>();
-        if (spawnSkateShoes) SkateShoesPickup.OfferNear(this);
     }
 
     private void Update()
     {
         if (BubbleMovementBlocked)
         {
+            horizontalInput = verticalInput = 0; jumpHeld = false; jumpPressedAt = float.MinValue;
             FollowCameraPosition();
             ReadCameraInput();
             return;
@@ -297,6 +297,28 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (FishingInputOwner != null && !IsFishingBlockedExternally)
+        {
+            // Fishing owns the keys, not the Rigidbody. Keep passive physics and
+            // normal grounded stopping alive when a bite interrupts a walk.
+            GroundCheck();
+            if (grounded && Time.time >= blastUntil) blastAirborne = false;
+            if (!rb.isKinematic)
+            {
+                rb.useGravity = true;
+                rb.linearDamping = 0;
+                if (grounded && !Flung && !BlastMotion)
+                {
+                    Vector3 relative = rb.linearVelocity - rideVelocity;
+                    Vector3 flat = Vector3.MoveTowards(new Vector3(relative.x, 0, relative.z), Vector3.zero,
+                        Mathf.Max(groundDeceleration, groundDrag) * Time.fixedDeltaTime);
+                    rb.linearVelocity = rideVelocity + new Vector3(flat.x, relative.y, flat.z);
+                }
+                ExtraGravity();
+                velocityBeforePhysics = rb.linearVelocity;
+            }
+            return;
+        }
         if (BubbleMovementBlocked) return;
         UpdateRideSupport();
         MovePlayer();
@@ -339,7 +361,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         rideSurface = null;
         rideVelocity = Vector3.zero;
-        if (rb == null || rb.isKinematic || climbing || restricted || wallRunning || BubbleMovementBlocked ||
+        if (rb == null || rb.isKinematic || climbing || restricted || wallRunning ||
+            (BubbleMovementBlocked && FishingInputOwner == null) || IsFishingBlockedExternally ||
             (skateShoes != null && skateShoes.SuppressGrounding) ||
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.
@@ -348,7 +371,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         // starting inside the uphill edge cannot report its supporting surface.
         float supportClearance = 0.12f + new Vector2(groundCheckHalfExtents.x, groundCheckHalfExtents.z).magnitude *
             Mathf.Tan(maxSlopeAngle * Mathf.Deg2Rad);
-        if (!Physics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
+        if (!ReflectionPhysics.BoxCast(GetGroundCheckOrigin() + Vector3.up * supportClearance, groundCheckHalfExtents,
             Vector3.down, out RaycastHit ground, Quaternion.identity, groundCheckDistance + supportClearance,
             whatIsGround, QueryTriggerInteraction.Ignore)) return;
         var surface = ground.collider.GetComponentInParent<IRideSurface>();
@@ -370,16 +393,16 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (WearingSkateShoes)
         {
             // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
-            return Physics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
+            return ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
                 Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore);
         }
-        if (Physics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
+        if (ReflectionPhysics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
                 groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore))
             return true;
         // Anything else solid and flat enough underfoot counts too (bones, rocks, decor on other layers):
         // standing on it without counting as grounded left the player floating, unable to walk or jump.
         if (!groundOnAnyLayer) return false;
-        int count = Physics.BoxCastNonAlloc(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, groundHits, Quaternion.identity,
+        int count = ReflectionPhysics.BoxCastNonAlloc(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, groundHits, Quaternion.identity,
             groundCheckDistance, AnyGroundMask, QueryTriggerInteraction.Ignore);
         float best = float.MaxValue;
         bool found = false;

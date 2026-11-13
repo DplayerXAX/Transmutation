@@ -145,6 +145,6 @@ public sealed class BubbleCapture : MonoBehaviour
         bubble.ForgetCapture(this);
     }
 
-    private void OnDisable() => Release();
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots) Release(); }
     private void OnDestroy() => Release();
 }

@@ -1,0 +1,125 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2213591921829481199
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3213967846555652107}
+  - component: {fileID: 4111238910974717629}
+  - component: {fileID: 2735942219926577672}
+  - component: {fileID: 6413363472495302914}
+  m_Layer: 0
+  m_Name: LeafGarden
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3213967846555652107
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2213591921829481199}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4111238910974717629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2213591921829481199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e3e63dbaf2d6894790f87ea3f1031d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeafGarden
+  creatureName: Leaf Garden
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 0
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
+  simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
+  heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  affectionGain: 0.35
+  affectionFade: 0.05
+  Area: {x: 96, y: 96}
+  Seed: 731
+  Automatic: 1
+  Surface: {fileID: 0}
+  RandomizeEventSizes: 1
+  RandomizeFirstDelay: 0
+  FirstDelaySeconds: {x: 20, y: 20}
+  SmallHeightRange: {x: 8, y: 18}
+  MediumHeightRange: {x: 24, y: 40}
+  LargeHeightRange: {x: 55, y: 80}
+  MediumChance: 0.13
+  LargeChance: 0.05
+  SizePreset: 2
+  RestSeconds: {x: 60, y: 180}
+  GatherSeconds: 5
+  ActiveSeconds: 12
+  SettleSeconds: 8
+--- !u!114 &2735942219926577672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2213591921829481199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc416e8746148af4095e5ce9855779f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeafGardenPresentation
+  Simulation: {fileID: 7200000, guid: 3ad689e6e71dec4419b9b32b372495c9, type: 3}
+  LeafMaterial: {fileID: 2100000, guid: 754aed10232943b4a9cd334072bbb55b, type: 2}
+  LeafMesh: {fileID: 4300000, guid: fc16a0e348ecfcc46953d0328dc6abc9, type: 2}
+  ViewCamera: {fileID: 0}
+  LeafCount: 200000
+  DistantDensity: 0.4
+  DetailDistance: 32
+  DrawLeaves: 1
+  SimulateLeaves: 1
+  Coverage: 1
+--- !u!114 &6413363472495302914
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2213591921829481199}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca137224e3a538a4e92188ef98cc1e9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LeafTornadoLaunchVolume
+  LaunchSpeed: 24
+  MinimumLaunchHeight: 40
+  TornadoHeightMultiplier: 1.15
+  ReentryCooldown: 0.8

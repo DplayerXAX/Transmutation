@@ -36,7 +36,29 @@ public sealed class GlowBeeColony : MonoBehaviour
     public IReadOnlyList<GlowBeeNest> Nests => nests;
     public IReadOnlyList<NectarFlower> Flowers => flowers;
 
+    private bool initialized;
+
     private void Start()
+    {
+        if (initialized) return;
+        initialized = true;
+        Prepare();
+        if (nestAnchors.Length > 0) FindAnchoredSites();
+        else FindConcealedSites();
+        foreach (Vector3 site in sites) BuildNest(site);
+        if (nests.Count == 0) Debug.LogWarning("Glow bees: no valid nest sites.", this);
+        if (spawnSpider && spiderPrefab != null && nests.Count > 0) SpawnPredator();
+    }
+
+    internal void InitializeReflection(Vector3 ground, ReflectionSpotlight beam)
+    {
+        initialized = true;
+        Prepare();
+        BuildNest(ground);
+        foreach (Creature creature in GetComponentsInChildren<Creature>()) beam.Register(creature);
+    }
+
+    private void Prepare()
     {
         random = new System.Random(seed);
         foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
@@ -49,12 +71,6 @@ public sealed class GlowBeeColony : MonoBehaviour
         petal = MakeMaterial("Nectar flower violet petals", new Color(0.57f, 0.29f, 0.72f));
         stem = MakeMaterial("Nectar flower stem", new Color(0.1f, 0.22f, 0.12f));
         Physics.SyncTransforms();
-        if (nestAnchors.Length > 0) FindAnchoredSites();
-        else FindConcealedSites();
-        foreach (Vector3 site in sites) BuildNest(site);
-        if (nests.Count == 0)
-            Debug.LogWarning("Glow bees: no valid nest sites. Check anchors, ground layers, or rock/trunk cover.", this);
-        if (spawnSpider && spiderPrefab != null && nests.Count > 0) SpawnPredator();
     }
 
     private float Range(float min, float max) => Mathf.Lerp(min, max, (float)random.NextDouble());
@@ -108,13 +124,13 @@ public sealed class GlowBeeColony : MonoBehaviour
                 Vector3 point = bounds.center + new Vector3(Mathf.Cos(angle) * (bounds.extents.x + 0.9f),
                     0f, Mathf.Sin(angle) * (bounds.extents.z + 0.9f));
                 if (!TryGround(point, out Vector3 ground) ||
-                    Physics.CheckSphere(ground + Vector3.up * 0.55f, 0.52f, sceneryLayers, QueryTriggerInteraction.Ignore)) continue;
+                    ReflectionPhysics.CheckSphere(ground + Vector3.up * 0.55f, 0.52f, sceneryLayers, QueryTriggerInteraction.Ignore)) continue;
                 Vector3 center = ground + Vector3.up * 0.6f;
                 float score = 0f;
-                if (sun != null && Physics.Raycast(center, -sun.transform.forward, 30f, sceneryLayers, QueryTriggerInteraction.Ignore)) score += 8f;
-                if (Physics.Raycast(center, Vector3.up, 6f, sceneryLayers, QueryTriggerInteraction.Ignore)) score += 4f;
+                if (sun != null && ReflectionPhysics.Raycast(center, -sun.transform.forward, 30f, sceneryLayers, QueryTriggerInteraction.Ignore)) score += 8f;
+                if (ReflectionPhysics.Raycast(center, Vector3.up, 6f, sceneryLayers, QueryTriggerInteraction.Ignore)) score += 4f;
                 for (int direction = 0; direction < 8; direction++)
-                    if (Physics.Raycast(center, Quaternion.Euler(0f, direction * 45f, 0f) * Vector3.forward,
+                    if (ReflectionPhysics.Raycast(center, Quaternion.Euler(0f, direction * 45f, 0f) * Vector3.forward,
                             3f, sceneryLayers, QueryTriggerInteraction.Ignore)) score += 1f;
                 candidates.Add((ground, score + Range(0f, 0.2f)));
             }
@@ -186,7 +202,7 @@ public sealed class GlowBeeColony : MonoBehaviour
         {
             float angle = Range(0f, Mathf.PI * 2f);
             Vector3 near = center + new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * Range(3f, 7f);
-            if (!TryGround(near, out Vector3 point, nestAnchors.Length > 0 ? 1.25f : 30f) || Physics.CheckSphere(point + Vector3.up * 0.5f,
+            if (!TryGround(near, out Vector3 point, nestAnchors.Length > 0 ? 1.25f : 30f) || ReflectionPhysics.CheckSphere(point + Vector3.up * 0.5f,
                     0.42f, sceneryLayers, QueryTriggerInteraction.Ignore)) continue;
             bool crowded = false;
             foreach (NectarFlower other in flowers)

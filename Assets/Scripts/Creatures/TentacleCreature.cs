@@ -13,6 +13,7 @@ using UnityEngine.InputSystem;
 [DefaultExecutionOrder(1100)]
 public sealed class TentacleCreature : Creature
 {
+    public override bool IgnoreCarrySizeLimit => true;
     [Header("Body")]
     [Min(0.05f)] [SerializeField] private float bodyRadius = 0.35f;
     [Tooltip("Height of the body centre above the ground while wandering.")]
@@ -200,6 +201,9 @@ public sealed class TentacleCreature : Creature
             throwPoseAttached = true;
         }
     }
+
+    // The exhibit freezes before the first update, so build the initial arm and skin pose now.
+    internal void PrepareReflectionPose() => LayoutThrowPose();
 
     private void LayoutThrowPose()
     {
@@ -741,7 +745,7 @@ public sealed class TentacleCreature : Creature
             float distance = move.magnitude;
             RaycastHit nearest = default;
             float limit = distance + 0.025f;
-            foreach (RaycastHit hit in Physics.SphereCastAll(at, radius, move / distance, limit, surfaceLayers, QueryTriggerInteraction.Ignore))
+            foreach (RaycastHit hit in ReflectionPhysics.SphereCastAll(at, radius, move / distance, limit, surfaceLayers, QueryTriggerInteraction.Ignore))
             {
                 if (hit.collider.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<Creature>() != null
                     || hit.collider.GetComponentInParent<SmoothFirstPersonController>() != null || hit.distance >= limit) continue;
@@ -1189,7 +1193,7 @@ public sealed class TentacleCreature : Creature
     private bool CastSurface(Vector3 origin, Vector3 direction, float distance, out RaycastHit best)
     {
         best = default;
-        int count = Physics.RaycastNonAlloc(origin, direction, HitBuffer, distance, surfaceLayers, QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.RaycastNonAlloc(origin, direction, HitBuffer, distance, surfaceLayers, QueryTriggerInteraction.Ignore);
         float bestDistance = float.MaxValue;
         Transform carrierRoot = IsCarried ? Carrier.transform.root : null;
 
@@ -1545,6 +1549,7 @@ public sealed class TentacleCreature : Creature
 
     protected override void OnDisable()
     {
+        if (ReflectionPhysics.SwitchingWorldRoots) { base.OnDisable(); return; }
         UnpinAll();
         base.OnDisable();
         OnDisableHook();

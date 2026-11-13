@@ -125,7 +125,8 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     private void Update()
     {
-        if (BoneAwakeningCutscene.Playing) return;
+        if (BoneAwakeningCutscene.Playing || RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput)
+        { CancelRightMouse(); return; }
         if (!Application.isFocused && !Application.isBatchMode)
         {
             CancelRightMouse();
@@ -256,11 +257,11 @@ if (creature == null || creature.IsBubbleCaptured || !creature.isActiveAndEnable
     return null;
 
 if (!string.IsNullOrEmpty(creature.PickupActionPrompt)) return creature;
-if (!creature.CanBeCarried) return null;
+if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return null;
 
 // Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
 // A Bellows can always be picked up, however full it is: it is a bag of air, and carrying it is how its stream is aimed.
-if (!(creature is TentacleCreature) && !(creature is BellowsCreature) && MeasureCreature(creature, out _, out _) > maxCarrySize)
+if (!creature.IgnoreCarrySizeLimit && MeasureCreature(creature, out _, out _) > maxCarrySize)
     return null;
 
 return creature;
@@ -336,7 +337,7 @@ private void FitCarryPoint(Creature creature)
             creature.ReceivePickupAttempt(this);
             return;
         }
-        if (!creature.CanBeCarried) return;
+        if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return;
         if (carryPoint == null) return;
         if (creature.TryGetComponent<CompostAbsorption>(out var absorption)) absorption.CancelForPickup();
         FitCarryPoint(creature);
@@ -437,7 +438,7 @@ private void FitCarryPoint(Creature creature)
         if (distance < 0.01f) return wanted;
         Vector3 dir = toward / distance;
         float radius = Mathf.Max(0.05f, heldRadius * 1.1f); // the whole creature must stay clear, not just its middle
-        int count = Physics.SphereCastNonAlloc(eye, radius, dir, holdHits, distance, ~((1 << 2) | (1 << 6)), QueryTriggerInteraction.Ignore);
+        int count = ReflectionPhysics.SphereCastNonAlloc(eye, radius, dir, holdHits, distance, ~((1 << 2) | (1 << 6)), QueryTriggerInteraction.Ignore);
         float clear = distance;
         for (int i = 0; i < count; i++)
         {
