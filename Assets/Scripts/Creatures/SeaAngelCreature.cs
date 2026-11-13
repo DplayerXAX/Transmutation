@@ -13,6 +13,7 @@ public sealed class SeaAngelCreature : Creature
     public float SwimSpeed => currentSpeed;
     public bool Materialized => materialized;
     public FishingPoleCreature ReservedBy { get; private set; }
+    public bool CaughtRetrieval { get; private set; }
     public override bool IsInPhysicalWorld => materialized;
     public override bool CanBeCarried => materialized;
     public override bool CanBeCaptured => materialized;
@@ -20,6 +21,7 @@ public sealed class SeaAngelCreature : Creature
     Vector3 home;
     float clock, freeAt, flapPhase;
     float currentSpeed;
+    float struggleStroke;
     Material[] ownedMaterials;
     public void Configure(float length, int seed) { bodyLength = length; appearanceSeed = seed; }
     protected override void InitializeCreature()
@@ -53,21 +55,27 @@ public sealed class SeaAngelCreature : Creature
     public void ReleaseReservation(FishingPoleCreature pole)
     {
         if (ReservedBy != pole) return;
-        ReservedBy = null; home = transform.position; freeAt = Time.time + 1;
+        ReservedBy = null; struggleStroke = 0; home = transform.position; freeAt = Time.time + 1;
     }
     /// <summary>Turn before accelerating; the fish's own movement always follows its nose.</summary>
-    public void SwimToward(Vector3 point, float dt, float speed, float stopDistance = .05f)
+    public void SwimToward(Vector3 point, float dt, float speed, float stopDistance = .05f, float acceleration = 1.8f, float turnRate = 0)
     {
         if (dt <= 0) return;
         Vector3 delta = point - transform.position;
         float distance = delta.magnitude;
-        if (distance > .001f) TurnToward(delta / distance, dt, turningSpeed);
+        if (distance > .001f) TurnToward(delta / distance, dt, turnRate > 0 ? turnRate : turningSpeed);
         float alignment = distance > .001f ? Vector3.Dot(transform.forward, delta / distance) : 0;
         float desiredSpeed = speed * Mathf.InverseLerp(.25f, .9f, alignment) * Mathf.Clamp01((distance - stopDistance) / .4f);
-        currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, dt * 1.8f);
+        currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, dt * acceleration);
         float step = Mathf.Min(currentSpeed * dt, Mathf.Max(0, distance - stopDistance));
         if (!materialized) transform.position += transform.forward * step;
         else SetCreatureVelocity(transform.forward * (dt > 0 ? step / dt : 0));
+    }
+    public void SetStruggleAnticipation(Vector3 direction, float amount, float dt)
+    {
+        struggleStroke = amount;
+        if (amount > 0 && direction.sqrMagnitude > .001f)
+            TurnToward((transform.forward + direction * .5f).normalized, dt, 110);
     }
     void TurnToward(Vector3 direction, float dt, float degreesPerSecond)
     {
@@ -85,24 +93,32 @@ public sealed class SeaAngelCreature : Creature
         return toBait.magnitude <= bodyLength * .53f + .12f &&
             (toBait.sqrMagnitude < .0001f || Vector3.Dot(transform.forward, toBait.normalized) > .9f);
     }
-    public void ReelTo(Vector3 point, float dt)
+    public bool BeginCaughtRetrieval(FishingPoleCreature pole)
     {
-        Vector3 movement = point - transform.position;
-        if (movement.sqrMagnitude > .000001f) TurnToward(movement.normalized, dt, 1000);
-        currentSpeed = dt > 0 ? movement.magnitude / dt : 0;
-        transform.position = point;
-    }
-    public void Materialize(Vector3 point)
-    {
-        transform.position = home = point; materialized = true; ReservedBy = null;
-        SetMovementPhysics(false, false);
+        if (ReservedBy != pole || IsDead || materialized) return false;
+        CaughtRetrieval = true; materialized = true;
         foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = true;
+        Die();
+        if (!IsDead)
+        {
+            CaughtRetrieval = materialized = false;
+            foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
+            return false;
+        }
+        currentSpeed = 0; struggleStroke = 0;
+        var body = GetComponent<Rigidbody>();
+        body.linearVelocity = body.angularVelocity = Vector3.zero;
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        if (leftFin != null) leftFin.localRotation = Quaternion.identity;
+        if (rightFin != null) rightFin.localRotation = Quaternion.identity;
+        return true;
     }
+    public void EndCaughtRetrieval() { CaughtRetrieval = false; }
     protected override void TickCreature(float dt)
     {
         clock += dt;
-        flapPhase += dt * (2.2f + Mathf.Min(currentSpeed, 3));
-        float flap = 24 * Mathf.Sin(flapPhase);
+        flapPhase += dt * (2.2f + Mathf.Min(currentSpeed, 3) + struggleStroke * 4);
+        float flap = (24 + struggleStroke * 12) * Mathf.Sin(flapPhase);
         if (leftFin != null) leftFin.localRotation = Quaternion.Euler(0, flap, 0);
         if (rightFin != null) rightFin.localRotation = Quaternion.Euler(0, -flap, 0);
         if (ReservedBy != null || IsCarried || IsBubbleCaptured) return;
@@ -117,10 +133,11 @@ public sealed class SeaAngelCreature : Creature
             else home = transform.position;
         }
     }
-    protected override void OnCarryStarted() { home = transform.position; }
+    protected override void OnCarryStarted() { if (ReservedBy != null) ReservedBy.CancelFishing(); home = transform.position; }
+    protected override void OnCaptureStarted() { if (ReservedBy != null) ReservedBy.CancelFishing(); base.OnCaptureStarted(); }
     public override void PrepareForThrow(PlayerCreatureCarrier carrier) { freeAt = Time.time + 3; home = transform.position; }
     protected override void OnDisable() { if (ReservedBy != null) ReservedBy.CancelFishing(); base.OnDisable(); }
-    protected override void OnDeath() { if (ReservedBy != null) ReservedBy.CancelFishing(); base.OnDeath(); }
+    protected override void OnDeath() { if (!CaughtRetrieval && ReservedBy != null) ReservedBy.CancelFishing(); base.OnDeath(); }
     void OnDestroy() { if (ownedMaterials != null) foreach (var m in ownedMaterials) if (m != null) Destroy(m); }
 }
 

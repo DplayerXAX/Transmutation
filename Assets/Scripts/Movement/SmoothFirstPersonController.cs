@@ -297,6 +297,28 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (FishingInputOwner != null && !IsFishingBlockedExternally)
+        {
+            // Fishing owns the keys, not the Rigidbody. Keep passive physics and
+            // normal grounded stopping alive when a bite interrupts a walk.
+            GroundCheck();
+            if (grounded && Time.time >= blastUntil) blastAirborne = false;
+            if (!rb.isKinematic)
+            {
+                rb.useGravity = true;
+                rb.linearDamping = 0;
+                if (grounded && !Flung && !BlastMotion)
+                {
+                    Vector3 relative = rb.linearVelocity - rideVelocity;
+                    Vector3 flat = Vector3.MoveTowards(new Vector3(relative.x, 0, relative.z), Vector3.zero,
+                        Mathf.Max(groundDeceleration, groundDrag) * Time.fixedDeltaTime);
+                    rb.linearVelocity = rideVelocity + new Vector3(flat.x, relative.y, flat.z);
+                }
+                ExtraGravity();
+                velocityBeforePhysics = rb.linearVelocity;
+            }
+            return;
+        }
         if (BubbleMovementBlocked) return;
         UpdateRideSupport();
         MovePlayer();
@@ -339,7 +361,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         rideSurface = null;
         rideVelocity = Vector3.zero;
-        if (rb == null || rb.isKinematic || climbing || restricted || wallRunning || BubbleMovementBlocked ||
+        if (rb == null || rb.isKinematic || climbing || restricted || wallRunning ||
+            (BubbleMovementBlocked && FishingInputOwner == null) || IsFishingBlockedExternally ||
             (skateShoes != null && skateShoes.SuppressGrounding) ||
             (ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f))) return;
         // The original thin cast can start inside the deck and hit the shell underneath instead.

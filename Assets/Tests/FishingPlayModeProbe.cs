@@ -8,11 +8,12 @@ using UnityEngine.InputSystem.LowLevel;
 public sealed class FishingPlayModeProbe : MonoBehaviour
 {
     public static string Result = "Not run";
+    public static string CatchTimings = "";
     Mouse testMouse; Keyboard testKeyboard;
     void OnDestroy() { if(testMouse!=null) InputSystem.RemoveDevice(testMouse); if(testKeyboard!=null) InputSystem.RemoveDevice(testKeyboard); }
     IEnumerator Start()
     {
-        Result = "Running";
+        Result = "Running"; CatchTimings = "";
         yield return new WaitForSeconds(.5f);
         var c = FindFirstObjectByType<PlayerCreatureCarrier>();
         var pole = FindFirstObjectByType<FishingPoleCreature>();
@@ -72,46 +73,109 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
             var target=pass==0?fish[0]:fish[7];
             yield return Cast(pole, c);
             Check(pole.State==FishingState.Waiting,"cast waiting");
-            target.transform.position=pole.LurePosition;
+            if(pass==0)
+            {
+                testKeyboard=InputSystem.AddDevice<Keyboard>();
+                InputSystem.QueueStateEvent(testKeyboard,new KeyboardState(Key.W));
+                yield return new WaitForSeconds(.15f);
+                Check(Vector3.ProjectOnPlane(c.PlayerController.Body.linearVelocity,Vector3.up).magnitude>1,"walking before bite");
+            }
+            PlaceFish(pole,target);
             float deadline=Time.time+9;
             while(pole.State==FishingState.Waiting && Time.time<deadline) yield return null;
             Check(pole.State==FishingState.Reeling && pole.TargetFish==target,"bite selected fish");
             Check(c.PlayerController.FishingInputOwner==pole,"movement owned");
                         if(pass==0)
             {
-                while(pole.Struggle.Telegraphing) yield return null;
-                testMouse=InputSystem.AddDevice<Mouse>(); testKeyboard=InputSystem.AddDevice<Keyboard>();
+
+                Vector3 bitePosition=c.transform.position;
+                yield return new WaitForSeconds(.2f);
+                Check(Vector3.ProjectOnPlane(c.PlayerController.Body.linearVelocity,Vector3.up).magnitude<.1f,"bite brakes walking while W remains held");
+                Check(Vector3.Distance(bitePosition,c.transform.position)<.6f,"bite does not coast indefinitely");
+                c.PlayerController.AddBlastImpulse(Vector3.right);
+                yield return new WaitForFixedUpdate();
+                Check(c.PlayerController.Body.linearVelocity.x>.5f,"fishing preserves external impulse");
+                yield return new WaitForSeconds(.3f);
+                testMouse=InputSystem.AddDevice<Mouse>();
                 var d=pole.Struggle.CounterDirection; var keys=new System.Collections.Generic.List<Key>();
                 if(d.x<0) keys.Add(Key.A); if(d.x>0) keys.Add(Key.D); if(d.y<0) keys.Add(Key.S); if(d.y>0) keys.Add(Key.W);
                 InputSystem.QueueStateEvent(testKeyboard,new KeyboardState(keys.ToArray()));
-                yield return null;
+                yield return new WaitForSeconds(.12f);
+                Check(pole.SteeringAccepted && pole.GetComponent<FishingPoleVisuals>().SteeringFeedback>.9f,"useful steering feedback before clicking");
+                System.IO.Directory.CreateDirectory("Temp/FishingValidation");
+                ScreenCapture.CaptureScreenshot(System.IO.Path.GetFullPath("Temp/FishingValidation/steering.png"));
                 float before=pole.Struggle.Progress;
                 InputSystem.QueueStateEvent(testMouse,new MouseState().WithButton(MouseButton.Left,true));
                 yield return new WaitForSeconds(.4f);
-                Check(pole.Struggle.Progress>before+.3f && pole.Struggle.Progress<before+1.1f,"holding LMB scores once");
+                Check(pole.Struggle.Progress>before+1.2f && pole.Struggle.Progress<before+1.85f,"holding LMB scores once");
+                var visuals=pole.GetComponent<FishingPoleVisuals>();
+                Check(visuals.bendPivot!=null && Quaternion.Angle(visuals.bendPivot.localRotation,Quaternion.identity)>1,"actual steering bends pole");
                 InputSystem.QueueStateEvent(testMouse,new MouseState());
                 InputSystem.QueueStateEvent(testKeyboard,new KeyboardState());
-                yield return null;
+                yield return new WaitForSeconds(.3f);
+                Check(Quaternion.Angle(visuals.bendPivot.localRotation,Quaternion.identity)<10,"steering returns leaving only bounded load bend");
                 InputSystem.RemoveDevice(testMouse); InputSystem.RemoveDevice(testKeyboard); testMouse=null;testKeyboard=null;
             }
             float biteDistance=Vector3.Distance(target.transform.position,c.CarryCamera.transform.position);
+            int deaths=0; target.Died += _ => deaths++;
+            int catchEvents=0; System.Action<SeaAngelCreature> onCatch = _ => catchEvents++;
+            pole.CatchSucceeded += onCatch;
+            float struggleStarted=Time.time;
             deadline=Time.time+15;
             while(pole.State==FishingState.Reeling && Time.time<deadline)
             {
-                pole.Pull(pole.Struggle.CounterDirection);
-                yield return new WaitForSeconds(.08f);
+                pole.RefreshCounterDirection();
+                Vector3 beforeWin=target.transform.position;
+                if(pole.Struggle.Required-pole.Struggle.Progress<=1.5f*(1+.2f*pole.NormalizedLoad))
+                {
+                    var movingBody=target.GetComponent<Rigidbody>(); movingBody.isKinematic=false;
+                    movingBody.linearVelocity=Vector3.one*4; movingBody.angularVelocity=Vector3.one*2;
+                }
+                pole.Pull(pole.RequiredDirection);
+                if(pole.State==FishingState.Landing)
+                {
+                    var body=target.GetComponent<Rigidbody>();
+                    Check(target.IsDead && target.Materialized && target.CaughtRetrieval && deaths==1,"win commits one physical death");
+                    Check(body.linearVelocity==Vector3.zero && body.angularVelocity==Vector3.zero && target.SwimSpeed==0,"win clears all momentum");
+                    Check(target.transform.position==beforeWin,"win does not snap position");
+                    Check(catchEvents==1,"one distinct success event");
+                    Check(pole.transform.Find("Catch Dimensional Mist").GetComponent<ParticleSystem>().particleCount>0,"success mist emitted at fish");
+                    break;
+                }
+                if(pass==0)
+                {
+                    yield return new WaitForSeconds(.08f);
+                    ScreenCapture.CaptureScreenshot(System.IO.Path.GetFullPath("Temp/FishingValidation/pull.png"));
+                    yield return new WaitForSeconds(.42f);
+                }
+                else
+                yield return new WaitForSeconds(.5f);
             }
+            CatchTimings += $"{target.BodyLength:F2}m: {Time.time-struggleStarted:F2}s; ";
             Check(pole.State==FishingState.Landing,"reeling wins");
-            Check(Vector3.Distance(target.transform.position,c.CarryCamera.transform.position)<biteDistance-.5f,"progress physically shortens tether");
-            Check(c.PlayerController.FishingInputOwner==null,"success unlocks");
-            yield return new WaitForSeconds(1);
+            Check(Vector3.Distance(target.transform.position,c.CarryCamera.transform.position)>Mathf.Min(4.2f,biteDistance*.75f),"fight keeps fish distant for final retrieval");
+            pole.CatchSucceeded -= onCatch;
+            Check(c.PlayerController.FishingInputOwner==pole,"movement stays locked during final retrieval");
+            Vector3 startRetrieve=target.transform.position;
+            yield return new WaitForSeconds(.2f);
+            Check(Quaternion.Angle(pole.GetComponent<FishingPoleVisuals>().bendPivot.localRotation,Quaternion.identity)>15,"win produces distinct pole flick");
+            if(pass==0) ScreenCapture.CaptureScreenshot(System.IO.Path.GetFullPath("Temp/FishingValidation/catch.png"));
+            if(pass==1) c.transform.position+=Vector3.right*.3f;
+            deadline=Time.time+5;
+            while(pole.State==FishingState.Landing && Time.time<deadline) yield return null;
+            Check(c.PlayerController.FishingInputOwner==null,"arrival releases movement lock");
+            Check(Vector3.Distance(startRetrieve,target.transform.position)>.4f,"retrieval moves physical body");
+            Check(target.IsDead && deaths==1 && target.GetComponent<Rigidbody>().useGravity,"corpse remains dead with gravity");
+            float caughtY=target.transform.position.y;
+            yield return new WaitForSeconds(.3f);
+            Check(target.transform.position.y<=caughtY+.05f && target.SwimSpeed==0,"corpse falls instead of swimming away");
             Check(target.Materialized && target.CanBeCarried && target.CanBeCaptured && target.CanBeConsumed,"materialized permissions");
             Check(pole.State==FishingState.Idle && target.ReservedBy==null,"landing cleanup");
             foreach(var collider in target.GetComponentsInChildren<Collider>()) Check(collider.enabled,"physical colliders enabled");
             target.transform.position = new Vector3(30,10,30);
         }
         yield return Cast(pole, c);
-        fish[1].transform.position=pole.LurePosition;
+        PlaceFish(pole,fish[1]);
         float until=Time.time+9;
         while(pole.State==FishingState.Waiting && Time.time<until) yield return null;
         Check(pole.State==FishingState.Reeling,"cancel test bite");
@@ -121,7 +185,7 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
         for(int mode=0;mode<3;mode++)
         {
             yield return Cast(pole, c);
-            fish[2+mode].transform.position=pole.LurePosition;
+            PlaceFish(pole,fish[2+mode]);
             until=Time.time+9;
             while(pole.State==FishingState.Waiting && Time.time<until) yield return null;
             Check(pole.State==FishingState.Reeling,"interruption bite");
@@ -130,7 +194,7 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
                 float progress=pole.Struggle.Progress; Time.timeScale=0;
                 yield return new WaitForSecondsRealtime(.1f);
                 Check(pole.Struggle.Progress==progress,"pause freezes struggle"); Time.timeScale=1;
-                until=Time.time+12;
+                until=Time.time+25;
                 while(pole.State!=FishingState.Idle && Time.time<until) yield return null;
             }
             else if(mode==1) { fish[3].gameObject.SetActive(false); yield return null; }
@@ -140,23 +204,62 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
         }
         Check(c.TryCarryFromInteraction(pole),"reacquire disabled pole");
         yield return new WaitForSeconds(.5f);
+        for(int transfer=0;transfer<3;transfer++)
+        {
+            var target=fish[transfer==0 ? 1 : transfer==1 ? 2 : 4];
+            yield return Cast(pole,c); PlaceFish(pole,target);
+            until=Time.time+9;
+            while(pole.State==FishingState.Waiting && Time.time<until) yield return null;
+            Check(pole.State==FishingState.Reeling,"retrieval transfer bite");
+            while(pole.State==FishingState.Reeling) { pole.RefreshCounterDirection(); pole.Pull(pole.RequiredDirection); yield return null; }
+            Check(target.IsDead && pole.State==FishingState.Landing,"retrieval transfer commits catch");
+            if(transfer==0) pole.TryHandleCarriedRightMouse(c,true,true,false);
+            else if(transfer==1)
+            {
+                // Existing bubble capture accepts dead remains and invokes the shared ownership hook.
+                var bubbleRoot=new GameObject("Validation Bubble"); bubbleRoot.transform.position=target.transform.position;
+                var bubble=bubbleRoot.AddComponent<TrappingBubble>();
+                var capture=target.gameObject.AddComponent<BubbleCapture>();
+                Check(capture.Attach(bubble),"bubble takes corpse ownership");
+                Check(pole.State==FishingState.Idle,"capture releases retrieval immediately");
+                capture.Release(); Destroy(bubbleRoot);
+            }
+            else
+            {
+                var obstruction=GameObject.CreatePrimitive(PrimitiveType.Cube);
+                obstruction.name="Validation Catch Space"; obstruction.transform.position=c.CarryCamera.transform.position;
+                obstruction.transform.localScale=Vector3.one*5; Physics.SyncTransforms();
+                yield return new WaitForFixedUpdate(); yield return null;
+                Check(pole.State==FishingState.Idle,"no clear catch space releases corpse"); Destroy(obstruction);
+            }
+            Check(pole.State==FishingState.Idle && target.ReservedBy==null && !target.CaughtRetrieval && target.IsDead,"retrieval transfer preserves dead body and clears claims");
+            target.transform.position=new Vector3(30,10,30);
+        }
         yield return Cast(pole, c);
-        fish[5].transform.position=pole.LurePosition;
+        PlaceFish(pole,fish[5]);
         until=Time.time+9;
         while(pole.State==FishingState.Waiting && Time.time<until) yield return null;
-        while(pole.State==FishingState.Reeling) { pole.Pull(pole.Struggle.CounterDirection); yield return null; }
-        Check(pole.State==FishingState.Landing,"blocked landing setup");
+        while(pole.State==FishingState.Reeling) { pole.RefreshCounterDirection(); pole.Pull(pole.RequiredDirection); yield return null; }
+        Check(pole.State==FishingState.Landing,"blocked physical retrieval setup");
         var wall=GameObject.CreatePrimitive(PrimitiveType.Cube); wall.name="Validation Obstruction";
         wall.transform.position=c.CarryCamera.transform.position+c.CarryCamera.transform.forward;
         wall.transform.localScale=new Vector3(10,10,.1f); Physics.SyncTransforms();
-        yield return null; yield return null;
-        Check(pole.State==FishingState.Idle && !fish[5].Materialized,"wall blocks materialization"); Destroy(wall);
+        until=Time.time+5;
+        while(pole.State==FishingState.Landing && Time.time<until) yield return null;
+        Check(pole.State==FishingState.Idle && fish[5].Materialized && fish[5].IsDead,"blocked retrieval releases committed corpse");
+        Check(fish[5].transform.position.z>wall.transform.position.z,"corpse cannot teleport through wall"); Destroy(wall);
         c.Release();
         Check(c.TryCarryFromInteraction(fish[0]),"caught fish pickup");
         c.GetComponent<CreatureThrower>().Throw(1);
         Check(!fish[0].IsCarried && !fish[0].SimulationEnabled,"caught fish shared throw");
-        Result="PASS: head-first steering/approach, charged casting, small/large catches, dimensional gates, materialization/colliders, movement ownership, RMB cleanup, hold-click input, pause/failure/disable cleanup, blocked landing, caught fish pickup/throw.";
+        Result="PASS: head-first steering/approach, charged casting, small/large catches, dimensional gates, single death/momentum reset/physical retrieval/gravity, movement ownership, RMB cleanup, hold-click input, pause/failure/disable cleanup, blocked physical retrieval, caught fish pickup/throw.";
         Debug.Log("FISHING VALIDATION " + Result); Destroy(gameObject);
+    }
+    void PlaceFish(FishingPoleCreature pole, SeaAngelCreature selected)
+    {
+        foreach(var f in FindObjectsByType<SeaAngelCreature>(FindObjectsSortMode.None))
+            if(!f.Materialized && f.ReservedBy==null) f.transform.position=new Vector3(30,10,30);
+        selected.transform.position=pole.LurePosition;
     }
     IEnumerator Cast(FishingPoleCreature pole, PlayerCreatureCarrier carrier)
     {
@@ -176,4 +279,3 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
         Result="FAIL: "+message; Debug.LogError("FISHING VALIDATION "+Result); throw new Exception(Result);
     }
 }
-

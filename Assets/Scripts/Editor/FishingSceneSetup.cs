@@ -77,15 +77,45 @@ public static class FishingSceneSetup
             var v = root.AddComponent<FishingPoleVisuals>();
             v.tip = new GameObject("Filament Tip").transform; v.tip.SetParent(root.transform,false); v.tip.localPosition = new Vector3(0,.03f,.94f);
             v.vein = Part(root.transform,"Progress Vein",new Vector3(0,.19f,.4f),new Vector3(.065f,.045f,.05f),light); v.veinRenderer = v.vein.GetComponent<Renderer>();
-            v.compass = new GameObject("Counter Pull Organ").transform; v.compass.SetParent(root.transform,false); v.compass.localPosition = new Vector3(0,.22f,.68f);
-            Part(v.compass,"Direction Stem",new Vector3(0,.07f,0),new Vector3(.025f,.14f,.025f),light);
-            Part(v.compass,"Direction Tip",new Vector3(0,.18f,0),new Vector3(.05f,.07f,.035f),light);
-            var l=Part(v.compass,"Arrow Left",new Vector3(-.035f,.13f,0),new Vector3(.025f,.1f,.025f),light); l.localRotation=Quaternion.Euler(0,0,-40);
-            var r=Part(v.compass,"Arrow Right",new Vector3(.035f,.13f,0),new Vector3(.025f,.1f,.025f),light); r.localRotation=Quaternion.Euler(0,0,40);
             PrefabUtility.SaveAsPrefabAsset(root,PolePath); Object.DestroyImmediate(root);
         }
         SeaAngelMeshBuilder.Apply();
+        UpgradePole();
         AssetDatabase.SaveAssets();
+    }
+    public static void UpgradePole()
+    {
+        var root = PrefabUtility.LoadPrefabContents(PolePath);
+        try
+        {
+            var visuals = root.GetComponent<FishingPoleVisuals>();
+            var obsolete = root.transform.Find("Counter Pull Organ");
+            if (obsolete != null) Object.DestroyImmediate(obsolete.gameObject);
+            var pivot = root.transform.Find("Pull Bend");
+            if (pivot == null)
+            {
+                pivot = new GameObject("Pull Bend").transform; pivot.SetParent(root.transform, false);
+                pivot.localPosition = new Vector3(0, 0, .18f);
+                var children = new System.Collections.Generic.List<Transform>();
+                foreach (Transform child in root.transform)
+                    if (child == visuals.tip || child == visuals.vein || (child.GetComponent<Renderer>() != null && child.localPosition.z >= .2f)) children.Add(child);
+                foreach (var child in children) child.SetParent(pivot, true);
+            }
+            visuals.bendPivot = pivot;
+            var tuning = new SerializedObject(root.GetComponent<FishingPoleCreature>());
+            if (tuning.FindProperty("fishingFeelVersion").intValue < 1)
+            {
+                tuning.FindProperty("drainRate").floatValue = .35f;
+                tuning.FindProperty("fishingFeelVersion").intValue = 1;
+                tuning.ApplyModifiedPropertiesWithoutUndo();
+                var presentation = new SerializedObject(visuals);
+                presentation.FindProperty("sidewaysBend").floatValue = 28;
+                presentation.FindProperty("verticalBend").floatValue = 20;
+                presentation.ApplyModifiedPropertiesWithoutUndo();
+            }
+            PrefabUtility.SaveAsPrefabAsset(root, PolePath);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
     }
     [MenuItem("Tools/Creatures/Fishing/Create Standalone Scene")]
     public static void CreateScene()
