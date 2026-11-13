@@ -289,6 +289,81 @@ public static class WorldMapDress
         log.Add("Flower field: " + count + " bubble lilies (all pickable near the player).");
     }
 
+    // ---------------- Field bubbles ----------------
+
+    /// <summary>
+    /// Batch, incremental (keeps every other edit in Scene_World): the flower field's instanced lilies are quiet until
+    /// picked, so as in Scene_LeafMap the bubbles come from real emitting MeadowFlowers, two per 28 m area of field,
+    /// fired in turn by a BubbleCascade. -executeMethod WorldMapDress.AddFieldBubbles
+    /// </summary>
+    public static void AddFieldBubbles()
+    {
+        var scene = EditorSceneManager.OpenScene(WorldMapBuild.ScenePath, OpenSceneMode.Single);
+        var root = scene.GetRootGameObjects().First(g => g.name == "World — combined map").transform;
+        var log = new List<string>();
+        FieldBubbles(root, log);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Directory.CreateDirectory("ArtCaptures/WorldMap");
+        File.WriteAllText("ArtCaptures/WorldMap/FieldBubbles.txt", string.Join("\n", log));
+    }
+
+    private static void FieldBubbles(Transform root, List<string> log)
+    {
+        const string GroupName = "05c Field bubble zones — emitters by area";
+        var old = root.Find(GroupName); if (old != null) Object.DestroyImmediate(old.gameObject);
+        var field = root.GetComponentInChildren<LilyField>(true);
+        var data = field != null ? (TextAsset)new SerializedObject(field).FindProperty("data").objectReferenceValue : null;
+        if (data == null) { log.Add("No lily field data."); return; }
+        var values = new float[data.bytes.Length / 4];
+        System.Buffer.BlockCopy(data.bytes, 0, values, 0, data.bytes.Length);
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Generated/LeafMap/MeadowFlower.prefab");
+        var group = new GameObject(GroupName).transform; group.SetParent(root, false);
+        var random = new System.Random(5);
+        const float Area = 28f;
+        var emitters = new List<BubbleFlower>();
+        var cells = Enumerable.Range(0, values.Length / 6)
+            .GroupBy(i => new Vector2Int(Mathf.FloorToInt(values[i * 6] / Area), Mathf.FloorToInt(values[i * 6 + 2] / Area)));
+        foreach (var cell in cells)
+        {
+            if (cell.Count() < 25) continue;
+            int placed = 0;
+            foreach (int i in cell.OrderBy(_ => random.Next()))
+            {
+                if (placed >= 2) break;
+                var at = new Vector3(values[i * 6], values[i * 6 + 1], values[i * 6 + 2]);
+                if (emitters.Any(e => (new Vector2(e.transform.position.x, e.transform.position.z) - new Vector2(at.x, at.z)).sqrMagnitude < 49f)) continue;
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, group);
+                go.name = "Field emitter " + (emitters.Count + 1);
+                go.transform.rotation = Quaternion.Euler(0f, values[i * 6 + 3], 0f);
+                SquirrelTree.PlaceOnGround(go.transform, at + Vector3.up * 0.02f);
+                var flower = go.GetComponent<BubbleFlower>();
+                flower.ConfigureGroundEmission(false, new Vector2(8f, 14f));
+                EditorUtility.SetDirty(flower);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(flower);
+                if (go.GetComponent<SettleWhenGroundReady>() == null) go.AddComponent<SettleWhenGroundReady>().lift = 0.02f;
+                emitters.Add(flower); placed++;
+            }
+        }
+        group.gameObject.AddComponent<BubbleCascade>().Configure(emitters.OrderBy(e => e.transform.position.z).ToList(), 9f);
+
+        // The emitters take the place of the instanced lilies right under them.
+        var kept = new List<float>(values.Length);
+        int removed = 0;
+        for (int i = 0; i < values.Length / 6; i++)
+        {
+            var p = new Vector2(values[i * 6], values[i * 6 + 2]);
+            if (emitters.Any(e => (new Vector2(e.transform.position.x, e.transform.position.z) - p).sqrMagnitude < 1.44f)) { removed++; continue; }
+            for (int k = 0; k < 6; k++) kept.Add(values[i * 6 + k]);
+        }
+        var bytes = new byte[kept.Count * 4];
+        System.Buffer.BlockCopy(kept.ToArray(), 0, bytes, 0, bytes.Length);
+        string path = AssetDatabase.GetAssetPath(data);
+        File.WriteAllBytes(path, bytes);
+        AssetDatabase.ImportAsset(path);
+        log.Add("Field bubbles: " + emitters.Count + " emitting MeadowFlowers (2 per 28 m area), BubbleCascade every 9 s; " + removed + " lilies under them removed.");
+    }
+
     // ---------------- Decor ----------------
 
     private static void Decor(Transform root, List<string> log)

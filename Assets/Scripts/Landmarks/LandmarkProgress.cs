@@ -137,7 +137,8 @@ public static class LandmarkGlyphs
                     new[] { new Vector2(0.06f, 0.2f) },
                 };
             default:
-                return Random(id);
+                // The rest of the planet's script (see GlyphLexicon); unknown ids get a made-up glyph.
+                return GlyphLexicon.TryGet(id, out IReadOnlyList<Vector2[]> strokes) ? strokes : Random(id);
         }
     }
 
