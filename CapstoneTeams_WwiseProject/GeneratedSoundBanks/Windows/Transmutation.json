@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{8211AF03-51BC-3252-8B75-B8DA2585DB6A}",
+    "Hash": "{6EDDB095-CA77-D8BD-7807-789580503D5D}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
@@ -29,7 +29,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "basic_test.wav",
-      "CachePath": "76/{765FADE7-30AA-0A51-77DE-42F33C0F9686}.wem"
+      "CachePath": "21/{21CDDAED-218E-71D2-824D-C49641294AB1}.wem"
      },
      {
       "Id": "115744844",
@@ -37,7 +37,15 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "climb my wall.wav",
-      "CachePath": "1B/{1BAB8EDB-9C67-6357-B4EC-174E310319D1}.wem"
+      "CachePath": "50/{50FE24C9-FB07-65A8-0E49-5C11D9F1AD25}.wem"
+     },
+     {
+      "Id": "117650681",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "among flowers and bubbles.wav",
+      "CachePath": "C0/{C0C143B5-6F90-0904-ED51-E99FFBD7B747}.wem"
      },
      {
       "Id": "121921526",
@@ -45,7 +53,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_loop.wav",
-      "CachePath": "1A/{1A83BD9D-8B18-30B2-995D-7B545BBB26DE}.wem"
+      "CachePath": "AB/{AB605B60-CDEE-13EF-8F06-9B30AF7EC3D3}.wem"
      },
      {
       "Id": "221012135",
@@ -53,7 +61,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "fuzzy.wav",
-      "CachePath": "A6/{A6895E12-D410-F1C3-D644-78BC34C9CC35}.wem"
+      "CachePath": "67/{67CE5E4E-AB86-0F68-C9A8-CE90A23EED6F}.wem"
      },
      {
       "Id": "226587581",
@@ -61,7 +69,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_5.wav",
-      "CachePath": "67/{67698BD0-C399-96EF-E185-A7CB3B4BF824}.wem"
+      "CachePath": "60/{60DC7F2D-3C26-05D4-D11D-57B321D484B9}.wem"
      },
      {
       "Id": "277055219",
@@ -69,7 +77,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_3.wav",
-      "CachePath": "E0/{E0613339-ADCC-466D-C63B-80B8891D2E16}.wem"
+      "CachePath": "51/{517A945F-A4B8-8AAE-9947-B98B5B75A4E3}.wem"
      },
      {
       "Id": "306202188",
@@ -77,7 +85,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_1.wav",
-      "CachePath": "2F/{2F2D1BAC-052E-E52F-71A2-ED7E29F98D71}.wem"
+      "CachePath": "65/{65F03AB4-A8BF-36B3-1ED7-E181B79BB075}.wem"
      },
      {
       "Id": "352086038",
@@ -88,12 +96,20 @@
       "CachePath": "39/{399C02EC-05CE-B5B3-226A-BC4D0F9E9A85}.wem"
      },
      {
+      "Id": "427461893",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "hungry cave.wav",
+      "CachePath": "4D/{4DB74638-1757-9802-C5A1-BE4630F89D4E}.wem"
+     },
+     {
       "Id": "453822448",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_4.wav",
-      "CachePath": "90/{903CA6A5-DB7A-C299-42BE-0EEF964F14B2}.wem"
+      "CachePath": "AF/{AF8499BE-F1CB-11DA-91DF-960242B79F0C}.wem"
      },
      {
       "Id": "454687851",
@@ -109,7 +125,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "cave.wav",
-      "CachePath": "25/{25223711-1AF6-49E2-FEF5-93CB6EF32381}.wem"
+      "CachePath": "92/{9295C487-969C-749D-5FB3-84120D66798E}.wem"
      },
      {
       "Id": "481382044",
@@ -133,7 +149,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "like a fluid.wav",
-      "CachePath": "BF/{BF9BEA1A-BD53-8DD5-C8BA-5E72D4A45552}.wem"
+      "CachePath": "C0/{C04931C7-38A1-97CF-EAC8-6F1FF7265E85}.wem"
      },
      {
       "Id": "688926031",
@@ -152,6 +168,14 @@
       "CachePath": "CE/{CEDA67B0-1F22-69AA-88A0-4C7E27C70314}.wem"
      },
      {
+      "Id": "719376861",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "mining island.wav",
+      "CachePath": "28/{2853F411-93F1-E48F-FB74-3FFFFBF59422}.wem"
+     },
+     {
       "Id": "766320165",
       "Language": "SFX",
       "Streaming": "false",
@@ -165,7 +189,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "time spider.wav",
-      "CachePath": "B6/{B6F4A03D-CFD5-C551-C09A-35C7E44B9E8C}.wem"
+      "CachePath": "F2/{F246CF5A-582E-E5AA-0328-374EAA404961}.wem"
      },
      {
       "Id": "849763107",
@@ -173,7 +197,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "tenacles.wav",
-      "CachePath": "DD/{DDC8DF5A-AE4E-EDA1-DDB6-3AD2DC310D4F}.wem"
+      "CachePath": "69/{6912AAC5-C6C9-9027-5EA1-AFA8858483FC}.wem"
      },
      {
       "Id": "1017687414",
@@ -181,7 +205,7 @@
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "intro_2.wav",
-      "CachePath": "7C/{7CD0348D-7A3F-8D96-E461-D3B78284F225}.wem"
+      "CachePath": "22/{227E6133-CADA-9152-460B-47542797FB75}.wem"
      }
     ],
     "Events": [
@@ -350,13 +374,22 @@
         "Id": "115744844"
        },
        {
+        "Id": "117650681"
+       },
+       {
         "Id": "221012135"
+       },
+       {
+        "Id": "427461893"
        },
        {
         "Id": "468006233"
        },
        {
         "Id": "631985183"
+       },
+       {
+        "Id": "719376861"
        },
        {
         "Id": "773018024"
@@ -390,16 +423,40 @@
       "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
      },
      {
+      "Id": "1241966871",
+      "Name": "BGM_island",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_island",
+      "GUID": "{256E7AAE-5B28-45E1-904F-C2466B357AF7}"
+     },
+     {
+      "Id": "1544215172",
+      "Name": "BGM_flowers",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_flowers",
+      "GUID": "{4B1C7467-AD65-46BA-AFA8-8104795DE517}"
+     },
+     {
       "Id": "1599936364",
       "Name": "BGM_timespider",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_timespider",
       "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
      },
      {
+      "Id": "2940023732",
+      "Name": "BGM_hungrycave",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_hungrycave",
+      "GUID": "{4F37A1BB-7E93-4E34-A356-960FA8D39809}"
+     },
+     {
       "Id": "3397956017",
       "Name": "BGM_bird",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
       "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
+     },
+     {
+      "Id": "3558075418",
+      "Name": "BGM_basic",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_basic",
+      "GUID": "{207E80F5-8088-4EAF-806C-E992905BD833}"
      },
      {
       "Id": "4230282112",
@@ -434,6 +491,6 @@
     ]
    }
   ],
-  "FileHash": "{B01C0DF4-B694-B3C4-390B-B4FFDF08CCCA}"
+  "FileHash": "{E23FF5A7-1F4A-391B-09C7-C01C5545D233}"
  }
 }

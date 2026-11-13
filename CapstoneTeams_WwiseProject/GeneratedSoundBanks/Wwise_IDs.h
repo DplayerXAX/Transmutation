@@ -28,11 +28,15 @@ namespace AK
 
     namespace GAME_PARAMETERS
     {
+        static const AkUniqueID BGM_BASIC = 3558075418U;
         static const AkUniqueID BGM_BIRD = 3397956017U;
         static const AkUniqueID BGM_CAVE = 861516679U;
         static const AkUniqueID BGM_CLIMB = 224820983U;
+        static const AkUniqueID BGM_FLOWERS = 1544215172U;
         static const AkUniqueID BGM_FLUID = 840600496U;
         static const AkUniqueID BGM_FUZZY = 721355700U;
+        static const AkUniqueID BGM_HUNGRYCAVE = 2940023732U;
+        static const AkUniqueID BGM_ISLAND = 1241966871U;
         static const AkUniqueID BGM_LANDMARK = 4101327976U;
         static const AkUniqueID BGM_TIMESPIDER = 1599936364U;
         static const AkUniqueID TUTORIAL_1 = 4230282115U;

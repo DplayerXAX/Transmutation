@@ -16,8 +16,12 @@ Game Parameter	ID	Name			Wwise Object Path	Notes
 	721355700	BGM_fuzzy			\Default Work Unit\BGM_fuzzy	
 	840600496	BGM_fluid			\Default Work Unit\BGM_fluid	
 	861516679	BGM_cave			\Default Work Unit\BGM_cave	
+	1241966871	BGM_island			\Default Work Unit\BGM_island	
+	1544215172	BGM_flowers			\Default Work Unit\BGM_flowers	
 	1599936364	BGM_timespider			\Default Work Unit\BGM_timespider	
+	2940023732	BGM_hungrycave			\Default Work Unit\BGM_hungrycave	
 	3397956017	BGM_bird			\Default Work Unit\BGM_bird	
+	3558075418	BGM_basic			\Default Work Unit\BGM_basic	
 	4230282112	Tutorial_2			\Default Work Unit\Tutorial_2	
 	4230282113	Tutorial_3			\Default Work Unit\Tutorial_3	
 	4230282115	Tutorial_1			\Default Work Unit\Tutorial_1	
@@ -26,24 +30,27 @@ Game Parameter	ID	Name			Wwise Object Path	Notes
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	11987434	Drop	.cache\9C\{9C017071-B9D6-F281-C5AB-FABF30D696C9}.wem		\Containers\Default Work Unit\SFX\Drop		220596
-	95100673	basic_test	.cache\76\{765FADE7-30AA-0A51-77DE-42F33C0F9686}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\basic_test		10584096
-	115744844	climb	.cache\1B\{1BAB8EDB-9C67-6357-B4EC-174E310319D1}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\climb		10584096
-	121921526	intro_loop	.cache\1A\{1A83BD9D-8B18-30B2-995D-7B545BBB26DE}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Outro\intro_loop		2866596
-	221012135	fuzzy	.cache\A6\{A6895E12-D410-F1C3-D644-78BC34C9CC35}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fuzzy		10584096
-	226587581	intro_5	.cache\67\{67698BD0-C399-96EF-E185-A7CB3B4BF824}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_5		2205096
-	277055219	intro_3	.cache\E0\{E0613339-ADCC-466D-C63B-80B8891D2E16}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_3		2205096
-	306202188	intro_1	.cache\2F\{2F2D1BAC-052E-E52F-71A2-ED7E29F98D71}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_1		2205096
+	95100673	basic_test	.cache\21\{21CDDAED-218E-71D2-824D-C49641294AB1}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\basic_test		704890
+	115744844	climb	.cache\50\{50FE24C9-FB07-65A8-0E49-5C11D9F1AD25}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\climb		992749
+	117650681	flowers_bubbles	.cache\C0\{C0C143B5-6F90-0904-ED51-E99FFBD7B747}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\flowers_bubbles		667981
+	121921526	intro_loop	.cache\AB\{AB605B60-CDEE-13EF-8F06-9B30AF7EC3D3}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Outro\intro_loop		293122
+	221012135	fuzzy	.cache\67\{67CE5E4E-AB86-0F68-C9A8-CE90A23EED6F}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fuzzy		803224
+	226587581	intro_5	.cache\60\{60DC7F2D-3C26-05D4-D11D-57B321D484B9}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_5		226416
+	277055219	intro_3	.cache\51\{517A945F-A4B8-8AAE-9947-B98B5B75A4E3}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_3		159821
+	306202188	intro_1	.cache\65\{65F03AB4-A8BF-36B3-1ED7-E181B79BB075}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_1		83026
 	352086038	BubblePop	.cache\39\{399C02EC-05CE-B5B3-226A-BC4D0F9E9A85}.wem		\Containers\Default Work Unit\SFX\BubblePop		220596
-	453822448	intro_4	.cache\90\{903CA6A5-DB7A-C299-42BE-0EEF964F14B2}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_4		2205096
+	427461893	hungry_cave	.cache\4D\{4DB74638-1757-9802-C5A1-BE4630F89D4E}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\hungry_cave		742105
+	453822448	intro_4	.cache\AF\{AF8499BE-F1CB-11DA-91DF-960242B79F0C}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_4		228832
 	454687851	left_D	.cache\F0\{F02073ED-9FC1-DEC1-54F1-6AAB1DEF58EC}.wem		\Containers\Default Work Unit\Footstep_Left\left_D		220596
-	468006233	cave	.cache\25\{25223711-1AF6-49E2-FEF5-93CB6EF32381}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\cave		10584096
+	468006233	cave	.cache\92\{9295C487-969C-749D-5FB3-84120D66798E}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\cave		845958
 	481382044	right_E	.cache\A5\{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem		\Containers\Default Work Unit\Footstep_Right\right_E		220596
 	557442941	PickUp	.cache\80\{809E59EA-E327-0511-923A-6F8019F07C0B}.wem		\Containers\Default Work Unit\SFX\PickUp		220596
-	631985183	fluid	.cache\BF\{BF9BEA1A-BD53-8DD5-C8BA-5E72D4A45552}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fluid		10584096
+	631985183	fluid	.cache\C0\{C04931C7-38A1-97CF-EAC8-6F1FF7265E85}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fluid		756263
 	688926031	LMB	.cache\8B\{8BBC56C1-A803-1A48-F49B-F8CF1059E37E}.wem		\Containers\Default Work Unit\SFX\LMB		220596
 	689415382	shootTenacles_F2	.cache\CE\{CEDA67B0-1F22-69AA-88A0-4C7E27C70314}.wem		\Containers\Default Work Unit\SFX\ShootTentacle\shootTenacles_F2		220596
+	719376861	mining_island	.cache\28\{2853F411-93F1-E48F-FB74-3FFFFBF59422}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\mining_island		1060068
 	766320165	shootTenacles_D2	.cache\9E\{9ECB7F44-CC6F-650A-3632-DAB5FEE9F63B}.wem		\Containers\Default Work Unit\SFX\ShootTentacle\shootTenacles_D2		220596
-	773018024	timespider	.cache\B6\{B6F4A03D-CFD5-C551-C09A-35C7E44B9E8C}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\timespider		10584096
-	849763107	TentacleNear	.cache\DD\{DDC8DF5A-AE4E-EDA1-DDB6-3AD2DC310D4F}.wem		\Containers\Default Work Unit\SFX\TentacleNear		10584096
-	1017687414	intro_2	.cache\7C\{7CD0348D-7A3F-8D96-E461-D3B78284F225}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_2		2205096
+	773018024	timespider	.cache\F2\{F246CF5A-582E-E5AA-0328-374EAA404961}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\timespider		835020
+	849763107	TentacleNear	.cache\69\{6912AAC5-C6C9-9027-5EA1-AFA8858483FC}.wem		\Containers\Default Work Unit\SFX\TentacleNear		733556
+	1017687414	intro_2	.cache\22\{227E6133-CADA-9152-460B-47542797FB75}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_2		175103
 

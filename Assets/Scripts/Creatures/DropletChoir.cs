@@ -164,13 +164,29 @@ public sealed class DropletChoir : MonoBehaviour
 
     private bool viewLocked;
     private Transform titleView;
+    private Camera titleCamera;
+    private float titleDistance, titleHalfHeight, titleTopMargin;
+
     /// <summary>
-    /// A region title: a one-off choir that hangs in the upper middle of the view (distance metres ahead,
-    /// raise metres above eye height), follows the view lazily, and is dense enough that its creatures
-    /// flow together into solid strokes. Creature count comes from the glyph's stroke length.
+    /// Keeps a screen title flush under the top edge of the screen: its top sits topMargin (a share of the
+    /// screen height) below the border, whatever the camera's field of view is right now.
+    /// </summary>
+    private void PlaceUnderTopBorder()
+    {
+        float fov = titleCamera != null ? titleCamera.fieldOfView : 60f;
+        float halfView = titleDistance * Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad);
+        float y = halfView * (1f - 2f * titleTopMargin) - titleHalfHeight;
+        transform.localPosition = new Vector3(0f, y, titleDistance);
+        transform.localRotation = Quaternion.identity;
+    }
+
+    /// <summary>
+    /// A region title: a one-off choir fixed to the camera (distance metres ahead) with its top just under
+    /// the top border of the screen (topMargin = gap as a share of the screen height), dense enough that
+    /// its creatures flow together into solid strokes. Creature count comes from the glyph's stroke length.
     /// </summary>
     public static DropletChoir SummonTitle(Transform view, string key, MonoBehaviour source, Material material,
-        float height = 1f, float distance = 4.5f, float hold = 6f, float raise = 1.15f)
+        float height = 1f, float distance = 4.5f, float hold = 6f, float topMargin = 0.035f)
     {
         const float titleSpacing = 0.045f;
         var strokes = new List<Vector2[]>();
@@ -183,13 +199,20 @@ public sealed class DropletChoir : MonoBehaviour
             for (int i = 1; i < stroke.Length; i++) length += Vector2.Distance(stroke[i - 1], stroke[i]);
         }
         int needed = Mathf.CeilToInt(length * (height / 6f) / titleSpacing);
+        float minY = float.MaxValue, maxY = float.MinValue;
+        foreach (Vector2[] stroke in strokes)
+            foreach (Vector2 p in stroke) { minY = Mathf.Min(minY, p.y); maxY = Mathf.Max(maxY, p.y); }
+        float halfHeight = strokes.Count > 0 ? (maxY - minY) * height / 6f * 0.5f : height * 0.5f;
         // Fixed in the camera's own space, like a title on the screen, but made of real creatures.
         var go = new GameObject("Summoned Title (" + key + ")");
         go.SetActive(false);
         go.transform.SetParent(view, false);
-        go.transform.localPosition = new Vector3(0f, raise, distance);
-        go.transform.localRotation = Quaternion.identity;
         var choir = go.AddComponent<DropletChoir>();
+        choir.titleCamera = view.GetComponent<Camera>();
+        choir.titleDistance = distance;
+        choir.titleTopMargin = topMargin;
+        choir.titleHalfHeight = halfHeight + 0.06f; // plus a bead's thickness at the top stroke
+        choir.PlaceUnderTopBorder();
         choir.ephemeral = true;
         choir.viewLocked = true;
         choir.titleView = view;
@@ -336,6 +359,7 @@ public sealed class DropletChoir : MonoBehaviour
         StepPhase();
         if (ephemeral) UpdatePresence(dt);
 
+        if (viewLocked) PlaceUnderTopBorder(); // follows field-of-view changes (sprinting, zoom)
         bool forming = phase == Phase.Gather || phase == Phase.Hold;
         formAmount = Mathf.MoveTowards(formAmount, forming ? 1f : 0f, dt / Mathf.Max(0.1f, travelTime));
         // A screen title is a child of the camera and needs no turning; others face the viewer slowly.

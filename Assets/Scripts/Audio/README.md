@@ -8,7 +8,7 @@ event names, so it doesn't care whether Wwise or Unity audio is playing.
 
 **Tools > Capstone > Audio > Set Up Adaptive Music In Open Scene** (`Editor/AudioSetup.cs`):
 
-- creates or loads the event bank `Assets/Audio/AudioEvents.asset`,
+- creates or loads the event bank `Assets/Audio/Resources/AudioEvents.asset` (in Resources so runtime setup can load it),
 - adds an `AudioManager` object and links the bank,
 - adds a `BGM_landmark` `MusicChannel` to the Hanging Spire, a `CaveMusicChannel` (`BGM_cave`) to the
   `ProceduralWorld`, and `Footsteps` to the player body.
@@ -26,6 +26,8 @@ Other menu items:
 | `AudioEventBank` | ScriptableObject: every event by name, plus creature type → layer mapping. |
 | `MusicChannel` | Makes a layer audible near this object (or inside its `zone` collider). |
 | `CaveMusicChannel` | `MusicChannel` that fades in by depth: on below the surface, fully on under the inner ceiling. |
+| `RegionMusicChannel` | `MusicChannel` for a map region: a cylinder between two heights, fading out over `fadeDistance`. |
+| `SceneAudioBoot` | When Scene_World loads, adds what Scene_Daniel has (see below). |
 | `Footsteps` | Posts a left / right footstep each time a leg in `FirstPersonBody` plants. |
 | `PlaceholderSynth` | Generates simple in-sync loops and blips so the system is audible without real assets. |
 
@@ -43,6 +45,28 @@ The manager rescans for creatures every `creatureScanInterval`, so creatures nee
 
 Current layers: `BGM_fuzzy` (FuzzCreature), `BGM_fluid` (FireEater), `BGM_cave` (underground),
 `BGM_landmark` (Hanging Spire).
+
+## Region music (replaces the base)
+
+A layer with `replacesBase` on is region music: as it fades in, the base track fades out (Wwise Game
+Parameter `BGM_basic` on the `basic_test` track, 100 = full). The other layers keep playing on top.
+In Wwise the region tracks sit in the same 60 s segment as `basic_test` (120 BPM, E minor), so the
+crossfade stays on the beat.
+
+| Layer | Wwise track | Region |
+| --- | --- | --- |
+| `BGM_flowers` | `flowers_bubbles` (among flowers and bubbles) | Flower field |
+| `BGM_hungrycave` | `hungry_cave` (hungry cave) | Cave under the forest |
+| `BGM_island` | `mining_island` (mining island) | Crystal sky mining island |
+
+## Scene_World
+
+Scene_World has no audio objects of its own; `SceneAudioBoot` adds them when it loads, so rebuilding the
+scene does not lose them: an `AkInitializer` (if missing), an `AudioManager` with the bank, an
+`AkAudioListener` on the main camera (if missing), `ClimbMusicChannel` on the spire, `ClimbReachSound`
+on the `HandClimber`, `Footsteps` on the body (if missing), and one `RegionMusicChannel` per region above.
+The flower field and cave use the same shapes as the region titles (`RegionTitles.WorldMapRegions`);
+the island is `WorldMapTerrain.IslandOffset` / `IslandRadius`, from 30 m below it upward.
 
 ## Code API (`AudioManager`, all static)
 

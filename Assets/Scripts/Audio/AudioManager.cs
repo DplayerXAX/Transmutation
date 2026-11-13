@@ -29,6 +29,8 @@ public sealed class AudioManager : MonoBehaviour
     [SerializeField] private string[] wwiseBanks = { "Transmutation" };
     [Tooltip("Posted on Start. Leave empty to start music from code.")]
     [SerializeField] private string startEvent = "PlayBGM";
+    [Tooltip("Wwise Game Parameter (0..100) on the base track; lowered while a region layer that replaces the base plays.")]
+    [SerializeField] private string baseParameter = "BGM_basic";
 
     [Header("Volume (Unity backend)")]
     [Range(0f, 1f)] public float masterVolume = 1f;
@@ -86,6 +88,7 @@ public sealed class AudioManager : MonoBehaviour
     private AudioEventDef baseDef;
     private AudioSource baseSource;
     private bool musicPlaying;
+    private float baseSent = -1f;
     private float beatDuration;
     private float lastBeatTime = -1f;
     private float lastGridHit = -1f;
@@ -105,6 +108,9 @@ public sealed class AudioManager : MonoBehaviour
     private float nextScan;
 
     public AudioEventBank Bank => bank;
+
+    /// <summary>For AudioManagers made at runtime: sets the bank before Start.</summary>
+    public void SetBank(AudioEventBank value) { if (bank == null) bank = value; }
     public bool UsingWwise => useWwise;
 
     private void Awake()
@@ -314,6 +320,7 @@ public sealed class AudioManager : MonoBehaviour
         }
         baseDef = null;
         musicPlaying = false;
+        baseSent = -1f;
         lastBeatTime = -1f;
     }
 
@@ -500,7 +507,18 @@ public sealed class AudioManager : MonoBehaviour
 
         baseFade = Mathf.MoveTowards(baseFade, baseFadeTarget, dt / 2f);
         float musicGain = masterVolume * musicVolume * baseFade;
-        if (baseSource != null) baseSource.volume = baseDef.volume * musicGain;
+
+        // Region music replaces the base track instead of adding to it.
+        float replaced = 0f;
+        foreach (Layer l in layers.Values)
+            if (l.def.replacesBase) replaced = Mathf.Max(replaced, l.weight);
+        float baseWeight = 1f - replaced;
+        if (baseSource != null) baseSource.volume = baseDef.volume * Mathf.Sin(baseWeight * Mathf.PI * 0.5f) * musicGain;
+        if (useWwise && !string.IsNullOrEmpty(baseParameter) && Mathf.Abs(baseWeight - baseSent) > 0.002f)
+        {
+            baseSent = baseWeight;
+            AkUnitySoundEngine.SetRTPCValue(baseParameter, baseWeight * 100f);
+        }
 
         foreach (Layer l in layers.Values) l.target = 0f;
 

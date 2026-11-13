@@ -215,7 +215,15 @@ public sealed class DropletTestDriver : MonoBehaviour
             yield return Wait(0.3f);
             float turnedError = title != null ? title.MeanPlaceError() : -1f;
             Vector3 viewAfter = title != null ? Camera.main.WorldToViewportPoint(title.Anchor) : Vector3.zero;
-            bool ok = title != null && error >= 0f && error < 0.08f && turnedError < 0.08f && Vector2.Distance(viewBefore, viewAfter) < 0.02f;
+            float top = 0f;
+            for (int i = 0; title != null && i < title.DropletCount; i++)
+            {
+                GlyphDroplet d = title.GetDroplet(i);
+                if (d != null && d.Presence > 0.5f) top = Mathf.Max(top, Camera.main.WorldToViewportPoint(d.transform.position).y);
+            }
+            Log($"  topmost creature at {top:F3} of the screen height (top border = 1)");
+            bool ok = title != null && error >= 0f && error < 0.08f && turnedError < 0.08f && Vector2.Distance(viewBefore, viewAfter) < 0.02f
+                && top > 0.9f && top < 0.99f;
             if (ok) passed++;
             Log($"{(ok ? "PASS" : "FAIL")} {region.name}: '{region.title}' appeared {Time.time - begin:F1} s after arriving at {floor}, {title?.GlyphDropletCount} creatures, place error {error * 100f:F1} cm (after a 50 deg turn {turnedError * 100f:F1} cm), screen spot {(Vector2)viewBefore} -> {(Vector2)viewAfter}, surface {title?.LastSurfaceMilliseconds:F2} ms");
         }

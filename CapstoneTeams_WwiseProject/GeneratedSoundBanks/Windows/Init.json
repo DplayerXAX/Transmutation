@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{34EF7C57-694E-1EA2-DA8E-865C25ED8C24}",
+    "Hash": "{F6E6DE33-3BDD-CD9A-0EA2-BBDF24EE08DD}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -80,16 +80,40 @@
       "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
      },
      {
+      "Id": "1241966871",
+      "Name": "BGM_island",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_island",
+      "GUID": "{256E7AAE-5B28-45E1-904F-C2466B357AF7}"
+     },
+     {
+      "Id": "1544215172",
+      "Name": "BGM_flowers",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_flowers",
+      "GUID": "{4B1C7467-AD65-46BA-AFA8-8104795DE517}"
+     },
+     {
       "Id": "1599936364",
       "Name": "BGM_timespider",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_timespider",
       "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
      },
      {
+      "Id": "2940023732",
+      "Name": "BGM_hungrycave",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_hungrycave",
+      "GUID": "{4F37A1BB-7E93-4E34-A356-960FA8D39809}"
+     },
+     {
       "Id": "3397956017",
       "Name": "BGM_bird",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
       "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
+     },
+     {
+      "Id": "3558075418",
+      "Name": "BGM_basic",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_basic",
+      "GUID": "{207E80F5-8088-4EAF-806C-E992905BD833}"
      },
      {
       "Id": "4101327976",
@@ -130,6 +154,6 @@
     ]
    }
   ],
-  "FileHash": "{347A93BA-AF16-3717-5F57-BF8875613113}"
+  "FileHash": "{D6F98976-3D3C-64C7-36C9-27A5E627ABCF}"
  }
 }

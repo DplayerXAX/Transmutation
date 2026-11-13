@@ -6,7 +6,7 @@
 				<MusicSwitchContainer Name="BGM" ID="{04398103-6A9C-4E42-BE05-7A67F718D5C9}" ShortID="75770381">
 					<ReferenceList>
 						<Reference Name="Conversion">
-							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+							<ObjectRef Name="Vorbis Quality High" ID="{53A9DE0F-3F4F-4B59-8614-3F9E3C7358FC}" WorkUnitID="{F6B2880C-85E5-47FA-A126-645B5DFD9ACC}"/>
 						</Reference>
 						<Reference Name="OutputBus">
 							<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
@@ -114,6 +114,40 @@
 												</AudioFileSource>
 											</ChildrenList>
 											<ObjectLists>
+												<ObjectList Name="RTPC">
+													<RTPC Name="" ID="{17E56DB6-762D-4281-89D2-6BEDF0A72EC2}" ShortID="693253661">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="BGM_basic" ID="{207E80F5-8088-4EAF-806C-E992905BD833}" WorkUnitID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{4839BF9F-9437-4BD9-8D42-6B5DD83CCA5F}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-96</YPos>
+																				<Flags>5</Flags>
+																				<SegmentShape>Log1</SegmentShape>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</ObjectList>
 												<ObjectList Name="Sequences">
 													<MusicTrackSequence Name="" ID="{0EFE6140-8E13-4DFC-9256-B62CDC7388CA}">
 														<ObjectLists>
@@ -582,6 +616,254 @@
 												</ObjectList>
 												<ObjectList Name="Sequences">
 													<MusicTrackSequence Name="" ID="{3170EE0F-D125-44A1-9904-1D58F5BF7FFF}"/>
+												</ObjectList>
+											</ObjectLists>
+										</MusicTrack>
+										<MusicTrack Name="mining_island" ID="{61FF8EB5-A98E-4239-B30E-4A1A41D6DD07}" ShortID="605322820">
+											<PropertyList>
+												<Property Name="Volume" Type="Real64">
+													<ValueList>
+														<Value>-3</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<ReferenceList>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+												</Reference>
+												<Reference Name="TransitionRoot">
+													<Custom>
+														<MusicTransition Name="Root" ID="{72CC095C-050B-4000-B4B4-1400320E4781}">
+															<PropertyList>
+																<Property Name="IsFolder" Type="bool" Value="True"/>
+															</PropertyList>
+															<TransitionInfo/>
+														</MusicTransition>
+													</Custom>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="mining island" ID="{407DF4FC-D6AC-483E-8307-376DC87A8B95}">
+													<Language>SFX</Language>
+													<AudioFile>mining island.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="719376861"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="RTPC">
+													<RTPC Name="" ID="{FC30C274-D840-4352-BC02-701D008C7788}" ShortID="865804023">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="BGM_island" ID="{256E7AAE-5B28-45E1-904F-C2466B357AF7}" WorkUnitID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{D1804924-0A46-46D0-9311-FF70B4153F0F}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-96</YPos>
+																				<Flags>5</Flags>
+																				<SegmentShape>Log1</SegmentShape>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</ObjectList>
+												<ObjectList Name="Sequences">
+													<MusicTrackSequence Name="" ID="{8C699C21-30A2-4C00-9AF8-EE74F4A34A88}">
+														<ObjectLists>
+															<ObjectList Name="Clips">
+																<MusicClip Name="mining island" ID="{41B8594B-1D83-4D9E-B279-CBEA752DC7F1}">
+																	<PropertyList>
+																		<Property Name="EndTrimOffset" Type="Real64" Value="60000"/>
+																		<Property Name="FadeInMode" Type="int16" Value="0"/>
+																		<Property Name="FadeOutMode" Type="int16" Value="0"/>
+																	</PropertyList>
+																	<AudioSourceRef Name="mining island" ID="{407DF4FC-D6AC-483E-8307-376DC87A8B95}"/>
+																</MusicClip>
+															</ObjectList>
+														</ObjectLists>
+													</MusicTrackSequence>
+												</ObjectList>
+											</ObjectLists>
+										</MusicTrack>
+										<MusicTrack Name="hungry_cave" ID="{1521BE74-A428-42BD-8477-1B0F665193AC}" ShortID="459158691">
+											<ReferenceList>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+												</Reference>
+												<Reference Name="TransitionRoot">
+													<Custom>
+														<MusicTransition Name="Root" ID="{ABB687CA-C04B-406F-BE87-521DE6F4B7FA}">
+															<PropertyList>
+																<Property Name="IsFolder" Type="bool" Value="True"/>
+															</PropertyList>
+															<TransitionInfo/>
+														</MusicTransition>
+													</Custom>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="hungry cave" ID="{9F0B7BD1-6085-4B5C-8272-2DAF1DA1BAFC}">
+													<Language>SFX</Language>
+													<AudioFile>hungry cave.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="427461893"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="RTPC">
+													<RTPC Name="" ID="{F56C3F3D-ABAD-489C-BF15-F2A0698FB62E}" ShortID="764521091">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="BGM_hungrycave" ID="{4F37A1BB-7E93-4E34-A356-960FA8D39809}" WorkUnitID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{36366FB8-FEBA-4DED-93EB-E946776BA4B8}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-96</YPos>
+																				<Flags>5</Flags>
+																				<SegmentShape>Log1</SegmentShape>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</ObjectList>
+												<ObjectList Name="Sequences">
+													<MusicTrackSequence Name="" ID="{92FDF961-C6EA-43F9-8C7C-8BAF67772BC3}">
+														<ObjectLists>
+															<ObjectList Name="Clips">
+																<MusicClip Name="hungry cave" ID="{746DEB7B-9ECE-4CF8-8AD4-85EEEE6E8E26}">
+																	<PropertyList>
+																		<Property Name="EndTrimOffset" Type="Real64" Value="60000"/>
+																		<Property Name="FadeInMode" Type="int16" Value="0"/>
+																		<Property Name="FadeOutMode" Type="int16" Value="0"/>
+																	</PropertyList>
+																	<AudioSourceRef Name="hungry cave" ID="{9F0B7BD1-6085-4B5C-8272-2DAF1DA1BAFC}"/>
+																</MusicClip>
+															</ObjectList>
+														</ObjectLists>
+													</MusicTrackSequence>
+												</ObjectList>
+											</ObjectLists>
+										</MusicTrack>
+										<MusicTrack Name="flowers_bubbles" ID="{FA4F5B77-1326-48C4-A389-C012A1624F76}" ShortID="836266490">
+											<PropertyList>
+												<Property Name="Volume" Type="Real64">
+													<ValueList>
+														<Value>-3</Value>
+													</ValueList>
+												</Property>
+											</PropertyList>
+											<ReferenceList>
+												<Reference Name="OutputBus">
+													<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+												</Reference>
+												<Reference Name="TransitionRoot">
+													<Custom>
+														<MusicTransition Name="Root" ID="{A8B6EF95-8687-49B8-9B9A-15AFC3B56C26}">
+															<PropertyList>
+																<Property Name="IsFolder" Type="bool" Value="True"/>
+															</PropertyList>
+															<TransitionInfo/>
+														</MusicTransition>
+													</Custom>
+												</Reference>
+											</ReferenceList>
+											<ChildrenList>
+												<AudioFileSource Name="among flowers and bubbles" ID="{0D67FEDA-C7A1-4C21-9374-67FC52A24B7E}">
+													<Language>SFX</Language>
+													<AudioFile>among flowers and bubbles.wav</AudioFile>
+													<MediaIDList>
+														<MediaID ID="117650681"/>
+													</MediaIDList>
+												</AudioFileSource>
+											</ChildrenList>
+											<ObjectLists>
+												<ObjectList Name="RTPC">
+													<RTPC Name="" ID="{84FD0004-E739-4A8D-8182-86782DD8B361}" ShortID="1046352982">
+														<PropertyList>
+															<Property Name="PropertyName" Type="string" Value="Volume"/>
+														</PropertyList>
+														<ReferenceList>
+															<Reference Name="ControlInput">
+																<ObjectRef Name="BGM_flowers" ID="{4B1C7467-AD65-46BA-AFA8-8104795DE517}" WorkUnitID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}"/>
+															</Reference>
+															<Reference Name="Curve">
+																<Custom>
+																	<Curve Name="" ID="{7FE8AF2B-A641-471F-BFC9-0CBAFC3F4E46}">
+																		<PropertyList>
+																			<Property Name="Flags" Type="int32" Value="3"/>
+																		</PropertyList>
+																		<PointList>
+																			<Point>
+																				<XPos>0</XPos>
+																				<YPos>-96</YPos>
+																				<Flags>5</Flags>
+																				<SegmentShape>Log1</SegmentShape>
+																			</Point>
+																			<Point>
+																				<XPos>100</XPos>
+																				<YPos>0</YPos>
+																				<Flags>37</Flags>
+																			</Point>
+																		</PointList>
+																	</Curve>
+																</Custom>
+															</Reference>
+														</ReferenceList>
+													</RTPC>
+												</ObjectList>
+												<ObjectList Name="Sequences">
+													<MusicTrackSequence Name="" ID="{71736363-40D5-4426-AC4D-13922B61BBF8}">
+														<ObjectLists>
+															<ObjectList Name="Clips">
+																<MusicClip Name="among flowers and bubbles" ID="{0FE7F7F2-8F2D-4DD3-B982-9181593F619C}">
+																	<PropertyList>
+																		<Property Name="EndTrimOffset" Type="Real64" Value="60000"/>
+																		<Property Name="FadeInMode" Type="int16" Value="0"/>
+																		<Property Name="FadeOutMode" Type="int16" Value="0"/>
+																	</PropertyList>
+																	<AudioSourceRef Name="among flowers and bubbles" ID="{0D67FEDA-C7A1-4C21-9374-67FC52A24B7E}"/>
+																</MusicClip>
+															</ObjectList>
+														</ObjectLists>
+													</MusicTrackSequence>
 												</ObjectList>
 											</ObjectLists>
 										</MusicTrack>
@@ -1057,7 +1339,7 @@
 									<ObjectRef Name="Near_14m" ID="{10BC6FC2-D821-4C28-A7A4-42487DED376E}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
 								</Reference>
 								<Reference Name="Conversion">
-									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+									<ObjectRef Name="Vorbis Quality High" ID="{53A9DE0F-3F4F-4B59-8614-3F9E3C7358FC}" WorkUnitID="{F6B2880C-85E5-47FA-A126-645B5DFD9ACC}"/>
 								</Reference>
 								<Reference Name="OutputBus">
 									<ObjectRef Name="SFX Audio Bus" ID="{8499FF44-7386-4B7F-886E-BFB4FB9C4126}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
@@ -1197,7 +1479,7 @@
 				<MusicPlaylistContainer Name="Tutorial" ID="{871A11E8-AA82-469B-A4C6-70D836E40149}" ShortID="160450458">
 					<ReferenceList>
 						<Reference Name="Conversion">
-							<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+							<ObjectRef Name="Vorbis Quality High" ID="{53A9DE0F-3F4F-4B59-8614-3F9E3C7358FC}" WorkUnitID="{F6B2880C-85E5-47FA-A126-645B5DFD9ACC}"/>
 						</Reference>
 						<Reference Name="OutputBus">
 							<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>

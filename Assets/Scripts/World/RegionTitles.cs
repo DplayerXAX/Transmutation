@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// When the player walks into a region (the flower field, the cave, the mushroom basin, the tower),
-/// glyph creatures condense out of the air in the upper middle of the screen (fixed to the camera) and write the region's
+/// glyph creatures condense out of the air flush under the top border of the screen (fixed to the camera) and write the region's
 /// title in the planet's script, hold it, scatter and evaporate (DropletChoir.SummonTitle).
 /// Regions are upright cylinders (centre, radius, height range); the first one containing the player
 /// wins. A region's title appears when the player enters it, at most once per Cooldown.
@@ -57,8 +57,8 @@ public sealed class RegionTitles : MonoBehaviour
     [Min(0f)] [SerializeField] private float settleTime = 1.2f;
     [Tooltip("How far in front of the eyes the title hangs (it follows the view lazily).")]
     [Min(1.5f)] [SerializeField] private float distanceAhead = 4f;
-    [Tooltip("How far above eye height the title's centre hangs (upper middle of the view).")]
-    [SerializeField] private float raise = 0.95f;
+    [Tooltip("Gap between the top border of the screen and the title's top, as a share of the screen height.")]
+    [Range(0f, 0.3f)] [SerializeField] private float topMargin = 0.035f;
     [Tooltip("Height of one glyph in metres.")]
     [Min(0.2f)] [SerializeField] private float glyphHeight = 0.75f;
     [Tooltip("Seconds the finished title holds before it scatters.")]
@@ -155,7 +155,7 @@ public sealed class RegionTitles : MonoBehaviour
         if (creatureMaterial == null) creatureMaterial = Resources.Load<Material>(MaterialResource);
         region.lastShown = Time.time;
         if (active != null) active.Release();
-        active = DropletChoir.SummonTitle(view, region.title, source, creatureMaterial, glyphHeight, distanceAhead, holdTime, raise);
+        active = DropletChoir.SummonTitle(view, region.title, source, creatureMaterial, glyphHeight, distanceAhead, holdTime, topMargin);
         active.name = "Region Title (" + region.name + ")";
         return active;
     }
