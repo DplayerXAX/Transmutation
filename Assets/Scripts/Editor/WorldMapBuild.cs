@@ -10,9 +10,9 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 /// <summary>
-/// Builds Scene_World (the combined map from Daniel's whiteboard) from a copy of Scene_LeafMap. Batch only, in the
-/// isolated test copy: -executeMethod WorldMapBuild.Run. Source scenes are never saved.
-/// Phase 1: terrain layout (WorldMapTerrain), Goo cave + Cistern sky island grafted into the saved terrain, spire and
+/// Builds Scene_World (the combined map from Daniel's whiteboard) from a copy of Scene_LeafMap.
+/// Source scenes are never saved. A live Editor rebuild opens Scene_World additively so another dirty scene remains open.
+/// Phase 1: terrain layout (WorldMapTerrain), Goo region + Cistern sky island grafted into the saved terrain, spire and
 /// bone mother moved onto their sinkholes, placeholder forest and ruins, review captures.
 /// </summary>
 public static class WorldMapBuild
@@ -29,16 +29,19 @@ public static class WorldMapBuild
 
     public static void Run()
     {
+        Scene previous = SceneManager.GetActiveScene();
+        Scene scene = default;
         try
         {
             var log = new List<string>();
-            Scene scene = CreateScene(log);
+            scene = CreateScene(log);
             ProceduralWorld world = FindInScene<ProceduralWorld>(scene);
             Terrain(world, log);
-            Graft(world, GooPath, WorldMapTerrain.GooOffset, WorldMapTerrain.GooLower, WorldMapTerrain.GooUpper, UndergroundCave, log);
+            Graft(world, GooPath, WorldMapTerrain.GooOffset, WorldMapTerrain.GooLower, WorldMapTerrain.GooUpper, SurfaceGoo, log);
             Vector3 r = new Vector3(WorldMapTerrain.IslandRadius * 1.2f, 0f, WorldMapTerrain.IslandRadius * 1.2f);
             Graft(world, CisternPath, WorldMapTerrain.IslandOffset, new Vector3(-r.x, -76f, -r.z), new Vector3(r.x, 48f, r.z), Island, log);
             AssetDatabase.SaveAssetIfDirty(world.SculptData);
+            PrepareSampler(world);
             Landmarks(scene, world, log);
             Player(scene, world, log);
             Transform root = scene.GetRootGameObjects().First(g => g.name == RootName).transform;
@@ -50,18 +53,28 @@ public static class WorldMapBuild
             AssetDatabase.SaveAssets();
             // Last: the terrain is final, so its meshes can be saved and Play skips generating them.
             WorldMapDress.BakeChunks(world, log);
+            WorldMapImport.SpreadGooLeaves(scene, log);
             EditorSceneManager.SaveScene(scene);
             AssetDatabase.SaveAssets();
             Directory.CreateDirectory(Captures);
+            Capture(scene, log);
             File.WriteAllText(Captures + "/Build.txt", string.Join("\n", log));
-            Capture(scene);
         }
         catch (Exception e)
         {
             Directory.CreateDirectory(Captures);
             File.WriteAllText(Captures + "/Build.txt", "FAIL\n" + e);
             Debug.LogException(e);
-            EditorApplication.Exit(1);
+            if (Application.isBatchMode) EditorApplication.Exit(1);
+            else throw;
+        }
+        finally
+        {
+            if (!Application.isBatchMode && previous.IsValid() && previous.isLoaded)
+            {
+                SceneManager.SetActiveScene(previous);
+                if (scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
+            }
         }
     }
 
@@ -76,10 +89,13 @@ public static class WorldMapBuild
 
     private static Scene CreateScene(List<string> log)
     {
-        if (!Application.isBatchMode) throw new InvalidOperationException("Run in the isolated batch copy.");
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before rebuilding Scene World.");
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+            if (SceneManager.GetSceneAt(i).path == ScenePath) throw new InvalidOperationException("Close Scene World before rebuilding it.");
         if (File.Exists(ScenePath)) AssetDatabase.DeleteAsset(ScenePath);
         if (!AssetDatabase.CopyAsset(LeafPath, ScenePath)) throw new InvalidOperationException("Could not copy " + LeafPath);
-        Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        Scene scene = EditorSceneManager.OpenScene(ScenePath, Application.isBatchMode ? OpenSceneMode.Single : OpenSceneMode.Additive);
+        SceneManager.SetActiveScene(scene);
 
         // The leaf's floating stones (with their bubble flowers) are kept and moved later to climb to the crystal island.
         var placed = scene.GetRootGameObjects().FirstOrDefault(g => g.name == "Placed World Objects");
@@ -122,7 +138,7 @@ public static class WorldMapBuild
         so.FindProperty("firstSinkholeDistance").floatValue = 0f;
         so.FindProperty("spawnFlatRadius").floatValue = 0f;
         so.FindProperty("rimHeight").floatValue = 0f;
-        so.FindProperty("placePlayerOnSurface").boolValue = true;
+        so.FindProperty("placePlayerOnSurface").boolValue = false;
         so.FindProperty("blockingRadius").floatValue = 190f;
         so.FindProperty("sculptData").objectReferenceValue = null;
         so.ApplyModifiedPropertiesWithoutUndo();
@@ -220,22 +236,62 @@ public static class WorldMapBuild
         finally { EditorSceneManager.CloseScene(source, true); SceneManager.SetActiveScene(own); }
     }
 
-    /// <summary>Cistern basin cut out as a floating island: its ground slab above a tapering, hanging rock root.</summary>
-    /// <summary>
-    /// Scene_Goo buried under the forest: below its roof (GooCeiling) the donor's cave and halls, above it the forest
-    /// floor, a solid seal round the box so the cave never opens into the inner world; the crater is the only mouth.
-    /// </summary>
-    private static float UndergroundCave(Vector3 q, float baseValue, Func<float> donor)
+    /// <summary>Blend Goo's exterior, canyon, cave and mountain into the nearby surface.</summary>
+    private static float SurfaceGoo(Vector3 q, float baseValue, Func<float> donor)
     {
         Vector3 lo = WorldMapTerrain.GooLower, hi = WorldMapTerrain.GooUpper;
-        float seal = 6f - Mathf.Min(Mathf.Min(q.x - lo.x, hi.x - q.x), Mathf.Min(Mathf.Min(q.z - lo.z, hi.z - q.z), q.y - lo.y));
-        float roof = q.y - WorldMapTerrain.GooCeiling(q.x, q.z);
-        // Above the roof: forest ground (base) with solid rock down to the roof. Below it: the donor cave.
-        float above = Mathf.Min(roof, baseValue);
-        if (roof > 3f && seal < -3f) return baseValue > 0f ? Mathf.Max(baseValue, Mathf.Min(roof, 3f)) : baseValue;
-        float cave = Mathf.Max(donor(), above);
-        if (seal > -3f) cave = Mathf.Max(cave, Mathf.Min(seal, roof > 0f ? baseValue : seal));
-        return cave;
+        float edge = Mathf.Min(Mathf.Min(q.x - lo.x, hi.x - q.x),
+            Mathf.Min(Mathf.Min(q.z - lo.z, hi.z - q.z), Mathf.Min(q.y - lo.y, hi.y - q.y)));
+        float fade = Mathf.SmoothStep(0f, 1f, edge / 10f);
+        // The donor mountain reaches the spawn clearing at its north-west edge.
+        Vector2 world = new Vector2(q.x + WorldMapTerrain.GooOffset.x, q.z + WorldMapTerrain.GooOffset.z);
+        float spawnDistance = Vector2.Distance(world, WorldMapTerrain.Spawn);
+        fade *= Mathf.SmoothStep(0f, 1f, (spawnDistance - 14f) / 17f);
+        float merged = Mathf.Lerp(baseValue, donor(), fade);
+        if (fade <= 0.95f) return merged;
+        Vector3 worldPoint = q + WorldMapTerrain.GooOffset;
+        return Mathf.Min(Mathf.Max(merged, GooClimbingShelves(worldPoint)), GooMountainSideOpenings(worldPoint));
+    }
+
+    /// <summary>Rounded stone rests inside Goo's open mountain exit, reaching toward its upper notch.</summary>
+    private static float GooClimbingShelves(Vector3 p)
+    {
+        Vector3[] centres = {
+            new Vector3(12f, 4f, -74f), new Vector3(4f, 10f, -74f),
+            new Vector3(14f, 16f, -74f), new Vector3(4f, 22f, -74f),
+            new Vector3(10f, 28f, -74f)
+        };
+        float best = -100f;
+        foreach (Vector3 c in centres)
+        {
+            float dx = (p.x - c.x) / 6.2f, dz = (p.z - c.z) / 5f;
+            float edge = (1f - Mathf.Sqrt(dx * dx + dz * dz)) * 5f;
+            edge += (Mathf.PerlinNoise(p.x * 0.23f + 19f, p.z * 0.23f + 37f) - 0.5f) * 0.55f;
+            float shelf = Mathf.Min(edge, Mathf.Min(c.y - p.y, p.y - (c.y - 2f)));
+            best = Mathf.Max(best, shelf);
+        }
+        return best;
+    }
+
+    /// <summary>Two irregular arches through the west flank, visible when arriving from the forest spawn.</summary>
+    private static float GooMountainSideOpenings(Vector3 p)
+    {
+        float lower = SideArch(p, new Vector2(-25f, -84f), new Vector2(8f, -77f), 5f, 7f, 3.7f, 7.5f);
+        float upper = SideArch(p, new Vector2(-24f, -61f), new Vector2(8f, -71f), 13f, 16f, 3.1f, 6.5f);
+        return Mathf.Min(lower, upper);
+    }
+
+    private static float SideArch(Vector3 p, Vector2 outside, Vector2 inside, float outerFloor,
+        float innerFloor, float halfWidth, float height)
+    {
+        Vector2 at = new Vector2(p.x, p.z), line = inside - outside;
+        float t = Mathf.Clamp01(Vector2.Dot(at - outside, line) / line.sqrMagnitude);
+        Vector2 centre = outside + line * t;
+        float rough = Mathf.Sin(p.x * 0.31f + p.z * 0.19f) * 0.35f;
+        float width = halfWidth + rough;
+        float floor = Mathf.Lerp(outerFloor, innerFloor, t);
+        float arch = height - Mathf.Pow(Mathf.Clamp01(Vector2.Distance(at, centre) / width), 2f) * 1.2f;
+        return Mathf.Max(Vector2.Distance(at, centre) - width, Mathf.Max(floor - p.y, p.y - floor - arch));
     }
 
     private static float Island(Vector3 q, float baseValue, Func<float> donor) => Mathf.Max(baseValue, IslandShape(q, donor));
@@ -252,18 +308,18 @@ public static class WorldMapBuild
         float R = WorldMapTerrain.IslandRadius;
         float a = Mathf.Atan2(q.z, q.x);
         float r = IslandRadial(q.x, q.z);
-        if (r > R + 4f || q.y < -74f) return -10f;
+        if (r > R + 4f || q.y < -43f) return -10f;
         float edge = R - r;
         float s = Mathf.Clamp01(r / R);
-        // The slab's underside dips from the rim to just above the donor's crust underside (-24).
-        float under = q.y - (-5f - 16f * (1f - s * s));
+        // A shallow slab leaves a broad open-air gap above the ground.
+        float under = q.y - (-4f - 10f * (1f - s * s));
         float slab = Mathf.Min(edge, under);
         float hanging = float.MinValue;
-        if (q.y < -12f)
+        if (q.y < -10f)
         {
             float lumps = 1f + (Mathf.PerlinNoise(a * 2.2f + 9f, q.y * 0.08f + 1f) - 0.5f) * 0.35f;
-            float radiusAt = Mathf.Pow(Mathf.Clamp01((q.y + 72f) / 58f), 0.8f) * R * 0.72f * lumps;
-            hanging = Mathf.Min(radiusAt - r, -12f - q.y + 4f);
+            float radiusAt = Mathf.Pow(Mathf.Clamp01((q.y + 42f) / 32f), 0.8f) * R * 0.60f * lumps;
+            hanging = Mathf.Min(radiusAt - r, -10f - q.y + 3f);
         }
         if (slab < -3f && hanging < -3f) return Mathf.Max(slab, hanging);
         float top = slab > -3f ? Mathf.Min(donor(), slab) : slab;
@@ -367,7 +423,7 @@ public static class WorldMapBuild
         var carrier = FindInScene<PlayerCreatureCarrier>(scene);
         Transform player = carrier.transform.root;
         Vector2 s = WorldMapTerrain.Spawn;
-        player.SetPositionAndRotation(new Vector3(s.x, WorldMapTerrain.SpawnHeight + 1.5f, s.y), Quaternion.LookRotation(new Vector3(0.15f, 0f, 1f)));
+        player.SetPositionAndRotation(new Vector3(s.x, WorldMapTerrain.SpawnHeight + 1.5f, s.y), Quaternion.LookRotation(Vector3.right));
         PrefabUtility.RecordPrefabInstancePropertyModifications(player);
         log.Add("Player spawn " + player.position);
     }
@@ -390,17 +446,17 @@ public static class WorldMapBuild
         }
         Cam("01_TopDown", new Vector3(0, 900, 15), new Vector3(0, 0, 15.01f), 30, true, 335);
         Cam("02_Oblique", new Vector3(30, 330, -470), new Vector3(10, 0, 70), 42);
-        Cam("03_SpawnView", new Vector3(-10, 9, -60), new Vector3(10, 6, 60), 70);
+        Cam("03_SpawnView", new Vector3(-173, -7, -105), new Vector3(-157, -6, -98), 70);
         Cam("04_CrackAndMother", new Vector3(-45, 30, 128), new Vector3(12, -16, 162), 60);
         Cam("05_RuinsFromCrack", new Vector3(10, 22, 135), new Vector3(0, 30, 250), 60);
-        Cam("06_CaveMouth", new Vector3(30, 28, -105), new Vector3(12, -2, -72), 60);
-        Cam("07_IslandFromFlowers", new Vector3(-150, 40, 20), new Vector3(0, 95, 60), 60);
-        Cam("08_MushroomBasin", new Vector3(20, 25, 20), new Vector3(125, -18, 40), 65);
-        Cam("09_GooCaveInside", new Vector3(4, -37, -175), new Vector3(4, -40, -125), 75);
-        Cam("10_FloatingStones", new Vector3(-175, 62, 20), new Vector3(-105, 60, 82), 62);
+        Cam("06_CaveMouth", new Vector3(8, 52, -218), new Vector3(8, 2, -176), 65);
+        Cam("07_IslandFromFlowers", new Vector3(-150, 40, 20), new Vector3(0, 99, 60), 60);
+        Cam("08_MushroomBasin", new Vector3(18, 28, 20), new Vector3(125, -29, 40), 65);
+        Cam("09_GooCaveInside", new Vector3(4, 2, -175), new Vector3(4, -1, -125), 75);
+        Cam("10_FloatingStones", new Vector3(-250, 110, -10), new Vector3(-150, 55, 65), 75);
     }
 
-    private static void Capture(Scene scene)
+    private static void Capture(Scene scene, List<string> log = null)
     {
         SceneManager.SetActiveScene(scene);
         var world = FindInScene<ProceduralWorld>(scene);
@@ -421,7 +477,14 @@ public static class WorldMapBuild
                 RenderSettings.fog = camera.name.StartsWith("01") || camera.name.StartsWith("02") || camera.name.StartsWith("09") ? false : fog;
                 camera.targetTexture = target; camera.aspect = 4f / 3f; camera.Render(); camera.Render();
                 RenderTexture.active = target; texture.ReadPixels(new Rect(0, 0, 1600, 1200), 0, 0); texture.Apply();
-                File.WriteAllBytes(Captures + "/" + camera.name + ".png", texture.EncodeToPNG());
+                byte[] png = texture.EncodeToPNG();
+                try { File.WriteAllBytes(Captures + "/" + camera.name + ".png", png); }
+                catch (IOException)
+                {
+                    string alternate = Captures + "/" + camera.name + "_" + DateTime.Now.ToString("yyyyMMdd_HHmmss_fff") + ".png";
+                    File.WriteAllBytes(alternate, png);
+                    log?.Add("Capture in use; wrote " + alternate + " instead.");
+                }
                 camera.targetTexture = null; camera.gameObject.SetActive(false);
             }
         }

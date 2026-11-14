@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c176e8d13bf61b4191a526377e71c2f, type: 3}
+  m_Name: BasiltLand
+  m_EditorClassIdentifier: Assembly-CSharp::TerrainSculptData
+  headroom: 6
+  editedSamples: 0
+  bakedFrom: Basilt v3 / enclosing megavine jungle
+  layout: '{"worldSize":{"x":480.0,"y":576.0},"cellSize":2.0,"chunkCells":24,"seed":1147,"leafMap":false,"leafScale":1.0,"worldMap":false,"surfaceAmplitude":32.0,"surfaceFrequency":0.013000000268220902,"ridges":0.699999988079071,"overhangAmplitude":5.0,"overhangFrequency":0.05999999865889549,"spawnFlatRadius":18.0,"spawnBlend":30.0,"rimHeight":30.0,"basin":false,"basinFloor":0.6200000047683716,"basinSlope":0.30000001192092898,"crustThickness":9.0,"innerGap":20.0,"ceilingMirror":0.800000011920929,"innerInvert":1.0,"innerDetail":5.0,"caveFrequency":0.02500000037252903,"caveWidth":0.11999999731779099,"caveDepth":14.0,"sinkholeCount":0,"sinkholeRadius":{"x":4.0,"y":7.0},"firstSinkholeDistance":0.0,"erosionTestCourse":false,"noiseOffset":{"x":948.07861328125,"y":368.479736328125},"sinkholes":[],"recipe":{"kind":3,"version":3,"mountainHeight":310.0,"mountainFrequency":0.0035000001080334188,"overhangStrength":80.0,"cavernWidth":0.08500000089406967,"islandCount":24,"islandElevation":{"x":340.0,"y":490.0},"islandRadius":{"x":40.0,"y":85.0},"verticalBounds":{"x":-30.0,"y":86.0},"baseSampleSpacing":9.0,"safeSpawn":{"x":-24.0,"y":1.5645233392715455,"z":-267.0}}}'
+  checks:
+  - 25.990604
+  - 28.092333
+  - 5.408654
+  - 10.485619
+  - 0.39334488
+  - 30.481583
+  - -0.85190964
+  - 23.300219
+  - 24.299866
+  - 4.8102894
+  - 15.701504
+  - 25.831154
+  - 12.918316
+  - 13.049909
+  - 20.409657
+  - 29.107227
+  packedEdits: 
+  revision: 5

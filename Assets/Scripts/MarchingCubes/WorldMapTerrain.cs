@@ -13,14 +13,17 @@ public static class WorldMapTerrain
 {
     // ---------------- Layout (world metres) ----------------
 
-    public static readonly Vector2 Spawn = new Vector2(-10f, -55f);
-    public const float SpawnHeight = 4f;
+    public static readonly Vector2 Spawn = new Vector2(-174f, -105f);
+    public const float SpawnHeight = -9.4f;
+    public static Vector2 SpawnExit => Spawn + new Vector2(40f, 8f);
     /// <summary>
-    /// Scene_Goo is grafted underground with this offset; its box (donor space) is GooLower..GooUpper. The forest
-    /// floor stays on top: the cave is roofed over below GooCeiling (donor y), and only its crater opens as the mouth.
+    /// Scene_Goo's exterior plain meets the world surface; its cave, canyon and mountain retain their donor heights.
     /// </summary>
-    public static readonly Vector3 GooOffset = new Vector3(4f, -34f, -138f);
-    public static readonly Vector3 GooLower = new Vector3(-42f, -30f, -95f), GooUpper = new Vector3(42f, 42f, 84f);
+    public static readonly Vector3 GooOffset = new Vector3(4f, 5f, -138f);
+    public static readonly Vector3 GooLower = new Vector3(-55f, -44f, -100f), GooUpper = new Vector3(55f, 50f, 116f);
+    public static bool InGooExterior(float x, float z) =>
+        x > GooOffset.x + GooLower.x - 4f && x < GooOffset.x + GooUpper.x + 4f &&
+        z > GooOffset.z + GooLower.z - 4f && z < GooOffset.z + GooUpper.z + 4f;
     /// <summary>The Goo crater (donor x, z): the one opening of the cave onto the forest floor.</summary>
     public static readonly Vector2 GooMouth = new Vector2(8f, 66f);
     public const float GooMouthRadius = 10f;
@@ -34,13 +37,12 @@ public static class WorldMapTerrain
     }
     public static readonly Vector2 FlowerCentre = new Vector2(-55f, 45f);
     public static readonly Vector2 MushroomCentre = new Vector2(125f, 40f);
-    /// <summary>Terrain under Scene_FungalHollow's floor mesh; the bowl wall starts at its edge (r 74, mesh edge ~ -8).</summary>
-    public const float MushroomFloor = -22f, MushroomRadius = 74f, MushroomLip = -9f;
-    /// <summary>Scene_FungalHollow content is moved by this (its cavern floor sits just above MushroomFloor).</summary>
-    public static readonly Vector3 MushroomOffset = new Vector3(125f, -14f, 40f);
+    /// <summary>The mushroom hollow's centre follows the donor floor; its sides are part of the world mesh.</summary>
+    public const float MushroomRadius = 64f;
+    public static readonly Vector3 MushroomOffset = new Vector3(125f, -36f, 40f);
     /// <summary>Scene_CisternBasin is grafted onto a floating island: donor origin moves here.</summary>
-    public static readonly Vector3 IslandOffset = new Vector3(0f, 88f, 60f);
-    public const float IslandRadius = 98f;
+    public static readonly Vector3 IslandOffset = new Vector3(0f, 92f, 60f);
+    public const float IslandRadius = 88f;
     public static readonly Vector2 SpireSpot = new Vector2(0f, 250f);
     public const float SpireHoleRadius = 7f;
     public static readonly Vector2 MotherHole = new Vector2(2f, 161f);
@@ -113,26 +115,27 @@ public static class WorldMapTerrain
             h = Mathf.Lerp(h, 7f + climb * 30f + swells, flower);
         }
 
-        // The mushroom basin: a sunken bowl, its west lip low where the ramp comes down.
+        // A broad west slope leaves the flower field, then breaks into a deep mushroom hollow.
+        // The floor and walls are one continuous marching-cubes surface, with no imported box walls.
         Vector2 m = new Vector2(x - MushroomCentre.x, z - MushroomCentre.y);
         float angle = Mathf.Atan2(m.y, m.x);
         float wobble = 1f + 0.07f * Mathf.Sin(angle * 3f + 0.6f) + 0.05f * Mathf.Sin(angle * 7f - 1.1f);
         float r = m.magnitude / wobble;
         float westness = Mathf.Clamp01(-Mathf.Cos(angle) * 1.3f - 0.3f);
-        float rim = Mathf.Lerp(16f, 7f, westness) + (Mathf.PerlinNoise(angle * 2f + 11f, 3f) - 0.5f) * 6f;
-        float bowl = r < MushroomRadius ? MushroomFloor
-            : Mathf.Lerp(MushroomLip, rim, Mathf.SmoothStep(0f, 1f, (r - MushroomRadius) / 18f));
-        // Just under the cavern floor mesh, so its square edges meet the ground instead of hanging over the ramp.
-        if (Mathf.Abs(m.x) < 75f && Mathf.Abs(m.y) < 75f) bowl = Mathf.Max(bowl, FungalFloor(m.x, m.y) + MushroomOffset.y - 1.2f);
-        float basin = 1f - Mathf.SmoothStep(0f, 1f, (r - MushroomRadius - 18f) / 22f);
+        float rim = Mathf.Lerp(13f, 7f, westness) + (Mathf.PerlinNoise(angle * 2f + 11f, 3f) - 0.5f) * 4f;
+        float floor = FungalFloor(m.x, m.y) + MushroomOffset.y - 0.25f;
+        float innerEdge = 62f;
+        float breakAt = Mathf.Lerp(71f, 80f, westness);
+        float rimAt = Mathf.Lerp(91f, 111f, westness);
+        float upper = Mathf.Lerp(-9f, rim, Mathf.SmoothStep(0f, 1f, (r - breakAt) / (rimAt - breakAt)));
+        float bowl = r <= innerEdge ? floor : r < breakAt
+            ? Mathf.Lerp(floor, -9f, Mathf.SmoothStep(0f, 1f, (r - innerEdge) / (breakAt - innerEdge))) : upper;
+        float basin = 1f - Mathf.SmoothStep(0f, 1f, (r - rimAt) / 12f);
         h = Mathf.Lerp(h, bowl, basin);
 
-        // The cave's crater mouth opens in a shallow hollow of the forest floor.
-        h -= 2.5f * Mathf.Exp(-(new Vector2(x, z) - CaveMouth).sqrMagnitude / 500f);
-
         h = Path(h, x, z, FlowerRoute, 5f, 7f);
-        h = Path(h, x, z, RampRoute, 6f, 9f);
-        h = Clearing(h, x, z, Spawn.x, Spawn.y, 15f, SpawnHeight);
+        // The former narrow mushroom ramp is now the broad west flank of the hollow.
+        // The forest start is a carved room beneath this intact surface, not a flat clearing.
 
         // The ground falls in gently towards the crack rim, so it reads from a distance.
         float d = CrackDistance(new Vector2(x, z), out float t);
@@ -232,6 +235,7 @@ public static class WorldMapTerrain
     /// <summary>Applied after the base crust / inner world density: cuts the crack and keeps the mother's ledge.</summary>
     public static float ShapeDensity(Vector3 p, float density)
     {
+        density = SpawnCave(p, density);
         float d = CrackDistance(new Vector2(p.x, p.z), out float t), w = CrackHalfWidth(t);
         if (d < w + 6f)
         {
@@ -247,6 +251,26 @@ public static class WorldMapTerrain
             density = Mathf.Max(density, JamTop(p.x, p.z) - p.y);
         }
         return density;
+    }
+
+    /// <summary>A small forest chamber, a left bend, then a shroom ledge and a sloped daylight exit.</summary>
+    private static float SpawnCave(Vector3 p, float density)
+    {
+        Vector2 q = new Vector2(p.x - Spawn.x, p.z - Spawn.y);
+        if (q.sqrMagnitude > 47f * 47f) return density;
+        float rough = (Mathf.PerlinNoise(p.x * 0.19f + 31f, p.z * 0.18f + 19f) - 0.5f) * 1.1f;
+        float room = (new Vector2((q.x + 1f) / 11f, q.y / 9f).magnitude - 1f) * 9f + rough;
+        room = Mathf.Max(room, Mathf.Max(-10.5f - p.y, p.y - 1.2f - rough));
+        float turn = Mathf.Min(Distance(q, new Vector2(6f, -1f), new Vector2(13f, 8f), out _),
+            Distance(q, new Vector2(13f, 8f), new Vector2(27f, 8f), out _));
+        float corridor = Mathf.Max(turn - 3.8f + rough * 0.35f,
+            Mathf.Max(-10.5f - p.y, p.y - 2.8f));
+        // The first rise is about 70% of the old hard jump. The remaining height unfolds
+        // over a long walkable ramp, open to daylight beyond the turn.
+        float exitFloor = Mathf.Lerp(-0.3f, 6f, Mathf.SmoothStep(0f, 1f, (q.x - 27f) / 13f));
+        float exit = Mathf.Max(Mathf.Abs(q.y - 8f) - 5.5f,
+            Mathf.Max(exitFloor - p.y, Mathf.Max(24f - q.x, q.x - 40f)));
+        return Mathf.Min(density, Mathf.Min(room, Mathf.Min(corridor, exit)));
     }
 
     // ---------------- Helpers ----------------

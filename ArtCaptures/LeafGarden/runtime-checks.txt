@@ -1,0 +1,25 @@
+PASS Player loop advances
+PASS GPU leaf buffer allocated
+PASS Resting carpet has no launch volume
+PASS Garden is protected from carrying, capture and whole-patch consumption
+PASS Collective garden has no physical body or leaf colliders
+PASS Demonstration creature walks across the garden
+PASS Moving creatures visibly displace actual GPU leaves
+PASS Gathering becomes active tornado
+PASS Tornado center is active
+PASS Distant carpet remains outside tornado
+PASS Volume does not extend above tornado
+PASS GPU leaf positions remain finite
+PASS Leaf geometry reaches the selected tornado height
+PASS Only a local fraction of the carpet becomes airborne
+PASS Dynamic body receives upward launch
+PASS Launch preserves horizontal momentum
+PASS Compound colliders and staying inside do not stack impulses
+PASS Launch is recorded
+PASS Exit and re-entry permit another launch
+PASS Anchored bodies are excluded
+PASS Actual project player receives external upward motion
+PASS Actual player reaches at least the full tornado height
+MEASURED player first apex 91.26 m; tornado 80 m; target apex 92.00 m
+PASS Tornado settles back to resting carpet
+PASS Finished event has no lingering launch volume

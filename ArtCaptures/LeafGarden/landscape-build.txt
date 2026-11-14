@@ -1,0 +1,1 @@
+Sculptable meadow 384x448m; 4 colonies, 100000 leaves each; ground map 513x513; terrain heights (-1.08, 51.86); mesh cache True; spawn (0.00, 37.97, -112.00).

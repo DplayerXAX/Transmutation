@@ -22,12 +22,17 @@ public sealed class ErosiveRain : MonoBehaviour
     [Min(0f)] [SerializeField] private float firstStormDelay = 3f;
     [Min(0f)] [SerializeField] private float windSpeed = 0.6f;
     [Min(0f)] [SerializeField] private float fallSpeed = 3f;
+    [Header("Scene World sky island")]
+    [Tooltip("Bias automatic storms to the crystal island, with occasional rain underneath it.")]
+    [SerializeField] private bool favorSkyIsland;
+    [Range(0f, 1f)] [SerializeField] private float islandStormShare = 5f / 7f;
     private static readonly Vector3[] ring = { Vector3.zero, Vector3.right, Vector3.left, Vector3.forward, Vector3.back,
         new Vector3(0.7f, 0f, 0.7f), new Vector3(-0.7f, 0f, 0.7f), new Vector3(0.7f, 0f, -0.7f), new Vector3(-0.7f, 0f, -0.7f) };
     private ErosiveFluidSource source;
     private float timer, stormLength, accumulator, heightTimer;
     private bool raining;
     private Vector3 centre, wind;
+    private bool pendingBelowIsland, stormBelowIsland;
     public bool Raining => raining;
     /// <summary>Cloud centre; drops start at this height.</summary>
     public Vector3 StormCentre => centre;
@@ -64,7 +69,7 @@ public sealed class ErosiveRain : MonoBehaviour
         if (!raining)
         {
             if (timer > 0f) return;
-            if (TryPickSite(fluid.World, out Vector3 site)) Begin(site); else timer = 1f;
+            if (TryPickSite(fluid.World, out Vector3 site)) Begin(site, pendingBelowIsland); else timer = 1f;
             return;
         }
         if (timer <= 0f)
@@ -81,7 +86,9 @@ public sealed class ErosiveRain : MonoBehaviour
         if (heightTimer <= 0f)
         {
             heightTimer = 1f;
-            if (CloudHeight(fluid.World, centre, out float y)) centre.y = Mathf.Max(centre.y, y);
+            bool found = stormBelowIsland ? BelowIslandCloudHeight(fluid.World, centre, out float y)
+                : CloudHeight(fluid.World, centre, out y);
+            if (found) centre.y = stormBelowIsland ? y : Mathf.Max(centre.y, y);
         }
         accumulator += dropsPerSecond * Intensity * dt;
         int count = Mathf.Min(16, Mathf.FloorToInt(accumulator));
@@ -94,8 +101,9 @@ public sealed class ErosiveRain : MonoBehaviour
         }
     }
 
-    private void Begin(Vector3 site)
+    private void Begin(Vector3 site, bool belowIsland = false)
     {
+        stormBelowIsland = belowIsland;
         centre = site; raining = true; accumulator = 0f; heightTimer = 1f; Intensity = 0f;
         stormLength = timer = Random.Range(stormDuration.x, Mathf.Max(stormDuration.x, stormDuration.y));
         Vector2 heading = Random.insideUnitCircle.normalized;
@@ -104,6 +112,21 @@ public sealed class ErosiveRain : MonoBehaviour
 
     private bool TryPickSite(ProceduralWorld world, out Vector3 site)
     {
+        pendingBelowIsland = false;
+        if (favorSkyIsland)
+        {
+            bool below = Random.value >= islandStormShare;
+            for (int attempt = 0; attempt < 24; attempt++)
+            {
+                Vector2 spread = Random.insideUnitCircle * (WorldMapTerrain.IslandRadius * 0.58f);
+                Vector3 point = WorldMapTerrain.IslandOffset + new Vector3(spread.x, 0f, spread.y);
+                bool found = below ? BelowIslandCloudHeight(world, point, out float y) : CloudHeight(world, point, out y);
+                if (!found || !world.IsRegionReady(new Vector3(point.x, y - cloudHeight, point.z), stormRadius)) continue;
+                pendingBelowIsland = below;
+                site = new Vector3(point.x, y, point.z);
+                return true;
+            }
+        }
         Bounds bounds = world.VolumeBounds;
         Camera view = Camera.main;
         for (int attempt = 0; attempt < 12; attempt++)
@@ -125,6 +148,20 @@ public sealed class ErosiveRain : MonoBehaviour
         }
         site = default;
         return false;
+    }
+
+    private bool BelowIslandCloudHeight(ProceduralWorld world, Vector3 point, out float height)
+    {
+        float highest = float.NegativeInfinity;
+        float top = WorldMapTerrain.IslandOffset.y - 35f;
+        foreach (Vector3 direction in ring)
+        {
+            Vector3 from = new Vector3(point.x, top, point.z) + direction * stormRadius;
+            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, world.VolumeBounds.size.y, 1 << world.TerrainLayer,
+                QueryTriggerInteraction.Ignore) && world.OwnsCollider(hit.collider)) highest = Mathf.Max(highest, hit.point.y);
+        }
+        height = highest + cloudHeight;
+        return !float.IsNegativeInfinity(highest);
     }
 
     // Highest generated ground under the storm footprint, plus the cloud height.

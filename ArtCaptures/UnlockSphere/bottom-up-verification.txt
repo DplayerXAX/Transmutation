@@ -1,0 +1,11 @@
+PASS player found
+PASS actual reflection visit entered
+PASS first unlock restores the bottom band
+PASS restoration advances in real frames
+PASS new bands coexist with the first restoration
+PASS bands settle precisely
+PASS complete sphere has seamless surface
+PASS one-fragment mode remains available
+PASS reflection visit exits normally
+PASS visit tracker is released
+COMPLETE; progress remained in memory and no save APIs were called.

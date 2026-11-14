@@ -1,0 +1,21 @@
+PASS resting places automatically have a reflection controller
+PASS exactly one reflection rig
+PASS generic creature inspector override works
+PASS spawn/world seat is movable and invulnerable
+PASS real pickup aim accepts the portable seat
+PASS shared right-mouse carry path picks up world seat
+PASS seat can be relocated and released
+PASS world seat remains invulnerable
+PASS world seat accepts normal sit interaction
+PASS seated player enters reflection through RequestEntry
+PASS return post is fixed and protected
+PASS return post rejects damage
+PASS return post cannot be destroyed or moved
+PASS player physics restored after seated entry
+PASS all locked geometry stays at least 3.6 metres outside the assembled sphere
+PASS return from reflection succeeds
+PASS World spire geometry survives reflection suspension
+PASS return restores world seat
+PASS world seat is movable again after return
+PASS player remains dynamic after return
+COMPLETE; creature save unchanged (discovery radius zero, progress in memory).

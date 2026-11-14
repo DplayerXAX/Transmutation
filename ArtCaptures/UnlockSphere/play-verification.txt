@@ -1,0 +1,18 @@
+PASS actual reflection visit contains one 232-fragment tracker
+PASS frames advance and locked fragments drift
+PASS motion disabled gives a static scattered arrangement
+PASS one family starts eight fragment restorations
+PASS restoration positions advance during real frames
+PASS simultaneous family unlocks coexist with an ongoing restoration
+PASS partial progress settles
+PASS completion displays a whole seamless sphere
+PASS one-fragment mode uses the live roster count
+PASS leaving removes tracker and visit objects
+PASS re-entry immediately displays existing partial progress and ignores stale IDs
+PASS re-entry does not duplicate the tracker
+PASS sphere remains decorative in the separate physics scene
+PASS active sphere receives the existing progression notification
+PASS notified unlock settles
+COMPLETE: creature save APIs were never called; progress remained in memory.
+
+Final palette compiled and recaptured. Isolated editor previews verified; all preview meshes/materials released on close.
