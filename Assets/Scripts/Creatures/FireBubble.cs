@@ -139,6 +139,18 @@ public sealed class FireBubble : LeashBubble
         bubbleBody.linearVelocity = direction.normalized * speed;
     }
 
+    /// <summary>
+    /// Carries a floating bubble higher and faster, e.g. on the warm air rising out of a canyon. Only ever raises
+    /// its ceiling, rise speed and flight time; a bubble already falling is left alone.
+    /// </summary>
+    public void Updraft(float ceilingWorldY, float riseSpeed, float flightSeconds)
+    {
+        if (descending || IsBoundToBone || IsDead) return;
+        fallStartWorldY = Mathf.Max(fallStartWorldY, ceilingWorldY);
+        upwardSpeed = Mathf.Max(upwardSpeed, riseSpeed);
+        lifetimeSeconds = Mathf.Max(lifetimeSeconds, elapsedTime + flightSeconds);
+    }
+
     public bool BindToBone(BoneChild owner) => BindToBone(owner, owner != null ? owner.transform : null);
     public bool BindToBone(BoneKiln owner, Transform bone) => BindToBone((Component)owner, bone);
 

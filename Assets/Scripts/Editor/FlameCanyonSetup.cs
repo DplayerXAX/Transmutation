@@ -9,22 +9,23 @@ using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 /// <summary>
-/// Authors Flame Canyon: a region built only from the heat creatures that already exist. A box canyon is cut
-/// 24 m into a plateau; the walls are taller than a fire bubble rises (20 m), so everything the fire flowers
-/// bloom stays inside and the canyon is one closed heat loop.
+/// Authors Flame Canyon: a region built only from the heat creatures that already exist. A long, narrow slot
+/// canyon is cut 44 m into a plateau, its floor only a few metres wide. Steam seeps up its whole length and
+/// hangs about the rim, half hiding the floor from above, and its updraft lifts the fire bubbles the flowers
+/// bloom up and out over the plateau (CanyonSteam).
 ///
-///   South   Cold Reach: where the player starts. Fuzz and closed fire flowers, and no fire source. Nothing
-///           here wakes up until heat is carried in (a fire source can be carried and shoots fire bubbles).
-///   Centre  Hearth: the main fire source in an ember pit. Its heat reaches about 17 m, the whole chamber;
+///   South   Cold Reach: where the player starts. Fuzz and closed fire flowers, and no heat at all.
+///   Centre  Hearth: a geothermal vent steaming in an ember pit. The ground keeps refilling it (GeothermalVent),
+///           so it is the canyon's lasting heat input. Its heat reaches about 17 m, the whole chamber;
 ///           fire flowers stand at 3, 6, 10 and 14 m (the nearer, the faster they bloom), fire eaters work
 ///           the fallen bubbles and fuzz warm red at the edge.
 ///   West    Fuzz Den: a dead-end side canyon off the Hearth. Cold; fuzz and closed flowers.
-///   Bend    Ember Gate: a second, smaller fire garden at the north-east bend.
+///   Bend    Ember Gate: a second, smaller fire garden round a weaker vent at the north-east bend.
 ///   North   Bone Hollow: bone children loop round a charred nest that releases fire bubbles, with a
 ///           tentacle creature to rein them (built in play mode by FlameCanyonLife).
 ///
 /// The canyon floor and walls are drawn with a fire-coloured copy of the inner-world material, its rings
-/// centred on the Hearth. The world object sits 24 m up so the canyon floor is at y = 0, the same height fire bubbles are tuned for.
+/// centred on the Hearth. The world object sits 44 m up so the canyon floor is at y = 0.
 /// The terrain is baked to a TerrainSculptData asset and cut from code in terraces (wide at the rim, narrow at
 /// the floor), so it can be hand-edited afterwards in the Sculpt And Place window.
 /// </summary>
@@ -37,25 +38,25 @@ public static class FlameCanyonSetup
     private const string InnerMaterialPath = "Assets/Materials/World/MAT_FlameCanyon_Inner.mat";
 
     /// <summary>Height of the plateau above the canyon floor (the floor is at y = 0).</summary>
-    private const float Depth = 24f;
+    private const float Depth = 44f;
     /// <summary>World heights of the terraces, rim first. Steps stay under the narrowest brush radius.</summary>
-    private static readonly float[] Levels = { 22f, 18f, 14f, 10f, 6f, 2f, 0f };
+    private static readonly float[] Levels = { 42f, 38f, 34f, 30f, 26f, 22f, 18f, 14f, 10f, 6f, 2f, 0f };
     /// <summary>Each terrace above the floor is this much wider than the one below it.</summary>
-    private const float Terrace = 1.6f;
+    private const float Terrace = 0.6f;
     /// <summary>Share of a brush radius that ends up flat (the rest is the wall).</summary>
     private const float FlatShare = 0.65f;
-    private const float CorridorRadius = 10f;
+    private const float CorridorRadius = 5f;
 
     private static readonly Vector2[] MainPath =
     {
-        new Vector2(-6f, -70f), new Vector2(-26f, -42f), new Vector2(8f, -6f),
-        new Vector2(34f, 30f), new Vector2(6f, 54f), new Vector2(-8f, 68f),
+        new Vector2(-6f, -108f), new Vector2(-28f, -80f), new Vector2(-20f, -46f), new Vector2(8f, -6f),
+        new Vector2(34f, 30f), new Vector2(24f, 62f), new Vector2(-4f, 84f), new Vector2(-12f, 108f),
     };
     private static readonly Vector2[] DenPath = { new Vector2(8f, -6f), new Vector2(-16f, 6f), new Vector2(-34f, 14f) };
 
-    private static readonly Vector2 ColdReach = new Vector2(-6f, -70f), Hearth = new Vector2(8f, -6f), EmberGate = new Vector2(34f, 30f),
-        BoneHollow = new Vector2(-8f, 68f), FuzzDen = new Vector2(-34f, 14f);
-    private const float ColdReachRadius = 16f, HearthRadius = 26f, EmberGateRadius = 15f, BoneHollowRadius = 21f, FuzzDenRadius = 14f;
+    private static readonly Vector2 ColdReach = new Vector2(-6f, -108f), Hearth = new Vector2(8f, -6f), EmberGate = new Vector2(34f, 30f),
+        BoneHollow = new Vector2(-12f, 108f), FuzzDen = new Vector2(-34f, 14f);
+    private const float ColdReachRadius = 12f, HearthRadius = 19f, EmberGateRadius = 11f, BoneHollowRadius = 17f, FuzzDenRadius = 10f;
 
     private struct Sample { public Vector2 at, dir; }
 
@@ -68,11 +69,11 @@ public static class FlameCanyonSetup
         for (int i = 0; i < SceneManager.sceneCount; i++)
             if (SceneManager.GetSceneAt(i).isDirty) throw new InvalidOperationException("Save or discard changes in the open scenes first.");
 
-        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PlayerObjects.prefab");
+        var playerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/PlayerObjects.prefab");
         var surface = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_World_Surface.mat");
         var inner = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/World/MAT_World_Inner.mat");
-        var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/FireSource.prefab");
-        var flowerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire Flower.prefab");
+        var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire/FireSource.prefab");
+        var flowerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Creatures/Fire/Fire Flower.prefab");
         var bone = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/Landmarks/MAT_Landmark_BoneMarble.mat");
         if (playerPrefab == null || surface == null || inner == null || sourcePrefab == null || flowerPrefab == null || bone == null)
             throw new InvalidOperationException("Flame Canyon needs PlayerObjects.prefab, the world materials, FireSource.prefab, Fire Flower.prefab and the bone material.");
@@ -98,10 +99,18 @@ public static class FlameCanyonSetup
         var population = root.gameObject.AddComponent<RealmPopulation>();
         var caps = new SerializedObject(population);
         caps.FindProperty("maxNewFireFlowers").intValue = 14;
-        caps.FindProperty("maxNewFireBubbles").intValue = 24;
+        caps.FindProperty("maxNewFireBubbles").intValue = 48;
         caps.ApplyModifiedPropertiesWithoutUndo();
 
         BuildLife(scene, root, world, sourcePrefab, flowerPrefab, bone, report);
+
+        // Steam seeping up the whole length of the canyon, and the updraft that lifts fire bubbles out of it.
+        var seeps = new List<Vector3>();
+        for (int i = 2; i < main.Count; i += 4) seeps.Add(Ground(main[i].at));
+        for (int i = 4; i < den.Count; i += 4) seeps.Add(Ground(den[i].at));
+        var steam = Group(root, "Canyon Steam — haze up the walls, updraft for fire bubbles").gameObject.AddComponent<CanyonSteam>();
+        steam.Setup(seeps, Levels[0]);
+        EditorUtility.SetDirty(steam);
 
         var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab, scene);
         // PlayerObjects must stay a scene root: carry collision filtering uses transform.root.
@@ -172,15 +181,15 @@ public static class FlameCanyonSetup
         f.FindProperty("basinSlope").floatValue = 0.3f;
         f.FindProperty("rimHeight").floatValue = 30f;
         // The crust has to be thicker than the canyon is deep, or the floor would open onto the inner world.
-        f.FindProperty("crustThickness").floatValue = 40f;
+        f.FindProperty("crustThickness").floatValue = 64f;
         f.FindProperty("caveWidth").floatValue = 0f;
         f.FindProperty("sinkholeCount").intValue = 0;
         f.FindProperty("firstSinkholeDistance").floatValue = 0f;
         f.FindProperty("surfaceMaterial").objectReferenceValue = surface;
         f.FindProperty("innerMaterial").objectReferenceValue = inner;
-        // The whole canyon (about 155 m from the spawn to the far wall) is built before the first frame:
+        // The whole canyon (about 220 m from the spawn to the far wall) is built before the first frame:
         // the creatures placed in it have bodies and would fall through ground that is not there yet.
-        f.FindProperty("blockingRadius").floatValue = 165f;
+        f.FindProperty("blockingRadius").floatValue = 230f;
         f.ApplyModifiedPropertiesWithoutUndo();
         // Freeze the layout into a sculpt asset (also builds the terrain in edit mode so it can be sculpted).
         TerrainSculptSetup.Bake(world);
@@ -221,7 +230,7 @@ public static class FlameCanyonSetup
         // Every dab of the cut: the two paths, plus a wide one at each chamber.
         var dabs = new List<(Vector2 at, float radius)>();
         foreach (Sample s in main) dabs.Add((s.at, CorridorRadius));
-        foreach (Sample s in den) dabs.Add((s.at, CorridorRadius - 1.5f));
+        foreach (Sample s in den) dabs.Add((s.at, CorridorRadius - 0.5f));
         dabs.Add((ColdReach, ColdReachRadius));
         dabs.Add((Hearth, HearthRadius));
         dabs.Add((EmberGate, EmberGateRadius));
@@ -323,40 +332,40 @@ public static class FlameCanyonSetup
 
         // Hearth: the main fire. The prefab radiates 25 heat a second, less 1.5 for every metre, so it reaches
         // about 17 m and a flower (80 heat to bloom) blooms faster the nearer it stands.
-        var hearth = Group(root, "Hearth — main fire source, flowers at 3 / 6 / 10 / 14 m, fire eaters, fuzz");
-        Source(hearth, sourcePrefab, "Hearth Fire Source (20 minutes of heat)", Hearth, 30000f);
+        var hearth = Group(root, "Hearth — main fire source, flowers at 3 / 6 / 9 / 11 m, fire eaters, fuzz");
+        Vent(hearth, "Hearth Geothermal Vent", Hearth, 6000f, new Vector2(12f, 40f));
         Flower(hearth, flowerPrefab, "Hearth Fire Flower 1 (3 m: blooms about every 4 s)", Hearth + Polar(20f, 3f));
         Flower(hearth, flowerPrefab, "Hearth Fire Flower 2 (6 m: about every 5 s)", Hearth + Polar(140f, 6f));
-        Flower(hearth, flowerPrefab, "Hearth Fire Flower 3 (10 m: about every 8 s)", Hearth + Polar(255f, 10f));
-        Flower(hearth, flowerPrefab, "Hearth Fire Flower 4 (14 m: about every 20 s)", Hearth + Polar(80f, 14f));
-        Clone(hearth, eater, "Hearth Fire Eater 1", Hearth + Polar(200f, 9f), 0.2f);
-        Clone(hearth, eater, "Hearth Fire Eater 2", Hearth + Polar(330f, 11f), 0.2f);
-        Clone(hearth, fuzz, "Hearth Fuzz 1 (12 m from the fire: warms red)", Hearth + Polar(300f, 12f), 0.7f);
-        Clone(hearth, fuzz, "Hearth Fuzz 2 (15 m: barely warm)", Hearth + Polar(170f, 15f), 0.7f);
+        Flower(hearth, flowerPrefab, "Hearth Fire Flower 3 (9 m: about every 7 s)", Hearth + Polar(255f, 9f));
+        Flower(hearth, flowerPrefab, "Hearth Fire Flower 4 (11 m: about every 10 s)", Hearth + Polar(80f, 11f));
+        Clone(hearth, eater, "Hearth Fire Eater 1", Hearth + Polar(200f, 7.5f), 0.2f);
+        Clone(hearth, eater, "Hearth Fire Eater 2", Hearth + Polar(330f, 9f), 0.2f);
+        Clone(hearth, fuzz, "Hearth Fuzz 1 (10 m from the fire: warms red)", Hearth + Polar(300f, 10f), 0.7f);
+        Clone(hearth, fuzz, "Hearth Fuzz 2 (11.5 m: barely warm)", Hearth + Polar(170f, 11.5f), 0.7f);
         Glow(hearth, Ground(Hearth) + Vector3.up * 3f, 26f, 2.4f, "Hearth Glow");
 
-        // Ember Gate: a smaller garden at the bend, so fire is in sight again on the way north. It burns out first.
+        // Ember Gate: a smaller garden at the bend, so fire is in sight again on the way north. A weaker vent.
         var gate = Group(root, "Ember Gate — second fire garden");
-        Source(gate, sourcePrefab, "Ember Gate Fire Source (8 minutes of heat)", EmberGate, 12000f);
+        Vent(gate, "Ember Gate Geothermal Vent", EmberGate, 3000f, new Vector2(6f, 26f));
         Flower(gate, flowerPrefab, "Ember Gate Fire Flower 1 (3 m)", EmberGate + Polar(170f, 3f));
         Flower(gate, flowerPrefab, "Ember Gate Fire Flower 2 (6 m)", EmberGate + Polar(290f, 6f));
-        Clone(gate, eater, "Ember Gate Fire Eater", EmberGate + Polar(120f, 7f), 0.2f);
+        Clone(gate, eater, "Ember Gate Fire Eater", EmberGate + Polar(120f, 5f), 0.2f);
         Glow(gate, Ground(EmberGate) + Vector3.up * 3f, 20f, 2f, "Ember Gate Glow");
 
-        // Cold Reach: the same creatures with no heat (the Hearth is 60 m away). Nothing blooms; the fuzz stay black.
+        // Cold Reach: the same creatures with no heat (the Hearth is 100 m away). Nothing blooms; the fuzz stay black.
         var cold = Group(root, "Cold Reach — closed flowers and cold fuzz (no fire source)");
         Vector2 reach = Vector2.Lerp(MainPath[0], MainPath[1], 0.55f);
-        Flower(cold, flowerPrefab, "Cold Fire Flower 1", reach + new Vector2(-2.5f, 1f));
-        Flower(cold, flowerPrefab, "Cold Fire Flower 2", reach + new Vector2(2f, 3.5f));
-        Flower(cold, flowerPrefab, "Cold Fire Flower 3", reach + new Vector2(0.5f, -3f));
-        Clone(cold, fuzz, "Cold Fuzz 1", ColdReach + new Vector2(4f, 2f), 0.7f);
-        Clone(cold, fuzz, "Cold Fuzz 2", ColdReach + new Vector2(5f, -2f), 0.7f);
-        Clone(cold, fuzz, "Cold Fuzz 3", ColdReach + new Vector2(2f, 5f), 0.7f);
+        Flower(cold, flowerPrefab, "Cold Fire Flower 1", reach + new Vector2(-1.5f, 0.5f));
+        Flower(cold, flowerPrefab, "Cold Fire Flower 2", reach + new Vector2(0.6f, 1f));
+        Flower(cold, flowerPrefab, "Cold Fire Flower 3", reach + new Vector2(0.3f, -2f));
+        Clone(cold, fuzz, "Cold Fuzz 1", ColdReach + new Vector2(3f, 1.5f), 0.7f);
+        Clone(cold, fuzz, "Cold Fuzz 2", ColdReach + new Vector2(3.5f, -1.5f), 0.7f);
+        Clone(cold, fuzz, "Cold Fuzz 3", ColdReach + new Vector2(1.5f, 3.5f), 0.7f);
 
         // Fuzz Den: the dead end west of the Hearth.
         var denGroup = Group(root, "Fuzz Den — cold side canyon");
         for (int i = 0; i < 4; i++) Clone(denGroup, fuzz, "Den Fuzz " + (i + 1), FuzzDen + Polar(i * 90f + 30f, 3f), 0.7f);
-        Flower(denGroup, flowerPrefab, "Den Fire Flower (closed)", FuzzDen + Polar(200f, 5.5f));
+        Flower(denGroup, flowerPrefab, "Den Fire Flower (closed)", FuzzDen + Polar(200f, 4.5f));
 
         // Bone Hollow: the children and their nest are built in play mode; the tentacle creature is their reins.
         var hollow = Group(root, "Bone Hollow — bone children and bubble nest (appear in play mode)");
@@ -364,7 +373,7 @@ public static class FlameCanyonSetup
         var life = hollow.gameObject.AddComponent<FlameCanyonLife>();
         life.Setup(world, bone, centre, Ground(BoneHollow + new Vector2(2f, -3f)));
         EditorUtility.SetDirty(life);
-        Clone(hollow, tentacle, "Bone Hollow Tentacle Creature (reins for a bone child)", BoneHollow + new Vector2(6f, -11f), 1.5f);
+        Clone(hollow, tentacle, "Bone Hollow Tentacle Creature (reins for a bone child)", BoneHollow + new Vector2(4f, -8f), 1.5f);
         Glow(hollow, centre + Vector3.up * 4f, 22f, 1.2f, "Bone Hollow Glow");
 
         foreach (GameObject template in new[] { eater, fuzz, tentacle }) if (template != null) Object.DestroyImmediate(template);
@@ -387,15 +396,76 @@ public static class FlameCanyonSetup
         go.SetActive(true);
     }
 
-    /// <summary>A fire source holding the given heat (the prefab's 4000 lasts under three minutes).</summary>
-    private static void Source(Transform parent, GameObject prefab, string name, Vector2 at, float heat)
+    // ---------------- Geothermal vents ----------------
+
+    private const string SourcePrefabPath = "Assets/Prefabs/Creatures/Fire/FireSource.prefab";
+    private const string VentPrefabPath = "Assets/Prefabs/Creatures/Fire/Geothermal Vent.prefab";
+
+    /// <summary>
+    /// A geothermal vent: a FireSource fixed in the ground that the ground keeps refilling (between the two flow
+    /// rates), with a crater and a steam plume. It starts full.
+    /// </summary>
+    private static GameObject Vent(Transform parent, string name, Vector2 at, float maxHeat, Vector2 flow) =>
+        Vent(parent, name, Ground(at) + Vector3.up * 0.6f, maxHeat, flow);
+
+    private static GameObject Vent(Transform parent, string name, Vector3 position, float maxHeat, Vector2 flow)
     {
-        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(VentPrefab(), parent);
         go.name = name;
-        go.transform.position = Ground(at) + Vector3.up * 0.6f;
-        var f = new SerializedObject(go.GetComponent<FireSource>());
-        f.FindProperty("heat").floatValue = heat;
-        f.ApplyModifiedPropertiesWithoutUndo();
+        go.transform.position = position;
+        var source = new SerializedObject(go.GetComponent<FireSource>());
+        source.FindProperty("heat").floatValue = maxHeat;
+        source.ApplyModifiedPropertiesWithoutUndo();
+        var vent = new SerializedObject(go.GetComponent<GeothermalVent>());
+        vent.FindProperty("maxHeat").floatValue = maxHeat;
+        vent.FindProperty("groundFlow").vector2Value = flow;
+        vent.ApplyModifiedPropertiesWithoutUndo();
+        return go;
+    }
+
+    /// <summary>The Geothermal Vent prefab: a variant of FireSource that cannot be carried, with a GeothermalVent.</summary>
+    private static GameObject VentPrefab()
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<GameObject>(VentPrefabPath);
+        if (existing != null) return existing;
+        var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SourcePrefabPath);
+        if (sourcePrefab == null) throw new InvalidOperationException("Flame Canyon needs " + SourcePrefabPath + ".");
+        var instance = (GameObject)PrefabUtility.InstantiatePrefab(sourcePrefab);
+        try
+        {
+            instance.name = "Geothermal Vent";
+            var source = new SerializedObject(instance.GetComponent<FireSource>());
+            // It can be carried off; left click then jets steam (GeothermalVent), so it does not shoot bubbles.
+            source.FindProperty("carryable").boolValue = true;
+            source.ApplyModifiedPropertiesWithoutUndo();
+            instance.AddComponent<GeothermalVent>();
+            // Saving a prefab instance makes a variant: later changes to FireSource still reach the vents.
+            return PrefabUtility.SaveAsPrefabAsset(instance, VentPrefabPath);
+        }
+        finally { Object.DestroyImmediate(instance); }
+    }
+
+    /// <summary>Replaces the Hearth and Ember Gate fire sources in the open Flame Canyon scene with geothermal vents.</summary>
+    [MenuItem("Tools/Capstone/Flame Canyon/Replace Fire Sources With Geothermal Vents (Open Scene)")]
+    public static void ReplaceSourcesWithVents()
+    {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode first.");
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ScenePath) throw new InvalidOperationException("Open " + ScenePath + " first.");
+        int replaced = 0;
+        foreach (FireSource source in Object.FindObjectsByType<FireSource>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (source.GetComponent<GeothermalVent>() != null || source.gameObject.scene != scene) continue;
+            bool hearth = source.name.StartsWith("Hearth");
+            if (!hearth && !source.name.StartsWith("Ember Gate")) continue;
+            Vent(source.transform.parent, hearth ? "Hearth Geothermal Vent" : "Ember Gate Geothermal Vent", source.transform.position,
+                hearth ? 6000f : 3000f, hearth ? new Vector2(12f, 40f) : new Vector2(6f, 26f)).transform.SetSiblingIndex(source.transform.GetSiblingIndex());
+            Object.DestroyImmediate(source.gameObject);
+            replaced++;
+        }
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Flame Canyon: replaced " + replaced + " fire sources with geothermal vents.");
     }
 
     private static void Flower(Transform parent, GameObject prefab, string name, Vector2 at)
@@ -443,7 +513,7 @@ public static class FlameCanyonSetup
 
         // Ember crystals: red shards in the scorched ground round each fire. Small, no colliders.
         var embers = Group(root, "Ember Crystals — round the fires");
-        foreach (var (centre, pieces, reach) in new[] { (Hearth, 22, 9f), (EmberGate, 14, 7f) })
+        foreach (var (centre, pieces, reach) in new[] { (Hearth, 18, 9f), (EmberGate, 10, 5.5f) })
             for (int i = 0; i < pieces; i++)
                 count += Place(world, embers, "Crystals", centre + Polar(Range(0f, 360f), Range(2.5f, reach)), Range(0.3f, 0.7f), false, true, ember) ? 1 : 0;
 
@@ -453,7 +523,7 @@ public static class FlameCanyonSetup
             foreach (Sample s in path)
                 foreach (float side in new[] { -1f, 1f })
                 {
-                    if (decorRandom.NextDouble() < 0.45) continue;
+                    if (decorRandom.NextDouble() < 0.65) continue;
                     Vector2 at = s.at + Across(s) * side * (CorridorRadius * FlatShare + Range(-1.2f, 0.4f));
                     if (InChamber(at, -2f)) continue;
                     bool fin = decorRandom.NextDouble() < 0.4;
@@ -464,7 +534,7 @@ public static class FlameCanyonSetup
             for (int i = 0; i < Mathf.RoundToInt(radius * 1.1f); i++)
             {
                 Vector2 at = centre + Polar(Range(0f, 360f), radius * FlatShare + Range(-1.5f, 0.5f));
-                if (NearPath(at, main, 6f) || NearPath(at, den, 5f)) continue;
+                if (NearPath(at, main, 4.5f) || NearPath(at, den, 4f)) continue;
                 bool fin = decorRandom.NextDouble() < 0.4;
                 count += Place(world, talus, fin ? "Shards" : "Pebbles", at, fin ? Range(1.2f, 2.2f) : Range(1.2f, 2.4f), true, true) ? 1 : 0;
             }
@@ -488,15 +558,15 @@ public static class FlameCanyonSetup
         {
             float d = Vector2.Distance(s.at, Hearth);
             if (d > HearthRadius * FlatShare + 4f && d < HearthRadius * FlatShare + 7.2f)
-                count += Place(world, way, "Arches", s.at, 3.2f, true, true, null, Mathf.Atan2(s.dir.x, s.dir.y) * Mathf.Rad2Deg, 0.1f) ? 1 : 0;
+                count += Place(world, way, "Arches", s.at, 2.6f, true, true, null, Mathf.Atan2(s.dir.x, s.dir.y) * Mathf.Rad2Deg, 0.1f) ? 1 : 0;
         }
         for (int i = 6; i < main.Count - 4; i += 6)
         {
-            Vector2 at = main[i].at + Across(main[i]) * (CorridorRadius * FlatShare - 2.2f);
+            Vector2 at = main[i].at + Across(main[i]) * (CorridorRadius * FlatShare - 0.5f);
             if (!InChamber(at, 0f)) count += Place(world, way, "Cairns", at, Range(0.6f, 0.85f), true, true) ? 1 : 0;
         }
-        count += Place(world, way, "Totems", main[4].at + Across(main[4]) * 4.5f, 0.9f, true, true) ? 1 : 0;
-        count += Place(world, way, "Totems", main[4].at - Across(main[4]) * 4.5f, 0.9f, true, true) ? 1 : 0;
+        count += Place(world, way, "Totems", main[4].at + Across(main[4]) * 2.5f, 0.9f, true, true) ? 1 : 0;
+        count += Place(world, way, "Totems", main[4].at - Across(main[4]) * 2.5f, 0.9f, true, true) ? 1 : 0;
 
         // Plateau: a thin scatter, so the top is not bare when you look up or climb out.
         var plateau = Group(root, "Plateau Scatter");
