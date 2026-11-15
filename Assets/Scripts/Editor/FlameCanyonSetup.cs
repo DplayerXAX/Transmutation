@@ -342,6 +342,7 @@ public static class FlameCanyonSetup
         Clone(hearth, eater, "Hearth Fire Eater 2", Hearth + Polar(330f, 9f), 0.2f);
         Clone(hearth, fuzz, "Hearth Fuzz 1 (10 m from the fire: warms red)", Hearth + Polar(300f, 10f), 0.7f);
         Clone(hearth, fuzz, "Hearth Fuzz 2 (11.5 m: barely warm)", Hearth + Polar(170f, 11.5f), 0.7f);
+        Snail(hearth, "Hearth Fire Snail (basks by the vent, spits lava when carried)", Hearth + Polar(240f, 4f));
         Glow(hearth, Ground(Hearth) + Vector3.up * 3f, 26f, 2.4f, "Hearth Glow");
 
         // Ember Gate: a smaller garden at the bend, so fire is in sight again on the way north. A weaker vent.
@@ -350,6 +351,7 @@ public static class FlameCanyonSetup
         Flower(gate, flowerPrefab, "Ember Gate Fire Flower 1 (3 m)", EmberGate + Polar(170f, 3f));
         Flower(gate, flowerPrefab, "Ember Gate Fire Flower 2 (6 m)", EmberGate + Polar(290f, 6f));
         Clone(gate, eater, "Ember Gate Fire Eater", EmberGate + Polar(120f, 5f), 0.2f);
+        Snail(gate, "Ember Gate Fire Snail", EmberGate + Polar(30f, 4f));
         Glow(gate, Ground(EmberGate) + Vector3.up * 3f, 20f, 2f, "Ember Gate Glow");
 
         // Cold Reach: the same creatures with no heat (the Hearth is 100 m away). Nothing blooms; the fuzz stay black.
@@ -361,6 +363,7 @@ public static class FlameCanyonSetup
         Clone(cold, fuzz, "Cold Fuzz 1", ColdReach + new Vector2(3f, 1.5f), 0.7f);
         Clone(cold, fuzz, "Cold Fuzz 2", ColdReach + new Vector2(3.5f, -1.5f), 0.7f);
         Clone(cold, fuzz, "Cold Fuzz 3", ColdReach + new Vector2(1.5f, 3.5f), 0.7f);
+        Snail(cold, "Cold Reach Fire Snail (empty: carry it to a fire)", ColdReach + new Vector2(-2f, 1.5f));
 
         // Fuzz Den: the dead end west of the Hearth.
         var denGroup = Group(root, "Fuzz Den — cold side canyon");
@@ -466,6 +469,15 @@ public static class FlameCanyonSetup
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Flame Canyon: replaced " + replaced + " fire sources with geothermal vents.");
+    }
+
+    private static void Snail(Transform parent, string name, Vector2 at)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(FireSnailSetup.PrefabPath);
+        if (prefab == null) prefab = FireSnailSetup.Prefab();
+        var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+        go.name = name;
+        go.transform.position = Ground(at) + Vector3.up * 0.3f;
     }
 
     private static void Flower(Transform parent, GameObject prefab, string name, Vector2 at)
