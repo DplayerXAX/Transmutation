@@ -3,6 +3,7 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
 public sealed class Bloodstone : Creature
 {
+    public override FurnaceIngredient IngredientKind => FurnaceIngredient.Bloodstone;
     public override bool CanBeConsumed => false;
     protected override void InitializeCreature()
     {

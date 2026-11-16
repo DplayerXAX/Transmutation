@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
 public sealed class BirdBones : Creature
 {
+    public override FurnaceIngredient IngredientKind => FurnaceIngredient.BirdBones;
     private static Material fallbackMaterial;
 
     protected override void InitializeCreature()

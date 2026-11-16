@@ -45,6 +45,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     // Daniel: Delayed interaction after pickup
     private Creature pendingHeldUse;
+    private FurnaceCreature stokedFurnace;
     private Spear pressedSpear;
     private float pendingHeldUseUntil;
     [SerializeField, Min(0.1f)] private float honeyCoatHoldTime = 0.45f;
@@ -68,9 +69,9 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     private void Update()
     {
         if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick)
-        { CancelSpear(); return; }
+        { stokedFurnace = null; CancelSpear(); return; }
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
-        if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSpear(); return; }
+        if (bugGrip != null && bugGrip.ConsumesInput) { stokedFurnace = null; pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSpear(); return; }
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
@@ -81,6 +82,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !Application.isFocused)
         {
             pendingHeldUse = null;
+            stokedFurnace = null;
             CancelHoneyGesture();
             UpdateHeldSqueeze(false);
             CancelSpear();
@@ -100,6 +102,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         bool leftHeld = Mouse.current != null &&
                         Mouse.current.leftButton.isPressed;
+
+        if (UpdateFurnace(Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame, leftHeld)) return;
 
         Spear spear = carrier != null ? carrier.CarriedCreature as Spear : null;
         if (spear != null)
@@ -146,6 +150,27 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         AudioManager.PostEvent("Play_LMB", gameObject);
         TryInteract();
+    }
+
+    private bool UpdateFurnace(bool pressed, bool held)
+    {
+        if (stokedFurnace != null)
+        {
+            if (held && stokedFurnace.isActiveAndEnabled && interactionCamera != null &&
+                Vector3.Distance(interactionCamera.transform.position, stokedFurnace.ember.transform.position) <= interactionRange)
+            {
+                stokedFurnace.Sustain(Time.deltaTime);
+                return true;
+            }
+            stokedFurnace = null;
+        }
+        if (!pressed ||
+            (carrier != null && carrier.CarriedCreature != null && carrier.CarriedCreature.IngredientKind == FurnaceIngredient.None) ||
+            !TryGetSurfaceHit(out var hit)) return false;
+        var furnace = hit.collider.GetComponentInParent<FurnaceCreature>();
+        if (furnace == null || furnace.ember != hit.collider || !furnace.Stoke(carrier != null ? carrier.PendingCreature : null)) return false;
+        stokedFurnace = furnace;
+        return true;
     }
 
     private void CancelSpear()
@@ -242,6 +267,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void OnDisable()
     {
+        stokedFurnace = null;
         if (squeezedSquirrel != null)
             squeezedSquirrel.SetSqueezeHeld(false, default);
 
