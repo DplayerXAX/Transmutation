@@ -12,11 +12,12 @@ public static class ExplosionResolver
         public Vector3 Center;
         public float Radius, Damage, Push;
         public Creature Emitter, Projectile;
+        public GameObject FiringPlayer;
     }
     private struct Hit
     {
         public Rigidbody Body;
-        public Creature Creature;
+        public ICombatTarget Target;
         public Vector3 Point;
         public float Distance;
     }
@@ -34,11 +35,11 @@ public static class ExplosionResolver
     { queue.Clear(); bodies.Clear(); creatureHits.Clear(); processing = false; ResolvedCount = 0; Exploded = null; }
 
     public static void Request(Scene scene, Vector3 center, float radius, float damage, float push,
-        Creature emitter, Creature projectile = null)
+        Creature emitter, Creature projectile = null, GameObject firingPlayer = null)
     {
         if (!scene.IsValid() || radius <= 0f) return;
         queue.Enqueue(new Blast { Scene = scene, Center = center, Radius = radius, Damage = damage,
-            Push = push, Emitter = emitter, Projectile = projectile });
+            Push = push, Emitter = emitter, Projectile = projectile, FiringPlayer = firingPlayer });
         if (processing) return;
         processing = true;
         try { while (queue.Count > 0) Resolve(queue.Dequeue()); }
@@ -56,28 +57,37 @@ public static class ExplosionResolver
         {
             Collider collider = overlaps[i];
             Rigidbody body = collider.attachedRigidbody;
-            Creature creature = CreatureSpatialQuery.Owner(collider);
-            if (body == null && creature == null) continue;
-            if (blast.Projectile != null && creature == blast.Projectile) continue;
+            ICombatTarget target = CombatTarget.Owner(collider);
+            if (body == null && !CombatTarget.Exists(target)) continue;
+            if (blast.Projectile != null && target == (ICombatTarget)blast.Projectile) continue;
             Vector3 point = collider.ClosestPoint(blast.Center);
             float distance = (point - blast.Center).magnitude;
             if (distance > blast.Radius) continue;
             if (CreatureSpatialQuery.FirstSolid(blast.Scene, blast.Center, point, blast.Projectile,
                 null, ref rays, out var obstruction) && (body == null || obstruction.rigidbody != body) &&
-                (creature == null || CreatureSpatialQuery.Owner(obstruction.collider) != creature)) continue;
-            int key = body != null ? body.GetInstanceID() : creature.GetInstanceID();
+                (!CombatTarget.Exists(target) || CombatTarget.Owner(obstruction.collider) != target)) continue;
+            var hit = new Hit { Body = body, Target = target, Point = point, Distance = distance };
+            // Receiver and rigidbody identity are independent: compound/multi-body targets take one hit.
+            if (CombatTarget.Exists(target) && target != (ICombatTarget)blast.Emitter)
+            {
+                int targetId = target.TargetComponent.GetInstanceID();
+                if (!creatureHits.TryGetValue(targetId, out var previousTarget) || distance < previousTarget.Distance)
+                    creatureHits[targetId] = hit;
+            }
+            if (body == null) continue;
+            int key = body.GetInstanceID();
             if (bodies.TryGetValue(key, out var previous) && previous.Distance <= distance) continue;
-            bodies[key] = new Hit { Body = body, Creature = creature, Point = point, Distance = distance };
+            bodies[key] = hit;
         }
         // The dictionary is not mutated by nested deaths: their blasts only enqueue.
-        foreach (Hit hit in bodies.Values)
-        {
-            if (hit.Creature == null || hit.Creature == blast.Emitter) continue;
-            int id = hit.Creature.GetInstanceID();
-            if (!creatureHits.TryGetValue(id, out var previous) || hit.Distance < previous.Distance) creatureHits[id] = hit;
-        }
         foreach (Hit hit in creatureHits.Values)
-            if (hit.Creature != null) hit.Creature.ApplyDamage(blast.Damage * Mathf.Clamp01(1f - hit.Distance / blast.Radius), blast.Emitter);
+            if (CombatTarget.Exists(hit.Target))
+            {
+                float damage = blast.Damage * Mathf.Clamp01(1f - hit.Distance / blast.Radius);
+                if (blast.FiringPlayer != null && hit.Target.TargetComponent.transform.IsChildOf(blast.FiringPlayer.transform))
+                    damage = Mathf.Min(1f, damage);
+                hit.Target.ApplyDamage(damage, blast.Emitter);
+            }
         foreach (Hit hit in bodies.Values)
         {
             float fraction = Mathf.Clamp01(1f - hit.Distance / blast.Radius);
@@ -85,6 +95,14 @@ public static class ExplosionResolver
             Vector3 direction = hit.Body.worldCenterOfMass - blast.Center;
             if (direction.sqrMagnitude < 0.001f) direction = Vector3.up;
             Vector3 velocity = direction.normalized * (blast.Push * fraction);
+            if (blast.FiringPlayer != null && hit.Body.transform.IsChildOf(blast.FiringPlayer.transform))
+            {
+                float height = Mathf.Max(1f, hit.Body.GetComponentInChildren<Collider>()?.bounds.size.y ?? 2f);
+                float shooterFalloff = Mathf.Clamp01((blast.Radius - hit.Distance) /
+                    Mathf.Max(0.01f, blast.Radius - height));
+                float lift = Mathf.Sqrt(2f * Physics.gravity.magnitude * 3.5f * height);
+                velocity.y = Mathf.Max(velocity.y, lift * shooterFalloff);
+            }
             CreatureImpulse.Apply(hit.Body, velocity, 0.22f);
         }
         ResolvedCount++;

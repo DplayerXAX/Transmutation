@@ -2,19 +2,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody), typeof(AsuraMotor))]
+[RequireComponent(typeof(AsuraBloodDrop))]
 public sealed class RollingAsura : Creature
 {
     [SerializeField] private float speed = 5f;
     [SerializeField] private float fuseSeconds = 0.6f;
     [SerializeField] private float triggerGap = 0.65f;
-    private readonly List<Creature> nearby = new List<Creature>();
+    private readonly List<ICombatTarget> nearby = new List<ICombatTarget>();
     private readonly List<int> indices = new List<int>();
     private RaycastHit[] hits = new RaycastHit[16];
     private AsuraMotor motor;
-    private Creature target;
+    private ICombatTarget target;
     private float nextSearch, fuse;
     private bool spent, detonated;
     private Vector3 lastPosition;
+    public bool Detonated => detonated;
+    public ICombatTarget Target => CombatTarget.Exists(target) ? target : null;
     public bool Armed { get; private set; }
     public bool Spent => spent;
     public float RollDegrees { get; private set; }
@@ -26,6 +29,7 @@ public sealed class RollingAsura : Creature
         lastPosition = transform.position;
         RollDegrees += Mathf.Min(distance, 0.3f) / 0.45f * Mathf.Rad2Deg;
         if (spent || IsCarried || IsBubbleCaptured) { motor.Stop(); return; }
+        if (target != null && !Valid(target)) { target = null; Armed = false; fuse = 0f; }
         if (Armed)
         {
             motor.Stop(); fuse -= dt;
@@ -37,11 +41,10 @@ public sealed class RollingAsura : Creature
             }
             return;
         }
-        if (target != null && !Valid(target)) target = null;
         if (target == null && Time.time >= nextSearch)
         {
             nextSearch = Time.time + 0.25f;
-            CreatureSpatialQuery.Nearby(gameObject.scene, AimPosition, 20f, nearby, indices);
+            CreatureSpatialQuery.NearbyCombat(gameObject.scene, AimPosition, 20f, nearby, indices);
             float best = float.PositiveInfinity;
             foreach (var candidate in nearby)
             {
@@ -60,9 +63,8 @@ public sealed class RollingAsura : Creature
             { Armed = true; fuse = fuseSeconds; motor.Stop(); }
         }
     }
-    private bool Valid(Creature other) => other != null && other != this && other.gameObject.scene == gameObject.scene &&
-        other.isActiveAndEnabled && !other.IsDead && !other.IsConsumptionPending && other.CanBeAITargeted &&
-        other.Polarity != Polarity && (other.AimPosition - AimPosition).sqrMagnitude < 625f && CreatureSpatialQuery.TryGetSolid(other, out _);
+    private bool Valid(ICombatTarget other) => CombatTarget.Eligible(this, other) &&
+        (other.AimPosition - AimPosition).sqrMagnitude < 625f && CreatureSpatialQuery.TryGetSolid(other, out _);
     private void Disarm() { Armed = false; spent = true; motor.Stop(); }
     protected override void OnCarryStarted() => Disarm();
     protected override void OnCaptureStarted() => Disarm();

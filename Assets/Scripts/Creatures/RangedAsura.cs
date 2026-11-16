@@ -2,6 +2,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody), typeof(AsuraMotor), typeof(CreatureCombat))]
 [RequireComponent(typeof(ProjectileAttack))]
+[RequireComponent(typeof(AsuraBloodDrop))]
 public sealed class RangedAsura : Creature
 {
     private CreatureCombat combat;

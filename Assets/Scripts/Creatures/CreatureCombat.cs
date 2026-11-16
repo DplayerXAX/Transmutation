@@ -17,10 +17,11 @@ public sealed class CreatureCombat : MonoBehaviour
     private AsuraMotor motor;
     private CreatureAttack attack;
     private float nextSearch, windupRemaining, nextRelease, obstructed;
-    private readonly List<Creature> candidates = new List<Creature>(64);
+    private readonly List<ICombatTarget> candidates = new List<ICombatTarget>(64);
     private readonly List<int> indices = new List<int>(64);
     private RaycastHit[] hits = new RaycastHit[16];
-    public Creature Target { get; private set; }
+    private ICombatTarget target;
+    public ICombatTarget Target { get => CombatTarget.Exists(target) ? target : null; private set => target = value; }
     public CreatureCombatState State { get; private set; }
     public int Searches { get; private set; }
     public int Releases { get; private set; }
@@ -34,11 +35,9 @@ public sealed class CreatureCombat : MonoBehaviour
         if (muzzle == null) muzzle = firingPivot != null ? firingPivot.Find("Muzzle") : transform;
     }
 
-    public bool Eligible(Creature candidate, float range)
+    public bool Eligible(ICombatTarget candidate, float range)
     {
-        return owner != null && candidate != null && candidate != owner && candidate.isActiveAndEnabled &&
-            candidate.gameObject.scene == gameObject.scene && !candidate.IsDead && !candidate.IsConsumptionPending &&
-            candidate.CanBeAITargeted && owner.CanBeAITargeted && candidate.Polarity != owner.Polarity &&
+        return CombatTarget.Eligible(owner, candidate) &&
             CreatureSpatialQuery.TryGetSolid(candidate, out _) &&
             (candidate.AimPosition - owner.AimPosition).sqrMagnitude <= range * range;
     }
@@ -51,11 +50,11 @@ public sealed class CreatureCombat : MonoBehaviour
         if (Target == null && Time.time >= nextSearch)
         {
             nextSearch = Time.time + searchInterval; Searches++;
-            CreatureSpatialQuery.Nearby(gameObject.scene, owner.AimPosition, detectionRange, candidates, indices);
+            CreatureSpatialQuery.NearbyCombat(gameObject.scene, owner.AimPosition, detectionRange, candidates, indices);
             float best = float.PositiveInfinity;
             for (int i = 0; i < candidates.Count; i++)
             {
-                Creature candidate = candidates[i];
+                ICombatTarget candidate = candidates[i];
                 if (!Eligible(candidate, detectionRange)) continue;
                 float distance = (candidate.AimPosition - owner.AimPosition).sqrMagnitude;
                 if (distance >= best || !CreatureSpatialQuery.Visible(owner, candidate, owner.AimPosition, ref hits)) continue;

@@ -37,7 +37,7 @@ public readonly struct CreatureInteraction
 /// or separate components rather than being added to this base class.
 /// </summary>
 [DisallowMultipleComponent]
-public abstract class Creature : MonoBehaviour, ICreatureStats
+public abstract class Creature : MonoBehaviour, ICreatureStats, ICombatTarget
 {
     /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
     public static event System.Action<Creature> Activated;
@@ -86,6 +86,9 @@ public enum FoodTag
     public float MaxHealth => maxHealth;
     public float Health => health;
     public CreaturePolarity Polarity => polarity;
+    public Component TargetComponent => this;
+    public Transform CombatRoot => transform;
+    public bool IsCombatActive => isActiveAndEnabled && !IsDead && !IsConsumptionPending;
     public virtual bool IsInPhysicalWorld => true;
     public bool CanBeAITargeted => IsInPhysicalWorld && Polarity != CreaturePolarity.None;
     /// <summary>Structural or unique creatures ignore incidental harm: projectile, melee and blast damage,

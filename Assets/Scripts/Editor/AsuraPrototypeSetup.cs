@@ -66,6 +66,8 @@ public static class AsuraPrototypeSetup
             BlastCore core = root.AddComponent<BlastCore>();
             ConfigureCreature(core, 100f, CreaturePolarity.Random, 90f, 1f);
             ConfigureAttack(core.GetComponent<ProjectileAttack>(), 16f, 60f, 1f, 0f, true);
+            Set(core.GetComponent<ProjectileAttack>(), fields => fields.FindProperty("projectileSpeed").floatValue = 22f);
+            Set(core, fields => fields.FindProperty("firingInterval").floatValue = 0.8f);
             root.AddComponent<WebCapture>(); root.AddComponent<BubbleCapture>();
             Transform visual = Child(root.transform, "Visual", Vector3.zero);
             Part(visual, PrimitiveType.Sphere, "Core", Vector3.zero, Vector3.one * 0.6f, bodyMaterial);
@@ -131,6 +133,7 @@ public static class AsuraPrototypeSetup
         if (!scene.IsValid() || !scene.isLoaded) scene = EditorSceneManager.OpenScene(Yoyo, OpenSceneMode.Additive);
         foreach (var existing in scene.GetRootGameObjects()) if (existing.name == RootName)
         {
+            PlaceSparringUnits(scene, existing.transform);
             PlacePlayer(scene, existing.transform.Find("Player Test Start"));
             EditorSceneManager.SaveScene(scene);
             Selection.activeGameObject = existing; return;
@@ -161,9 +164,12 @@ public static class AsuraPrototypeSetup
             }
         }
         PlaceWitness(scene, root.transform, "GooCreature", new Vector3(-15f, 0.45f, 8f), CreaturePolarity.None);
+        PlaceSparringUnits(scene, root.transform);
         PlaceWitness(scene, root.transform, "CorruptSeed", new Vector3(14f, 0.3f, -5f), CreaturePolarity.Dark);
         GameObject core = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/BlastCore.prefab"), scene);
         core.transform.SetParent(root.transform, false); core.transform.localPosition = new Vector3(-16f, 0.5f, -13.3f);
+        HeldWeaponSetup.CreateAssets();
+        HeldWeaponSetup.Place(scene, root.transform);
         var effects = root.AddComponent<AsuraPrototypeEffects>();
         Set(effects, fields => fields.FindProperty("explosionMaterial").objectReferenceValue = explosionMaterial);
         var marker = Child(root.transform, "Player Test Start", new Vector3(-18f, 1.5f, -15f));
@@ -173,6 +179,27 @@ public static class AsuraPrototypeSetup
         Selection.activeGameObject = root;
         Debug.Log("Asura Prototype authored in Scene_Yoyo: six manual Asuras, two ecology witnesses, and one Blast Core.");
     }
+    internal static void PlaceSparringUnits(Scene scene, Transform parent)
+    {
+        PlaceUnit("MeleeAsura", CreaturePolarity.Light, -17f, 2f);
+        PlaceUnit("MeleeAsura", CreaturePolarity.Dark, 16f, -3f);
+        PlaceUnit("RollingAsura", CreaturePolarity.Light, -21f, 17f);
+        PlaceUnit("RollingAsura", CreaturePolarity.Dark, 21f, 17f);
+
+        void PlaceUnit(string prefab, CreaturePolarity polarity, float x, float z)
+        {
+            string name = prefab + " " + polarity + " Outer";
+            if (parent.Find(name) != null) return;
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + prefab + ".prefab");
+            var unit = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);
+            unit.name = name;
+            unit.transform.SetParent(parent, false);
+            unit.transform.localPosition = new Vector3(x, 0.5f, z);
+            Set(unit.GetComponent<Creature>(), fields => fields.FindProperty("initialPolarity").enumValueIndex = (int)polarity);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(unit.transform);
+        }
+    }
+
     private static void PlacePlayer(Scene scene, Transform marker)
     {
         if (marker == null) return;

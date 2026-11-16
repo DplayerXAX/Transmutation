@@ -339,7 +339,8 @@ public static class AsuraCombatValidation
             projectile.GetComponent<WebCapture>().Release();
             Check(projectile.FlightState == ProjectileFlightState.Spent && projectile.SimulationEnabled, "web release does not rearm flight");
             Object.DestroyImmediate(projectile.gameObject); Object.DestroyImmediate(webRoot); Object.DestroyImmediate(source.gameObject);
-            string result = "PASS: " + checks + " Asura combat and lifecycle integration checks.";
+            checks += AsuraBloodValidation.Run();
+            string result = "PASS: " + checks + " Asura combat, blood and lifecycle integration checks.";
             Debug.Log(result); return result;
         }
         finally

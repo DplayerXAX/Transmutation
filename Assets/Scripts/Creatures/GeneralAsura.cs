@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(Rigidbody), typeof(AsuraMotor), typeof(CreatureCombat))]
 [RequireComponent(typeof(ProjectileAttack))]
+[RequireComponent(typeof(AsuraBloodDrop))]
 public sealed class GeneralAsura : Creature
 {
     [SerializeField] private BlastCore blastCorePrefab;

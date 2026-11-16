@@ -20,6 +20,8 @@ public sealed class FirstPersonBody : MonoBehaviour
     [SerializeField] private Material limbMaterial;
     [SerializeField] private Material jointMaterial;
     [SerializeField] private Material gooMaterial;
+    [SerializeField] private Material bloodCoatMaterial;
+    [SerializeField, Range(0.001f, 0.012f)] private float bloodCoatGap = 0.0035f;
     [Min(0.01f)] [SerializeField] private float armThickness = 0.075f;
     [Min(0.01f)] [SerializeField] private float legThickness = 0.11f;
     [SerializeField] private bool showLegs = true;
@@ -109,6 +111,11 @@ public sealed class FirstPersonBody : MonoBehaviour
     private Material mimicMaterial;
     private PlayerGooCoating gooCoating;
     private readonly System.Collections.Generic.List<Renderer> gooRenderers = new System.Collections.Generic.List<Renderer>();
+    private readonly System.Collections.Generic.List<Renderer> bloodRenderers = new System.Collections.Generic.List<Renderer>();
+    private readonly System.Collections.Generic.List<Renderer> bloodSources = new System.Collections.Generic.List<Renderer>();
+    private PlayerCreatureStats bloodStats;
+    private Material bloodMaterialInstance;
+    private bool bloodVisible;
 
     private void Awake()
     {
@@ -155,6 +162,65 @@ public sealed class FirstPersonBody : MonoBehaviour
             BuildGooArm(leftArm);
             BuildGooArm(rightArm);
         }
+        BuildBloodCoat();
+    }
+
+    private void BuildBloodCoat()
+    {
+        bloodStats = controller != null ? controller.GetComponent<PlayerCreatureStats>() : null;
+        if (bloodStats == null || bloodCoatMaterial == null) return;
+        bloodMaterialInstance = new Material(bloodCoatMaterial) { name = "Player blood shell", hideFlags = HideFlags.DontSave };
+        bloodMaterialInstance.SetFloat("_Gap", bloodCoatGap);
+        foreach (Renderer source in renderers)
+        {
+            // Copy only anatomical skin, leaving bones, veins, torso, held items and goo untouched.
+            bool skin = source.sharedMaterial == leftArm.webbedHand.Skin || source.sharedMaterial == rightArm.webbedHand.Skin ||
+                (showLegs && (source.sharedMaterial == leftLeg.webbedHand.Skin || source.sharedMaterial == rightLeg.webbedHand.Skin));
+            if (!skin) continue;
+            var shell = new GameObject("Blood shell") { layer = source.gameObject.layer };
+            shell.transform.SetParent(source.transform, false);
+            Renderer renderer;
+            if (source is SkinnedMeshRenderer skinned)
+            {
+                var copy = shell.AddComponent<SkinnedMeshRenderer>();
+                copy.sharedMesh = skinned.sharedMesh; copy.bones = skinned.bones; copy.rootBone = skinned.rootBone;
+                copy.localBounds = skinned.localBounds; copy.updateWhenOffscreen = true;
+                renderer = copy;
+            }
+            else
+            {
+                shell.AddComponent<MeshFilter>().sharedMesh = source.GetComponent<MeshFilter>().sharedMesh;
+                renderer = shell.AddComponent<MeshRenderer>();
+            }
+            renderer.sharedMaterial = bloodMaterialInstance;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false; renderer.enabled = false;
+            bloodSources.Add(source); bloodRenderers.Add(renderer);
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (bloodStats == null) return;
+        bloodStats.CoatChanged += OnBloodCoat;
+        OnBloodCoat(bloodStats.CoatHealth, bloodStats.Polarity);
+    }
+    private void OnDisable()
+    {
+        if (bloodStats != null) bloodStats.CoatChanged -= OnBloodCoat;
+        foreach (Renderer shell in bloodRenderers) if (shell != null) shell.enabled = false;
+    }
+    private void OnBloodCoat(float health, CreaturePolarity polarity)
+    {
+        bloodVisible = health > 0f;
+        Color color = AsuraBloodPalette.For(polarity); color.a = 0.27f;
+        if (bloodMaterialInstance != null) bloodMaterialInstance.SetColor("_BaseColor", color);
+        UpdateBloodCoat();
+    }
+    private void UpdateBloodCoat()
+    {
+        for (int i = 0; i < bloodRenderers.Count; i++)
+            bloodRenderers[i].enabled = bloodVisible && bloodSources[i] != null && bloodSources[i].enabled && bloodSources[i].gameObject.activeInHierarchy;
     }
 
     internal Transform VisualRoot => root;
@@ -163,6 +229,7 @@ public sealed class FirstPersonBody : MonoBehaviour
     {
         if (root != null) Destroy(root.gameObject);
         if (mimicMaterial != null) Destroy(mimicMaterial);
+        if (bloodMaterialInstance != null) Destroy(bloodMaterialInstance);
     }
 
     /// <summary>Borrow a material for the originally white parts; dark joints keep their own appearance.</summary>
@@ -250,6 +317,7 @@ public sealed class FirstPersonBody : MonoBehaviour
             part.SetPropertyBlock(block);
         }
         UpdateGooCoating();
+        UpdateBloodCoat();
         if (torso != null) PoseTorso();
         LimbsPosed?.Invoke();
     }

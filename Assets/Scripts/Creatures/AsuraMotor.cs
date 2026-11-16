@@ -53,7 +53,7 @@ public sealed class AsuraMotor : MonoBehaviour
             Vector3 origin = body.worldCenterOfMass;
             if (CreatureSpatialQuery.FirstSolid(gameObject.scene, origin, origin + direction * (radius + 0.9f),
                 owner, null, ref hits, out var obstacle) && Mathf.Abs(obstacle.normal.y) < 0.5f &&
-                CreatureSpatialQuery.Owner(obstacle.collider) == null)
+                CombatTarget.Owner(obstacle.collider) == null)
             {
                 if (!steering)
                 {

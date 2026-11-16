@@ -10,9 +10,9 @@ public sealed class ProjectileAttack : CreatureAttack
     private Collider[] launchOverlaps = new Collider[16];
     public ProjectileCreature ProjectilePrefab => projectilePrefab;
 
-    public override bool Release(Creature owner, Creature target, Transform muzzle)
+    public override bool Release(Creature owner, ICombatTarget target, Transform muzzle)
     {
-        if (projectilePrefab == null || target == null || muzzle == null ||
+        if (projectilePrefab == null || !CombatTarget.Eligible(owner, target) || muzzle == null ||
             !CreatureSpatialQuery.Visible(owner, target, muzzle.position, ref hits)) return false;
         return Fire(owner, muzzle.position, (target.AimPosition - muzzle.position).normalized) != null;
     }
