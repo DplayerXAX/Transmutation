@@ -33,7 +33,9 @@ public sealed class SlabJournal : MonoBehaviour
     private readonly TextGenerator textMeasure = new();
     private Material buttonStone;
     private SlabJournalData.Page Page => data.pages[data.viewedPage];
-    internal bool Drawing => editing && tool != SlabJournalButton.Action.Type && held == null && !data.ReadOnly;
+    internal bool Drawing => editing &&
+        (tool == SlabJournalButton.Action.Draw || tool == SlabJournalButton.Action.Erase) &&
+        held == null && !data.ReadOnly;
     internal bool Erasing => tool == SlabJournalButton.Action.Erase;
 
     internal void Setup(InkSurface surface, IReadOnlyList<string> unlocked, string saveRoot = null)
@@ -55,7 +57,7 @@ public sealed class SlabJournal : MonoBehaviour
         editing = true;
         pageRaycaster.enabled = true;
         satchel.gameObject.SetActive(true);
-        SetTool(initialTool);
+        ApplyTool(initialTool);
         if (data.ReadOnly) Hint("Journal save could not be opened");
     }
 
@@ -82,9 +84,15 @@ public sealed class SlabJournal : MonoBehaviour
         return true;
     }
 
-    internal bool AcceptsInk(Vector2 cursor) => Drawing &&
-        RectTransformUtility.RectangleContainsScreenPoint(pageArea, cursor, view) &&
-        !RectTransformUtility.RectangleContainsScreenPoint(satchelPanel, cursor);
+    internal bool AcceptsInk(Vector2 cursor)
+    {
+        if (!Drawing || !RectTransformUtility.RectangleContainsScreenPoint(pageArea, cursor, view) ||
+            RectTransformUtility.RectangleContainsScreenPoint(satchelPanel, cursor)) return false;
+        foreach (GameObject sticker in placed)
+            if (sticker.activeSelf && RectTransformUtility.RectangleContainsScreenPoint(
+                (RectTransform)sticker.transform, cursor, view)) return false;
+        return true;
+    }
 
     internal void Turn(int step)
     {
@@ -168,6 +176,11 @@ public sealed class SlabJournal : MonoBehaviour
     }
 
     internal void SetTool(SlabJournalButton.Action selected)
+    {
+        ApplyTool(tool == selected ? SlabJournalButton.Action.None : selected);
+    }
+
+    private void ApplyTool(SlabJournalButton.Action selected)
     {
         CancelSticker();
         if (selected != SlabJournalButton.Action.Type) textField.DeactivateInputField();
@@ -365,7 +378,7 @@ public sealed class SlabJournal : MonoBehaviour
             Vector2 at = Vector2.Scale(sticker.position - Vector2.one * 0.5f, pageArea.sizeDelta);
             var graphic = Art(pageArea, item.image, 88);
             graphic.rectTransform.anchoredPosition = at;
-            graphic.raycastTarget = editing && tool == SlabJournalButton.Action.Type && held == null && !data.ReadOnly;
+            graphic.raycastTarget = editing && held == null && !data.ReadOnly;
             OnClick(graphic.gameObject, () => PickUp(item, sticker));
             placed.Add(graphic.gameObject);
         }
@@ -474,7 +487,7 @@ public sealed class SlabJournal : MonoBehaviour
 
 internal sealed class SlabJournalButton : MonoBehaviour
 {
-    internal enum Action { Previous, Next, Type, Draw, Erase }
+    internal enum Action { Previous, Next, Type, Draw, Erase, None }
     internal SlabJournal Journal { get; private set; }
     internal Action Command { get; private set; }
     internal void Setup(SlabJournal journal, Action action) { Journal = journal; Command = action; }

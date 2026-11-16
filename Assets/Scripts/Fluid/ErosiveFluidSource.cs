@@ -34,7 +34,7 @@ public sealed class ErosiveFluidSource : MonoBehaviour
     /// <summary>A driven source only supplies droplet settings; its owner (e.g. rain) spawns the drops.</summary>
     internal void SetDriven(bool value) => driven = value;
     /// <summary>Small, short-lived, gentler drops so rain shares the pool with ground sources.</summary>
-    internal void ConfigureForRain()
+    public void ConfigureForRain()
     {
         emitting = true; lifetime = 30f; dropletRadius = 0.12f; spread = 0f;
         erosionRate = 0.3f; erosionRadius = 0.6f;

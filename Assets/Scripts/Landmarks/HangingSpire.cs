@@ -140,6 +140,7 @@ public sealed class HangingSpire : MonoBehaviour
 
     private void OnDisable()
     {
+        if (ReflectionPhysics.SwitchingWorldRoots) return;
         if (root != null) Destroy(root.gameObject);
         root = null;
         built = false;

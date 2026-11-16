@@ -14,6 +14,7 @@ Shader "Capstone/World/BlackFlowContours"
         _DotDensity("Populated Contours", Range(0,1)) = 0.65
         _FlowSpeed("Dot Flow Speed", Range(-0.2,0.2)) = 0.018
         _Seed("Random Seed", Float) = 37
+        _FacetStrength("Directional Facet Shading", Range(0,1)) = 0
         [HideInInspector] _BaseColor("Base Color", Color) = (1,1,1,1)
     }
     SubShader
@@ -28,18 +29,19 @@ Shader "Capstone/World/BlackFlowContours"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile_fog
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
                 half4 _BackgroundColor, _LineColor, _DotColor, _BaseColor;
                 float _PatternScale, _WarpStrength, _LineDensity, _LineWidth;
-                float _DotRadius, _DotsPerLoop, _DotDensity, _FlowSpeed, _Seed;
+                float _DotRadius, _DotsPerLoop, _DotDensity, _FlowSpeed, _Seed, _FacetStrength;
             CBUFFER_END
-            struct Attributes { float4 positionOS : POSITION; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; half fog : TEXCOORD1; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; half fog : TEXCOORD1; float3 normalWS : TEXCOORD2; };
             Varyings Vert(Attributes v)
             {
                 Varyings o;
                 o.positionWS=TransformObjectToWorld(v.positionOS.xyz);
+                o.normalWS=TransformObjectToWorldNormal(v.normalOS);
                 o.positionCS=TransformWorldToHClip(o.positionWS);
                 o.fog=ComputeFogFactor(o.positionCS.z);
                 return o;
@@ -94,6 +96,7 @@ Shader "Capstone/World/BlackFlowContours"
                 dots*=smoothstep(0.04,0.16,length(s));
                 half3 color=lerp(_BackgroundColor.rgb,_LineColor.rgb,lineMask);
                 color=lerp(color,_DotColor.rgb,dots);
+                color*=lerp(1,0.28+0.72*saturate(dot(normalize(v.normalWS),GetMainLight().direction)),_FacetStrength);
                 return half4(MixFog(color,v.fog),1);
             }
             ENDHLSL

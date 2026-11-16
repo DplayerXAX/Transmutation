@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public enum TerrainRecipeKind { Original = 0, AmplifiedMountains = 1 }
+public enum TerrainRecipeKind { Original = 0, AmplifiedMountains = 1, GoldenMeadow = 2, Basilt = 3, BasiltVines = 4 }
 
 /// <summary>Serializable shape recipe, frozen with TerrainSculptData. Tools and meshing belong to ProceduralWorld.</summary>
 [Serializable]

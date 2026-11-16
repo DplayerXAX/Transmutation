@@ -1,0 +1,19 @@
+PASS Shared sculptable ProceduralWorld is fully generated
+PASS Saved chunk cache is used at runtime
+PASS Four independent leaf creatures cover the meadow
+PASS Player loop advances
+PASS Colony has its configured GPU leaf population
+PASS Colony has its configured GPU leaf population
+PASS Colony has its configured GPU leaf population
+PASS Colony has its configured GPU leaf population
+PASS Visible GPU leaves have finite positions
+PASS Leaf coverage follows substantial terrain height variation
+FAIL GPU leaf homes agree with the baked collider support map
+PASS Overlook has a modest walkable rock roof
+PASS Cliff tip has real empty space below its overhang
+PASS No forced five-second showcase tornado
+PASS Seeded event distribution favors small tornadoes and makes large ones rare
+PASS Natural tornado heights stay within the configured ranges
+PASS Two colonies can sustain different tornadoes simultaneously
+PASS Tornado source follows the actual hillside elevation
+MEASURED sampled leaves=15799; ground height range=-1.03..37.56; worst support error=14.379m; size distribution=8278/1272/450; sizes=8.00..79.98m

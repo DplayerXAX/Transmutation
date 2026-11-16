@@ -57,7 +57,6 @@ public static class SkateShoesValidation
         orientation.SetParent(root.transform, false);
         Set(player, "orientation", orientation);
         Set(player, "whatIsGround", (LayerMask)(1 << 7));
-        Set(player, "spawnSkateShoes", false);
         Call(player, "Start");
         return player;
     }
@@ -192,20 +191,9 @@ public static class SkateShoesValidation
             Check(!pickup.TryEquip(player), "the same pair cannot be claimed twice");
             Object.DestroyImmediate(pickupRoot);
 
-            var offerRoot = new GameObject("Delayed spawn shoes");
-            var offer = offerRoot.AddComponent<SkateShoesPickup>();
-            Set(player, "grounded", false);
-            var placement = (IEnumerator)typeof(SkateShoesPickup).GetMethod("PlaceNear", Private)
-                .Invoke(offer, new object[] { player });
-            Check(placement.MoveNext() && !offer.GetComponent<Collider>().enabled,
-                "starting shoes wait for generated ground before becoming visible or solid");
-            player.Body.position = new Vector3(50f, 1.02f, 0f);
-            Set(player, "grounded", true);
-            Physics.SyncTransforms();
-            Check(!placement.MoveNext() && offer.GetComponent<Collider>().enabled &&
-                Vector3.Distance(offer.transform.position, player.Body.position) < 4f,
-                "starting offer follows procedural spawn relocation and rests near the real spawn");
-            Object.DestroyImmediate(offerRoot);
+            Check(typeof(SkateShoesPickup).GetMethod("OfferNear") == null &&
+                typeof(SmoothFirstPersonController).GetField("spawnSkateShoes", Private) == null,
+                "shoes only appear from authored pickup prefabs");
             Object.DestroyImmediate(player.gameObject);
             Object.DestroyImmediate(camera.gameObject);
             Object.DestroyImmediate(floor);

@@ -12,6 +12,7 @@ Shader "Capstone/World/HeightStippleGround"
         _ContourWidth("Contour Width (band fraction)", Range(0.005,0.15)) = 0.025
         _ContourStrength("Contour Strength", Range(0,1)) = 0.45
         _ShadowStrength("Received Shadow Strength", Range(0,1)) = 0.3
+        _FacetStrength("Directional Facet Shading", Range(0,1)) = 0
         [HideInInspector] _BaseColor("Base Color", Color) = (1,1,1,1)
     }
     SubShader
@@ -33,6 +34,7 @@ Shader "Capstone/World/HeightStippleGround"
                 half4 _GroundColor, _HighColor, _LowColor, _BaseColor;
                 float _HeightLow, _HeightHigh, _Midpoint, _BandCount;
                 float _ContourWidth, _ContourStrength, _ShadowStrength;
+                float _FacetStrength;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
             struct Varyings
@@ -72,6 +74,7 @@ Shader "Capstone/World/HeightStippleGround"
                 color=lerp(color,_LowColor.rgb,contour*_ContourStrength);
                 Light sun=GetMainLight(TransformWorldToShadowCoord(v.positionWS));
                 color*=lerp(1-_ShadowStrength,1,sun.shadowAttenuation);
+                color*=lerp(1,0.42+0.58*saturate(dot(normalize(v.normalWS),sun.direction)),_FacetStrength);
                 return half4(MixFog(color,v.fog),1);
             }
             ENDHLSL

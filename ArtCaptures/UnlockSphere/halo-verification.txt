@@ -1,0 +1,1 @@
+PASS: surrounding debris at half and three-quarter bottom-up progress; real frames and drift advance; visit enters/exits normally. No creature save APIs called.

@@ -13,6 +13,7 @@ using UnityEngine.InputSystem;
 [DefaultExecutionOrder(1100)]
 public sealed class TentacleCreature : Creature
 {
+    public override bool IgnoreCarrySizeLimit => true;
     [Header("Body")]
     [Min(0.05f)] [SerializeField] private float bodyRadius = 0.35f;
     [Tooltip("Height of the body centre above the ground while wandering.")]
