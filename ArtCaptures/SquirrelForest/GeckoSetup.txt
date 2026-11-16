@@ -1,0 +1,1 @@
+PASS: reusable giant gecko prefab created, linked in gameplay library, and placed near the forest player. Legacy shoe pickups spawn this gecko.

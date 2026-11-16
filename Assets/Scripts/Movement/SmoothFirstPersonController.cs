@@ -47,6 +47,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [SerializeField] private float groundDrag = 4f;
     private PlayerSkateShoes skateShoes;
     public bool WearingSkateShoes => skateShoes != null && skateShoes.Equipped;
+    public bool RidingGecko => skateShoes != null && skateShoes.Gecko != null;
 
     [Header("Jumping — FullMovement Values")]
     [SerializeField] private float jumpForce = 12f;
@@ -385,7 +386,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private Vector3 GetGroundCheckOrigin()
     {
         float feetY = -playerHeight * 0.5f + groundCheckHalfExtents.y + groundCheckOriginYOffset;
-        return transform.position + Vector3.up * feetY;
+        return transform.position + Vector3.up * (feetY - (skateShoes != null && skateShoes.Gecko != null ? SkateGecko.RideHeight : 0f));
     }
 
     private bool CastGround(out RaycastHit hit)
@@ -393,8 +394,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (WearingSkateShoes)
         {
             // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
-            return ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
-                Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore);
+            if (ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
+                Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore)) return true;
+            // Keep the ordinary solid-surface fallback for rocks and bones on other layers.
         }
         if (ReflectionPhysics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
                 groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore))
@@ -741,6 +743,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     /// <summary>Heavier falls, and short hops when the jump key is let go early.</summary>
     private void ExtraGravity()
     {
+        // Rider and airborne gecko share ordinary gravity so a straight jump stays together.
+        if (skateShoes != null && skateShoes.Gecko != null) return;
         if (rb.isKinematic || !rb.useGravity || grounded || Flung || restricted || climbing || wallRunning) return;
         float vy = rb.linearVelocity.y;
         if (vy <= 0f) ownJumpRising = false;

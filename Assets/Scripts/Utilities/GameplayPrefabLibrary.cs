@@ -5,6 +5,7 @@ using UnityEngine;
 public sealed class GameplayPrefabLibrary : ScriptableObject
 {
     public GlowHoney glowHoney;
+    public SkateGecko skateGecko;
     public SkateShoesPickup skateShoes;
     public SkateShoesVisuals skateShoesVisual;
     public static GameplayPrefabLibrary Load() => Resources.Load<GameplayPrefabLibrary>("GameplayPrefabLibrary");

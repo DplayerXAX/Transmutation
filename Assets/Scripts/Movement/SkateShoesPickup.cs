@@ -9,6 +9,14 @@ public sealed class SkateShoesPickup : MonoBehaviour
 
     private void Awake()
     {
+        // Old authored shoe placements now release a living gecko instead of equipment.
+        var library = GameplayPrefabLibrary.Load();
+        if (Application.isPlaying && library != null && library.skateGecko != null)
+        {
+            var gecko = Instantiate(library.skateGecko, transform.position + Vector3.up * .3f, transform.rotation);
+            UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(gecko.gameObject, gameObject.scene);
+            gameObject.SetActive(false); Destroy(gameObject); return;
+        }
         var collider = GetComponent<BoxCollider>();
         collider.size = new Vector3(0.75f, 0.5f, 0.6f);
         collider.center = Vector3.up * 0.21f;

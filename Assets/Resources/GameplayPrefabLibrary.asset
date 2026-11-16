@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: GameplayPrefabLibrary
   m_EditorClassIdentifier: Assembly-CSharp::GameplayPrefabLibrary
   glowHoney: {fileID: 3702916647755730239, guid: 0a86f6f9e2b5cfa42a804bba173360bf, type: 3}
+  skateGecko: {fileID: 7379570202946609305, guid: 0584c68b586492a429bfeaf82ade4273, type: 3}
   skateShoes: {fileID: 8281372777023366697, guid: 235eb5028caed66488adb022f7aa5df4, type: 3}
   skateShoesVisual: {fileID: 386395607237125969, guid: 1d7af8d72ea85d541beda9dd6b50cb77, type: 3}
