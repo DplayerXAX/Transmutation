@@ -170,11 +170,24 @@ public static class AsuraBloodValidation
             Check(rolling.Target == stats && rolling.Armed, "rolling acquires and arms against coated player");
             stats.TryApplyBlood(CreaturePolarity.Light); Tick(rolling, 1f);
             Check(!rolling.Armed && !rolling.IsDead, "rolling cancels its fuse after friendly switch");
-            stats.TryApplyBlood(CreaturePolarity.Dark); Set(rolling, "nextSearch", 0f); Tick(rolling, 0.01f); Tick(rolling, 1f);
+            stats.TryApplyBlood(CreaturePolarity.Dark);
+            long beforeDetonation = stats.BloodPoints;
+            Set(rolling, "nextSearch", 0f); Tick(rolling, 0.01f); Tick(rolling, 1f);
+            Check(stats.CoatHealth > 0 && stats.BloodPoints == beforeDetonation + 25, "surviving a rival roller awards 25 points");
             Check(rolling.Detonated && rolling.IsDead && rolling.GetComponent<AsuraBloodDrop>().DroppedBlood != null, "rolling direct self-detonation leaves blood");
             var rollingDrop = rolling.GetComponent<AsuraBloodDrop>().DroppedBlood; rolling.Die();
             Check(rolling.GetComponent<AsuraBloodDrop>().DroppedBlood == rollingDrop, "self-detonation reward is claimed once");
             Object.DestroyImmediate(rollingDrop.gameObject); Object.DestroyImmediate(rolling.gameObject);
+
+            stats.ApplyDamage(stats.CoatHealth - 1);
+            var lethalRoller = Spawn<RollingAsura>("RollingAsura", Vector3.zero);
+            Resolve(lethalRoller, CreaturePolarity.Light);
+            Set(lethalRoller, "nextSearch", 0f); physics.Simulate(0.001f);
+            Tick(lethalRoller, 0.01f); Tick(lethalRoller, 1f);
+            Check(lethalRoller.Detonated && stats.CoatHealth == 0 && stats.BloodPoints == 0,
+                "a roller that breaks the coat cannot credit its own subsequent death");
+            Object.DestroyImmediate(lethalRoller.GetComponent<AsuraBloodDrop>().DroppedBlood.gameObject);
+            Object.DestroyImmediate(lethalRoller.gameObject);
 
             Move(Vector3.zero); body.linearVelocity = Vector3.zero; camera.transform.rotation = Quaternion.identity;
             stats.ApplyDamage(1000f);

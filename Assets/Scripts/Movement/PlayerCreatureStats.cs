@@ -14,6 +14,10 @@ public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombat
     public float Luminosity => luminosity;
 
     public float CoatHealth { get; private set; }
+    public const int PointsPerStone = 100;
+    public long BloodPoints { get; private set; }
+    public event System.Action<long> BloodPointsChanged;
+    public event System.Action<long, CreaturePolarity> CoatBroken;
     public CreaturePolarity Polarity { get; private set; } = CreaturePolarity.None;
     public event System.Action<float, CreaturePolarity> CoatChanged;
     public Component TargetComponent => this;
@@ -23,7 +27,23 @@ public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombat
     public bool CanBeAITargeted => IsCombatActive && CoatHealth > 0f && Polarity != CreaturePolarity.None;
     private Rigidbody body;
 
-    private void Awake() => body = GetComponentInParent<Rigidbody>();
+    private void Awake()
+    {
+        body = GetComponentInParent<Rigidbody>();
+        CoatBroken += SpawnPayout;
+    }
+
+    private void SpawnPayout(long points, CreaturePolarity endingColor) =>
+        BloodstoneBurst.Emit(this, points / PointsPerStone);
+
+    public bool TryAddBloodPoints(CreaturePolarity donor, int amount)
+    {
+        if (!CanBeAITargeted || amount <= 0 || donor == Polarity ||
+            (donor != CreaturePolarity.Light && donor != CreaturePolarity.Dark)) return false;
+        BloodPoints = System.Math.Min(BloodPoints, long.MaxValue - amount) + amount;
+        BloodPointsChanged?.Invoke(BloodPoints);
+        return true;
+    }
 
     public bool TryApplyBlood(CreaturePolarity donor)
     {
@@ -37,7 +57,11 @@ public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombat
     {
         if (!IsCombatActive || CoatHealth <= 0f || float.IsNaN(amount) || float.IsInfinity(amount) || amount <= 0f) return false;
         float next = Mathf.Max(0f, CoatHealth - amount);
+        long points = BloodPoints;
+        var endingColor = Polarity;
+        if (next == 0f) BloodPoints = 0;
         CommitCoat(next, next > 0f ? Polarity : CreaturePolarity.None);
+        if (next == 0f) CoatBroken?.Invoke(points, endingColor);
         return true;
     }
 

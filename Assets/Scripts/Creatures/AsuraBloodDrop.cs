@@ -14,9 +14,7 @@ public sealed class AsuraBloodDrop : MonoBehaviour
     private void OnDisable() { if (donor != null) donor.Died -= OnDied; }
     private void OnDied(Creature dead)
     {
-        if (claimed || !Application.isPlaying || !gameObject.scene.isLoaded ||
-            (dead.DeathCause != CreatureDeathCause.Damage && !(dead is RollingAsura roller && roller.Detonated)) ||
-            (dead.Polarity != CreaturePolarity.Light && dead.Polarity != CreaturePolarity.Dark)) return;
+        if (claimed || !AsuraBloodPointReward.IsCombatDeath(dead)) return;
         claimed = true;
         if (bloodPrefab == null) bloodPrefab = Resources.Load<AsuraBlood>("AsuraBlood");
         if (bloodPrefab == null) { Debug.LogError("Asura blood prefab is missing.", this); return; }

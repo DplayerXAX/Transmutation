@@ -50,19 +50,7 @@ public static class AsuraBloodSetup
             }
             finally { Object.DestroyImmediate(root); }
         }
-        var blood = AssetDatabase.LoadAssetAtPath<AsuraBlood>(BloodPath);
-        foreach (string name in new[] { "MeleeAsura", "RangedAsura", "GeneralAsura", "RollingAsura" })
-        {
-            string path = AsuraPrototypeSetup.Folder + "/" + name + ".prefab";
-            var root = PrefabUtility.LoadPrefabContents(path);
-            try
-            {
-                var drop = root.GetComponent<AsuraBloodDrop>();
-                if (drop == null) drop = root.AddComponent<AsuraBloodDrop>();
-                Set(drop, "bloodPrefab", blood); PrefabUtility.SaveAsPrefabAsset(root, path);
-            }
-            finally { PrefabUtility.UnloadPrefabContents(root); }
-        }
+        InstallRewards();
         var scene = SceneManager.GetSceneByPath(AsuraFeelSetup.ScenePath);
         if (!scene.isLoaded) scene = EditorSceneManager.OpenScene(AsuraFeelSetup.ScenePath, OpenSceneMode.Single);
         SceneManager.SetActiveScene(scene);
@@ -89,5 +77,57 @@ public static class AsuraBloodSetup
         Set(hud, "player", stats);
         EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets();
         return "Blood prefab, four Asura drops, body shell and globe installed in Scene_AsuraShowcase.";
+    }
+
+    [MenuItem("Tools/Creatures/Asura/Install Bloodstone Rewards")]
+    public static void InstallRewards()
+    {
+        const string folder = AsuraPrototypeSetup.Folder + "/Resources";
+        if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder(AsuraPrototypeSetup.Folder, "Resources");
+        if (AssetDatabase.LoadAssetAtPath<Material>(folder + "/BloodDroplet.mat") == null)
+            AssetDatabase.CreateAsset(new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit")), folder + "/BloodDroplet.mat");
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(folder + "/Bloodstone.prefab") == null)
+        {
+            var stone = new GameObject("Bloodstone");
+            try
+            {
+                var rigid = stone.AddComponent<Rigidbody>();
+                rigid.mass = 0.35f;
+                rigid.linearDamping = 1.5f;
+                rigid.angularDamping = 3f;
+                rigid.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                stone.AddComponent<SphereCollider>().radius = 0.18f;
+                stone.AddComponent<Bloodstone>();
+                var facet = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                facet.name = "Crystal";
+                facet.transform.SetParent(stone.transform, false);
+                facet.transform.localRotation = Quaternion.Euler(32, 18, 45);
+                facet.transform.localScale = new Vector3(0.22f, 0.30f, 0.20f);
+                Object.DestroyImmediate(facet.GetComponent<Collider>());
+                var material = new Material(Shader.Find("Universal Render Pipeline/Lit")) { color = new Color(0.34f, 0.065f, 0.10f) };
+                AssetDatabase.CreateAsset(material, folder + "/Bloodstone.mat");
+                facet.GetComponent<Renderer>().sharedMaterial = material;
+                PrefabUtility.SaveAsPrefabAsset(stone, folder + "/Bloodstone.prefab");
+            }
+            finally { Object.DestroyImmediate(stone); }
+        }
+        var blood = AssetDatabase.LoadAssetAtPath<AsuraBlood>(BloodPath);
+        foreach (var role in new[] { ("MeleeAsura", 25), ("RollingAsura", 25), ("RangedAsura", 50), ("GeneralAsura", 100) })
+        {
+            string path = AsuraPrototypeSetup.Folder + "/" + role.Item1 + ".prefab";
+            var root = PrefabUtility.LoadPrefabContents(path);
+            try
+            {
+                if (!root.TryGetComponent<AsuraBloodDrop>(out var drop)) drop = root.AddComponent<AsuraBloodDrop>();
+                Set(drop, "bloodPrefab", blood);
+                if (!root.TryGetComponent<AsuraBloodPointReward>(out var reward)) reward = root.AddComponent<AsuraBloodPointReward>();
+                var fields = new SerializedObject(reward);
+                fields.FindProperty("bloodPointValue").intValue = role.Item2;
+                fields.ApplyModifiedPropertiesWithoutUndo();
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+        AssetDatabase.SaveAssets();
     }
 }

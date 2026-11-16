@@ -186,9 +186,22 @@ public static class AsuraPrototypeSetup
         PlaceUnit("RollingAsura", CreaturePolarity.Light, -21f, 17f);
         PlaceUnit("RollingAsura", CreaturePolarity.Dark, 21f, 17f);
 
-        void PlaceUnit(string prefab, CreaturePolarity polarity, float x, float z)
+        foreach (var polarity in new[] { CreaturePolarity.Light, CreaturePolarity.Dark })
         {
-            string name = prefab + " " + polarity + " Outer";
+            int side = polarity == CreaturePolarity.Light ? -1 : 1;
+            PlaceUnit("GeneralAsura", polarity, side * 13f, 9f, "Rear");
+            PlaceUnit("RangedAsura", polarity, side * 15f, 4f, "Flank");
+            PlaceUnit("RangedAsura", polarity, side * 12f, -7f, "Front");
+            PlaceUnit("MeleeAsura", polarity, side * 4f, -13f, "Vanguard");
+            PlaceUnit("MeleeAsura", polarity, side * 7f, -5f, "Front");
+            PlaceUnit("MeleeAsura", polarity, side * 4f, 3f, "Center");
+            PlaceUnit("MeleeAsura", polarity, side * 6f, 8f, "Rear");
+            PlaceUnit("MeleeAsura", polarity, side * 11f, -1f, "Flank");
+        }
+
+        void PlaceUnit(string prefab, CreaturePolarity polarity, float x, float z, string position = "Outer")
+        {
+            string name = prefab + " " + polarity + " " + position;
             if (parent.Find(name) != null) return;
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(Folder + "/" + prefab + ".prefab");
             var unit = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene);

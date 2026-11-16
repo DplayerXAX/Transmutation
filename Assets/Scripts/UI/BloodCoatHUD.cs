@@ -8,9 +8,11 @@ public sealed class BloodCoatHUD : MonoBehaviour
     [SerializeField, Min(16f)] private float diameter = 64f;
     [SerializeField] private Vector2 inset = new Vector2(24f, 24f);
     private BloodGlobeGraphic globe;
+    private RectTransform fill;
+    private UnityEngine.UI.Text stoneCount;
     public bool Visible => globe != null && globe.gameObject.activeSelf;
     public float OccupiedScreenWidth => Visible && globe.canvas != null
-        ? (inset.x + diameter + 16f) * globe.canvas.scaleFactor : 0f;
+        ? (inset.x + diameter + 28f + stoneCount.preferredWidth) * globe.canvas.scaleFactor : 0f;
 
     private static bool sceneHooked;
 
@@ -63,23 +65,54 @@ public sealed class BloodCoatHUD : MonoBehaviour
         var rect = globe.rectTransform;
         rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
         rect.anchoredPosition = inset; rect.sizeDelta = Vector2.one * diameter;
+        var track = Piece<UnityEngine.UI.Image>("Blood points", rect, new Vector2(diameter + 6f, 0f), new Vector2(9f, diameter));
+        track.color = new Color(0.1f, 0.07f, 0.09f, 0.9f);
+        var meter = Piece<UnityEngine.UI.Image>("Progress", track.rectTransform, Vector2.one, new Vector2(7f, diameter - 2f));
+        meter.color = new Color(0.94f, 0.36f, 0.40f);
+        fill = meter.rectTransform;
+        stoneCount = Piece<UnityEngine.UI.Text>("Stones earned", track.rectTransform, new Vector2(11f, 0f), new Vector2(24f, 20f));
+        stoneCount.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        stoneCount.fontSize = 16;
+        stoneCount.horizontalOverflow = HorizontalWrapMode.Overflow;
+        stoneCount.alignment = TextAnchor.LowerLeft;
+        stoneCount.gameObject.AddComponent<UnityEngine.UI.Outline>().effectColor = Color.black;
         item.SetActive(false);
+    }
+    private static T Piece<T>(string name, RectTransform parent, Vector2 position, Vector2 size) where T : UnityEngine.UI.Graphic
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(T));
+        var graphic = go.GetComponent<T>();
+        graphic.raycastTarget = false;
+        var rect = graphic.rectTransform;
+        rect.SetParent(parent, false);
+        rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        return graphic;
     }
     private void OnEnable()
     {
         if (player == null) player = FindFirstObjectByType<PlayerCreatureStats>();
         if (player == null) return;
         player.CoatChanged += OnCoat;
+        player.BloodPointsChanged += OnPoints;
         OnCoat(player.CoatHealth, player.Polarity);
     }
     private void OnDisable()
     {
         if (player != null) player.CoatChanged -= OnCoat;
+        if (player != null) player.BloodPointsChanged -= OnPoints;
         if (globe != null) globe.gameObject.SetActive(false);
     }
     private void OnCoat(float health, CreaturePolarity polarity)
     {
         globe.SetCoat(health, polarity);
+        OnPoints(player.BloodPoints);
         globe.gameObject.SetActive(health > 0f);
+    }
+    private void OnPoints(long points)
+    {
+        fill.localScale = new Vector3(1f, (points % PlayerCreatureStats.PointsPerStone) / (float)PlayerCreatureStats.PointsPerStone, 1f);
+        stoneCount.text = (points / PlayerCreatureStats.PointsPerStone).ToString();
     }
 }

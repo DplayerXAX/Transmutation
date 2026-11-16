@@ -750,6 +750,7 @@ GameObject:
   - component: {fileID: 1547791909326498257}
   - component: {fileID: 3932282436859313590}
   - component: {fileID: 4902800891799972002}
+  - component: {fileID: 1959503077850202424}
   m_Layer: 0
   m_Name: GeneralAsura
   m_TagString: Untagged
@@ -964,6 +965,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4f663f40e5df12c48b8d1a180b0bdb07, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AsuraBloodDrop
   bloodPrefab: {fileID: 2109663464989351326, guid: e0747a60683887844aa9b45ddd105161, type: 3}
+--- !u!114 &1959503077850202424
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8854511930475670162}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8714c96569b02254ea332e6ee8d7cc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AsuraBloodPointReward
+  bloodPointValue: 100
+  collectionRadius: 12
