@@ -60,7 +60,9 @@ public sealed class CreatureSleep : MonoBehaviour
             bool tentacle = creature is TentacleCreature;
             float beyond = tentacle ? sleepBeyond : otherSleepBeyond, within = tentacle ? wakeWithin : otherWakeWithin;
             float distance = Vector3.Distance(creature.transform.position, player.position);
-            bool busy = creature.IsCarried || creature.IsBubbleCaptured || tentacle && ((TentacleCreature)creature).PinnedCount > 0;
+            bool busy = creature.IsCarried || creature.IsBubbleCaptured ||
+                creature is SquirrelNest nest && nest.IsMoving || creature is Squirrel squirrel && squirrel.IsMigrating ||
+                tentacle && ((TentacleCreature)creature).PinnedCount > 0;
             if (!sleeping.Contains(creature))
             {
                 if (busy || distance <= beyond || !creature.SimulationEnabled) continue;

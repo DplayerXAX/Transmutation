@@ -33,6 +33,8 @@ Material:
     - _AlphaCutoff: 0.05
     - _AlphaFromRamp: 1
     - _BaseAlpha: 0.85
+    - _Contrast: 1.45
+    - _CreatureHurt: 0
     - _Cull: 2
     - _FresnelBias: 0.12
     - _FresnelPower: 2.2
@@ -41,8 +43,6 @@ Material:
     - _GrainScale: 95
     - _GrainSpeed: 32
     - _HDRIntensity: 1.5
-    - _Saturation: 1.75
-    - _Contrast: 1.45
     - _HeatContrast: 1.6
     - _NoiseScale: 1.6
     - _NoiseWeight: 0.68
@@ -51,6 +51,7 @@ Material:
     - _RampStop3: 0.402
     - _RampStop4: 0.497
     - _RampStop5: 0.833
+    - _Saturation: 1.75
     - _UseRampTex: 0
     - _WarpStrength: 0.7
     m_Colors:

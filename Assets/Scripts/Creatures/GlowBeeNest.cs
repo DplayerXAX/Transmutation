@@ -11,7 +11,8 @@ public sealed class GlowBeeNest : Creature
     private readonly List<GlowHoney> products = new List<GlowHoney>();
     private GlowBeeColony colony;
     private float storedNectar, fermentation;
-    public Vector3 Entrance => transform.position + transform.forward * 0.65f + Vector3.up * 0.15f;
+    public Vector3 Entrance => transform.position + transform.forward * (0.48f * Mathf.Abs(transform.lossyScale.x) + 0.17f) +
+        transform.up * (0.15f * Mathf.Abs(transform.lossyScale.y));
     public float StoredNectar => storedNectar;
     public int HoneyCapacity => honeyCapacity;
     public int NectarPerHoney => nectarPerHoney;

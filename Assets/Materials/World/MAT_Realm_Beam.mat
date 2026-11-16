@@ -25,8 +25,8 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Intensity: 1.8
     - _Fade: 0
+    - _Intensity: 1.8
     m_Colors:
     - _Core: {r: 1, g: 1, b: 1, a: 1}
     - _Edge: {r: 0.55, g: 0.8, b: 1, a: 1}

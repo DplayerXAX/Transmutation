@@ -25,19 +25,19 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Cull: 2
     - _GrainCount: 9
     - _GrainWave: 0.35
-    - _ThinLine: 0.6
-    - _ThickLine: 3.2
-    - _TipGlow: 0
-    - _TipLength: 0.15
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
+    - _ThickLine: 3.2
+    - _ThinLine: 0.6
+    - _TipGlow: 0
+    - _TipLength: 0.15
     m_Colors:
     - _Color: {r: 0.74, g: 0.73, b: 0.7, a: 1}
-    - _ShadowColor: {r: 0.42, g: 0.41, b: 0.4, a: 1}
     - _GrainColor: {r: 0.05, g: 0.05, b: 0.06, a: 1}
+    - _ShadowColor: {r: 0.42, g: 0.41, b: 0.4, a: 1}
     - _TipColor: {r: 0.95, g: 0.97, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

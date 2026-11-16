@@ -187,12 +187,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TrappingBubble
   creatureName: Bubble
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
+  limitLifetime: 0
   upwardSpeed: 0.25
   launchDecaySeconds: 0.35
   riseDuration: {x: 12, y: 20}
@@ -205,6 +222,8 @@ MonoBehaviour:
   releaseImmunity: 0.25
   shooterProtection: 0.25
   escapeHeight: 4
+  escapeForward: 3
+  playerSteerSpeed: 1.2
   requireExplicitInteractionToPop: 0
   shell: {fileID: 9149729476682847983}
 --- !u!1 &7142265863149175716

@@ -42,7 +42,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f18564342139477ba1d9bfba630f7f95, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelSystemManager
   squirrelPrefab: {fileID: 2224693188947993226, guid: 6bfee320e35194fc99b2c55d1bd38eaa, type: 3}
   nestPrefab: {fileID: 7812910053619368809, guid: 606358e6904854f61985a28041ab5963, type: 3}
@@ -60,7 +60,9 @@ MonoBehaviour:
   fightDuration: 1.4
   fightCooldown: 6
   sizeAdvantage: 2
+  autoDiscoverScene: 1
   foodPrefab: {fileID: 2935333217659554997, guid: e074c5cfe37a44e85976920a38e90ec1, type: 3}
+  scatterFoodOnSide: 0
   foods: []
   initialFoodCount: 15
   foodSpawnRadius: 6
@@ -69,4 +71,3 @@ MonoBehaviour:
   respawnInterval: 15
   foodPerCycle: 3
   maxUnstoredFood: 24
-  autoDiscoverScene: 1

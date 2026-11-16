@@ -1,0 +1,7 @@
+PASS
+Trees: 700 (previously 500, +40%).
+Whole tree height: 2.000-9.000 m.
+Trunks and crowns scale proportionally with tree height; tallest trees grow 1.5x in all dimensions.
+Additional tree spacing: 1.8 m; path retained.
+12 hive anchors retain unit world scale and bare trunk attachment.
+Squirrel home candidates and flower clearings retained.

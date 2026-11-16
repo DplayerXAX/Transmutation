@@ -25,32 +25,32 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Scale: 0.75
-    - _Warp: 2.4
-    - _Macro: 1.8
+    - _BlockGradient: 0.25
+    - _Blocks: 6
+    - _BubbleScale: 4.5
+    - _Bubbles: 0.12
     - _Darkness: 0.3
-    - _Levels: 4
-    - _StepSoftness: 0.22
-    - _LightAngle: 126
-    - _LightHeight: 0.35
-    - _Relief: 1.8
+    - _DriftAngle: 35
     - _Gloss: 35
     - _GlossStrength: 1
-    - _ZenithDarken: 0.45
     - _HazeHeight: 1.8
-    - _Blocks: 6
-    - _BlockGradient: 0.25
     - _HighlightCut: 0.25
+    - _Levels: 4
     - _Lift: 0.03
-    - _Bubbles: 0.12
-    - _BubbleScale: 4.5
-    - _Speed: 0.03
-    - _DriftAngle: 35
+    - _LightAngle: 126
+    - _LightHeight: 0.35
+    - _Macro: 1.8
     - _Morph: 0.06
+    - _Relief: 1.8
+    - _Scale: 0.75
+    - _Speed: 0.03
+    - _StepSoftness: 0.22
+    - _Warp: 2.4
+    - _ZenithDarken: 0.45
     m_Colors:
+    - _GroundColor: {r: 0.12, g: 0.12, b: 0.13, a: 1}
+    - _HorizonColor: {r: 0.82, g: 0.82, b: 0.82, a: 1}
     - _InkColor: {r: 0.035, g: 0.035, b: 0.04, a: 1}
     - _PaperColor: {r: 0.9, g: 0.9, b: 0.89, a: 1}
-    - _HorizonColor: {r: 0.82, g: 0.82, b: 0.82, a: 1}
-    - _GroundColor: {r: 0.12, g: 0.12, b: 0.13, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

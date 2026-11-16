@@ -427,6 +427,9 @@ MonoBehaviour:
   jumpCooldown: 0.25
   airMultiplier: 0.4
   fieldOfView: 72
+  groundOnAnyLayer: 1
+  frictionlessBody: 1
+  unstickAfter: 0.45
   groundAcceleration: 60
   groundDeceleration: 80
   airAcceleration: 22
@@ -655,6 +658,12 @@ MonoBehaviour:
   maxCarrySize: 2.2
   clearBelowCrosshair: 8
   clearRightOfCrosshair: 6
+  flowerInCorner: 1
+  flowerCorner: {x: 0.62, y: -0.24, z: 0.95}
+  adaptiveHold: 1
+  handRest: {x: 0.28, y: -0.3, z: 0.45}
+  holdOutward: {x: 0.35, y: -0.25, z: 1}
+  bellowsHold: {x: 0.9, y: -0.45, z: 2.1}
   grabReachTime: 0.22
   bringInSpeed: 12
 --- !u!114 &5322836975175712463
@@ -891,6 +900,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   carrier: {fileID: 0}
+  honeyCoatHoldTime: 0.45
 --- !u!1 &7285722104702189515
 GameObject:
   m_ObjectHideFlags: 0

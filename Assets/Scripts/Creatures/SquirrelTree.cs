@@ -5,10 +5,14 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public sealed class SquirrelTree : MonoBehaviour
 {
+    [SerializeField] private bool useRootPoint;
+    [SerializeField] private Vector3 rootPoint;
+    public void SetRootPoint(Vector3 localPoint) { useRootPoint = true; rootPoint = localPoint; }
     public Vector3 GroundPosition
     {
         get
         {
+            if (useRootPoint) return transform.TransformPoint(rootPoint);
             Vector3 point = transform.position;
             var trunk = GetComponent<Collider>();
             if (trunk != null) point.y = trunk.bounds.min.y;
