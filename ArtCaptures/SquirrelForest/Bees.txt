@@ -1,6 +1,6 @@
 PASS: 40-second Play Mode observation.
 Six colonies; twelve active hives; 72 glow bees; 238 authored hyacinth nectar sources.
 Observed gathering from hyacinths and returning nectar to hives.
-Honey products at observation end: 14.
+Honey products at observation end: 16.
 All colony flower references are authored hyacinths.
 Validated 12 half-size mounted hives on bare trunks and accessible entrances.

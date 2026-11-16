@@ -152,7 +152,7 @@ public sealed class SilkForestManager : MonoBehaviour
         var trees = new List<Tree>();
         float sx = Mathf.Clamp(Mathf.Abs(forestSize.x), 1, 500);
         float sz = Mathf.Clamp(Mathf.Abs(forestSize.y), 1, 500);
-        int target = Mathf.Clamp(Mathf.RoundToInt(sx * sz * Mathf.Clamp(treeDensity, 0, 12) / 100), 0, Mathf.Clamp(maximumTrees, 1, 500));
+        int target = Mathf.Clamp(Mathf.RoundToInt(sx * sz * Mathf.Clamp(treeDensity, 0, 12) / 100), 0, Mathf.Clamp(maximumTrees, 1, 1000));
         // Bounded rejection sampling; density never overrides the minimum spacing.
         for (int attempt = 0; trees.Count < target && attempt < target * 100; attempt++)
         {
