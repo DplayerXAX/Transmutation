@@ -40,9 +40,19 @@ public sealed class FireSource : Creature
     [Tooltip("Horizontal speed of a shot bubble; it keeps this heading while it floats.")]
     [Min(0.1f)] [SerializeField] private float shotSpeed = 4f;
     private float nextShot;
+    [Tooltip("Off for a source fixed in the world, such as a geothermal vent.")]
+    [SerializeField] private bool carryable = true;
 
+    public override bool CanBeCarried => carryable;
     public override bool CanUseWhileCarried => !IsDead;
-    public override string CarriedPrompt => IsDead ? null : "[LMB] Shoot fire bubble";
+    public override string CarriedPrompt => IsDead ? null : CarriedUse != null ? CarriedUse.Prompt : "[LMB] Shoot fire bubble";
+
+    /// <summary>Something on this object (a geothermal vent) that takes over left click while carried.</summary>
+    public interface ICarriedUse { string Prompt { get; } }
+    public ICarriedUse CarriedUse { get; set; }
+
+    /// <summary>Takes heat out of the source for a use of its own (a vent's steam jet). Returns what was taken.</summary>
+    public float DrainHeat(float amount) => SpendHeat(amount);
 
     // Creatures currently overlapping the radiation trigger.
     private readonly HashSet<Creature> creaturesInRange = new HashSet<Creature>();
@@ -116,6 +126,7 @@ public sealed class FireSource : Creature
     /// <summary>Carried: shoots a fire bubble ahead along the view, paid for with the source's own Heat.</summary>
     public override void ReceiveInteraction(CreatureInteraction interaction)
     {
+        if (CarriedUse != null) return; // it handles the button itself
         if (!IsCarried || IsDead || !SimulationEnabled || Time.time < nextShot || Heat < shotHeat) return;
         FireBubble prefab = shotBubblePrefab;
         if (prefab == null)
