@@ -25,15 +25,15 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Bands: 0.35
+    - _Cull: 2
     - _Pulse: 0.25
     - _PulseSpeed: 1.1
-    - _Bands: 0.35
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
     m_Colors:
-    - _CoreColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 0.9, g: 0.93, b: 0.98, a: 1}
+    - _CoreColor: {r: 1, g: 1, b: 1, a: 1}
     - _RimColor: {r: 0.35, g: 0.4, b: 0.5, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

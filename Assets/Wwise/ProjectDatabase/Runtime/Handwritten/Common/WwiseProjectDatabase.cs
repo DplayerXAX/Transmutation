@@ -63,16 +63,32 @@ public partial class WwiseProjectDatabase
         SoundBankDirectoryUpdated?.InvokeUnitySafe();
     }
     public static event System.Action SoundBankDirectoryUpdated;
+
+    private static string GetNativeDatabasePath(string directoryPath)
+    {
+        // The Windows native database crashes when its absolute input path contains
+        // Chinese characters (including when marshalled as UTF-8). Unity's working
+        // directory is the project root, so use a relative path for the native call.
+        // Keep the original path for the managed file existence check.
+#if UNITY_EDITOR_WIN
+        return Path.GetRelativePath(System.Environment.CurrentDirectory, Path.GetFullPath(directoryPath));
+#else
+        return directoryPath;
+#endif
+    }
+
     public static async Task<bool> InitAsync(string inDirectoryPath, string inDirectoryPlatformName)
     {
         IsInitialized = false;
         InitCheckUp(inDirectoryPath);
         if (!ProjectInfoExists)
             return false;
+
+        var nativeDirectoryPath = GetNativeDatabasePath(inDirectoryPath);
         
         try
         {
-            await Task.Run(() => WwiseProjectDataBasePINVOKE.Init(inDirectoryPath, inDirectoryPlatformName));
+            await Task.Run(() => WwiseProjectDataBasePINVOKE.Init(nativeDirectoryPath, inDirectoryPlatformName));
         }
         catch (System.Exception e)
         {
@@ -93,7 +109,7 @@ public partial class WwiseProjectDatabase
         
         try
         {
-            WwiseProjectDataBasePINVOKE.Init(inDirectoryPath, inDirectoryPlatformName);
+            WwiseProjectDataBasePINVOKE.Init(GetNativeDatabasePath(inDirectoryPath), inDirectoryPlatformName);
 
             if (!string.IsNullOrEmpty(language))
             {

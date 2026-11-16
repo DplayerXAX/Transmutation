@@ -21,6 +21,10 @@ public sealed class SquirrelMotor : MonoBehaviour
     private bool hasBypassPoint;
     private float hopRequested;
     private float nextHop;
+    private Vector3 progressPosition;
+    private float progressTime;
+    private Vector3 recoveryPoint;
+    private float recoveryTime;
     public float BodyRadius => GetComponent<Collider>() is Collider collider
         ? Mathf.Max(collider.bounds.extents.x, collider.bounds.extents.z) : 0.5f;
 
@@ -75,7 +79,15 @@ public sealed class SquirrelMotor : MonoBehaviour
             return;
         }
         Vector3 velocity = desiredVelocity;
-        if (hasBypassPoint && velocity.sqrMagnitude > 0.01f)
+        UpdateProgress();
+        if (recoveryTime > 0f)
+        {
+            recoveryTime -= Time.fixedDeltaTime;
+            Vector3 escape = Vector3.ProjectOnPlane(recoveryPoint - body.position, Vector3.up);
+            if (escape.sqrMagnitude < 0.09f) recoveryTime = 0f;
+            else velocity = escape.normalized * Mathf.Max(1f, desiredVelocity.magnitude);
+        }
+        if (recoveryTime <= 0f && hasBypassPoint && velocity.sqrMagnitude > 0.01f)
         {
             Vector3 offset = Vector3.ProjectOnPlane(bypassPoint - body.position, Vector3.up);
             if (offset.sqrMagnitude < 0.09f) hasBypassPoint = false;
@@ -156,6 +168,36 @@ public sealed class SquirrelMotor : MonoBehaviour
             best = score;
             bypassPoint = point;
             hasBypassPoint = true;
+        }
+    }
+
+    private void UpdateProgress()
+    {
+        if (desiredVelocity.sqrMagnitude < 0.01f) { progressTime = 0f; progressPosition = body.position; recoveryTime = 0f; return; }
+        if (Vector3.ProjectOnPlane(body.position - progressPosition, Vector3.up).sqrMagnitude >= 0.0625f)
+        { progressTime = 0f; progressPosition = body.position; }
+        else progressTime += Time.fixedDeltaTime;
+        if (progressTime < 1.2f) return;
+        progressTime = 0f; progressPosition = body.position;
+        PhysicsScene physics = gameObject.scene.GetPhysicsScene();
+        float distance = Mathf.Max(1.5f, BodyRadius * 3f), best = float.NegativeInfinity;
+        Vector3 preferred = desiredVelocity.normalized;
+        for (int i = 0; i < 12; i++)
+        {
+            Vector3 direction = Quaternion.AngleAxis(i * 30f, Vector3.up) * preferred;
+            // A cast can miss a collider already touching the body. Do not retry the stalled heading.
+            if (Vector3.Dot(direction, preferred) > 0.7f) continue;
+            Vector3 point = body.position + direction * distance;
+            if (!squirrel.AllowsMovementAt(point) || !physics.Raycast(point + Vector3.up * 3f,
+                Vector3.down, out var floor, 8f, groundLayers, QueryTriggerInteraction.Ignore) || floor.normal.y < 0.7f) continue;
+            float clearance = distance;
+            foreach (var hit in body.SweepTestAll(direction, distance, QueryTriggerInteraction.Ignore))
+                if (Mathf.Abs(hit.normal.y) < 0.5f && hit.collider.GetComponentInParent<Squirrel>() == null)
+                    clearance = Mathf.Min(clearance, hit.distance);
+            if (clearance < distance * 0.7f) continue;
+            float score = Vector3.Dot(direction, preferred) + clearance / distance;
+            if (score <= best) continue;
+            best = score; recoveryPoint = floor.point; recoveryTime = 2.5f; hasBypassPoint = false;
         }
     }
 

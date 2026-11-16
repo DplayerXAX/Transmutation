@@ -1,0 +1,12 @@
+PASS
+Six homes distributed across eligible low-canopy trees.
+Configured minimum spacing: 28 m. Actual minimum: 42.38 m.
+Coverage: 88.75 x 90.77 m.
+Each home is within 1.8 m of a low-canopy tree root.
+Migration/build placement respects spacing; initialization remains idempotent.
+Nest 1: (42.43, 1.39, -46.15)
+Nest 2: (-42.37, 0.89, 43.33)
+Nest 3: (-42.34, 0.22, -41.51)
+Nest 4: (46.38, -2.31, 38.45)
+Nest 5: (2.69, -0.09, -2.27)
+Nest 6: (4.45, -2.94, 44.62)

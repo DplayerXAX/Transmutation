@@ -25,6 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _FakeLightAmount: 0.15
     - _FloorBlendWidth: 9.08
     - _FloorFreq: 12.33
     - _FloorHeight: -5
@@ -32,6 +33,12 @@ Material:
     - _FloorTriplanarSharpness: 1
     - _FloorViewFalloff: 0.15
     - _FloorViewInfluence: 1
+    - _HatchScale: 3.5
+    - _HatchStrength: 0.9
+    - _HatchWidth: 1.1
+    - _HazeEnd: 80
+    - _HazeStart: 10
+    - _MainLightAmount: 1.2
     - _PolarScale: 0.02
     - _RayPhaseProximityBoost: 100
     - _RayPhaseProximityFalloff: 0.12
@@ -43,24 +50,17 @@ Material:
     - _RingKeepThreshold: 1
     - _RingSqrtBoost: 6
     - _RingTravel: 7
-    - _ShadowLineDim: 0.35
-    - _MainLightAmount: 1.2
-    - _FakeLightAmount: 0.15
     - _ShadeLevels: 2
-    - _HatchStrength: 0.9
-    - _HatchScale: 3.5
-    - _HatchWidth: 1.1
+    - _ShadowLineDim: 0.35
     - _SheenAmount: 0
-    - _HazeStart: 10
-    - _HazeEnd: 80
     m_Colors:
+    - _Center: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 0.08, g: 0.1, b: 0.12, a: 1}
-    - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}
-    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
-    - _LineColor2: {r: 1, g: 1, b: 1, a: 1}
     - _FakeLightDir: {r: 0.3, g: 1, b: 0.2, a: 0}
     - _HatchColor: {r: 0.35, g: 0.35, b: 0.37, a: 1}
     - _HazeColor: {r: 0, g: 0, b: 0, a: 0}
-    - _Center: {r: 0, g: 0, b: 0, a: 0}
+    - _LineColor: {r: 1, g: 1, b: 1, a: 1}
+    - _LineColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

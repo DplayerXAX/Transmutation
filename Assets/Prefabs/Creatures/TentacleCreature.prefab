@@ -92,20 +92,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe33add57e03498680820e4b9ee5c7c5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -154,3 +163,6 @@ MonoBehaviour:
   canClimbUp: 0
   canHang: 0
   backScale: 0.32
+  huntRadius: 9
+  holdTime: {x: 6, y: 11}
+  huntCooldown: 15

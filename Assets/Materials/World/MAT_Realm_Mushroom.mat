@@ -25,16 +25,16 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Cull: 2
     - _GillCount: 36
-    - _SpotAmount: 0.35
     - _Glow: 0.7
+    - _SpotAmount: 0.35
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
     m_Colors:
-    - _Top: {r: 0.96, g: 0.9, b: 0.82, a: 1}
+    - _Rim: {r: 0.9, g: 0.95, b: 1, a: 1}
     - _Shade: {r: 0.62, g: 0.5, b: 0.55, a: 1}
-    - _Under: {r: 1.0, g: 0.6, b: 0.78, a: 1}
-    - _Rim: {r: 0.9, g: 0.95, b: 1.0, a: 1}
+    - _Top: {r: 0.96, g: 0.9, b: 0.82, a: 1}
+    - _Under: {r: 1, g: 0.6, b: 0.78, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -216,6 +216,9 @@ MonoBehaviour:
   visualRoot: {fileID: 0}
   leftFin: {fileID: 0}
   rightFin: {fileID: 0}
+  swimSpeed: 0.5
+  approachSpeed: 0.85
+  turningSpeed: 110
 --- !u!1 &4336200083225498576
 GameObject:
   m_ObjectHideFlags: 0

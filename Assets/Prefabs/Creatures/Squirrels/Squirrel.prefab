@@ -185,7 +185,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5bd8e4ad6ef74163b8ccb34f15736ca2, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelMotor
   acceleration: 18
   turnSpeed: 360
@@ -202,9 +202,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b1695fb0cef3443d95379ec3d436c2d2, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Squirrel
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -221,6 +222,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2

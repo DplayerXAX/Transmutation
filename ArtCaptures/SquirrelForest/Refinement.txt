@@ -1,0 +1,7 @@
+PASS
+Ground material: Assets/Generated/WorldMap/World_InkStone.mat
+Shader: Capstone/World/TerrainLinesLit
+Player height: 2.000 m
+Overall tree heights including crowns: 2.000 to 6.000 m
+Trees: 90; low-canopy nest anchors: 53
+Scaled tree colliders and vine sockets follow the generated trees.

@@ -658,7 +658,7 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private void UpdateLeg(Limb leg, float side, float speed, bool grounded, bool climbing, float deltaTime)
     {
-        leg.webbedHand.SetFootVisible(!controller.WearingSkateShoes);
+        leg.webbedHand.SetFootVisible(!controller.WearingSkateShoes || controller.RidingGecko);
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
         Vector3 centre = controller.transform.position;
         Vector3 hip = centre + Vector3.up * hipHeight + orientation.right * (hipWidth * side);

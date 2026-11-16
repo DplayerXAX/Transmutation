@@ -1,0 +1,7 @@
+PASS
+World reference: 520 pines; 173 sampled in southern forest; mean nearest-tree distance 4.991 m.
+Silk forest: 500 trees, previously 90; 96 x 96 m.
+Mean nearest-tree distance: 2.879 m; extra trees minimum separation: 2.1 m.
+Overall heights retained: 2.000-6.000 m.
+Low-canopy habitat anchors: 316.
+Added trees share the existing baked meshes and materials.

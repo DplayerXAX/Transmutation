@@ -1,0 +1,16 @@
+Movement regression comparison: 47 seconds of Play Mode, sampled every 5 seconds.
+Motion_Before.txt
+Squirrel 1: sum of sampled horizontal displacements 14.10 m; longest low-movement sequence 15 s.
+Squirrel 2: sum of sampled horizontal displacements 28.27 m; longest low-movement sequence 10 s.
+Squirrel 3: sum of sampled horizontal displacements 29.62 m; longest low-movement sequence 0 s.
+Squirrel 4: sum of sampled horizontal displacements 19.98 m; longest low-movement sequence 0 s.
+Squirrel 5: sum of sampled horizontal displacements 5.99 m; longest low-movement sequence 40 s.
+Squirrel 6: sum of sampled horizontal displacements 31.60 m; longest low-movement sequence 0 s.
+Motion.txt
+Squirrel 1: sum of sampled horizontal displacements 19.27 m; longest low-movement sequence 0 s.
+Squirrel 2: sum of sampled horizontal displacements 28.43 m; longest low-movement sequence 0 s.
+Squirrel 3: sum of sampled horizontal displacements 27.58 m; longest low-movement sequence 0 s.
+Squirrel 4: sum of sampled horizontal displacements 16.00 m; longest low-movement sequence 0 s.
+Squirrel 5: sum of sampled horizontal displacements 50.08 m; longest low-movement sequence 0 s.
+Squirrel 6: sum of sampled horizontal displacements 27.28 m; longest low-movement sequence 5 s.
+All six squirrels moved throughout the post-fix observation; recovery uses grounded directions and respects territory boundaries.

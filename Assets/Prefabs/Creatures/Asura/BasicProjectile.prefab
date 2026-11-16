@@ -99,6 +99,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BasicProjectile
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
   maxHealth: 5
   initialPolarity: 0
   health: 0
@@ -115,10 +116,9 @@ MonoBehaviour:
   ageRate: 1
   isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
 --- !u!114 &3812285128688880371

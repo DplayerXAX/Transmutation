@@ -44,6 +44,18 @@ public sealed class PlayerSkateShoes : MonoBehaviour
         controller.State != SmoothFirstPersonController.MovementState.Sliding &&
         controller.State != SmoothFirstPersonController.MovementState.Crouching;
     public int RampTakeoffs { get; private set; }
+    public SkateGecko Gecko { get; private set; }
+    public void MountGecko(SkateGecko gecko)
+    {
+        if (Gecko != null) Gecko.Dismount();
+        Gecko = gecko; equipped = true; enabled = true;
+        ApplyEquipment();
+        if (visuals != null) visuals.gameObject.SetActive(false);
+    }
+    public void ReleaseGecko()
+    {
+        Gecko = null; equipped = false; RestoreEquipment();
+    }
 
     private void Awake()
     {
@@ -105,10 +117,12 @@ public sealed class PlayerSkateShoes : MonoBehaviour
 
     private void Update()
     {
-        if (controller != null && controller.enabled && Application.isFocused && Time.timeScale > 0f &&
-            !controller.BubbleMovementBlocked && !BoneAwakeningCutscene.Playing &&
-            Keyboard.current != null && Keyboard.current[toggleKey].wasPressedThisFrame)
-            SetEquipped(!equipped);
+        if (Gecko != null)
+        {
+            if (!CanDrive || (Application.isFocused && Keyboard.current != null && Keyboard.current[Key.K].wasPressedThisFrame))
+                Gecko.Dismount();
+            return;
+        }
         if (!CanDrive) supportedLastStep = false;
     }
 
@@ -119,6 +133,7 @@ public sealed class PlayerSkateShoes : MonoBehaviour
         if (!CanDrive) { supportedLastStep = false; return false; }
         bool supported = grounded && !SuppressGrounding && ground.collider != null &&
             Vector3.Angle(ground.normal, Vector3.up) <= maximumSlopeAngle;
+        if (Gecko != null && !Gecko.UpdateRide(input, supported, dt)) return false;
         Vector3 velocity = body.linearVelocity - supportVelocity;
 
         // A convex crest separates the old uphill tangent from the new surface. Keep that tangent;
@@ -183,7 +198,7 @@ public sealed class PlayerSkateShoes : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (!Equipped || visuals == null) return;
+        if (!Equipped || visuals == null || Gecko != null) return;
         if (firstPersonBody == null) firstPersonBody = transform.root.GetComponentInChildren<FirstPersonBody>();
         Transform facing = controller.Orientation != null ? controller.Orientation : transform;
         for (int i = 0; i < 2; i++)
@@ -213,15 +228,15 @@ public sealed class PlayerSkateShoes : MonoBehaviour
 
     private void OnGUI()
     {
+        if (Gecko == null) return;
         if (controller == null || !controller.enabled || BoneAwakeningCutscene.Playing) return;
         if (statusStyle == null) statusStyle = new GUIStyle(GUI.skin.label)
         { fontSize = 16, normal = { textColor = new Color(0.6f, 1f, 0.9f) } };
-        string status = Equipped ? $"Skate shoes  {body.linearVelocity.magnitude:0.0} m/s    [S] Brake    [K] Take off"
-            : "Skate shoes stored    [K] Put on";
+        string status = $"Gecko board  {body.linearVelocity.magnitude:0.0} m/s    [S] Brake    [K] Step off";
         GUI.Label(new Rect(20f, Screen.height - 145f, 560f, 28f), status, statusStyle);
     }
 
-    private void OnDisable() => RestoreEquipment();
+    private void OnDisable() { if (Gecko != null) Gecko.Dismount(); RestoreEquipment(); }
     private void OnDestroy()
     {
         RestoreEquipment();

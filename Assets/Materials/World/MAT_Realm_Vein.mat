@@ -25,17 +25,17 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _SpotScale: 12
-    - _SpotAmount: 0.35
-    - _StripeAmount: 0.25
+    - _Cull: 2
     - _GlowPulse: 0.35
+    - _SpotAmount: 0.35
+    - _SpotScale: 12
+    - _StripeAmount: 0.25
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
     m_Colors:
     - _Body: {r: 0.02, g: 0.06, b: 0.08, a: 1}
     - _BodyLit: {r: 0.06, g: 0.16, b: 0.2, a: 1}
-    - _Glow: {r: 0.45, g: 0.95, b: 1.0, a: 1}
-    - _Sheen: {r: 0.6, g: 0.9, b: 1.0, a: 1}
+    - _Glow: {r: 0.45, g: 0.95, b: 1, a: 1}
+    - _Sheen: {r: 0.6, g: 0.9, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

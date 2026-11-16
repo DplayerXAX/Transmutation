@@ -26,15 +26,15 @@ Material:
     m_Ints: []
     m_Floats:
     - _Bands: 5
-    - _Stretch: 0.18
-    - _Warp: 1.4
+    - _Cull: 2
     - _FlowSpeed: 0.5
-    - _VeinWidth: 1.3
     - _Gloss: 1
     - _LampReflection: 1
+    - _Stretch: 0.18
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
+    - _VeinWidth: 1.3
+    - _Warp: 1.4
     m_Colors:
     - _ColorA: {r: 0.04, g: 0.42, b: 0.44, a: 1}
     - _ColorB: {r: 0.01, g: 0.15, b: 0.18, a: 1}
