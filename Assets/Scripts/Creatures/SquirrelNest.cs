@@ -94,6 +94,29 @@ public sealed class SquirrelNest : Creature
     private bool wasKinematic;
     private bool usedGravity;
 
+    public bool PlaceOnTerrain(Vector3 requestedGround)
+    {
+        if (!gameObject.scene.GetPhysicsScene().Raycast(requestedGround + Vector3.up * 100f, Vector3.down,
+                out var hit, 200f, 1 << 7, QueryTriggerInteraction.Ignore) || hit.normal.y < 0.7f) return false;
+        // A horizontal box rests on the uphill rim and leaves the downhill side hanging.
+        // Align the actual support plane, independently of renderer bounds or stored food.
+        Quaternion rotation = Quaternion.FromToRotation(transform.up, hit.normal) * transform.rotation;
+        transform.rotation = rotation;
+        var body = GetComponent<Rigidbody>(); body.rotation = rotation;
+        if (TryGetComponent<BoxCollider>(out var box))
+        {
+            Vector3 bottom = box.center - Vector3.up * box.size.y * 0.5f;
+            Vector3 position = hit.point - transform.TransformVector(bottom) + hit.normal * 0.015f;
+            transform.position = position; body.position = position;
+        }
+        else SquirrelTree.PlaceOnGround(transform, hit.point);
+        if (!body.isKinematic)
+        {
+            body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; body.WakeUp();
+        }
+        return true;
+    }
+
     public bool BeginMove(Squirrel squirrel)
     {
         if (Owner != squirrel || IsMoving || IsCarried || IsDead) return false;
@@ -123,7 +146,6 @@ public sealed class SquirrelNest : Creature
     {
         if (!IsMoving) return;
         transform.SetParent(restingParent, true);
-        SquirrelTree.PlaceOnGround(transform, ground);
         for (int i = 0; i < shapes.Length; i++)
             if (shapes[i] != null) shapes[i].enabled = enabledShapes[i];
         if (nestBody != null)
@@ -131,6 +153,7 @@ public sealed class SquirrelNest : Creature
             nestBody.isKinematic = wasKinematic;
             nestBody.useGravity = usedGravity;
         }
+        PlaceOnTerrain(ground);
         IsMoving = false;
         Physics.SyncTransforms();
     }

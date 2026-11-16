@@ -10,9 +10,13 @@ public sealed class GlowBeeColony : MonoBehaviour
     [Range(1, 8)] [SerializeField] private int beesPerNest = 4;
     [Range(2, 12)] [SerializeField] private int flowersPerNest = 5;
     [SerializeField] private int seed = 814;
+    [Tooltip("Optional authored nectar flowers. Colonies forage these instead of generating placeholder flowers.")]
+    [SerializeField] private NectarFlower[] authoredFlowers = new NectarFlower[0];
     [Header("Placement")]
     [Tooltip("Optional authored ground positions. When nonempty, these replace rock/trunk discovery.")]
     [SerializeField] private Transform[] nestAnchors = new Transform[0];
+    [SerializeField] private bool mountHivesOnAnchors;
+    [SerializeField, Range(0.25f, 1f)] private float hiveScale = 1f;
     [SerializeField] private LayerMask groundLayers = 1 << 7;
     [SerializeField] private LayerMask sceneryLayers = (1 << 0) | (1 << 7);
     [Min(2f)] [SerializeField] private float nestSeparation = 9f;
@@ -43,6 +47,8 @@ public sealed class GlowBeeColony : MonoBehaviour
         if (initialized) return;
         initialized = true;
         Prepare();
+        foreach (var flower in authoredFlowers)
+            if (flower != null && flower.gameObject.scene == gameObject.scene && !flowers.Contains(flower)) flowers.Add(flower);
         if (nestAnchors.Length > 0) FindAnchoredSites();
         else FindConcealedSites();
         foreach (Vector3 site in sites) BuildNest(site);
@@ -80,6 +86,11 @@ public sealed class GlowBeeColony : MonoBehaviour
         foreach (Transform anchor in nestAnchors)
         {
             if (sites.Count >= nestCount) break;
+            if (mountHivesOnAnchors)
+            {
+                if (anchor != null && anchor.gameObject.scene == gameObject.scene) sites.Add(anchor.position);
+                continue;
+            }
             if (anchor == null || anchor.gameObject.scene != gameObject.scene ||
                 !TryGround(anchor.position, out Vector3 ground, 1.25f)) continue;
             if (gameObject.scene.GetPhysicsScene().OverlapSphere(ground + Vector3.up * 0.55f, 0.52f,
@@ -168,6 +179,15 @@ public sealed class GlowBeeColony : MonoBehaviour
     private void BuildNest(Vector3 ground)
     {
         GameObject root = Root("Hidden Glow Bee Nest " + (nests.Count + 1), ground + Vector3.up * 0.5f);
+        if (mountHivesOnAnchors)
+            foreach (var anchor in nestAnchors)
+                if (anchor != null && (anchor.position - ground).sqrMagnitude < 0.001f)
+                {
+                    root.transform.SetParent(anchor, true);
+                    root.transform.SetPositionAndRotation(anchor.position, anchor.rotation);
+                    break;
+                }
+        root.transform.localScale = Vector3.one * hiveScale;
         var nest = root.AddComponent<GlowBeeNest>();
         nest.Configure(this);
         nests.Add(nest);
@@ -177,9 +197,10 @@ public sealed class GlowBeeColony : MonoBehaviour
             Part(root.transform, "Wax ridge", new Vector3(0f, -0.27f + i * 0.17f, 0f),
                 new Vector3(0.99f, 0.09f, 0.84f), shell);
         int firstFlower = flowers.Count;
-        for (int i = 0; i < flowersPerNest; i++) BuildFlowerPatch(ground);
+        if (authoredFlowers.Length == 0)
+            for (int i = 0; i < flowersPerNest; i++) BuildFlowerPatch(ground);
         // Do not create a colony that has no accessible food source.
-        if (flowers.Count == firstFlower)
+        if (flowers.Count == 0)
             Debug.LogWarning("Glow bee nest has no clear flower placement nearby.", nest);
         for (int i = 0; i < beesPerNest; i++)
         {

@@ -129,7 +129,7 @@ public sealed partial class Squirrel
             if (instance.scene != gameObject.scene) SceneManager.MoveGameObjectToScene(instance, gameObject.scene);
             var home = instance.GetComponent<SquirrelNest>() ?? instance.AddComponent<SquirrelNest>();
             home.AssignOwner(this);
-            SquirrelTree.PlaceOnGround(home.transform, ground);
+            if (!home.PlaceOnTerrain(ground)) SquirrelTree.PlaceOnGround(home.transform, ground);
             // Spend exactly the collected instances only after a valid nest exists.
             for (int i = 0; i < nestBuildFoodCost; i++)
             {

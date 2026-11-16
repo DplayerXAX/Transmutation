@@ -1,0 +1,6 @@
+PASS
+Hyacinths: 24 patches, centres at least 13 m apart; 238 nectar stalks.
+Flower carpet: 1600 low star flowers, four colours; 400 additional Scene_World plants.
+Bees: 6 colonies, 12 authored hive anchors, 72 runtime glow bees.
+Only authored hyacinths supply nectar to these colonies.
+Walkway and squirrel nest clearings retained.

@@ -6,9 +6,10 @@ public sealed class NectarFlower : MonoBehaviour
     [Min(1f)] [SerializeField] private float capacity = 3f;
     [Min(0.1f)] [SerializeField] private float refillSeconds = 12f;
     private float nectar;
+    [SerializeField] private Vector3 sippingOffset = new Vector3(0f, 0.85f, 0f);
     public bool HasNectar => nectar >= 1f;
     public float Nectar => nectar;
-    public Vector3 SippingPoint => transform.position + Vector3.up * 0.85f;
+    public Vector3 SippingPoint => transform.TransformPoint(sippingOffset);
     private void Awake() => nectar = capacity;
     private void Update() => nectar = Mathf.Min(capacity, nectar + Time.deltaTime / refillSeconds);
     public float TakeNectar(float requested)

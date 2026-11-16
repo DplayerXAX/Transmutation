@@ -146,6 +146,12 @@ public sealed partial class SquirrelSystemManager : MonoBehaviour
             Debug.LogWarning("SquirrelSystemManager needs Squirrel/Nest prefabs and tree anchors in this scene.", this);
             return;
         }
+        List<Vector3> spreadHomes = null;
+        if (spreadNestLocations && !TryPlanSpreadHomes(Mathf.Max(population, squirrels.Count), out spreadHomes))
+        {
+            Debug.LogWarning("Not enough eligible tree-root sites for the configured minimum nest separation.", this);
+            return;
+        }
         initialized = true;
         // Instantiate the asset so runtime changes never become the next spawn template.
         while (squirrels.Count < population)
@@ -182,9 +188,10 @@ public sealed partial class SquirrelSystemManager : MonoBehaviour
                 inward.y = 0f;
                 if (inward.sqrMagnitude > 0.001f) ground = tree.GroundPosition + inward.normalized * nestTreeDistance;
             }
+            if (spreadHomes != null) ground = spreadHomes[i];
             if (gameObject.scene.GetPhysicsScene().Raycast(ground + Vector3.up * 20f, Vector3.down,
                     out var groundHit, 40f, 1 << 7, QueryTriggerInteraction.Ignore)) ground = groundHit.point;
-            SquirrelTree.PlaceOnGround(home.transform, ground);
+            if (!home.PlaceOnTerrain(ground)) SquirrelTree.PlaceOnGround(home.transform, ground);
             home.name = squirrel.name + " Nest";
             home.AssignOwner(squirrel);
             squirrel.ConfigureNestBuilding(nestPrefab, this);
