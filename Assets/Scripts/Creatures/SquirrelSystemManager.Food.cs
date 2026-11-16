@@ -7,6 +7,7 @@ public sealed partial class SquirrelSystemManager
 {
     [Header("Food spawning")]
     [SerializeField] private GameObject foodPrefab;
+    [SerializeField] private bool scatterFoodOnSide;
     [SerializeField] private List<SquirrelFood> foods = new List<SquirrelFood>();
     [Tooltip("Initial food population spawned from foodPrefab.")]
     [SerializeField, Min(0)] private int initialFoodCount = 15;
@@ -81,6 +82,12 @@ public sealed partial class SquirrelSystemManager
             food.Respawn(transform);
             food.transform.localScale = foodPrefab.transform.localScale;
             food.transform.localRotation = foodPrefab.transform.localRotation;
+            if (scatterFoodOnSide)
+            {
+                food.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f) *
+                    Quaternion.Euler(Random.Range(72f, 108f), Random.Range(0f, 360f), 0f);
+                if (food.TryGetComponent<Rigidbody>(out var foodBody)) foodBody.rotation = food.transform.rotation;
+            }
             food.name = foodPrefab.name + " " + (++spawnSerial);
             SquirrelTree.PlaceOnGround(food.transform, point);
             Physics.SyncTransforms();

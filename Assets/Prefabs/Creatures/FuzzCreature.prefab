@@ -92,20 +92,29 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 92085c7aa57b4f349e53286ef84a1ea3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -126,5 +135,15 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05

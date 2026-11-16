@@ -25,17 +25,17 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _Cull: 0
     - _FringeAmount: 0.7
     - _Glint: 0.6
     - _InnerLines: 2
     - _Sway: 0.04
     - _SwaySpeed: 0.4
-    - _Cull: 0
     m_Colors:
     - _DeepColor: {r: 0.25, g: 0.27, b: 0.3, a: 1}
-    - _MidColor: {r: 0.6, g: 0.62, b: 0.66, a: 1}
     - _EdgeColor: {r: 1, g: 1, b: 1, a: 1}
     - _FringeA: {r: 0.3, g: 0.75, b: 0.8, a: 1}
     - _FringeB: {r: 0.78, g: 0.4, b: 0.7, a: 1}
+    - _MidColor: {r: 0.6, g: 0.62, b: 0.66, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

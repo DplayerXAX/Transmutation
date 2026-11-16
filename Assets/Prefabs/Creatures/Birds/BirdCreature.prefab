@@ -97,17 +97,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BirdCreature
   creatureName: Bird
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 1
   dietTags: 2
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
   speedRange: {x: 3, y: 6}
   steeringStrength: 5
   turnSpeed: 160
@@ -119,6 +130,10 @@ MonoBehaviour:
   wanderWeight: 0.3
   huntRadius: 25
   huntDesire: 4
+  hunger: 50
+  hungerRate: 0.25
+  appetiteThreshold: 20
+  nutritionSharingRadius: 10
   bonesPrefab: {fileID: 6826449762699514734, guid: 828fdddfb5dbd7341a721bf20128e4a9, type: 3}
 --- !u!114 &8764616129875264311
 MonoBehaviour:

@@ -186,9 +186,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0c3531dc030543829f9a0c535a70fb09, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelFood
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
   maxHealth: 100
   initialPolarity: 3
   health: 0
@@ -205,5 +206,8 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05

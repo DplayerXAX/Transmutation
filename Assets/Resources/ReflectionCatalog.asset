@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a03c632e2eb4ac6a00b5ff36d52c4b7, type: 3}
   m_Name: ReflectionCatalog
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   exhibits:
   - id: birds
     creatureType: BirdCreature

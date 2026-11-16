@@ -420,6 +420,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1 &6663006841818713141
 GameObject:
   m_ObjectHideFlags: 0
@@ -548,6 +550,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1001 &4099431408716780072
 PrefabInstance:
   m_ObjectHideFlags: 0

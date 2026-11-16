@@ -133,6 +133,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   seedPrefab: {fileID: 296603038041281245, guid: 331bf545ab7c4344a87cc8c873d94622, type: 3}

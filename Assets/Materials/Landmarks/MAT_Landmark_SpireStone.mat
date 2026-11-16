@@ -39,18 +39,18 @@ Material:
     - _HatchWidth: 1
     - _HazeEnd: 80
     - _HazeStart: 10
-    - _LineWidth: 1.1
     - _JointStrength: 0
+    - _LineWidth: 1.1
     - _MainLightAmount: 1.2
     - _PulseSpacing: 60
     - _PulseSpeed: 3
     - _PulseWidth: 8
-    - _ScriptGlowBase: 0.25
     - _RimPower: 3
     - _RimStrength: 0.25
     - _ScriptChance: 0.4
     - _ScriptChanceInside: 0.7
     - _ScriptFlicker: 0.25
+    - _ScriptGlowBase: 0.25
     - _ShadeLevels: 2
     - _ShadowLineDim: 1
     m_Colors:

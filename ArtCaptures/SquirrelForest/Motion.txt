@@ -1,0 +1,71 @@
+Motion observation
+TIME 2.0
+Squirrel 1 pos=(41.37, 2.06, -45.25) delta=2.487 velocity=(-0.12, -0.32, -1.43) intent=(-0.07, 0.00, -1.30) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 2 pos=(-40.72, 1.17, 45.08) delta=15.663 velocity=(1.31, -0.04, 0.06) intent=(0.51, 0.00, -1.20) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Dense silk tree 429 - Silk tree 22 · 3 crowns + 2 buds/(-0.05, 0.00, 1.00)
+Squirrel 3 pos=(-43.52, 0.37, -40.18) delta=19.917 velocity=(-0.67, -0.14, -0.09) intent=(-0.09, 0.00, -1.30) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.23, 0.91, 0.33)
+Squirrel 4 pos=(44.98, -1.93, 38.77) delta=3.220 velocity=(-0.12, -0.07, -1.32) intent=(0.96, 0.00, -0.88) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(-0.05, 1.00, -0.04)
+Squirrel 5 pos=(4.28, 0.40, 0.50) delta=3.107 velocity=(0.76, -0.17, -0.26) intent=(1.50, 0.00, -1.32) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Dense silk tree 283 - Silk tree 17 · 1 crowns + 0 buds/(-0.92, 0.00, 0.40)
+Squirrel 6 pos=(2.58, -2.66, 45.42) delta=16.203 velocity=(-0.86, -0.15, -1.05) intent=(-0.87, 0.00, -0.97) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+TIME 7.0
+Squirrel 1 pos=(41.26, 1.39, -47.84) delta=2.586 velocity=(0.18, 0.31, 1.12) intent=(0.23, 0.00, 1.28) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.08, 0.96, -0.26)
+Squirrel 2 pos=(-41.10, 1.21, 41.36) delta=3.735 velocity=(-1.28, 0.04, -0.04) intent=(-1.30, 0.00, -0.04) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-43.63, 0.49, -40.61) delta=0.441 velocity=(0.13, -0.40, 1.09) intent=(1.30, 0.00, 0.09) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Squirrel 3 Nest/(-1.00, 0.00, 0.05)
+Squirrel 4 pos=(47.97, -1.80, 38.02) delta=3.086 velocity=(0.99, -0.06, 0.77) intent=(0.25, 0.00, 1.28) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(-0.06, 1.00, -0.04)
+Squirrel 5 pos=(3.71, 0.46, -4.20) delta=4.732 velocity=(1.68, -0.10, 1.14) intent=(-0.02, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.88, 0.00, -0.48)
+Squirrel 6 pos=(1.95, -2.78, 44.33) delta=1.262 velocity=(0.75, 0.05, 1.03) intent=(0.71, 0.00, 1.09) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+TIME 12.0
+Squirrel 1 pos=(41.70, 1.50, -47.67) delta=0.470 velocity=(-1.34, -0.16, -0.19) intent=(0.50, 0.00, 1.20) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(-0.07, 0.97, -0.24)
+Squirrel 2 pos=(-42.37, 1.25, 41.84) delta=1.358 velocity=(1.29, -0.05, 0.29) intent=(1.27, 0.00, 0.29) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-43.50, 0.30, -40.21) delta=0.426 velocity=(-1.12, -0.04, -0.64) intent=(-0.98, 0.00, -0.85) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 4 pos=(48.76, -1.69, 38.97) delta=1.237 velocity=(0.07, -0.07, -1.33) intent=(-0.85, 0.00, -0.98) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=none
+Squirrel 5 pos=(3.39, 0.42, -3.89) delta=0.440 velocity=(0.92, -0.31, 0.16) intent=(0.05, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.00, 0.00, -1.00)
+Squirrel 6 pos=(6.13, -2.17, 46.24) delta=4.602 velocity=(0.82, -0.03, -1.02) intent=(0.90, 0.00, -0.93) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+TIME 17.1
+Squirrel 1 pos=(41.62, 2.11, -45.21) delta=2.459 velocity=(1.13, 0.18, 0.44) intent=(1.17, 0.00, 0.57) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Dense silk tree 152 - Silk tree 06 · 1 crowns + 2 buds/(-0.90, 0.00, -0.44)
+Squirrel 2 pos=(-41.21, 1.22, 41.26) delta=1.300 velocity=(-1.15, 0.04, 0.56) intent=(-1.17, 0.00, 0.56) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-44.55, 0.61, -41.53) delta=1.688 velocity=(1.13, 0.18, 0.33) intent=(1.30, 0.00, 0.10) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.24, 0.90, 0.36)
+Squirrel 4 pos=(47.77, -1.81, 37.65) delta=1.648 velocity=(0.07, 0.06, 1.27) intent=(0.10, 0.00, 1.30) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Silk tree 23 · 2 crowns + 1 buds/(-0.08, 0.00, -1.00)
+Squirrel 5 pos=(3.81, 0.41, -3.74) delta=0.445 velocity=(1.93, -0.13, -0.48) intent=(-0.04, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.36, 0.00, -0.93)
+Squirrel 6 pos=(6.22, -2.32, 44.81) delta=1.434 velocity=(-0.48, 0.08, 1.16) intent=(-1.11, 0.00, 0.68) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Squirrel 6 Nest/(0.94, 0.15, 0.30)
+TIME 22.1
+Squirrel 1 pos=(43.71, 2.17, -45.33) delta=2.096 velocity=(0.43, 0.26, 1.07) intent=(-0.67, 0.00, -1.11) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=none
+Squirrel 2 pos=(-42.11, 1.25, 41.53) delta=0.946 velocity=(1.23, -0.04, -0.47) intent=(1.21, 0.00, -0.48) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-43.81, 0.55, -40.81) delta=1.031 velocity=(-0.45, 0.31, -1.02) intent=(-0.31, 0.00, -1.26) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.21, 0.91, 0.36)
+Squirrel 4 pos=(46.29, -1.80, 40.20) delta=2.945 velocity=(-1.00, -0.11, -0.91) intent=(-0.96, 0.00, -0.88) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 5 pos=(3.67, 0.41, -3.79) delta=0.149 velocity=(1.96, 0.04, -0.22) intent=(-0.01, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.38, 0.00, -0.92)
+Squirrel 6 pos=(5.52, -2.37, 45.13) delta=0.770 velocity=(0.17, -0.14, -1.35) intent=(0.27, 0.00, -1.27) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+TIME 27.1
+Squirrel 1 pos=(43.90, 2.15, -45.61) delta=0.331 velocity=(-0.34, 0.24, 1.13) intent=(-1.29, 0.00, -0.13) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=none
+Squirrel 2 pos=(-40.52, 1.19, 41.00) delta=1.685 velocity=(-1.25, 0.06, 0.22) intent=(-0.96, 0.00, 0.87) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(0.04, 1.00, -0.01)
+Squirrel 3 pos=(-44.14, 0.73, -41.62) delta=0.878 velocity=(0.63, -0.34, 1.26) intent=(0.79, 0.00, 1.03) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Squirrel 3 Nest/(-1.00, 0.00, 0.05)
+Squirrel 4 pos=(44.71, -2.00, 37.54) delta=3.101 velocity=(0.52, -0.02, -1.20) intent=(1.30, 0.00, 0.03) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(-0.05, 1.00, -0.04)
+Squirrel 5 pos=(3.68, 0.41, -3.79) delta=0.016 velocity=(1.94, 0.04, -0.20) intent=(-0.01, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.38, 0.00, -0.92)
+Squirrel 6 pos=(3.86, -2.79, 42.97) delta=2.726 velocity=(-1.34, -0.15, 0.27) intent=(-0.80, 0.00, 1.02) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=none
+TIME 32.1
+Squirrel 1 pos=(40.90, 1.36, -47.97) delta=3.821 velocity=(0.83, -0.30, -0.86) intent=(1.30, 0.00, -0.08) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.10, 0.96, -0.27)
+Squirrel 2 pos=(-42.65, 1.27, 40.03) delta=2.342 velocity=(0.53, -0.04, -1.31) intent=(0.50, 0.00, -1.31) activity=Migrating sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-42.22, -0.22, -37.61) delta=4.451 velocity=(0.19, -0.37, 1.53) intent=(0.31, 0.00, 1.37) activity=Migrating sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 4 pos=(48.62, -1.68, 39.33) delta=4.312 velocity=(0.19, 0.07, 1.25) intent=(-0.25, 0.00, 1.28) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Ground - Scene_World southern pine forest contours/(-0.06, 1.00, -0.05)
+Squirrel 5 pos=(3.62, 0.41, -3.79) delta=0.062 velocity=(1.69, 0.06, -0.03) intent=(0.00, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.25, 0.00, -0.97)
+Squirrel 6 pos=(2.93, -2.86, 43.37) delta=1.013 velocity=(1.00, -0.01, -0.84) intent=(1.02, 0.00, -0.81) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+TIME 37.1
+Squirrel 1 pos=(42.36, 1.48, -47.98) delta=1.456 velocity=(-0.85, 0.16, 0.87) intent=(-0.81, 0.00, 1.02) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Squirrel 1 Nest/(-0.01, 0.00, -1.00)
+Squirrel 2 pos=(-39.85, -0.26, 32.93) delta=7.626 velocity=(0.56, -0.44, -1.46) intent=(0.49, 0.00, -1.31) activity=Migrating sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-43.03, -0.79, -35.10) delta=2.636 velocity=(-0.10, -0.20, 1.48) intent=(0.44, 0.00, 1.33) activity=Migrating sim=True auto=True kinematic=False bypass=True sweep=none
+Squirrel 4 pos=(46.91, -1.71, 40.75) delta=2.226 velocity=(-1.27, -0.11, -0.44) intent=(-0.18, 0.00, -1.29) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Squirrel 4 Nest/(0.00, 0.04, 1.00)
+Squirrel 5 pos=(3.68, 0.41, -3.79) delta=0.058 velocity=(1.94, 0.02, -0.20) intent=(-0.01, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.39, 0.00, -0.92)
+Squirrel 6 pos=(4.00, -2.77, 42.92) delta=1.158 velocity=(-1.27, -0.14, 0.48) intent=(-0.13, 0.00, 1.29) activity=Searching sim=True auto=True kinematic=False bypass=True sweep=Squirrel 6 Nest/(-0.39, 0.00, -0.92)
+TIME 42.1
+Squirrel 1 pos=(41.25, 1.76, -46.53) delta=1.829 velocity=(0.00, -0.14, -0.59) intent=(1.30, 0.00, 0.09) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 2 pos=(-39.21, -1.24, 26.78) delta=6.190 velocity=(-0.08, -0.27, -2.08) intent=(1.42, 0.00, -1.41) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 2 Nest/(-0.82, 0.01, -0.57)
+Squirrel 3 pos=(-40.71, -1.57, -28.61) delta=6.891 velocity=(0.40, -0.20, 1.43) intent=(0.41, 0.00, 1.34) activity=Migrating sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 4 pos=(46.05, -1.98, 35.91) delta=4.912 velocity=(0.81, 0.02, -1.00) intent=(0.85, 0.00, -0.99) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 5 pos=(3.70, 0.42, -3.81) delta=0.027 velocity=(1.98, 0.03, -0.23) intent=(-0.02, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.57, 0.00, -0.82)
+Squirrel 6 pos=(3.10, -2.86, 43.15) delta=0.924 velocity=(0.36, -0.03, -1.26) intent=(0.41, 0.00, -1.23) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(0.00, 0.00, 1.00)
+TIME 47.1
+Squirrel 1 pos=(41.33, 1.52, -47.50) delta=0.977 velocity=(-1.02, 0.10, 0.70) intent=(0.06, 0.00, 1.30) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Squirrel 1 Nest/(-0.66, 0.00, -0.75)
+Squirrel 2 pos=(-33.47, -0.59, 19.46) delta=9.296 velocity=(1.20, 0.31, -1.47) intent=(0.00, 0.00, 0.00) activity=Returning sim=True auto=True kinematic=False bypass=False sweep=none
+Squirrel 3 pos=(-38.65, -1.60, -23.67) delta=5.357 velocity=(1.96, 0.07, -0.27) intent=(1.24, 0.00, 1.57) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 3 Nest/(0.18, 0.00, -0.98)
+Squirrel 4 pos=(47.42, -1.92, 35.32) delta=1.493 velocity=(-0.65, -0.14, 1.11) intent=(-0.51, 0.00, 1.20) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(-0.71, 0.00, -0.71)
+Squirrel 5 pos=(3.67, 0.41, -3.78) delta=0.037 velocity=(1.95, 0.04, -0.24) intent=(-0.01, 0.00, 2.00) activity=Collecting sim=True auto=True kinematic=False bypass=True sweep=Squirrel 5 Nest/(0.40, 0.00, -0.92)
+Squirrel 6 pos=(3.20, -2.88, 42.46) delta=0.696 velocity=(-0.60, -0.15, 1.03) intent=(-0.36, 0.00, 1.25) activity=Searching sim=True auto=True kinematic=False bypass=False sweep=Ground - Scene_World southern pine forest contours/(0.00, 0.00, -1.00)

@@ -148,10 +148,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 1152, y: 1152}
   cellSize: 3
   chunkCells: 24
   seed: 1707
+  leafMap: 0
+  leafScale: 1
+  worldMap: 0
   generationRecipe:
     kind: 1
     version: 1

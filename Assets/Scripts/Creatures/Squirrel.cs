@@ -342,6 +342,7 @@ public sealed partial class Squirrel : Creature
         if (!physics.Raycast(point + Vector3.up * 100f, Vector3.down, out RaycastHit hit,
                 200f, 1 << 7, QueryTriggerInteraction.Ignore) || hit.normal.y < 0.7f) return false;
         ground = hit.point;
+        if (foodManager != null && !foodManager.IsNestLocationAvailable(ground, nest)) return false;
         Vector3 half = nestHalfExtents + new Vector3(0.15f, 0f, 0.15f);
         Vector3 center = ground + Vector3.up * (half.y + 0.08f);
         int count = physics.OverlapBox(center, half, nestPlacementHits, Quaternion.identity, ~0,

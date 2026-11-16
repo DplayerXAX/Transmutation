@@ -25,13 +25,13 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _SpotScale: 11
-    - _SpotAmount: 0.12
-    - _StripeAmount: 0
+    - _Cull: 2
     - _GlowPulse: 0.15
+    - _SpotAmount: 0.12
+    - _SpotScale: 11
+    - _StripeAmount: 0
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
     m_Colors:
     - _Body: {r: 0.025, g: 0.028, b: 0.032, a: 1}
     - _BodyLit: {r: 0.09, g: 0.095, b: 0.1, a: 1}
