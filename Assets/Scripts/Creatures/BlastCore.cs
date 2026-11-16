@@ -10,7 +10,7 @@ public sealed class BlastCore : Creature
     public int ShotsFired { get; private set; }
     public override bool CanUseWhileCarried => !IsDead;
     public override string InteractionPrompt => IsDead || !IsCarried ? null : "Fire blast seed";
-    public override string CarriedPrompt => IsDead ? null : "Left click: fire blast seed";
+    public override string CarriedPrompt => IsDead ? null : "[LMB] Fire blast seed";
     protected override void InitializeCreature()
     {
         SetCreatureName("Blast Core"); SetFoodAndDiet(FoodTag.Matter, FoodTag.None);

@@ -476,6 +476,11 @@ Transform:
   - {fileID: 970072395}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!20 &251896993 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 3648896915039600098, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 882356832}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &255446384
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -976,6 +981,77 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
   m_PrefabInstance: {fileID: 376339421}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &399520297
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 399520299}
+  - component: {fileID: 399520298}
+  m_Layer: 0
+  m_Name: Interaction Prompt HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &399520298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399520297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 367ffd6ec0dc464496dc6bc7d863d4e8, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionPromptHUD
+  hintsVisible: 1
+  carrier: {fileID: 882356840}
+  interactor: {fileID: 666380134}
+  traversal: {fileID: 0}
+  handClimber: {fileID: 0}
+  offsetFromCentre: {x: 0, y: -70}
+  titleFontSize: 18
+  hintFontSize: 22
+  titleColor: {r: 1, g: 1, b: 1, a: 0.55}
+  hintColor: {r: 1, g: 1, b: 1, a: 0.92}
+  fadeTime: 0.12
+  showText: 0
+  iconOffset: {x: 0, y: -38}
+  iconScale: 0.8
+  showCreatureName: 1
+  pickUpHint: '[RMB] Pick up'
+  putDownThrowHint: "Tap RMB: Put down \xB7 Hold RMB: Throw"
+  throwChargeHintFormat: "Throw {0}% \xB7 Release RMB to throw"
+  interactHintFormat: '[LMB]  {0}'
+  petHint: '[Hold LMB]  Pet'
+  pettingHint: Petting...
+  climbHint: '[Hold W]  Climb'
+  climbJumpHint: '[Space]  Jump off wall'
+  wallRunHint: '[Hold W]  Wall run'
+  wallRunActiveHint: '[Space]  Wall jump    [Shift] / [Ctrl]  Up / Down'
+  ledgeHint: '[Space]  Jump    [WASD]  Let go'
+  handClimbHint: '[WASD]  Climb    [Space]  Push off'
+--- !u!4 &399520299
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399520297}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &423192670
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1422,6 +1498,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
   m_PrefabInstance: {fileID: 619406677}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &666380134 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5761345274222056843, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 882356832}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69845535f75a8ab48a56435465fb2c00, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCreatureInteractor
 --- !u!1001 &672005610
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1803,6 +1890,14 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6302391524333744001, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: viewCamera
+      value:
+      objectReference: {fileID: 251896993}
+    - target: {fileID: 6302391524333744001, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      propertyPath: bloodCoatMaterial
+      value:
+      objectReference: {fileID: 2100000, guid: 58f71fb64e2025e4fbbaf3aecb44f3cc, type: 2}
     - target: {fileID: 8755812520023030105, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1846,19 +1941,52 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 882356835}
   m_SourcePrefab: {fileID: 100100000, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
 --- !u!114 &882356833 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 9096247247460234985, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
   m_PrefabInstance: {fileID: 882356832}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 882356834}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a9137d9a2ae84fe6a87f651eb2cd4e52, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SmoothFirstPersonController
+--- !u!1 &882356834 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4143822023010584049, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 882356832}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &882356835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882356834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b6d487ce1545e54ea41055ac2f3528c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCreatureStats
+  luminosity: 0
+  emissionOffset: {x: 0, y: 0.5, z: 0}
+--- !u!114 &882356840 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8888969591394796978, guid: f7ee1d37ed37e4fe9874d5b46555972e, type: 3}
+  m_PrefabInstance: {fileID: 882356832}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882356834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d31d257a44d4b00b1a8cc43a574c038, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCreatureCarrier
 --- !u!1001 &902376509
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2053,6 +2181,53 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
   m_PrefabInstance: {fileID: 1073383592}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1077577122
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1077577124}
+  - component: {fileID: 1077577123}
+  m_Layer: 0
+  m_Name: Blood Coat HUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1077577123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1077577122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c100efdb4017ab3479061800f7264e4c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::BloodCoatHUD
+  player: {fileID: 882356835}
+  diameter: 64
+  inset: {x: 24, y: 24}
+--- !u!4 &1077577124
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1077577122}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1087037852
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3562,6 +3737,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1806492758}
   - component: {fileID: 1806492757}
+  - component: {fileID: 1806492759}
   m_Layer: 0
   m_Name: Sun
   m_TagString: Untagged
@@ -3649,6 +3825,35 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1806492759
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1806492756}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_CustomShadowLayers: 0
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
+  m_SoftShadowQuality: 0
+  m_RenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_ShadowRenderingLayersMask:
+    serializedVersion: 0
+    m_Bits: 1
+  m_Version: 4
+  m_LightLayerMask: 1
+  m_ShadowLayerMask: 1
+  m_RenderingLayers: 1
+  m_ShadowRenderingLayers: 1
 --- !u!1001 &1854318462
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4020,3 +4225,5 @@ SceneRoots:
   - {fileID: 180516737}
   - {fileID: 1647886610}
   - {fileID: 2083239090}
+  - {fileID: 1077577124}
+  - {fileID: 399520299}

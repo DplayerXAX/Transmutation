@@ -8,11 +8,12 @@ public static class CreatureSpatialQuery
 {
     private sealed class Snapshot
     {
-        public readonly List<Creature> Creatures = new List<Creature>(256);
+        public readonly List<ICombatTarget> Targets = new List<ICombatTarget>(256);
         public readonly List<Vector3> Points = new List<Vector3>(256);
         public readonly BirdOctree Tree = new BirdOctree();
         public Vector3[] Positions = new Vector3[256];
         public float NextRefresh = float.NegativeInfinity;
+        public int Revision = -1;
     }
     private static readonly Dictionary<int, Snapshot> scenes = new Dictionary<int, Snapshot>();
     private static readonly List<Collider> solids = new List<Collider>(16);
@@ -30,38 +31,53 @@ public static class CreatureSpatialQuery
 
     public static void Nearby(Scene scene, Vector3 center, float radius, List<Creature> results, List<int> indices)
     {
+        Snapshot snapshot = Query(scene, center, radius, indices);
+        results.Clear();
+        for (int i = 0; i < indices.Count; i++)
+            if (snapshot.Targets[indices[i]] is Creature creature && creature != null) results.Add(creature);
+    }
+
+    public static void NearbyCombat(Scene scene, Vector3 center, float radius, List<ICombatTarget> results, List<int> indices)
+    {
+        Snapshot snapshot = Query(scene, center, radius, indices);
+        results.Clear();
+        for (int i = 0; i < indices.Count; i++)
+        {
+            ICombatTarget target = snapshot.Targets[indices[i]];
+            if (CombatTarget.Exists(target)) results.Add(target);
+        }
+    }
+
+    private static Snapshot Query(Scene scene, Vector3 center, float radius, List<int> indices)
+    {
         if (!scenes.TryGetValue(scene.handle, out Snapshot snapshot))
         {
             snapshot = new Snapshot(); scenes.Add(scene.handle, snapshot);
         }
-        if (Time.time >= snapshot.NextRefresh)
+        if (Time.time >= snapshot.NextRefresh || snapshot.Revision != CreatureRegistry.CombatRevision)
         {
-            CreatureRegistry.SnapshotCombat(scene, snapshot.Creatures, snapshot.Points);
+            CreatureRegistry.SnapshotCombat(scene, snapshot.Targets, snapshot.Points);
             if (snapshot.Positions.Length < snapshot.Points.Count)
                 Array.Resize(ref snapshot.Positions, Mathf.NextPowerOfTwo(snapshot.Points.Count));
             snapshot.Points.CopyTo(snapshot.Positions);
             snapshot.Tree.Rebuild(snapshot.Positions, snapshot.Points.Count);
             snapshot.NextRefresh = Time.time + 0.1f;
+            snapshot.Revision = CreatureRegistry.CombatRevision;
             SnapshotCount++;
         }
         snapshot.Tree.Query(center, radius, indices);
         LastCandidateChecks = snapshot.Tree.LastCandidateChecks;
-        results.Clear();
-        for (int i = 0; i < indices.Count; i++)
-        {
-            Creature creature = snapshot.Creatures[indices[i]];
-            if (creature != null) results.Add(creature);
-        }
+        return snapshot;
     }
 
-    public static bool TryGetSolid(Creature creature, out Collider solid)
+    public static bool TryGetSolid(ICombatTarget target, out Collider solid)
     {
         solid = null;
-        if (creature == null || !creature.TryGetComponent<Rigidbody>(out var body) || !body.detectCollisions) return false;
-        if (creature.TryGetComponent<Collider>(out var root) && root.enabled && !root.isTrigger)
+        if (!CombatTarget.Exists(target) || !target.CombatRoot.TryGetComponent<Rigidbody>(out var body) || !body.detectCollisions) return false;
+        if (target.CombatRoot.TryGetComponent<Collider>(out var root) && root.enabled && !root.isTrigger)
         { solid = root; return true; }
         solids.Clear();
-        creature.GetComponentsInChildren(false, solids);
+        target.CombatRoot.GetComponentsInChildren(false, solids);
         for (int i = 0; i < solids.Count; i++)
             if (solids[i].enabled && !solids[i].isTrigger && solids[i].attachedRigidbody == body)
             { solid = solids[i]; return true; }
@@ -93,8 +109,8 @@ public static class CreatureSpatialQuery
         return !float.IsPositiveInfinity(best);
     }
 
-    public static bool Visible(Creature observer, Creature target, Vector3 from, ref RaycastHit[] hits,
-        GameObject extraIgnore = null) => observer != null && target != null && !FlashBlindness.IsBlinded(observer) &&
+    public static bool Visible(Creature observer, ICombatTarget target, Vector3 from, ref RaycastHit[] hits,
+        GameObject extraIgnore = null) => observer != null && CombatTarget.Exists(target) && !FlashBlindness.IsBlinded(observer) &&
             (!FirstSolid(observer.gameObject.scene, from, target.AimPosition,
-            observer, extraIgnore, ref hits, out var hit) || Owner(hit.collider) == target);
+            observer, extraIgnore, ref hits, out var hit) || CombatTarget.Owner(hit.collider) == target);
 }

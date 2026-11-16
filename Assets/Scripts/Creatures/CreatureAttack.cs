@@ -10,7 +10,7 @@ public abstract class CreatureAttack : MonoBehaviour
     public float Damage => damage;
     public float Interval => Mathf.Max(interval, windup + 0.01f);
     public float Windup => windup;
-    public virtual bool InReach(Creature owner, Creature target) => target != null &&
+    public virtual bool InReach(Creature owner, ICombatTarget target) => CombatTarget.Exists(target) &&
         (target.AimPosition - owner.AimPosition).sqrMagnitude <= Range * Range;
-    public abstract bool Release(Creature owner, Creature target, Transform muzzle);
+    public abstract bool Release(Creature owner, ICombatTarget target, Transform muzzle);
 }

@@ -349,7 +349,7 @@ MonoBehaviour:
   interval: 1
   windup: 0
   projectilePrefab: {fileID: 4364900487722447880, guid: 8303471b7f3016a41b0f209937edc99f, type: 3}
-  projectileSpeed: 12
+  projectileSpeed: 22
   blastRadius: 4
   blastPush: 12
 --- !u!114 &2424513554447337368
@@ -387,7 +387,7 @@ MonoBehaviour:
   maximumCarryDistance: 8
   affectionGain: 0.35
   affectionFade: 0.05
-  firingInterval: 1
+  firingInterval: 0.8
   muzzle: {fileID: 9216373809462168014}
 --- !u!114 &4747399285661104480
 MonoBehaviour:

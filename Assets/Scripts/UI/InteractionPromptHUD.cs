@@ -63,6 +63,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     private CanvasGroup group;
     private Text titleText;
     private Text hintText;
+    private bool bloodActionVisible;
 
     private void Awake()
     {
@@ -94,7 +95,8 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         var mouse = UnityEngine.InputSystem.Mouse.current;
         if (icon != null)
             icon.Show(leftUsable, rightUsable, mouse != null && mouse.leftButton.isPressed, mouse != null && mouse.rightButton.isPressed, fadeTime);
-        if (!showText) hint = null;
+        // Blood has a contextual keyboard action; a mouse diagram cannot communicate its binding.
+        if (!showText && !bloodActionVisible) hint = null;
 
         bool visible = !string.IsNullOrEmpty(hint);
         if (visible)
@@ -111,6 +113,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
     /// <summary>Highest priority first: what the player is doing, then what they could do.</summary>
     private void ChoosePrompt(ref string title, ref string hint)
     {
+        bloodActionVisible = false;
         BubbleCapture capture = carrier != null ? carrier.GetComponentInParent<BubbleCapture>() : null;
         if (capture != null && capture.IsCaptured)
         {
@@ -179,11 +182,19 @@ public sealed class InteractionPromptHUD : MonoBehaviour
             hint = DropHint();
             string extra = carrier.CarriedCreature.CarriedPrompt;
             if (!string.IsNullOrEmpty(extra)) hint = extra + "\n" + hint;
+            if (interactor != null && !string.IsNullOrEmpty(interactor.ContextualBloodPrompt))
+            {
+                hint = interactor.ContextualBloodPrompt + "\n" + hint;
+                bloodActionVisible = true;
+            }
             if (!carrier.CarriesTentacle && !carrier.CarriedCreature.CanUseWhileCarried && interactor != null)
             {
                 Creature target = interactor.FindCreature();
                 if (target != null && !string.IsNullOrEmpty(target.InteractionPrompt))
+                {
                     hint = string.Format(interactHintFormat, target.InteractionPrompt) + "\n" + hint;
+                    bloodActionVisible = target is AsuraBlood;
+                }
             }
             return;
         }
@@ -228,6 +239,7 @@ public sealed class InteractionPromptHUD : MonoBehaviour
         Creature carryTarget = carrier != null && carrier.isActiveAndEnabled ? carrier.FindCreature() : null;
         Creature interactTarget = interactor != null && interactor.isActiveAndEnabled ? interactor.FindCreature() : null;
         string interactVerb = interactTarget != null ? interactTarget.InteractionPrompt : null;
+        bloodActionVisible = interactTarget is AsuraBlood;
         if (string.IsNullOrEmpty(interactVerb)) interactTarget = null;
 
         Creature petTarget = petter != null && petter.isActiveAndEnabled ? petter.FindPettable() : null;

@@ -33,7 +33,7 @@ public static class LuminosityValidation
             Near(new UnityEditor.SerializedObject(p).FindProperty("luminosity").floatValue, 52f,
                 "Inspector field and readable number are the same value");
             effect.AdvanceTime(30f);
-            Near(p.Luminosity, 52f, "honey remains active before expiry");
+            Near(p.Luminosity, 27f, "honey fades to half strength before expiry while retaining native luminosity");
             Check(ReferenceEquals(HoneyLuminosityEffect.Apply(p, 50f, 60f), effect), "refresh reuses the timer component");
             Near(p.Luminosity, 52f, "refresh does not stack luminosity");
             p.SetLuminosity(p.Luminosity + 7f);

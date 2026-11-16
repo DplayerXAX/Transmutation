@@ -275,7 +275,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         }
         GroundCheck();
-        if (grounded && Time.time >= blastUntil) blastAirborne = false;
+        if (grounded && Time.time >= groundBrakingResumesAt) impulseAirborne = false;
 
         if (grounded)
             doubleJumpAvailable = allowDoubleJump;
@@ -286,7 +286,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded && !Flung && !BlastMotion && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
+        rb.linearDamping = grounded && !Flung && !ImpulseMotion && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -302,12 +302,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             // Fishing owns the keys, not the Rigidbody. Keep passive physics and
             // normal grounded stopping alive when a bite interrupts a walk.
             GroundCheck();
-            if (grounded && Time.time >= blastUntil) blastAirborne = false;
+            if (grounded && Time.time >= groundBrakingResumesAt) impulseAirborne = false;
             if (!rb.isKinematic)
             {
                 rb.useGravity = true;
                 rb.linearDamping = 0;
-                if (grounded && !Flung && !BlastMotion)
+                if (grounded && !Flung && !ImpulseMotion)
                 {
                     Vector3 relative = rb.linearVelocity - rideVelocity;
                     Vector3 flat = Vector3.MoveTowards(new Vector3(relative.x, 0, relative.z), Vector3.zero,
@@ -388,7 +388,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         return transform.position + Vector3.up * feetY;
     }
 
-    private bool CastGround(out RaycastHit hit)
+    internal bool CastGround(out RaycastHit hit)
     {
         if (WearingSkateShoes)
         {
@@ -630,7 +630,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
         moveDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
 
-        if (BlastMotion)
+        if (ImpulseMotion)
         {
             // A blast changes velocity once. Steering stays responsive without ground braking or slope glue.
             if (moveDirection.sqrMagnitude > 0.01f)
@@ -749,16 +749,20 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     }
 
     private float flungUntil;
-    private float blastUntil;
-    private bool blastAirborne;
-    public bool BlastMotion => Time.time < blastUntil || (blastAirborne && !grounded);
+    private float groundBrakingResumesAt;
+    private bool impulseAirborne;
+    public bool ImpulseMotion => Time.time < groundBrakingResumesAt || (impulseAirborne && !grounded);
 
-    public void AddBlastImpulse(Vector3 velocityChange)
+    public bool BlastMotion => ImpulseMotion;
+
+    public void AddBlastImpulse(Vector3 velocityChange, float groundBrakeDelay = 0.18f) => AddMovementImpulse(velocityChange, groundBrakeDelay);
+
+    public void AddMovementImpulse(Vector3 velocityChange, float groundBrakeDelay = 0.18f)
     {
         if (rb == null || rb.isKinematic) return;
         rb.linearVelocity += velocityChange;
-        blastUntil = Time.time + 0.18f;
-        blastAirborne = true;
+        groundBrakingResumesAt = Mathf.Max(groundBrakingResumesAt, Time.time + groundBrakeDelay);
+        impulseAirborne = true;
         ownJumpRising = false;
     }
 
@@ -783,7 +787,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         // A climber drives the body kinematically; its velocity cannot be set.
         if (rb.isKinematic)
             return;
-        if (Flung || BlastMotion) return;
+        if (Flung || ImpulseMotion) return;
         if (skateShoes != null && skateShoes.CanDrive) return;
         // The walking limit applies relative to a moving back, including its turn at this contact point.
         if (rideSurface != null)

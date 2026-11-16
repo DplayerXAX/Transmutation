@@ -96,9 +96,9 @@ public abstract class ProjectileCreature : Creature
         if (FlightState != ProjectileFlightState.Flying || !SimulationEnabled || IsConsumptionPending) return;
         if (IsCarried || IsBubbleCaptured || (TryGetComponent<WebCapture>(out var web) && web.IsCaptured))
         { BecomeSpent(); return; }
-        OnFlightImpact(CreatureSpatialQuery.Owner(collision.collider));
+        OnFlightImpact(CombatTarget.Owner(collision.collider));
     }
-    protected abstract void OnFlightImpact(Creature struck);
+    protected abstract void OnFlightImpact(ICombatTarget struck);
 
     public override void Die()
     {

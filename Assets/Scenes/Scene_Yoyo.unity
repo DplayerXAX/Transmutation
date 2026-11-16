@@ -293,6 +293,68 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
   m_PrefabInstance: {fileID: 6064213}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &41849236
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -11
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Flank
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &41849237 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 41849236}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &112865708
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -355,6 +417,68 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
   m_PrefabInstance: {fileID: 112865708}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &151631152
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 662291674508432413, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_Name
+      value: Spear
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 28.330002
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+--- !u!4 &151631153 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5092418611752599488, guid: 711bd51edf9060945a6c269fded97a93, type: 3}
+  m_PrefabInstance: {fileID: 151631152}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &168543578
 GameObject:
   m_ObjectHideFlags: 0
@@ -386,6 +510,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2015496645}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &204721743
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 13
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 309214510446728224, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8854511930475670162, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_Name
+      value: GeneralAsura Dark Rear
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+--- !u!4 &204721744 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+  m_PrefabInstance: {fileID: 204721743}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &311715796
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -455,6 +645,68 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 331bf545ab7c4344a87cc8c873d94622, type: 3}
+--- !u!1001 &323268284
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -13
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8854511930475670162, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+      propertyPath: m_Name
+      value: GeneralAsura Light Rear
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+--- !u!4 &323268285 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 116148782671952636, guid: 0e9002996bb8c184da10305b63a26ae1, type: 3}
+  m_PrefabInstance: {fileID: 323268284}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &398051771
 GameObject:
   m_ObjectHideFlags: 0
@@ -512,6 +764,200 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &431088419
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 455611943030259542, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 21
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 17
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4609335362252107142, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_Name
+      value: RollingAsura Dark Outer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+--- !u!4 &431088420 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+  m_PrefabInstance: {fileID: 431088419}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &504972544
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6879694285982727221, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_Name
+      value: RangedAsura Light Front
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+--- !u!4 &504972545 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+  m_PrefabInstance: {fileID: 504972544}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &505789979
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 16
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Outer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &505789980 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 505789979}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &560265206
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -569,6 +1015,68 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0380d5bcd62399547aee417587734dd8, type: 3}
+--- !u!1001 &586543254
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -17
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Outer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &586543255 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 586543254}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &614062471
 GameObject:
   m_ObjectHideFlags: 0
@@ -802,6 +1310,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &653226997
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6879694285982727221, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_Name
+      value: RangedAsura Dark Front
+      objectReference: {fileID: 0}
+    - target: {fileID: 7860811535798757547, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+--- !u!4 &653226998 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+  m_PrefabInstance: {fileID: 653226997}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &714320338
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -859,6 +1433,134 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 544931d333b4a5646840685a7ff88541, type: 3}
+--- !u!1001 &777981442
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -7
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Front
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &777981443 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 777981442}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &787032246
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Center
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &787032247 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 787032246}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &793194966
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1468,6 +2170,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &996532049
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 11
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Flank
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &996532050 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 996532049}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &996754083
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1530,6 +2298,68 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
   m_PrefabInstance: {fileID: 996754083}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1015873130
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Center
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &1015873131 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 1015873130}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1040287272
 GameObject:
   m_ObjectHideFlags: 0
@@ -1580,6 +2410,200 @@ MonoBehaviour:
   seed: 1334
   overrideFlightSpeed: 0
   flightSpeedRange: {x: 3, y: 6}
+--- !u!1001 &1092899590
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6879694285982727221, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_Name
+      value: RangedAsura Dark Flank
+      objectReference: {fileID: 0}
+    - target: {fileID: 7860811535798757547, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+--- !u!4 &1092899591 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+  m_PrefabInstance: {fileID: 1092899590}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1161664263
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -15
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6879694285982727221, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+      propertyPath: m_Name
+      value: RangedAsura Light Flank
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+--- !u!4 &1161664264 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1464121369246960448, guid: c2389bf928d71e3499d86bcd5d100a7d, type: 3}
+  m_PrefabInstance: {fileID: 1161664263}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1185488192
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Vanguard
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &1185488193 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 1185488192}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1281976459
 GameObject:
   m_ObjectHideFlags: 0
@@ -1808,6 +2832,72 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
   m_PrefabInstance: {fileID: 1375902606}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1403244338
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Front
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &1403244339 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 1403244338}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1445908759
 GameObject:
   m_ObjectHideFlags: 0
@@ -1898,8 +2988,92 @@ Transform:
   - {fileID: 1624616486}
   - {fileID: 2081416782}
   - {fileID: 853711738}
+  - {fileID: 151631153}
+  - {fileID: 1786973238}
+  - {fileID: 586543255}
+  - {fileID: 505789980}
+  - {fileID: 1622247033}
+  - {fileID: 431088420}
+  - {fileID: 323268285}
+  - {fileID: 1161664264}
+  - {fileID: 504972545}
+  - {fileID: 1482414189}
+  - {fileID: 777981443}
+  - {fileID: 1015873131}
+  - {fileID: 1607678710}
+  - {fileID: 41849237}
+  - {fileID: 204721744}
+  - {fileID: 1092899591}
+  - {fileID: 653226998}
+  - {fileID: 1185488193}
+  - {fileID: 1403244339}
+  - {fileID: 787032247}
+  - {fileID: 2124660897}
+  - {fileID: 996532050}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1482414188
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -4
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Vanguard
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &1482414189 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 1482414188}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1545226759
 GameObject:
   m_ObjectHideFlags: 0
@@ -2190,6 +3364,130 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
   m_PrefabInstance: {fileID: 1583229320}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1607678709
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Light Rear
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &1607678710 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 1607678709}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1622247032
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -21
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 17
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4609335362252107142, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+      propertyPath: m_Name
+      value: RollingAsura Light Outer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+--- !u!4 &1622247033 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1896548007687119086, guid: 4182e15232e27f941b20936a5c353167, type: 3}
+  m_PrefabInstance: {fileID: 1622247032}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1624616485
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2445,6 +3743,72 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 3031770563395535164, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}
   m_PrefabInstance: {fileID: 1721416249}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1786973237
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3165582843950133584, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: style
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7413666539753026010, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_Name
+      value: Greatsword
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 29.83
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+--- !u!4 &1786973238 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8363073940827646225, guid: 0f2c0d48106b356488d02853a92af195, type: 3}
+  m_PrefabInstance: {fileID: 1786973237}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1948257011 stripped
 GameObject:
@@ -2786,6 +4150,72 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 8839045574713509204, guid: a629e5c0fe330ce4399bdcee23a9101d, type: 3}
   m_PrefabInstance: {fileID: 2081416781}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2124660896
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 3313055347645887109, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: initialPolarity
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4520961931596826353, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+      propertyPath: m_Name
+      value: MeleeAsura Dark Rear
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+--- !u!4 &2124660897 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3592857894484619380, guid: 761faa197493c684da0b6a35bc6d0d00, type: 3}
+  m_PrefabInstance: {fileID: 2124660896}
   m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

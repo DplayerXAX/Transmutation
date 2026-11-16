@@ -23,12 +23,29 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     [SerializeField] private LayerMask interactionLayers = ~0;
 
     [SerializeField] private PlayerCreatureCarrier carrier;
+    [Tooltip("Coat with aimed blood while a held ability owns left click.")]
+    [SerializeField] private Key bloodCoatKey = Key.F;
+    public string BloodCoatBinding => Keyboard.current != null ? Keyboard.current[bloodCoatKey].displayName : bloodCoatKey.ToString();
+    public PlayerCreatureStats PlayerStats => carrier != null && carrier.PlayerController != null
+        ? carrier.PlayerController.GetComponent<PlayerCreatureStats>() : GetComponentInParent<PlayerCreatureStats>();
+    public bool CanInteractWithBlood(AsuraBlood blood) => isActiveAndEnabled && blood != null &&
+        !RestSpotSystem.BlocksInteraction && !MeditationController.BlocksPlayerInput && !ReflectionVisitor.ConsumedClick &&
+        !BoneAwakeningCutscene.Playing && !BoneRide.Busy && FindCreature() == blood;
+    public string ContextualBloodPrompt => HeldHasOwnUse() && carrier != null && !carrier.CarriesTentacle &&
+        FindCreature() is AsuraBlood blood && !blood.Used ? $"[{BloodCoatBinding}] {blood.InteractionPrompt}" : null;
+    public bool TryContextualBloodUse()
+    {
+        if (!HeldHasOwnUse() || carrier.CarriesTentacle || !(FindCreature() is AsuraBlood blood)) return false;
+        pendingHeldUse = null;
+        return blood.TryCoat(this);
+    }
 
     // Aria: Squirrel hold interaction
     private Squirrel squeezedSquirrel;
 
     // Daniel: Delayed interaction after pickup
     private Creature pendingHeldUse;
+    private Spear pressedSpear;
     private float pendingHeldUseUntil;
     [SerializeField, Min(0.1f)] private float honeyCoatHoldTime = 0.45f;
     private GlowHoney pressedHoney;
@@ -50,9 +67,10 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void Update()
     {
-        if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick) return;
+        if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick)
+        { CancelSpear(); return; }
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
-        if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); return; }
+        if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSpear(); return; }
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
@@ -65,6 +83,15 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             pendingHeldUse = null;
             CancelHoneyGesture();
             UpdateHeldSqueeze(false);
+            CancelSpear();
+            return;
+        }
+
+        // Contextual coat owns this frame. Simultaneous F + LMB cannot also fire the held item.
+        if (Keyboard.current != null && Keyboard.current[bloodCoatKey].wasPressedThisFrame &&
+            !string.IsNullOrEmpty(ContextualBloodPrompt))
+        {
+            TryContextualBloodUse();
             return;
         }
 
@@ -73,6 +100,22 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         bool leftHeld = Mouse.current != null &&
                         Mouse.current.leftButton.isPressed;
+
+        Spear spear = carrier != null ? carrier.CarriedCreature as Spear : null;
+        if (spear != null)
+        {
+            if (pressedSpear != null && pressedSpear != spear) CancelSpear();
+            bool pressed = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+            bool released = Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
+            if (pressed || released)
+            {
+                if (pressed) pressedSpear = spear;
+                spear.SetSpearHeld(pressed, released, interactionCamera != null ? interactionCamera.transform.forward : transform.forward);
+                if (released) pressedSpear = null;
+            }
+            return;
+        }
+        if (pressedSpear != null) CancelSpear();
 
         // Aria: A carried squirrel consumes left mouse input.
         if (UpdateHeldSqueeze(leftHeld))
@@ -103,6 +146,12 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         AudioManager.PostEvent("Play_LMB", gameObject);
         TryInteract();
+    }
+
+    private void CancelSpear()
+    {
+        if (pressedSpear != null) pressedSpear.CancelSpearCharge();
+        pressedSpear = null;
     }
 
     /// <summary>

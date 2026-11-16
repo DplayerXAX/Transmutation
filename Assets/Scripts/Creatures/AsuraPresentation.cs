@@ -4,8 +4,8 @@ using UnityEngine;
 public sealed class AsuraPresentation : MonoBehaviour
 {
     [SerializeField] private Transform visual;
-    [SerializeField] private Color lightColor = new Color(0.96f, 0.78f, 0.3f);
-    [SerializeField] private Color darkColor = new Color(0.33f, 0.12f, 0.65f);
+    [SerializeField] private Color lightColor = AsuraBloodPalette.Light;
+    [SerializeField] private Color darkColor = AsuraBloodPalette.Dark;
     private Creature creature;
     private CreatureCombat combat;
     private ProjectileCreature projectile;

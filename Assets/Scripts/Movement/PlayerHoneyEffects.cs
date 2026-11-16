@@ -15,6 +15,7 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     private HoneyLuminosityEffect coating;
     private PlayerCreatureCarrier carrier;
     private PlayerCreatureStats stats;
+    private BloodCoatHUD bloodHUD;
     private GlowBeeColony colony;
     private GlowBeeNest nearbyNest;
     private Light sightLight;
@@ -40,6 +41,7 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         if (effects == null) effects = owner.AddComponent<PlayerHoneyEffects>();
         effects.carrier = playerCarrier;
         effects.stats = owner.GetComponent<PlayerCreatureStats>();
+        effects.bloodHUD = FindFirstObjectByType<BloodCoatHUD>();
         if (effects.stats == null) effects.stats = owner.AddComponent<PlayerCreatureStats>();
         if (owner.GetComponent<PlayerLuminosityVisuals>() == null) owner.AddComponent<PlayerLuminosityVisuals>();
         return effects;
@@ -180,7 +182,11 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         if (nearbyNest != null) GUI.Box(new Rect(Screen.width * 0.5f - 210f, Screen.height * 0.67f, 420f, 88f), NestReadout, panelStyle);
         string status = HasHoneySight ? $"Honey sight  {Mathf.CeilToInt(sightRemaining)}s" : "";
         if (IsScented) status += (status.Length > 0 ? "\n" : "") + $"Glowing + sweet scent  {Mathf.CeilToInt(CoatingRemaining)}s";
-        if (status.Length > 0) GUI.Box(new Rect(20f, Screen.height - 95f, 295f, 72f), status, panelStyle);
+        if (status.Length > 0)
+        {
+            float left = Mathf.Max(20f, bloodHUD != null ? bloodHUD.OccupiedScreenWidth : 0f);
+            GUI.Box(new Rect(left, Screen.height - 95f, 295f, 72f), status, panelStyle);
+        }
     }
 
     private void OnDisable()

@@ -659,6 +659,8 @@ GameObject:
   - component: {fileID: 763769728342006873}
   - component: {fileID: 2338925212692249091}
   - component: {fileID: 8918689177038102776}
+  - component: {fileID: 2382737620631885008}
+  - component: {fileID: 7725527882481521905}
   m_Layer: 0
   m_Name: RangedAsura
   m_TagString: Untagged
@@ -820,6 +822,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
 --- !u!114 &763769728342006873
@@ -861,6 +864,33 @@ MonoBehaviour:
   visual: {fileID: 0}
   lightColor: {r: 0.96, g: 0.78, b: 0.3, a: 1}
   darkColor: {r: 0.33, g: 0.12, b: 0.65, a: 1}
+--- !u!114 &2382737620631885008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6879694285982727221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f663f40e5df12c48b8d1a180b0bdb07, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AsuraBloodDrop
+  bloodPrefab: {fileID: 2109663464989351326, guid: e0747a60683887844aa9b45ddd105161, type: 3}
+--- !u!114 &7725527882481521905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6879694285982727221}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8714c96569b02254ea332e6ee8d7cc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AsuraBloodPointReward
+  bloodPointValue: 50
+  collectionRadius: 12
 --- !u!1 &8128781853782674760
 GameObject:
   m_ObjectHideFlags: 0

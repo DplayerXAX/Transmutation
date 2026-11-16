@@ -66,7 +66,7 @@ public sealed class CreatureEditor : Editor
             cause.showMixedValue = creatures.Any(c => c.DeathCause != creatures[0].DeathCause);
             var fighting = creatures[0].GetComponent<CreatureCombat>();
             combat.SetValueWithoutNotify(fighting == null ? "—" : fighting.State + " / " +
-                (fighting.Target != null ? fighting.Target.name : "no target") + " / releases " + fighting.Releases);
+                (fighting.Target != null ? fighting.Target.TargetComponent.name : "no target") + " / releases " + fighting.Releases);
             dead.showMixedValue = creatures.Any(c => c.IsDead != creatures[0].IsDead);
             running.showMixedValue = creatures.Any(c => (c.isActiveAndEnabled && c.SimulationEnabled) != running.value);
             state.SetEnabled(EditorApplication.isPlaying);

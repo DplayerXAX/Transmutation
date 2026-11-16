@@ -2,6 +2,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody), typeof(AsuraMotor), typeof(CreatureCombat))]
 [RequireComponent(typeof(MeleeAttack))]
+[RequireComponent(typeof(AsuraBloodDrop))]
 public sealed class MeleeAsura : Creature
 {
     private CreatureCombat combat;

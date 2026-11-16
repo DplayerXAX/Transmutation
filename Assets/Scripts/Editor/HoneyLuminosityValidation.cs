@@ -100,7 +100,9 @@ public static class HoneyLuminosityValidation
             bee.SetLuminosity(50f); update.Invoke(glow, null);
             stats.SetLuminosity(stats.Luminosity + 2f);
             advance.Invoke(effects, new object[] { 1000f });
-            Check(stats.Luminosity == 2f && !body.gameObject.activeInHierarchy, "expiry subtracts honey's amount while preserving other stat changes");
+            Check(Mathf.Abs(stats.Luminosity - 2f) < 0.0001f &&
+                Mathf.Abs(body.intensity - LuminosityLighting.PointIntensity(2f)) < 0.0001f,
+                "expiry subtracts honey's amount while the shared light retains other luminosity");
             stats.SetLuminosity(0f);
             effects.TryApply(GlowHoney.Use.Coat);
             effects.enabled = false;
