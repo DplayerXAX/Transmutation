@@ -4031,7 +4031,7 @@ MonoBehaviour:
   affectionGain: 0.35
   affectionFade: 0.05
   sightRange: 18
-  fleeSpeed: 17
+  fleeSpeed: 10
   fleeAcceleration: 13
   catchDistance: 2.2
   airborneTurnAngle: 50

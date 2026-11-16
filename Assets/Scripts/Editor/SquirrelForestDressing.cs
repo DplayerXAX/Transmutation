@@ -34,9 +34,9 @@ public static class SquirrelForestDressing
             if (sky == null) throw new InvalidOperationException("Missing Scene_World sky material.");
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.38f, 0.42f, 0.5f);
-            RenderSettings.ambientEquatorColor = new Color(0.24f, 0.27f, 0.32f);
-            RenderSettings.ambientGroundColor = new Color(0.12f, 0.14f, 0.18f);
+            RenderSettings.ambientSkyColor = new Color(0.114f, 0.126f, 0.15f);
+            RenderSettings.ambientEquatorColor = new Color(0.072f, 0.081f, 0.096f);
+            RenderSettings.ambientGroundColor = new Color(0.036f, 0.042f, 0.054f);
             RenderSettings.fog = true; RenderSettings.fogColor = new Color(0.25f, 0.3f, 0.4f);
             RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogDensity = 0.0042f;
             var roots = scene.GetRootGameObjects();

@@ -7,7 +7,7 @@ public sealed class SkateGecko : Creature
 {
     public const float RideHeight = .4f;
     [SerializeField] float sightRange = 18f;
-    [SerializeField] float fleeSpeed = 17f;
+    [SerializeField] float fleeSpeed = 10f;
     [SerializeField] float fleeAcceleration = 13f;
     [SerializeField] float catchDistance = 2.2f;
     [SerializeField] float airborneTurnAngle = 50f;

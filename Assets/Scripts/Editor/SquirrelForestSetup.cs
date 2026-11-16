@@ -119,9 +119,9 @@ public static class SquirrelForestSetup
             light.type = LightType.Directional; light.intensity = 1.6f; light.color = new Color(1, 0.91f, 0.76f);
             light.transform.rotation = Quaternion.Euler(42, -35, 0); light.shadows = LightShadows.Soft;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.45f, 0.54f, 0.59f);
-            RenderSettings.ambientEquatorColor = new Color(0.25f, 0.32f, 0.28f);
-            RenderSettings.ambientGroundColor = new Color(0.13f, 0.17f, 0.12f);
+            RenderSettings.ambientSkyColor = new Color(0.135f, 0.162f, 0.177f);
+            RenderSettings.ambientEquatorColor = new Color(0.075f, 0.096f, 0.084f);
+            RenderSettings.ambientGroundColor = new Color(0.039f, 0.051f, 0.036f);
             RenderSettings.fog = true; RenderSettings.fogColor = new Color(0.3f, 0.4f, 0.42f);
             RenderSettings.fogMode = FogMode.ExponentialSquared; RenderSettings.fogDensity = 0.006f;
             var camera = new GameObject("Forest review camera").AddComponent<Camera>(); camera.enabled = false;
