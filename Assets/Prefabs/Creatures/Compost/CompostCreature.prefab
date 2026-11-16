@@ -640,6 +640,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   gooPrefab: {fileID: 3163288652093547313, guid: d7ec1e08eb2cede468e8195d79f5c28d, type: 3}

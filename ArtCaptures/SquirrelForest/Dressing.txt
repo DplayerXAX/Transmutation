@@ -1,0 +1,13 @@
+PASS
+Sky: Assets/Materials/World/MAT_Sky_Black.mat
+Sky shader: Skybox/Cubemap
+Ambient and fog match Scene_World. All cameras use skybox clearing.
+Forest-floor decor: 250
+Creepers: 50
+CavePebbles: 50
+Pebbles: 50
+Fronds: 50
+NeedleBeards: 50
+Tree count remains 500.
+2.4 m clearance around habitat roots; clear central walk; terrain-only ground layer retained.
+Shader errors: 0

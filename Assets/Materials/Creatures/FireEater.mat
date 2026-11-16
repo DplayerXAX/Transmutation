@@ -26,6 +26,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _CellDensity: 37
+    - _CreatureHurt: 0
     - _DotAmount: 1
     - _DotSize: 0.01
     - _EdgeSoftness: 0

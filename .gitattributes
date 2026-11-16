@@ -1,1 +1,2 @@
 Assets/Generated/SilkForest/SilkForestMeshes*.asset filter=lfs diff=lfs merge=lfs -text
+Assets/Generated/SquirrelForest/ForestTrees*.asset filter=lfs diff=lfs merge=lfs -text

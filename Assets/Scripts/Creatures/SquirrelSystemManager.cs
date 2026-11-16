@@ -182,13 +182,18 @@ public sealed partial class SquirrelSystemManager : MonoBehaviour
                 inward.y = 0f;
                 if (inward.sqrMagnitude > 0.001f) ground = tree.GroundPosition + inward.normalized * nestTreeDistance;
             }
+            if (gameObject.scene.GetPhysicsScene().Raycast(ground + Vector3.up * 20f, Vector3.down,
+                    out var groundHit, 40f, 1 << 7, QueryTriggerInteraction.Ignore)) ground = groundHit.point;
             SquirrelTree.PlaceOnGround(home.transform, ground);
             home.name = squirrel.name + " Nest";
             home.AssignOwner(squirrel);
             squirrel.ConfigureNestBuilding(nestPrefab, this);
             squirrel.Initialize(this, home, Random.Range(minimum, maximum), baseCapacity, territoryRadius);
             // Body height is adjusted after random scaling so all sizes stand on the same floor.
-            SquirrelTree.PlaceOnGround(squirrel.transform, ground + Vector3.forward * Mathf.Min(squirrelSpawnRadius, territoryRadius * 0.5f));
+            Vector3 spawn = ground + Vector3.forward * Mathf.Min(squirrelSpawnRadius, territoryRadius * 0.5f);
+            if (gameObject.scene.GetPhysicsScene().Raycast(spawn + Vector3.up * 20f, Vector3.down,
+                    out var spawnHit, 40f, 1 << 7, QueryTriggerInteraction.Ignore)) spawn = spawnHit.point;
+            SquirrelTree.PlaceOnGround(squirrel.transform, spawn);
         }
         // Explicit initialization order: relocate both existing food and new food only after trees are known.
         GenerateAroundTrees(trees);

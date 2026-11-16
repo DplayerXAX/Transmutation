@@ -32,7 +32,7 @@ Material:
     - _Scale: 3.5
     - _Speed: 0.1
     - _Twist: 0.6
-    - _Warp: 1.0
+    - _Warp: 1
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

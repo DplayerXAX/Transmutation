@@ -6449,6 +6449,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -6817,6 +6818,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -34410,6 +34412,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -38604,6 +38607,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   platform: {fileID: 210576872}
@@ -38615,6 +38619,17 @@ MonoBehaviour:
   expansionPushForce: 8
   expansionPushRadius: 3.5
   expansionUpwardModifier: 0.5
+  compactMaterial: {fileID: 0}
+  hops: 1
+  hopPause: {x: 1.2, y: 3.5}
+  hopUpSpeed: 7
+  hopForwardSpeed: 2.5
+  wanderRadius: 5
+  maxHopDrop: 1.5
+  crouchTime: 0.18
+  growsInto: {fileID: 0}
+  crowdingRadius: 6
+  lifespanJitter: 0.25
   currentState: 0
   growth: 0
   remainingExpandedTime: 0
@@ -43712,8 +43727,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5526450aedb7fd34389266354d8db024, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FluidNearPlayer
-  activeRange: 70
-  margin: 15
 --- !u!1001 &483444554
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -46433,6 +46446,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   platform: {fileID: 941960704}
@@ -46444,6 +46458,17 @@ MonoBehaviour:
   expansionPushForce: 8
   expansionPushRadius: 3.5
   expansionUpwardModifier: 0.5
+  compactMaterial: {fileID: 0}
+  hops: 1
+  hopPause: {x: 1.2, y: 3.5}
+  hopUpSpeed: 7
+  hopForwardSpeed: 2.5
+  wanderRadius: 5
+  maxHopDrop: 1.5
+  crouchTime: 0.18
+  growsInto: {fileID: 0}
+  crowdingRadius: 6
+  lifespanJitter: 0.25
   currentState: 0
   growth: 0
   remainingExpandedTime: 0
@@ -50839,6 +50864,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   platform: {fileID: 1199664328}
@@ -50850,6 +50876,17 @@ MonoBehaviour:
   expansionPushForce: 8
   expansionPushRadius: 3.5
   expansionUpwardModifier: 0.5
+  compactMaterial: {fileID: 0}
+  hops: 1
+  hopPause: {x: 1.2, y: 3.5}
+  hopUpSpeed: 7
+  hopForwardSpeed: 2.5
+  wanderRadius: 5
+  maxHopDrop: 1.5
+  crouchTime: 0.18
+  growsInto: {fileID: 0}
+  crowdingRadius: 6
+  lifespanJitter: 0.25
   currentState: 0
   growth: 0
   remainingExpandedTime: 0
@@ -52170,6 +52207,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -53897,6 +53935,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -57192,6 +57231,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -57989,6 +58029,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -59092,6 +59133,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -61092,6 +61134,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!64 &1039529034
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -61929,6 +61973,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -64796,6 +64841,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -65110,6 +65156,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1158834802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -72085,6 +72133,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -76184,6 +76233,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -79210,6 +79260,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -79559,6 +79610,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -80334,6 +80386,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -85489,6 +85542,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -91386,6 +91440,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -92365,6 +92420,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1 &1897403715
 GameObject:
   m_ObjectHideFlags: 0
@@ -93227,6 +93284,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   heatToFull: 30
@@ -95022,6 +95080,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -99852,12 +99911,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 216, y: 324}
   cellSize: 1.25
   chunkCells: 24
   seed: 211026
   leafMap: 1
   leafScale: 1
+  worldMap: 0
+  generationRecipe:
+    kind: 0
+    version: 1
+    mountainHeight: 310
+    mountainFrequency: 0.0035
+    overhangStrength: 80
+    cavernWidth: 0.085
+    islandCount: 24
+    islandElevation: {x: 340, y: 490}
+    islandRadius: {x: 40, y: 85}
+    verticalBounds: {x: -90, y: 558}
+    baseSampleSpacing: 9
+    safeSpawn: {x: 0, y: 148, z: -360}
   surfaceAmplitude: 24
   surfaceFrequency: 0.013
   ridges: 0.2

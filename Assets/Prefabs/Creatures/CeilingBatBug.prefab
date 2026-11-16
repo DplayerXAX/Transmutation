@@ -1542,6 +1542,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   legs:

@@ -910,6 +910,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   blastCorePrefab: {fileID: 2424513554447337368, guid: a629e5c0fe330ce4399bdcee23a9101d, type: 3}

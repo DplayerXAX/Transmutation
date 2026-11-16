@@ -25,15 +25,15 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _PulseSpacing: 9
-    - _PulseLength: 0.6
-    - _PulseSpeed: 1.6
+    - _Cull: 2
     - _Prism: 0.75
+    - _PulseLength: 0.6
+    - _PulseSpacing: 9
+    - _PulseSpeed: 1.6
     - _Sway: 0
     - _SwaySpeed: 0.6
-    - _Cull: 2
     m_Colors:
-    - _Color: {r: 0.9, g: 0.92, b: 1.0, a: 1}
+    - _Color: {r: 0.9, g: 0.92, b: 1, a: 1}
     - _PulseColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

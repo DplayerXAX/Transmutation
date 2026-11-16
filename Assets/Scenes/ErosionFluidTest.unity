@@ -178,6 +178,9 @@ MonoBehaviour:
   collisionLayers:
     serializedVersion: 2
     m_Bits: 913
+  contactAgeMultiplier: 4
+  contactAgeFloor: 4
+  erosiveRain: 1
 --- !u!4 &61389147
 Transform:
   m_ObjectHideFlags: 0
@@ -768,10 +771,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 32, y: 32}
   cellSize: 0.5
   chunkCells: 16
   seed: 1
+  leafMap: 0
+  leafScale: 1
+  worldMap: 0
+  generationRecipe:
+    kind: 0
+    version: 1
+    mountainHeight: 310
+    mountainFrequency: 0.0035
+    overhangStrength: 80
+    cavernWidth: 0.085
+    islandCount: 24
+    islandElevation: {x: 340, y: 490}
+    islandRadius: {x: 40, y: 85}
+    verticalBounds: {x: -90, y: 558}
+    baseSampleSpacing: 9
+    safeSpawn: {x: 0, y: 148, z: -360}
   surfaceAmplitude: 32
   surfaceFrequency: 0.013
   ridges: 0.7
@@ -780,6 +800,9 @@ MonoBehaviour:
   spawnFlatRadius: 18
   spawnBlend: 30
   rimHeight: 30
+  basin: 0
+  basinFloor: 0.62
+  basinSlope: 0.3
   crustThickness: 9
   innerGap: 20
   ceilingMirror: 0.8
@@ -796,6 +819,7 @@ MonoBehaviour:
   chunkLayer: 7
   blockingRadius: 40
   meshesPerFrame: 6
+  placePlayerOnSurface: 1
   respawnFallingPlayer: 1
   erosionTestCourse: 1
   erodibility: 1
@@ -829,6 +853,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   chunksBuilt: 0
   chunksTotal: 0
+  sculptData: {fileID: 0}
 --- !u!4 &1660135321
 Transform:
   m_ObjectHideFlags: 0
@@ -876,17 +901,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TentacleCreature
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -935,6 +969,9 @@ MonoBehaviour:
   canClimbUp: 0
   canHang: 0
   backScale: 0.32
+  huntRadius: 9
+  holdTime: {x: 6, y: 11}
+  huntCooldown: 15
 --- !u!54 &1876917218
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1105,17 +1142,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuzzCreature
   creatureName: Unnamed Creature
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
   foodTags: 0
   dietTags: 0
   canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
   age: 40
   ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -1136,8 +1182,18 @@ MonoBehaviour:
   furMaterial: {fileID: 2100000, guid: fc5788aa88d345c5828e6b6684dce99e, type: 2}
   gooMaterial: {fileID: 2100000, guid: f4ef6916db904042ab3b68e7c6fb2e04, type: 2}
   furShells: 12
+  heatForRed: 15
+  coolRate: 0.6
+  hotRoot: {r: 0.45, g: 0.03, b: 0.02, a: 1}
+  hotTip: {r: 1, g: 0.32, b: 0.12, a: 1}
+  gooRoot: {r: 0.03, g: 0.3, b: 0.07, a: 1}
+  gooTip: {r: 0.45, g: 1, b: 0.35, a: 1}
+  maxGoo: 2
+  gooCoats: 0
   following: 0
   chainIndex: -1
+  ropeDrop: 2
+  ropeSpacing: 1.05
 --- !u!54 &2040242691
 Rigidbody:
   m_ObjectHideFlags: 0

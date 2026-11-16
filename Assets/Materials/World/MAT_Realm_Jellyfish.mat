@@ -25,18 +25,18 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Opacity: 0.35
     - _EdgeOpacity: 0.9
-    - _Iridescence: 0.5
-    - _Veins: 0.5
-    - _VeinScale: 9
     - _Glow: 1.1
+    - _Iridescence: 0.5
+    - _Opacity: 0.35
     - _Sway: 0.04
     - _SwaySpeed: 1.2
+    - _VeinScale: 9
+    - _Veins: 0.5
     m_Colors:
-    - _Tint: {r: 1, g: 0.55, b: 0.75, a: 1}
     - _FilmA: {r: 1, g: 0.45, b: 0.6, a: 1}
     - _FilmB: {r: 1, g: 0.8, b: 0.4, a: 1}
     - _FilmC: {r: 0.6, g: 0.5, b: 1, a: 1}
+    - _Tint: {r: 1, g: 0.55, b: 0.75, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

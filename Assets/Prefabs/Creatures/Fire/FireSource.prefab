@@ -283,12 +283,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireSource
   creatureName: Fire Source
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
   heat: 4000
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
   radiationPerSecond: 25
   heatDropPerMetre: 1.5
   heatReceiverLayers:
@@ -297,6 +313,10 @@ MonoBehaviour:
   bodyCollider: {fileID: 2303167142865417911}
   radiationTrigger: {fileID: 1091521392603036995}
   sourceBody: {fileID: 8921371036882868935}
+  shotBubblePrefab: {fileID: 0}
+  shotHeat: 20
+  shotCooldown: 0.8
+  shotSpeed: 4
 --- !u!135 &1091521392603036995
 SphereCollider:
   m_ObjectHideFlags: 0

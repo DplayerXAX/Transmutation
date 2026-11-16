@@ -45,12 +45,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkyWeb
   creatureName: Sky Web
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
   maximumRadius: 6
   webScale: 1
   cellCount: 7
@@ -66,6 +82,8 @@ MonoBehaviour:
   growthDuration: 45
   strandMaterial: {fileID: 2100000, guid: 2b31601c7db3ec242a1aa1edd1768523, type: 2}
   patchMaterial: {fileID: 2100000, guid: 2420b8a7a23534244bad2b84fdee0aac, type: 2}
+  walkable: 1
+  walkRadius: 0.1
   trappingLayers:
     serializedVersion: 2
     m_Bits: 4294967295

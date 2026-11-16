@@ -74,18 +74,35 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SkySpider
   creatureName: Sky Spider
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
   webPrefab: {fileID: 6567200558255696930, guid: 51e175fb2c465224bbf826a086160bac, type: 3}
   webScale: 1
   returnRange: 12
   moveSpeed: 1.2
   turnSpeed: 120
   pauseTimeRange: {x: 0.4, y: 1.6}
+  biteRange: 0.75
 --- !u!1 &7871754853554195105
 GameObject:
   m_ObjectHideFlags: 0

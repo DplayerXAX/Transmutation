@@ -115,6 +115,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 50
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
 --- !u!1 &8592662005722648484

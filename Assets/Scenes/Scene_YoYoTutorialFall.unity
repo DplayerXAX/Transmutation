@@ -606,6 +606,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   placeInWorld: 0
@@ -616,6 +619,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 128
   seed: 901
+  route: []
   rockMaterial: {fileID: 0}
   oreMaterial: {fileID: 0}
   heartMaterial: {fileID: 0}
@@ -623,7 +627,6 @@ MonoBehaviour:
   larvaPrefab: {fileID: 4728406342670090175, guid: c163dae5009d80644ae393da2e3ce91b, type: 3}
   bodySize: {x: 6.5, y: 3.6, z: 9}
   walkHeight: 9.8
-  restDrop: 2.6
   hipOffset: {x: 2.6, y: 3.2}
   footOffset: {x: 5.6, y: 4.6}
   upperLength: 6.6
@@ -636,14 +639,16 @@ MonoBehaviour:
   stepHeight: 1.6
   stepThreshold: 1.6
   restTime: {x: 6, y: 10}
+  restKneelHold: 18
   restChance: 0.5
   maxFootSlope: 60
   stompRadius: 5.5
   stompFling: 10
   stompPush: 6
   stompDamage: 20
-  chainLength: 5.6
-  heartRadius: 0.7
+  heartOreSize: {x: 3.6, y: 3.2, z: 3.4}
+  heartOreOffset: -1.6
+  heartCellSize: 0.25
   heartIntegrity: 10
   heartSensitivity: 4
   staggerTime: 3.5
@@ -1148,6 +1153,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1001 &451455436
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1753,6 +1760,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -1925,10 +1935,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 372, y: 348}
   cellSize: 1.5
   chunkCells: 24
   seed: 27
+  leafMap: 0
+  leafScale: 1
+  worldMap: 0
+  generationRecipe:
+    kind: 0
+    version: 1
+    mountainHeight: 310
+    mountainFrequency: 0.0035
+    overhangStrength: 80
+    cavernWidth: 0.085
+    islandCount: 24
+    islandElevation: {x: 340, y: 490}
+    islandRadius: {x: 40, y: 85}
+    verticalBounds: {x: -90, y: 558}
+    baseSampleSpacing: 9
+    safeSpawn: {x: 0, y: 148, z: -360}
   surfaceAmplitude: 12
   surfaceFrequency: 0.014
   ridges: 0.45
@@ -2445,6 +2472,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1001 &943256402
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2666,6 +2695,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -3115,6 +3147,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1 &1084249417
 GameObject:
   m_ObjectHideFlags: 0
@@ -3646,6 +3680,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -4327,6 +4364,9 @@ MonoBehaviour:
   restingHeatPerSecond: 0.225
   wakeAfter: 2.5
   emergenceDuration: 14
+  launchToSky: 1
+  launchHeight: 60
+  launchSpeed: 34
   helixTwist: 9
   helixRoll: 30
   crawlSpeed: 6
@@ -4626,6 +4666,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -4770,6 +4813,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -5046,6 +5092,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -5612,6 +5661,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -6376,6 +6428,9 @@ MonoBehaviour:
   ageRate: 0
   isDead: 0
   heat: 0
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35

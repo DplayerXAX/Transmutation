@@ -25,17 +25,17 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _HorizonFade: 0.35
+    - _Keep: 0.6
+    - _Levels: 9
     - _LineStrength: 0.45
     - _LineWidth: 0.9
-    - _Levels: 9
     - _Scale: 1.6
     - _Speed: 0.015
-    - _Keep: 0.6
-    - _HorizonFade: 0.35
     m_Colors:
-    - _ZenithColor: {r: 0.03, g: 0.03, b: 0.035, a: 1}
-    - _HorizonColor: {r: 0.11, g: 0.11, b: 0.12, a: 1}
     - _GroundColor: {r: 0.02, g: 0.02, b: 0.025, a: 1}
+    - _HorizonColor: {r: 0.11, g: 0.11, b: 0.12, a: 1}
     - _LineColor: {r: 0.55, g: 0.55, b: 0.58, a: 1}
+    - _ZenithColor: {r: 0.03, g: 0.03, b: 0.035, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

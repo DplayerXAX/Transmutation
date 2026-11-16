@@ -1703,6 +1703,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -1868,6 +1869,9 @@ MonoBehaviour:
   restingHeatPerSecond: 0.225
   wakeAfter: 2.5
   emergenceDuration: 14
+  launchToSky: 1
+  launchHeight: 60
+  launchSpeed: 34
   helixTwist: 9
   helixRoll: 30
   crawlSpeed: 6
@@ -2205,6 +2209,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -7385,6 +7390,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -8130,6 +8136,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -8498,6 +8505,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -8882,6 +8890,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!64 &1039529034
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -9741,6 +9751,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1158834802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13196,6 +13208,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -13871,6 +13884,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -14987,6 +15001,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -15392,6 +15407,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e882aee125134dfab8b6dccf98661033, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SquirrelTree
+  useRootPoint: 0
+  rootPoint: {x: 0, y: 0, z: 0}
 --- !u!1 &1897403715
 GameObject:
   m_ObjectHideFlags: 0
@@ -16352,6 +16369,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -17298,12 +17316,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 216, y: 324}
   cellSize: 1.25
   chunkCells: 24
   seed: 211026
   leafMap: 1
   leafScale: 1
+  worldMap: 0
+  generationRecipe:
+    kind: 0
+    version: 1
+    mountainHeight: 310
+    mountainFrequency: 0.0035
+    overhangStrength: 80
+    cavernWidth: 0.085
+    islandCount: 24
+    islandElevation: {x: 340, y: 490}
+    islandRadius: {x: 40, y: 85}
+    verticalBounds: {x: -90, y: 558}
+    baseSampleSpacing: 9
+    safeSpawn: {x: 0, y: 148, z: -360}
   surfaceAmplitude: 24
   surfaceFrequency: 0.013
   ridges: 0.2

@@ -11432,6 +11432,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -64700,7 +64701,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e024146885486de4bb933a88f1b669ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MeditationController
-  meditateKey: 27
   veilMaterial: {fileID: 2100000, guid: 1c24e9cc11346664286cd7b1156ee39e, type: 2}
   settleTime: 1.5
   skyEraseTime: 1.8
@@ -64713,7 +64713,6 @@ MonoBehaviour:
   settleLook: 0.3
   lookSensitivity: 0.12
   spaceVeilRadius: 26
-  spaceHeight: 3000
   spaceEyeHeight: 1.6
 --- !u!114 &1154897109
 MonoBehaviour:
@@ -64743,10 +64742,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e9b8c24891ee11448b169c6a705a11b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ReflectionVisitor
-  walkSpeed: 2.4
-  lookSensitivity: 0.12
   reach: 3.5
-  interactKey: 19
   brushPixels: 3.2
   eraserPixels: 14
   focusTime: 0.6
@@ -64780,15 +64776,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ReflectionSpace
   floorMaterial: {fileID: 2100000, guid: 01a49b39f3b9115458e155745e29ad28, type: 2}
   stoneMaterial: {fileID: 2100000, guid: 27702e042556bd24ba704d5d1ae6fa52, type: 2}
-  faceMaterial: {fileID: 2100000, guid: a05e2ead4811f7b44bc7689233a72fe7, type: 2}
   spotlightShader: {fileID: 4800000, guid: a78701036d5e4b4eac9a72a6d2b4b6d7, type: 3}
-  seed: 7
-  floorRadius: 14
-  walkRadius: 11
-  steleCount: 5
-  tabletCount: 4
-  steleDistance: {x: 6.5, y: 8.5}
-  tabletDistance: {x: 4.2, y: 5.2}
+  unlockSphere:
+    position: {x: 0, y: 19, z: 25}
+    radius: 2.3
+    fractureSeed: 17041
+    fragmentMode: 0
+    fragmentCount: 232
+    surfaceSubdivisions: 4
+    scatterDistance: 3.6
+    scatterRotation: 48
+    motion: 1
+    driftAmount: 0.055
+    driftSpeed: 0.5
+    rotationAmount: 7
+    rotationSpeed: 0.23
+    restorationDuration: 1.65
+    stagger: 0.045
+    material: {fileID: 0}
 --- !u!4 &1154897113
 Transform:
   m_ObjectHideFlags: 0
@@ -95108,6 +95113,9 @@ MonoBehaviour:
   restingHeatPerSecond: 0.225
   wakeAfter: 2.5
   emergenceDuration: 14
+  launchToSky: 1
+  launchHeight: 60
+  launchSpeed: 34
   helixTwist: 9
   helixRoll: 30
   crawlSpeed: 6
@@ -96918,6 +96926,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   bodyRadius: 0.35
@@ -97195,10 +97204,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f73b2046c3a4e118694b3775aa8720f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralWorld
+  chunkCache: {fileID: 0}
   worldSize: {x: 288, y: 288}
   cellSize: 1.25
   chunkCells: 24
   seed: 1
+  leafMap: 0
+  leafScale: 1
+  worldMap: 0
+  generationRecipe:
+    kind: 0
+    version: 1
+    mountainHeight: 310
+    mountainFrequency: 0.0035
+    overhangStrength: 80
+    cavernWidth: 0.085
+    islandCount: 24
+    islandElevation: {x: 340, y: 490}
+    islandRadius: {x: 40, y: 85}
+    verticalBounds: {x: -90, y: 558}
+    baseSampleSpacing: 9
+    safeSpawn: {x: 0, y: 148, z: -360}
   surfaceAmplitude: 32
   surfaceFrequency: 0.013
   ridges: 0.7
@@ -97799,6 +97825,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -97945,6 +97972,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -98091,6 +98119,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -98237,6 +98266,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   noticeRadius: 6
@@ -100153,6 +100183,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -108515,6 +108546,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2
@@ -113924,6 +113956,7 @@ MonoBehaviour:
   heat: 0
   luminosity: 0
   emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
   affectionGain: 0.35
   affectionFade: 0.05
   moveSpeed: 2

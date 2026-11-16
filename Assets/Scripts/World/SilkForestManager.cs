@@ -26,6 +26,8 @@ public sealed class SilkForestManager : MonoBehaviour
     public bool trunkColliders = true;
     [InspectorName("贴合地面"), Tooltip("向下探测地面，将树根放置在地形或带碰撞体的表面上。")]
     public bool projectToGround;
+    [Tooltip("Register only trees with small trunk crowns as squirrel habitat anchors.")]
+    public bool squirrelHabitatAnchors;
     [InspectorName("地面图层"), Tooltip("只在这些图层中寻找可放置树根的地面。")]
     public LayerMask groundLayers = 1;
     [InspectorName("地面探测高度（米）"), Tooltip("从种植平面上方指定高度向下探测地面。")]
@@ -34,6 +36,8 @@ public sealed class SilkForestManager : MonoBehaviour
     [Header("树木随机范围与形态")]
     [InspectorName("树干高度范围（米）"), Tooltip("到顶部树冠连接位置的高度；整体高度还包含树冠。")]
     public Vector2 heightRange = new Vector2(9, 16);
+    [Tooltip("Optional overall tree height including crowns, in metres. Zero keeps the original trunk-height settings.")]
+    public Vector2 overallHeightRange;
     [InspectorName("顶部球冠数量范围"), Tooltip("每棵树顶部球冠的随机数量，支持 1 至 5 个。")]
     public Vector2Int crownCountRange = new Vector2Int(1, 3);
     [InspectorName("顶部球冠半径范围（米）"), Tooltip("主要球冠的半径范围；附属球冠会额外缩小。")]
@@ -165,7 +169,7 @@ public sealed class SilkForestManager : MonoBehaviour
                 foot = transform.InverseTransformPoint(hit.point);
             }
             var tree = new Tree { foot = foot, height = Mathf.Clamp(R(heightRange), 2, 60) };
-            BuildTree(tree, trees.Count);
+            BuildTree(tree, trees.Count, target);
             trees.Add(tree);
         }
         generatedTreeCount = trees.Count;
@@ -206,7 +210,7 @@ public sealed class SilkForestManager : MonoBehaviour
         return tree.foot + new Vector3(Mathf.Sin(t * 3.1f) * tree.height * 0.022f, tree.height * t, Mathf.Sin(t * 4.3f) * tree.height * 0.012f);
     }
 
-    private void BuildTree(Tree tree, int index)
+    private void BuildTree(Tree tree, int index, int target)
     {
         var silk = new SilkForestGeometry.MeshBuffer();
         var film = new SilkForestGeometry.MeshBuffer();
@@ -267,6 +271,8 @@ public sealed class SilkForestManager : MonoBehaviour
         }
         var holder = new GameObject($"Silk tree {index + 1:00} · {count} crowns + {buds} buds");
         holder.transform.SetParent(generatedRoot, false);
+        if (squirrelHabitatAnchors && buds > 0)
+            holder.AddComponent<SquirrelTree>().SetRootPoint(tree.foot);
         MakeMesh(holder.transform, "Crown membranes", silk, silkMaterial);
         MakeMesh(holder.transform, "Tensioned silk strands", strands, strandMaterial);
         MakeMesh(holder.transform, "Sticky thin films", film, membraneMaterial);
@@ -276,6 +282,31 @@ public sealed class SilkForestManager : MonoBehaviour
             collider.center = tree.foot + Vector3.up * tree.height * 0.5f;
             collider.height = tree.height;
             collider.radius = trunkRadius * 1.5f;
+        }
+        if (overallHeightRange.x > 0f && overallHeightRange.y > 0f)
+        {
+            Bounds bounds = default; bool first = true;
+            foreach (var filter in holder.GetComponentsInChildren<MeshFilter>())
+            {
+                if (first) { bounds = filter.sharedMesh.bounds; first = false; }
+                else bounds.Encapsulate(filter.sharedMesh.bounds);
+            }
+            float desired = Mathf.Lerp(Mathf.Min(overallHeightRange.x, overallHeightRange.y),
+                Mathf.Max(overallHeightRange.x, overallHeightRange.y), target > 1 ? index / (float)(target - 1) : 0f);
+            float scale = desired / Mathf.Max(0.01f, bounds.size.y);
+            holder.transform.localScale = Vector3.one * scale;
+            holder.transform.localPosition = tree.foot * (1f - scale);
+            tree.height *= scale;
+            // Vines are generated afterwards from these same scaled crown attachment points.
+            for (int i = 0; i < tree.crowns.Count; i++)
+            {
+                var crown = tree.crowns[i];
+                crown.centre = tree.foot + (crown.centre - tree.foot) * scale;
+                crown.radius *= scale;
+                for (int j = 0; j < crown.sockets.Count; j++)
+                    crown.sockets[j] = tree.foot + (crown.sockets[j] - tree.foot) * scale;
+                tree.crowns[i] = crown;
+            }
         }
     }
 

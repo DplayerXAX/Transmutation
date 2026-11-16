@@ -471,34 +471,42 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FireFlower
   creatureName: Fire Flower
+  minimumImpactSpeed: 15.6
+  maxHealth: 100
+  initialPolarity: 3
+  health: 0
+  polarity: 0
+  identityOwner: 0
+  deathCause: 0
+  aimPoint: {fileID: 0}
+  foodTags: 0
+  dietTags: 0
+  canEatSameType: 0
+  nutrition: 120
   simulationEnabled: 1
+  age: 40
+  ageRate: 0
+  isDead: 0
   heat: 0
-  carryStrength: 45.2
-  carryDamping: 12
-  maximumCarryAcceleration: 60
-  maximumCarryDistance: 8
+  luminosity: 0
+  emissionOrigin: {fileID: 0}
+  ignoreCarrySizeLimit: 0
+  affectionGain: 0.35
+  affectionFade: 0.05
   bloomHeatThreshold: 80
   bloomDuration: 1
   recoveryDuration: 1
   densityShapes:
   - shape: {fileID: 7644078241564382630}
-    startPosition: {x: 0, y: 0, z: 0}
-    spreadDirection: {x: 0, y: 0, z: 0}
-    initialized: 0
   - shape: {fileID: 8824190300413003835}
-    startPosition: {x: 0, y: 0, z: 0}
-    spreadDirection: {x: 0, y: 0, z: 0}
-    initialized: 0
   - shape: {fileID: 2092512094764293325}
-    startPosition: {x: 0, y: 0, z: 0}
-    spreadDirection: {x: 0, y: 0, z: 0}
-    initialized: 0
-  startHeightRange: {x: -3, y: 4}
   maxSpreadDistance: 5
+  spreadOutDuration: 0.35
   bodyCylinder: {fileID: 2003425443163747241}
   bodyRadiusMin: 0.25
   bodyRadiusMax: 0.75
   bubblePrefab: {fileID: 2077643943965342362, guid: 159bd17bc4e614ffab8ec76d1ad3b567, type: 3}
+  flowerRenderer: {fileID: 0}
   currentState: 0
   stateTime: 0
   bloomAmount: 0

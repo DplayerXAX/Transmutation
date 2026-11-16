@@ -4435,7 +4435,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f49a70f7ae64841b14875a55173cf90, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SilkForestManager
   seed: 73421
   forestSize: {x: 32, y: 28}
@@ -4446,6 +4446,7 @@ MonoBehaviour:
   generateOnStart: 1
   trunkColliders: 1
   projectToGround: 0
+  squirrelHabitatAnchors: 0
   groundLayers:
     serializedVersion: 2
     m_Bits: 1
