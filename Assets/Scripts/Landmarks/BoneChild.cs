@@ -351,7 +351,16 @@ public sealed class BoneChild : MonoBehaviour
         Vector3 step = weave * (speed * dt);
         if (Physics.SphereCast(head + Vector3.up * 0.3f, 0.35f * size, step.normalized, out RaycastHit block, step.magnitude + 0.3f, Ground, QueryTriggerInteraction.Ignore)
             && !block.collider.transform.IsChildOf(transform) && block.normal.y < 0.5f)
+        {
             step = Vector3.ProjectOnPlane(step, block.normal);
+            step.y = 0f;
+            // Sliding along the wall would still go into rock (a corner): stop and turn away instead of pushing in.
+            if (step.sqrMagnitude > 1e-8f && Physics.SphereCast(head + Vector3.up * 0.3f, 0.35f * size, step.normalized, out RaycastHit again,
+                    step.magnitude + 0.3f, Ground, QueryTriggerInteraction.Ignore) && !again.collider.transform.IsChildOf(transform) && again.normal.y < 0.5f)
+                step = Vector3.zero;
+            if (step.sqrMagnitude < 1e-8f && !fire)
+                headDir = Vector3.RotateTowards(headDir, Vector3.ProjectOnPlane(block.normal, Vector3.up).normalized, 1.5f * dt, 0f).normalized;
+        }
         // Its mother's open crack (BoneScar) is a drop it will not crawl into: it stops at the lip and turns along it.
         if (BoneScar.Covers(head + step * 4f, 0.8f) && !BoneScar.Covers(head, 0.2f))
         {
@@ -359,7 +368,8 @@ public sealed class BoneChild : MonoBehaviour
             if (!fire) headDir = Quaternion.Euler(0f, 70f * orbitSense * dt, 0f) * headDir;
         }
         head += step;
-        float groundY = GroundBelow(head);
+        // Ground only from just above the head: from higher up an overhang could lift it into the rock.
+        float groundY = GroundBelow(head, 1.2f);
         head.y = Mathf.Max(groundY + 0.3f * size, Mathf.Lerp(head.y, groundY + 0.3f * size, 1f - Mathf.Exp(-8f * dt)));
         // Rears up towards a bubble floating above its head.
         float reach = fire ? Mathf.Clamp(chasing.transform.position.y - head.y - 0.3f, 0f, 3.4f) * Mathf.Clamp01(2.5f - flat.magnitude / 2f) : 0f;
@@ -744,10 +754,10 @@ public sealed class BoneChild : MonoBehaviour
         }
     }
 
-    private float GroundBelow(Vector3 point)
+    private float GroundBelow(Vector3 point, float from = 3f)
     {
         float best = float.PositiveInfinity, height = rest.y;
-        foreach (RaycastHit hit in Physics.RaycastAll(point + Vector3.up * 3f, Vector3.down, 200f, Ground, QueryTriggerInteraction.Ignore))
+        foreach (RaycastHit hit in Physics.RaycastAll(point + Vector3.up * from, Vector3.down, 200f, Ground, QueryTriggerInteraction.Ignore))
         {
             if (hit.collider.transform.IsChildOf(transform) || hit.collider.GetComponentInParent<BoneChild>() != null
                 || hit.collider.GetComponentInParent<Creature>() != null || hit.distance >= best) continue;

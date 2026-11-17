@@ -20,8 +20,7 @@ public sealed class BubbleCascade : MonoBehaviour
     private float clock;
     private int[] lastCycle;
     private Transform player;
-    private float nextCount;
-    private int bubbles;
+    private float nextSearch;
 
     public void Configure(List<BubbleFlower> cascade, float seconds)
     {
@@ -39,16 +38,15 @@ public sealed class BubbleCascade : MonoBehaviour
     {
         if (player == null)
         {
+            // Searching the scene is costly: try again at most once a second.
+            if (Time.time < nextSearch) return;
+            nextSearch = Time.time + 1f;
             var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
             if (carrier == null) return;
             player = carrier.transform;
         }
         clock += Time.deltaTime;
-        if (Time.time >= nextCount)
-        {
-            nextCount = Time.time + 0.5f;
-            bubbles = FindObjectsByType<TrappingBubble>(FindObjectsSortMode.None).Length;
-        }
+        int bubbles = TrappingBubble.LiveCount;
         for (int i = 0; i < flowers.Count; i++)
         {
             var flower = flowers[i];

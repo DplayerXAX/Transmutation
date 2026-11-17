@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{6EDDB095-CA77-D8BD-7807-789580503D5D}",
+    "Hash": "{248A80FC-4648-ED0E-2D12-B2D40E0CEDA9}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
@@ -22,6 +22,22 @@
       "Location": "Memory",
       "ShortName": "drop_RMB.wav",
       "CachePath": "9C/{9C017071-B9D6-F281-C5AB-FABF30D696C9}.wem"
+     },
+     {
+      "Id": "12357768",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\tunnel_glim.wav",
+      "CachePath": "E6/{E61DC268-FEA5-8A6E-6E9D-026ADE5FCB95}.wem"
+     },
+     {
+      "Id": "55465272",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\tunnel_bell.wav",
+      "CachePath": "C3/{C3F574B1-0517-6E0F-F587-DD529C01B4BC}.wem"
      },
      {
       "Id": "95100673",
@@ -144,6 +160,30 @@
       "CachePath": "80/{809E59EA-E327-0511-923A-6F8019F07C0B}.wem"
      },
      {
+      "Id": "575148561",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\crate_G.wav",
+      "CachePath": "A7/{A74B0F80-41DD-BE10-2A83-44377A66E697}.wem"
+     },
+     {
+      "Id": "585933015",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\crate_B.wav",
+      "CachePath": "A7/{A745686E-271F-4D55-3035-AD7BF8AC251B}.wem"
+     },
+     {
+      "Id": "593635440",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\crate_thump.wav",
+      "CachePath": "07/{07BB8DE3-5F08-CA4B-1DCB-C5C89906FE70}.wem"
+     },
+     {
       "Id": "631985183",
       "Language": "SFX",
       "Streaming": "false",
@@ -168,12 +208,28 @@
       "CachePath": "CE/{CEDA67B0-1F22-69AA-88A0-4C7E27C70314}.wem"
      },
      {
+      "Id": "699336699",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\tunnel_maw.wav",
+      "CachePath": "49/{49C412CC-5B2C-7451-631B-5F77C9DC9B4D}.wem"
+     },
+     {
       "Id": "719376861",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "mining island.wav",
       "CachePath": "28/{2853F411-93F1-E48F-FB74-3FFFFBF59422}.wem"
+     },
+     {
+      "Id": "738846583",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\crate_E.wav",
+      "CachePath": "B9/{B9C05118-E46C-764E-D8B4-9086A2F6AA98}.wem"
      },
      {
       "Id": "766320165",
@@ -206,6 +262,14 @@
       "Location": "Memory",
       "ShortName": "intro_2.wav",
       "CachePath": "22/{227E6133-CADA-9152-460B-47542797FB75}.wem"
+     },
+     {
+      "Id": "1052475880",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\crate_D.wav",
+      "CachePath": "D0/{D0AE8086-FBA6-0C7F-77A1-8B6B6AF83693}.wem"
      }
     ],
     "Events": [
@@ -232,6 +296,81 @@
       "DurationType": "OneShot",
       "DurationMin": "0",
       "DurationMax": "0"
+     },
+     {
+      "Id": "2552967964",
+      "Name": "Play_Crate_B",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Crate_B",
+      "GUID": "{5A702FA1-A6C8-414E-8783-9663D874DCF0}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.3999773",
+      "DurationMax": "1.3999773",
+      "MediaRefs": [
+       {
+        "Id": "585933015"
+       }
+      ]
+     },
+     {
+      "Id": "2552967962",
+      "Name": "Play_Crate_D",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Crate_D",
+      "GUID": "{4909440C-64CE-4477-8B58-245978F9CB47}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.3999773",
+      "DurationMax": "1.3999773",
+      "MediaRefs": [
+       {
+        "Id": "1052475880"
+       }
+      ]
+     },
+     {
+      "Id": "2552967963",
+      "Name": "Play_Crate_E",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Crate_E",
+      "GUID": "{3D9F2B30-0E7B-46AF-A0A6-817940055197}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.3999773",
+      "DurationMax": "1.3999773",
+      "MediaRefs": [
+       {
+        "Id": "738846583"
+       }
+      ]
+     },
+     {
+      "Id": "2552967961",
+      "Name": "Play_Crate_G",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Crate_G",
+      "GUID": "{F5878F74-9320-48B1-BCF1-05536F6514CF}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.3999773",
+      "DurationMax": "1.3999773",
+      "MediaRefs": [
+       {
+        "Id": "575148561"
+       }
+      ]
+     },
+     {
+      "Id": "2282554232",
+      "Name": "Play_Crate_Thump",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Crate_Thump",
+      "GUID": "{AA025761-6A35-46CD-9B8B-6BF0D8FEC12B}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "0.9",
+      "DurationMax": "0.9",
+      "MediaRefs": [
+       {
+        "Id": "593635440"
+       }
+      ]
      },
      {
       "Id": "2007351433",
@@ -368,6 +507,12 @@
       "DurationType": "Infinite",
       "MediaRefs": [
        {
+        "Id": "12357768"
+       },
+       {
+        "Id": "55465272"
+       },
+       {
         "Id": "95100673"
        },
        {
@@ -387,6 +532,9 @@
        },
        {
         "Id": "631985183"
+       },
+       {
+        "Id": "699336699"
        },
        {
         "Id": "719376861"
@@ -441,6 +589,12 @@
       "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
      },
      {
+      "Id": "1858147165",
+      "Name": "BGM_maw",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_maw",
+      "GUID": "{D3167C01-839F-4E3E-8557-1968B3401DD8}"
+     },
+     {
       "Id": "2940023732",
       "Name": "BGM_hungrycave",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_hungrycave",
@@ -457,6 +611,12 @@
       "Name": "BGM_basic",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_basic",
       "GUID": "{207E80F5-8088-4EAF-806C-E992905BD833}"
+     },
+     {
+      "Id": "3700541675",
+      "Name": "BGM_bell",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bell",
+      "GUID": "{36FE1C92-D8E9-450B-B25B-DFA3871EA56B}"
      },
      {
       "Id": "4230282112",
@@ -487,10 +647,16 @@
       "Name": "Tutorial_5",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_5",
       "GUID": "{F45F7410-E9F8-4B9D-8A43-CF872791FBA2}"
+     },
+     {
+      "Id": "4238026883",
+      "Name": "BGM_glim",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_glim",
+      "GUID": "{09780652-EC0C-4360-920E-E778B158F857}"
      }
     ]
    }
   ],
-  "FileHash": "{E23FF5A7-1F4A-391B-09C7-C01C5545D233}"
+  "FileHash": "{19AD44C9-3F22-02DC-8254-A0842AC1BB5D}"
  }
 }

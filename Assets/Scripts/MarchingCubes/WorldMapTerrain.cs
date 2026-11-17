@@ -250,7 +250,8 @@ public static class WorldMapTerrain
             // Where the mother is jammed, fallen rubble fills the crack from wall to wall under her body.
             density = Mathf.Max(density, JamTop(p.x, p.z) - p.y);
         }
-        return density;
+        // Dark tunnels behind the spawn chamber (DarkTunnelShape).
+        return DarkTunnelShape.Carve(p, density);
     }
 
     /// <summary>A small forest chamber, a left bend, then a shroom ledge and a sloped daylight exit.</summary>

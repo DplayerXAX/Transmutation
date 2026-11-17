@@ -82,6 +82,8 @@ public sealed class DropletChoir : MonoBehaviour
         public float weight, order, arc, side;
         public Vector2 slot;
         public bool inGlyph;
+        public float fade;      // screen titles: 1 until the creature has flown off screen
+        public Vector2 exitDir; // screen titles: which way it flies off, in the camera's plane
     }
 
     private Singer[] singers = new Singer[0];
@@ -242,6 +244,7 @@ public sealed class DropletChoir : MonoBehaviour
     {
         appearTime += dt;
         if (vanishing) vanishTime += dt;
+        if (viewLocked) { UpdateScreenPresence(dt); return; }
         for (int i = 0; i < singers.Length; i++)
         {
             if (singers[i].droplet == null) continue;
@@ -252,6 +255,49 @@ public sealed class DropletChoir : MonoBehaviour
             singers[i].droplet.SetPresence(presence * presence * (3f - 2f * presence));
         }
         if (vanishing && vanishTime > 3f) Destroy(gameObject);
+    }
+
+    /// <summary>
+    /// A screen title's creatures fade in where they condense, but only fade out once they have flown
+    /// off the screen (or, as a safety net, a while after the title has gone).
+    /// </summary>
+    private void UpdateScreenPresence(float dt)
+    {
+        bool allGone = true;
+        for (int i = 0; i < singers.Length; i++)
+        {
+            ref Singer s = ref singers[i];
+            if (s.droplet == null) continue;
+            float delay = Mathf.Repeat(s.seed.y, 1f) * 1.6f;
+            if (Leaving(ref s, delay))
+            {
+                bool offScreen = true;
+                if (titleCamera != null)
+                {
+                    Vector3 v = titleCamera.WorldToViewportPoint(s.droplet.transform.position);
+                    offScreen = v.z < 0f || v.x < -0.08f || v.x > 1.08f || v.y < -0.08f || v.y > 1.08f;
+                }
+                if (offScreen || vanishTime > 6f) s.fade = Mathf.Max(0f, s.fade - dt / 0.35f);
+            }
+            float appear = Mathf.Clamp01((appearTime - delay) / 1.2f);
+            float presence = appear * s.fade;
+            s.droplet.SetPresence(presence * presence * (3f - 2f * presence));
+            if (s.fade > 0f) allGone = false;
+        }
+        if (vanishing && (allGone || vanishTime > 8f)) Destroy(gameObject);
+    }
+
+    /// <summary>Screen titles: whether this creature is on its way off screen.</summary>
+    private bool Leaving(ref Singer s, float delay) =>
+        phase == Phase.Disperse || vanishing || (!s.inGlyph && appearTime > 3f + delay);
+
+    /// <summary>Screen titles: a point well beyond the screen's edge along the creature's exit direction.</summary>
+    private Vector3 ExitPoint(ref Singer s, Vector3 anchor, Quaternion rotation)
+    {
+        float fov = titleCamera != null ? titleCamera.fieldOfView : 60f;
+        float aspect = titleCamera != null ? titleCamera.aspect : 16f / 9f;
+        float reach = titleDistance * Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad) * Mathf.Max(1f, aspect) * 2.4f + 1f;
+        return anchor + rotation * new Vector3(s.exitDir.x * reach, s.exitDir.y * reach, 0f);
     }
 
     private void Spawn()
@@ -270,6 +316,10 @@ public sealed class DropletChoir : MonoBehaviour
             singer.droplet.Configure(this, dropletMaterial, dropletDiameter * Random.Range(0.8f, 1.2f),
                 Random.Range(smoothTimeRange.x, smoothTimeRange.y), maxSpeed);
             if (ephemeral) singer.droplet.SetPresence(0f);
+            singer.fade = 1f;
+            // Mostly up and out: the title sits under the top border, so that is the shortest way off screen.
+            Vector2 away = Random.insideUnitCircle.normalized;
+            singer.exitDir = (away + new Vector2(0f, 0.7f)).normalized;
             singer.arc = Random.Range(0.25f, 0.9f);
             singer.side = Random.Range(-0.6f, 0.6f);
             singers[i] = singer;
@@ -389,11 +439,13 @@ public sealed class DropletChoir : MonoBehaviour
 
             float e = s.weight * s.weight * (3f - 2f * s.weight);
             Vector3 drift = DriftPoint(ref s, t);
+            bool leaving = viewLocked && Leaving(ref s, Mathf.Repeat(s.seed.y, 1f) * 1.6f);
+            if (leaving) drift = ExitPoint(ref s, anchor, rotation);
             // While a glyph hangs, the spare droplets keep to the back so the strokes stay readable.
-            if (!s.inGlyph) drift -= normal * (formAmount * 1.2f);
+            if (!s.inGlyph && !leaving) drift -= normal * (formAmount * 1.2f);
             // Surface tension: a drifting droplet's goal leans toward any droplet it touches, so touching
             // droplets cling and move as one until their own wandering pulls hard enough to tear them apart.
-            if (stickiness > 0f && e < 0.99f) drift += Cling(i, clingDistance) * (1f - e);
+            if (stickiness > 0f && e < 0.99f && !leaving) drift += Cling(i, clingDistance) * (1f - e);
             Vector3 place = anchor + rotation * new Vector3(s.slot.x, s.slot.y, 0f)
                 + normal * (Mathf.Sin(t * 0.7f + s.seed.x) * 0.015f);
             float lift = Mathf.Sin(e * Mathf.PI);

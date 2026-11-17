@@ -4,8 +4,13 @@ Event	ID	Name			Wwise Object Path	Notes
 	1169957417	Play_Climb_Reach			\Default Work Unit\Play_Climb_Reach	
 	1532331005	Play_BubblePop			\Default Work Unit\Play_BubblePop	
 	2007351433	Play_Drop			\Default Work Unit\Play_Drop	
+	2282554232	Play_Crate_Thump			\Default Work Unit\Play_Crate_Thump	
 	2490201179	Play_LMB			\Default Work Unit\Play_LMB	
 	2542411811	PlayBGM			\Default Work Unit\PlayBGM	
+	2552967961	Play_Crate_G			\Default Work Unit\Play_Crate_G	
+	2552967962	Play_Crate_D			\Default Work Unit\Play_Crate_D	
+	2552967963	Play_Crate_E			\Default Work Unit\Play_Crate_E	
+	2552967964	Play_Crate_B			\Default Work Unit\Play_Crate_B	
 	2837114212	Play_Footstep_Left			\Default Work Unit\Play_Footstep_Left	
 	2973966097	Play_ShootTentacle			\Default Work Unit\Play_ShootTentacle	
 	3181405346	Play_TentacleNear			\Default Work Unit\Play_TentacleNear	
@@ -19,17 +24,22 @@ Game Parameter	ID	Name			Wwise Object Path	Notes
 	1241966871	BGM_island			\Default Work Unit\BGM_island	
 	1544215172	BGM_flowers			\Default Work Unit\BGM_flowers	
 	1599936364	BGM_timespider			\Default Work Unit\BGM_timespider	
+	1858147165	BGM_maw			\Default Work Unit\BGM_maw	
 	2940023732	BGM_hungrycave			\Default Work Unit\BGM_hungrycave	
 	3397956017	BGM_bird			\Default Work Unit\BGM_bird	
 	3558075418	BGM_basic			\Default Work Unit\BGM_basic	
+	3700541675	BGM_bell			\Default Work Unit\BGM_bell	
 	4230282112	Tutorial_2			\Default Work Unit\Tutorial_2	
 	4230282113	Tutorial_3			\Default Work Unit\Tutorial_3	
 	4230282115	Tutorial_1			\Default Work Unit\Tutorial_1	
 	4230282118	Tutorial_4			\Default Work Unit\Tutorial_4	
 	4230282119	Tutorial_5			\Default Work Unit\Tutorial_5	
+	4238026883	BGM_glim			\Default Work Unit\BGM_glim	
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	11987434	Drop	.cache\9C\{9C017071-B9D6-F281-C5AB-FABF30D696C9}.wem		\Containers\Default Work Unit\SFX\Drop		220596
+	12357768	tunnel_glim	.cache\E6\{E61DC268-FEA5-8A6E-6E9D-026ADE5FCB95}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\tunnel_glim		403543
+	55465272	tunnel_bell	.cache\C3\{C3F574B1-0517-6E0F-F587-DD529C01B4BC}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\tunnel_bell		375571
 	95100673	basic_test	.cache\21\{21CDDAED-218E-71D2-824D-C49641294AB1}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\basic_test		704890
 	115744844	climb	.cache\50\{50FE24C9-FB07-65A8-0E49-5C11D9F1AD25}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\climb		992749
 	117650681	flowers_bubbles	.cache\C0\{C0C143B5-6F90-0904-ED51-E99FFBD7B747}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\flowers_bubbles		667981
@@ -45,12 +55,18 @@ In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	468006233	cave	.cache\92\{9295C487-969C-749D-5FB3-84120D66798E}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\cave		845958
 	481382044	right_E	.cache\A5\{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem		\Containers\Default Work Unit\Footstep_Right\right_E		220596
 	557442941	PickUp	.cache\80\{809E59EA-E327-0511-923A-6F8019F07C0B}.wem		\Containers\Default Work Unit\SFX\PickUp		220596
+	575148561	Crate_G	.cache\A7\{A74B0F80-41DD-BE10-2A83-44377A66E697}.wem		\Containers\Default Work Unit\SFX\Crate_G		247052
+	585933015	Crate_B	.cache\A7\{A745686E-271F-4D55-3035-AD7BF8AC251B}.wem		\Containers\Default Work Unit\SFX\Crate_B		247052
+	593635440	Crate_Thump	.cache\07\{07BB8DE3-5F08-CA4B-1DCB-C5C89906FE70}.wem		\Containers\Default Work Unit\SFX\Crate_Thump		158856
 	631985183	fluid	.cache\C0\{C04931C7-38A1-97CF-EAC8-6F1FF7265E85}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\fluid		756263
 	688926031	LMB	.cache\8B\{8BBC56C1-A803-1A48-F49B-F8CF1059E37E}.wem		\Containers\Default Work Unit\SFX\LMB		220596
 	689415382	shootTenacles_F2	.cache\CE\{CEDA67B0-1F22-69AA-88A0-4C7E27C70314}.wem		\Containers\Default Work Unit\SFX\ShootTentacle\shootTenacles_F2		220596
+	699336699	tunnel_maw	.cache\49\{49C412CC-5B2C-7451-631B-5F77C9DC9B4D}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\tunnel_maw		194658
 	719376861	mining_island	.cache\28\{2853F411-93F1-E48F-FB74-3FFFFBF59422}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\mining_island		1060068
+	738846583	Crate_E	.cache\B9\{B9C05118-E46C-764E-D8B4-9086A2F6AA98}.wem		\Containers\Default Work Unit\SFX\Crate_E		247052
 	766320165	shootTenacles_D2	.cache\9E\{9ECB7F44-CC6F-650A-3632-DAB5FEE9F63B}.wem		\Containers\Default Work Unit\SFX\ShootTentacle\shootTenacles_D2		220596
 	773018024	timespider	.cache\F2\{F246CF5A-582E-E5AA-0328-374EAA404961}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\timespider		835020
 	849763107	TentacleNear	.cache\69\{6912AAC5-C6C9-9027-5EA1-AFA8858483FC}.wem		\Containers\Default Work Unit\SFX\TentacleNear		733556
 	1017687414	intro_2	.cache\22\{227E6133-CADA-9152-460B-47542797FB75}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_2		175103
+	1052475880	Crate_D	.cache\D0\{D0AE8086-FBA6-0C7F-77A1-8B6B6AF83693}.wem		\Containers\Default Work Unit\SFX\Crate_D		247052
 

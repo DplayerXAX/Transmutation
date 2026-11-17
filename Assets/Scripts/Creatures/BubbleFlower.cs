@@ -13,7 +13,7 @@ public sealed class BubbleFlower : Creature
     [Min(0f)] [SerializeField] private float launchSpeed = 8f;
     [Tooltip("Shots fired while carried: launch speed and how long they keep it, so they fly straight out ahead " +
              "(about speed x time metres) before slowing to a float.")]
-    [Min(0f)] [SerializeField] private float carriedLaunchSpeed = 13f;
+    [Min(0f)] [SerializeField] private float carriedShotSpeed = 10f; // was carriedLaunchSpeed 13 until 2026-11-16
     [Min(0.05f)] [SerializeField] private float carriedLaunchHold = 0.85f;
     [Range(0f, 1f)] [SerializeField] private float horizontalLaunchMultiplier = 0.75f;
     [Range(0f, 1f)] [SerializeField] private float verticalLaunchMultiplier = 0.5f;
@@ -45,7 +45,21 @@ public sealed class BubbleFlower : Creature
     {
         if (IsCarried || IsDead || !isActiveAndEnabled || !SimulationEnabled) return false;
         ResetGroundTimer();
-        return Fire(Vector3.up, null, 0f);
+        return FireAmbient();
+    }
+
+    /// <summary>Ambient bubbles in the whole scene stop being made above this many (they are physics bodies).</summary>
+    public const int AmbientBubbleCap = 60;
+
+    // Bubbles a flower makes by itself expire after their lifetime (TrappingBubble bubbles are otherwise permanent
+    // until popped, so ambient ones piled up into hundreds and the physics step grew without limit).
+    // Shots fired by the player while carrying the flower stay permanent as before.
+    private bool FireAmbient()
+    {
+        if (TrappingBubble.LiveCount >= AmbientBubbleCap) return false;
+        if (!Fire(Vector3.up, null, 0f)) return false;
+        if (LastShot != null) LastShot.LifetimeLimited = true;
+        return true;
     }
     public override bool CanUseWhileCarried => !IsDead;
     public override string CarriedPrompt => IsDead ? null : "[LMB] Shoot bubble";
@@ -75,7 +89,7 @@ public sealed class BubbleFlower : Creature
         if (!autoEmitOnGround || !AmbientEmissionAllowed) return;
         groundTimer -= deltaTime;
         if (groundTimer > 0f) return;
-        Fire(Vector3.up, null, 0f);
+        FireAmbient();
         ResetGroundTimer();
     }
 
@@ -115,7 +129,7 @@ public sealed class BubbleFlower : Creature
         Vector3 direction = (aimPoint - origin).normalized;
         // Something right in front of the eyes (nearer than where the bubble starts): just shoot straight ahead.
         if (direction.sqrMagnitude < 0.001f || Vector3.Dot(direction, ray.direction) < 0.5f) direction = ray.direction;
-        if (Fire(direction, Carrier.PlayerController != null ? Carrier.PlayerController.gameObject : Carrier.gameObject, carriedLaunchSpeed, origin, carriedLaunchHold))
+        if (Fire(direction, Carrier.PlayerController != null ? Carrier.PlayerController.gameObject : Carrier.gameObject, carriedShotSpeed, origin, carriedLaunchHold))
         {
             nextManualShot = Time.time + manualCooldown;
             queuedCarrier = null;

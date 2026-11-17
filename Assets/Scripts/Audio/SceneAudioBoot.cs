@@ -63,15 +63,13 @@ public static class SceneAudioBoot
     // Region music for the world map; the region shapes are the same ones the region titles use.
     private static void AddWorldRegions(Transform parent)
     {
+        // One list for both, so a region's music and its title change at the same place.
         foreach (RegionTitles.Region r in RegionTitles.WorldMapRegions())
         {
-            if (r.name == "Flower Field") Region(parent, r.name, "BGM_flowers", r.centre, r.radius, r.heightRange, 15f);
-            else if (r.name == "Cave") Region(parent, r.name, "BGM_hungrycave", r.centre, r.radius, r.heightRange, 8f);
+            string layer = r.name == "Flower Field" ? "BGM_flowers" : r.name == "Cave" ? "BGM_hungrycave"
+                : r.name == "Mining Island" ? "BGM_island" : null;
+            if (layer != null && r.musicFade > 0f) Region(parent, r.name, layer, r.centre, r.radius, r.heightRange, r.musicFade);
         }
-        // The crystal mining island floats above the flower field and mushroom basin.
-        Vector3 island = WorldMapTerrain.IslandOffset;
-        Region(parent, "Mining Island", "BGM_island", new Vector3(island.x, 0f, island.z), WorldMapTerrain.IslandRadius,
-            new Vector2(island.y - 30f, island.y + 150f), 15f);
     }
 
     private static void Region(Transform parent, string name, string layer, Vector3 centre, float radius, Vector2 heights, float fade)

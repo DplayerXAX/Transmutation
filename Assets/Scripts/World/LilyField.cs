@@ -4,9 +4,9 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// A field of bubble lilies drawn with GPU instancing from a baked point list, where every flower can be picked
-/// up: the flowers round the player are swapped for real BubbleFlowers from a small pool (walk-through, quiet
-/// until carried, then they shoot like any bubble flower). A flower that is carried off stays a real creature
-/// and leaves a gap; the others turn back into instances as the player walks on.
+/// up: the lily under the crosshair (within pickup reach) is swapped for a real BubbleFlower from a small pool, so
+/// the normal pickup prompt and pickup work, and only one or two real flowers exist at a time. A flower that is
+/// carried off stays a real creature and leaves a gap; the others turn back into instances when not aimed at.
 /// Point data: 6 floats per flower (x, y, z, yaw degrees, scale, tone) in a .bytes asset.
 /// </summary>
 [ExecuteAlways]
@@ -19,10 +19,8 @@ public sealed class LilyField : MonoBehaviour
     [Tooltip("Material per tone (purple, violet, ice): the whole lily for a one-submesh mesh, else the outer petals.")]
     [SerializeField] private Material[] outer = new Material[0];
     [SerializeField] private BubbleFlower livePrefab;
-    [Tooltip("Outer petal material per tone for the real flowers that replace lilies near the player.")]
+    [Tooltip("Outer petal material per tone for the real flower that replaces the lily the player aims at.")]
     [SerializeField] private Material[] liveOuter = new Material[0];
-    [Tooltip("Flowers this close to the player become real, pickable bubble flowers.")]
-    [Min(1f)] [SerializeField] private float liveRadius = 4.5f;
     [Min(1)] [SerializeField] private int livePool = 32;
     [Min(4f)] [SerializeField] private float tileSize = 24f;
     [Header("Stem Height")]
@@ -57,9 +55,8 @@ public sealed class LilyField : MonoBehaviour
     private readonly Dictionary<int, BubbleFlower> live = new Dictionary<int, BubbleFlower>();
     private readonly HashSet<int> taken = new HashSet<int>();
     private readonly Stack<BubbleFlower> pool = new Stack<BubbleFlower>();
+    private readonly Dictionary<BubbleFlower, int> toneOf = new Dictionary<BubbleFlower, int>();
     private int created;
-    private Transform player;
-    private float nextZone;
 
     public int Count => count;
 
@@ -148,6 +145,22 @@ public sealed class LilyField : MonoBehaviour
         return true;
     }
 
+    /// <summary>Adds the (x, z) of every lily inside an area, so other plants (FloraPatch) can grow round them.</summary>
+    public void CollectPositions(Rect area, List<Vector2> into)
+    {
+        if (count == 0) Load();
+        for (int cz = Mathf.FloorToInt(area.yMin / 4f); cz <= Mathf.FloorToInt(area.yMax / 4f); cz++)
+        for (int cx = Mathf.FloorToInt(area.xMin / 4f); cx <= Mathf.FloorToInt(area.xMax / 4f); cx++)
+        {
+            if (!grid.TryGetValue(new Vector2Int(cx, cz), out var cell)) continue;
+            foreach (int i in cell)
+            {
+                var p = new Vector2(points[i * Stride], points[i * Stride + 2]);
+                if (area.Contains(p)) into.Add(p);
+            }
+        }
+    }
+
     private Vector3 Position(int i) => new Vector3(points[i * Stride], points[i * Stride + 1], points[i * Stride + 2]);
     private int Tone(int i, int tones) => Mathf.Clamp(Mathf.RoundToInt(points[i * Stride + 5]), 0, tones - 1);
 
@@ -202,46 +215,52 @@ public sealed class LilyField : MonoBehaviour
             Graphics.RenderMeshInstanced(settings, mesh, submesh, instances, Mathf.Min(Batch, instances.Length - start), start);
     }
 
-    // ---------------- The live zone round the player ----------------
+    // ---------------- Real flowers only where the player aims ----------------
+
+    // A lily turns into a real, pickable bubble flower only while the crosshair rests on it within pickup reach
+    // (the same centre-of-view ray the carrier uses), so the pickup prompt and pickup work as for any creature,
+    // while only one or two real flowers exist at a time instead of a ring of them round the player.
+    // Real flowers make no ambient bubbles here (ground emission is off), so nothing needs them earlier.
+    private const int AimPool = 6;
+    private const float AimReach = 5.5f, KeepSeconds = 1.5f;
+    private readonly Dictionary<int, float> lastAimed = new Dictionary<int, float>();
+    private readonly List<int> release = new List<int>();
+    private Camera eye;
 
     private void Update()
     {
-        if (!Application.isPlaying || livePrefab == null || count == 0 || Time.time < nextZone) return;
-        nextZone = Time.time + 0.1f;
-        if (player == null)
+        if (!Application.isPlaying || livePrefab == null || count == 0) return;
+        int poolSize = Mathf.Min(livePool, AimPool);
+        // Fill the small pool one flower a frame from the start.
+        if (created < poolSize) { var spare = Create(); if (spare != null) pool.Push(spare); }
+        if (eye == null || !eye.isActiveAndEnabled) eye = Camera.main;
+        if (eye == null) return;
+
+        Ray ray = eye.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        int aimed = AimedLily(ray);
+        if (aimed >= 0 && !taken.Contains(aimed))
         {
-            var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
-            if (carrier == null) return;
-            player = carrier.PlayerBody != null ? carrier.PlayerBody.transform : carrier.transform;
+            lastAimed[aimed] = Time.time;
+            if (!live.ContainsKey(aimed))
+            {
+                BubbleFlower flower = Take();
+                if (flower != null) { Place(flower, aimed, Position(aimed)); live[aimed] = flower; Show(aimed, false); }
+            }
         }
-        Vector3 centre = player.position;
-        // Only the lilies the player can reach need to be real: the ones near the aim of the view (anything
-        // the crosshair can rest on within reach) and the ones right at the player's feet.
-        Camera eye = Camera.main;
-        Vector3 origin = eye != null ? eye.transform.position : centre, aim = eye != null ? eye.transform.forward : Vector3.zero;
-        bool Wanted(Vector3 home, float slack)
-        {
-            Vector3 flat = home - centre; flat.y = 0f;
-            if (flat.sqrMagnitude < (2f + slack) * (2f + slack)) return true;
-            if (aim == Vector3.zero) return flat.sqrMagnitude < liveRadius * liveRadius;
-            Vector3 head = home + Vector3.up * 0.9f;
-            float along = Vector3.Dot(head - origin, aim);
-            if (along < 0f || along > liveRadius + 1.5f + slack) return false;
-            return (head - (origin + aim * along)).sqrMagnitude < (1.4f + slack) * (1.4f + slack);
-        }
-        // Flowers that left with the player (carried, thrown) stay real; their spot stays empty.
-        var release = new List<int>();
+
+        // Flowers carried off stay real and leave a gap; the rest turn back into lilies once not aimed at for a moment.
+        release.Clear();
         foreach (var pair in live)
         {
             BubbleFlower flower = pair.Value;
-            Vector3 home = Position(pair.Key);
-            if (flower == null || flower.IsCarried || (flower.transform.position - home).sqrMagnitude > 0.25f) { taken.Add(pair.Key); release.Add(pair.Key); continue; }
-            if (!Wanted(home, 0.8f)) release.Add(pair.Key);
+            if (flower == null || flower.IsCarried || (flower.transform.position - Position(pair.Key)).sqrMagnitude > 0.25f) { taken.Add(pair.Key); release.Add(pair.Key); continue; }
+            if (!lastAimed.TryGetValue(pair.Key, out float at) || Time.time - at > KeepSeconds) release.Add(pair.Key);
         }
         foreach (int i in release)
         {
             BubbleFlower flower = live[i];
             live.Remove(i);
+            lastAimed.Remove(i);
             if (taken.Contains(i))
             {
                 // Picked up: show the whole stem again.
@@ -253,30 +272,44 @@ public sealed class LilyField : MonoBehaviour
             pool.Push(flower);
             Show(i, true);
         }
-        // Swap the instances round the player for real flowers.
-        int reach = Mathf.CeilToInt((liveRadius + 2.5f) / 4f);
-        var middle = new Vector2Int(Mathf.FloorToInt(centre.x / 4f), Mathf.FloorToInt(centre.z / 4f));
-        for (int dz = -reach; dz <= reach; dz++)
-        for (int dx = -reach; dx <= reach; dx++)
-        {
-            if (!grid.TryGetValue(middle + new Vector2Int(dx, dz), out var cell)) continue;
-            foreach (int i in cell)
-            {
-                if (live.ContainsKey(i) || taken.Contains(i)) continue;
-                Vector3 home = Position(i);
-                if (!Wanted(home, 0f)) continue;
-                BubbleFlower flower = Take();
-                if (flower == null) return;
-                Place(flower, i, home);
-                live[i] = flower;
-                Show(i, false);
-            }
-        }
     }
 
-    private BubbleFlower Take()
+    // The lily whose head is nearest the view ray (within a forgiving radius) and within reach, or -1.
+    private int AimedLily(Ray ray)
     {
-        if (pool.Count > 0) return pool.Pop();
+        Vector3 a = ray.origin, b = ray.origin + ray.direction * AimReach;
+        int x0 = Mathf.FloorToInt(Mathf.Min(a.x, b.x) / 4f) - 1, x1 = Mathf.FloorToInt(Mathf.Max(a.x, b.x) / 4f) + 1;
+        int z0 = Mathf.FloorToInt(Mathf.Min(a.z, b.z) / 4f) - 1, z1 = Mathf.FloorToInt(Mathf.Max(a.z, b.z) / 4f) + 1;
+        float headUp = mesh != null ? mesh.bounds.center.y + mesh.bounds.extents.y * 0.5f : 0.8f;
+        int best = -1; float bestScore = float.MaxValue;
+        for (int cz = z0; cz <= z1; cz++)
+        for (int cx = x0; cx <= x1; cx++)
+        {
+            if (!grid.TryGetValue(new Vector2Int(cx, cz), out var cell)) continue;
+            foreach (int i in cell)
+            {
+                if (taken.Contains(i)) continue;
+                float size = points[i * Stride + 4];
+                Vector3 baseAt = Position(i), head = baseAt + Vector3.up * (headUp * size - Sink(i));
+                // Test both the head and the middle of the stem, so aiming anywhere on the flower works.
+                foreach (Vector3 p in new[] { head, (head + baseAt) * 0.5f })
+                {
+                    float along = Vector3.Dot(p - a, ray.direction);
+                    if (along < 0.3f || along > AimReach) continue;
+                    float off = (p - (a + ray.direction * along)).magnitude;
+                    if (off > 0.45f * size) continue;
+                    float score = off + along * 0.05f;
+                    if (score < bestScore) { bestScore = score; best = i; }
+                }
+            }
+        }
+        return best;
+    }
+
+    private BubbleFlower Take() => pool.Count > 0 ? pool.Pop() : Create();
+
+    private BubbleFlower Create()
+    {
         if (created >= livePool) return null;
         created++;
         BubbleFlower flower = Instantiate(livePrefab, transform);
@@ -298,8 +331,10 @@ public sealed class LilyField : MonoBehaviour
         var look = t.Find("Bubble lily");
         // The live flower stays on the ground (its body and collider); only the drawn lily sinks to match.
         if (look != null) look.localPosition = Vector3.down * (Sink(i) / Mathf.Max(0.01f, points[i * Stride + 4]));
-        if (look != null && tone < liveOuter.Length && liveOuter[tone] != null)
+        // Swapping materials allocates, so only when this pooled flower last showed another tone.
+        if (look != null && tone < liveOuter.Length && liveOuter[tone] != null && (!toneOf.TryGetValue(flower, out int shown) || shown != tone))
         {
+            toneOf[flower] = tone;
             var renderer = look.GetComponent<MeshRenderer>();
             var materials = renderer.sharedMaterials;
             if (materials.Length > 1) { materials[1] = liveOuter[tone]; renderer.sharedMaterials = materials; }

@@ -259,6 +259,42 @@ MonoBehaviour:
     fadeIn: 1.5
     fadeOut: 2.5
     placeholderVoice: -1
+  - name: BGM_glim
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 0.6
+    fadeOut: 1.5
+    replacesBase: 0
+    placeholderVoice: 3
+  - name: BGM_maw
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 0.6
+    fadeOut: 1.5
+    replacesBase: 0
+    placeholderVoice: 2
+  - name: BGM_bell
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 0.6
+    fadeOut: 1.5
+    replacesBase: 0
+    placeholderVoice: 1
   creatureChannels:
   - creatureType: FuzzCreature
     layerEvent: BGM_fuzzy
@@ -276,6 +312,18 @@ MonoBehaviour:
     layerEvent: BGM_bird
     innerRadius: 2
     outerRadius: 10
+  - creatureType: GlimLantern
+    layerEvent: BGM_glim
+    innerRadius: 3
+    outerRadius: 20
+  - creatureType: LureMaw
+    layerEvent: BGM_maw
+    innerRadius: 4
+    outerRadius: 24
+  - creatureType: BellSnail
+    layerEvent: BGM_bell
+    innerRadius: 3
+    outerRadius: 16
   creatureSounds:
   - creatureType: TentacleCreature
     eventName: Play_TentacleNear

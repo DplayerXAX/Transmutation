@@ -184,6 +184,7 @@ public sealed class BoneKiln : MonoBehaviour
     }
     public Transform Root => root;
     public int SinkholeIndex => sinkholeIndex;
+    public bool Built => built;
     public bool PlaceAtThisObject { get => placeAtThisObject; set => placeAtThisObject = value; }
 
     /// <summary>Builds her now, in edit mode, for the Scene view preview (LandmarkScenePreview).</summary>

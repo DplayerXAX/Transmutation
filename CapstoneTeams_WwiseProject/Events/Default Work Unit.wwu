@@ -124,6 +124,61 @@
 						</Action>
 					</ChildrenList>
 				</Event>
+				<Event Name="Play_Crate_E" ID="{3D9F2B30-0E7B-46AF-A0A6-817940055197}">
+					<ChildrenList>
+						<Action Name="" ID="{F63015C0-334E-4206-ADC9-5E13A88517DD}" ShortID="661792766">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Crate_E" ID="{522C3A25-F593-4949-A1BB-4648A3EBD25F}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Crate_G" ID="{F5878F74-9320-48B1-BCF1-05536F6514CF}">
+					<ChildrenList>
+						<Action Name="" ID="{7CF185A9-3087-4B41-ACAE-1E61FAE74ACB}" ShortID="66601958">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Crate_G" ID="{1BBABFE7-1462-4F9B-8816-655BC8E2CE65}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Crate_B" ID="{5A702FA1-A6C8-414E-8783-9663D874DCF0}">
+					<ChildrenList>
+						<Action Name="" ID="{62D1B476-C2E5-4188-AB8D-F094ABD32EA3}" ShortID="975227414">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Crate_B" ID="{39428B6F-FD58-4290-A7B6-952C6AEDF575}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Crate_D" ID="{4909440C-64CE-4477-8B58-245978F9CB47}">
+					<ChildrenList>
+						<Action Name="" ID="{49C73E56-7578-465C-AEC8-B3CF9AD56C21}" ShortID="651553814">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Crate_D" ID="{353F4E17-0F54-456F-8978-CE969F24AAD5}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
+				<Event Name="Play_Crate_Thump" ID="{AA025761-6A35-46CD-9B8B-6BF0D8FEC12B}">
+					<ChildrenList>
+						<Action Name="" ID="{4361994C-D174-4E7C-A3C0-EDDC733C9DDC}" ShortID="78351328">
+							<ReferenceList>
+								<Reference Name="Target">
+									<ObjectRef Name="Crate_Thump" ID="{5187B7BF-FF39-403D-8F76-944A27A402A6}" WorkUnitID="{B2A2DC41-E6A5-4BE6-8E86-79E1BB77DBA1}"/>
+								</Reference>
+							</ReferenceList>
+						</Action>
+					</ChildrenList>
+				</Event>
 			</ChildrenList>
 		</WorkUnit>
 	</Events>

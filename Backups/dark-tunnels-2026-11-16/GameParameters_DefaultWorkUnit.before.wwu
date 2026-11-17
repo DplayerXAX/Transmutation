@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WwiseDocument Type="WorkUnit" ID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}" SchemaVersion="133">
+	<GameParameters>
+		<WorkUnit Name="Default Work Unit" ID="{191E66FF-9EC3-4C40-B0B0-0527CDC5AC3A}" PersistMode="Standalone">
+			<ChildrenList>
+				<GameParameter Name="BGM_landmark" ID="{93BE28E3-BBE3-4176-8247-EDC7A6E99568}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_fuzzy" ID="{4D3949A8-14FE-426D-9078-4D4EC9D90842}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_cave" ID="{FD0B5E54-FFDA-4471-8F77-27DC7547847F}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_fluid" ID="{CD677A09-C6BC-46E4-824D-DC16A6BEC140}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_climb" ID="{59F93406-0AA5-43CD-BD54-BF0D129565E0}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_timespider" ID="{8F06F720-9DAC-4F43-B8C2-C1A25049E173}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_bird" ID="{50029BD0-54A0-4825-8C36-84243EF4B481}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_1" ID="{70F9897C-4DAA-4419-9807-DF34CC6152EF}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_2" ID="{62D558F1-5257-475F-BC26-76F496D5E99F}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_3" ID="{00BCFA34-B2A8-4256-9B17-1AF6E107D8A1}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_4" ID="{4D82FAC9-96E2-4026-BBE1-DE3676BEC8B2}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="Tutorial_5" ID="{F45F7410-E9F8-4B9D-8A43-CF872791FBA2}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_island" ID="{256E7AAE-5B28-45E1-904F-C2466B357AF7}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_hungrycave" ID="{4F37A1BB-7E93-4E34-A356-960FA8D39809}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_flowers" ID="{4B1C7467-AD65-46BA-AFA8-8104795DE517}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="0"/>
+					</PropertyList>
+				</GameParameter>
+				<GameParameter Name="BGM_basic" ID="{207E80F5-8088-4EAF-806C-E992905BD833}">
+					<PropertyList>
+						<Property Name="InitialValue" Type="Real64" Value="100"/>
+					</PropertyList>
+				</GameParameter>
+			</ChildrenList>
+		</WorkUnit>
+	</GameParameters>
+</WwiseDocument>

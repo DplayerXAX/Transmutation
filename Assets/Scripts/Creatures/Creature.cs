@@ -262,7 +262,7 @@ public enum FoodTag
         InitializeDeadRemains();
         CreatureThrower.ReleaseFlight(this);
         EndPet();
-        if (IsCarried) Carrier.Release();
+        ReleaseFromCarrier();
         if (TryGetComponent<WebCapture>(out var webCapture)) webCapture.Release();
         if (TryGetComponent<BubbleCapture>(out var bubbleCapture) && bubbleCapture.IsCaptured) bubbleCapture.Release();
         ApplyCorpsePhysics();
@@ -418,6 +418,17 @@ public enum FoodTag
         return true;
     }
 
+    /// <summary>
+    /// Lets go of carry ownership. The hand drops it if it is the one in the hand; a creature put away on the
+    /// body or the pack beast (BodyMounts) only ends its own carry, so the hand keeps what it holds.
+    /// </summary>
+    protected void ReleaseFromCarrier()
+    {
+        if (!IsCarried) return;
+        if (Carrier.CarriedCreature == this) Carrier.Release();
+        else EndCarry(Carrier);
+    }
+
     public void EndCarry(PlayerCreatureCarrier carrier)
     {
         if (Carrier != carrier) return;
@@ -491,7 +502,7 @@ public enum FoodTag
         CreatureRegistry.Unregister(this);
         LuminosityQuery.Unregister(this);
         if (ReflectionPhysics.SwitchingWorldRoots) return;
-        if (IsCarried) Carrier.Release();
+        ReleaseFromCarrier();
         if (TryGetComponent<BubbleCapture>(out var capture) && capture.IsCaptured) capture.Release();
     }
 
@@ -539,6 +550,10 @@ public enum FoodTag
     /// Unity frame update entry point.
     /// Passes delta time to the subclass while simulation is enabled.
     /// </summary>
+    // One profiler label per creature type, so the Profiler splits "Creature.Update" by species (near-free when not profiling).
+    private static readonly System.Collections.Generic.Dictionary<System.Type, Unity.Profiling.ProfilerMarker> tickMarkers =
+        new System.Collections.Generic.Dictionary<System.Type, Unity.Profiling.ProfilerMarker>();
+
     protected virtual void Update()
     {
         if (!SimulationEnabled)
@@ -546,6 +561,9 @@ public enum FoodTag
             return;
         }
 
+        var type = GetType();
+        if (!tickMarkers.TryGetValue(type, out var marker)) tickMarkers[type] = marker = new Unity.Profiling.ProfilerMarker("Creature tick: " + type.Name);
+        using var timing = marker.Auto();
         AdvanceAge(Time.deltaTime);
         if (!SimulationEnabled) return;
         TickCreature(Time.deltaTime);

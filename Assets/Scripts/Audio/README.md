@@ -68,6 +68,20 @@ on the `HandClimber`, `Footsteps` on the body (if missing), and one `RegionMusic
 The flower field and cave use the same shapes as the region titles (`RegionTitles.WorldMapRegions`);
 the island is `WorldMapTerrain.IslandOffset` / `IslandRadius`, from 30 m below it upward.
 
+## Tunnel creature layers and the conductor baton
+
+`BGM_glim`, `BGM_maw`, `BGM_bell` are mapped to `GlimLantern`, `LureMaw`, `BellSnail`. In Wwise they are the tracks
+`tunnel_glim` / `tunnel_maw` / `tunnel_bell` in `basic_test` (Volume RTPC on the Game Parameters of the same names, -6 dB),
+with placeholder stems generated in code (60 s, 120 BPM, E minor pentatonic: high glass bells, a low throbbing E pedal,
+soft kalimba plucks; `Originals/SFX/SFX/tunnel_*.wav`). Replace the wavs with real music and regenerate the bank. The same parts as MIDI (120 BPM, E minor, 30 bars): `Assets/Audio/MIDI/tunnel_glim.mid`, `tunnel_maw.mid`, `tunnel_bell.mid` (the Maw's continuous drone is written as held notes).
+
+Tone Crate notes: Sound SFX `Crate_E/G/B/D/Thump` (Containers > SFX, 3D, Near_30m attenuation; generated placeholder
+knock-and-bell tones E3 G3 B3 D4 and a low thump) with events `Play_Crate_*`, posted on the grid.
+
+The baton uses two calls: `AudioManager.SoloLayer(name)` plays one layer alone (it goes to 1, every other layer and the
+base duck to 0.12; null ends it) and `AudioManager.SetCreatureMuted(creature, true)` takes one creature out of the mix
+(others of its type still count).
+
 ## Code API (`AudioManager`, all static)
 
 ```csharp
