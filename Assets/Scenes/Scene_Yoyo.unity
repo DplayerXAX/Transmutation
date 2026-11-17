@@ -3011,6 +3011,7 @@ Transform:
   - {fileID: 2124660897}
   - {fileID: 996532050}
   - {fileID: 1670399175}
+  - {fileID: 2048573264}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1482414188
@@ -4125,8 +4126,11 @@ MonoBehaviour:
   beesPerNest: 4
   flowersPerNest: 5
   seed: 814
+  authoredFlowers: []
   nestAnchors:
   - {fileID: 168543579}
+  mountHivesOnAnchors: 0
+  hiveScale: 1
   groundLayers:
     serializedVersion: 2
     m_Bits: 128
@@ -4152,6 +4156,68 @@ Transform:
   - {fileID: 168543579}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &2048573263
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1452851169}
+    m_Modifications:
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 32.83
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -13.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4198144815188418793, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+      propertyPath: m_Name
+      value: Boomerang
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+--- !u!4 &2048573264 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 767562013600139844, guid: 461a501142e4a3c43a249590c13ef81d, type: 3}
+  m_PrefabInstance: {fileID: 2048573263}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2081416781
 PrefabInstance:
   m_ObjectHideFlags: 0

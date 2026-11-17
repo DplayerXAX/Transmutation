@@ -88,6 +88,13 @@ public sealed class CreatureThrower : MonoBehaviour
     /// <summary>Existing callers launch at maximum strength.</summary>
     public void Throw() => Throw(1f);
 
+    public float LevelThrowRange(float handHeight)
+    {
+        float verticalSpeed = throwSpeed * 0.18f / Mathf.Sqrt(1f + 0.18f * 0.18f);
+        float time = (verticalSpeed + Mathf.Sqrt(verticalSpeed * verticalSpeed + 2f * throwGravity * handHeight)) / throwGravity;
+        return throwSpeed / Mathf.Sqrt(1f + 0.18f * 0.18f) * time;
+    }
+
     /// <summary>Launches the carried creature with normalized, capped charge.</summary>
     public void Throw(float charge01)
     {
@@ -95,6 +102,7 @@ public sealed class CreatureThrower : MonoBehaviour
         if (view == null) view = Camera.main;
         if (!HoldingThrowable || view == null) return;
         Creature creature = carrier.CarriedCreature;
+        if (creature is Boomerang boomerang) { boomerang.Launch(charge01); return; }
         Vector3 start = StartPoint();
         Vector3 velocity = LaunchVelocity(charge01);
         creature.PrepareForThrow(carrier);

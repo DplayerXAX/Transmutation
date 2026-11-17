@@ -24,6 +24,7 @@ public static class HeldWeaponSetup
         Create<Spear>("Spear", Color.gray);
         Create<Greatsword>("Greatsword", Color.gray);
         CreateChainsaw();
+        CreateBoomerang();
     }
 
     public static void Place(Scene scene, Transform parent)
@@ -31,6 +32,7 @@ public static class HeldWeaponSetup
         PlaceOne(scene, parent, "Spear", new Vector3(-14.5f, 0.5f, -13.3f));
         PlaceOne(scene, parent, "Greatsword", new Vector3(-13f, 0.5f, -13.3f));
         PlaceOne(scene, parent, "Chainsaw", parent.Find("Greatsword").localPosition + Vector3.right * 1.5f);
+        PlaceOne(scene, parent, "Boomerang", parent.Find("Greatsword").localPosition + Vector3.right * 3f);
     }
 
     private static void PlaceOne(Scene scene, Transform parent, string name, Vector3 localPosition)
@@ -41,6 +43,40 @@ public static class HeldWeaponSetup
         instance.name = name;
         instance.transform.SetParent(parent, false);
         instance.transform.localPosition = localPosition;
+    }
+
+    private static void CreateBoomerang()
+    {
+        string path = Folder + "/Boomerang.prefab";
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) return;
+        var root = new GameObject("Boomerang");
+        try
+        {
+            root.SetActive(false);
+            root.AddComponent<Rigidbody>().collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            root.AddComponent<SphereCollider>().radius = 0.35f;
+            root.AddComponent<Boomerang>();
+            var visual = new GameObject("Visual").transform;
+            visual.SetParent(root.transform, false);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(Folder + "/Greatsword Material.mat");
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                arm.name = "Wing";
+                arm.transform.SetParent(visual, false);
+                arm.transform.localPosition = new Vector3(side * 0.20f, 0f, 0.1f);
+                arm.transform.localRotation = Quaternion.Euler(0f, side * -35f, 0f);
+                arm.transform.localScale = new Vector3(0.55f, 0.065f, 0.15f);
+                Object.DestroyImmediate(arm.GetComponent<Collider>());
+                arm.GetComponent<Renderer>().sharedMaterial = material;
+            }
+            var fields = new SerializedObject(root.GetComponent<Boomerang>());
+            fields.FindProperty("initialPolarity").enumValueIndex = (int)CreaturePolarity.None;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            root.SetActive(true);
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally { Object.DestroyImmediate(root); }
     }
 
     private static void CreateChainsaw()
