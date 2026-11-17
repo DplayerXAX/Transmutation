@@ -45,7 +45,7 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
     MeshRenderer meshRenderer;
     Material runtimeMaterial;
     MaterialPropertyBlock properties;
-    float clock, credits, nextStep, length, pulse, visualUntil;
+    float clock, credits, nextStep, length, pulse, visualUntil, lastRefresh = -1f;
     int nextTip;
     bool dirty, rebind;
     Action refreshAction;
@@ -148,7 +148,21 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
                 if (nodes[index].valid) { tips.Add(index); break; }
             }
         }
-        if (dirty || pulse > 0f || clock < visualUntil) SurfaceWorkQueue.Enqueue(this, refreshAction);
+        // Rebuilding the strand mesh costs 5-20 ms once the network is large, so only rebuild when the geometry or the
+        // fresh-growth colours changed (pulse is a material property, it never needs a rebuild), and wait while the
+        // network is out of view and the camera is far away; the pending change is applied once it is seen again.
+        if (!dirty && (clock >= visualUntil || clock - lastRefresh < 0.25f)) return; // colour-only fades refresh 4x a second
+        if (!meshRenderer.isVisible && !CameraNear()) { dirty = true; return; }
+        lastRefresh = clock;
+        SurfaceWorkQueue.Enqueue(this, refreshAction);
+    }
+
+    bool CameraNear()
+    {
+        var cam = Camera.main;
+        if (cam == null) return true;
+        Bounds b = meshRenderer.bounds; b.Expand(30f);
+        return b.Contains(cam.transform.position);
     }
 
     Vector3 Direction(Node tip)
@@ -288,12 +302,24 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
         return false;
     }
 
+    // Incremental mesh: new nodes are appended, only still-fresh cords get their colour refreshed, and the whole
+    // mesh is rebuilt only after a rebind (terrain changed under the network) or a width change.
+    int emittedNodes = 1;
+    bool fullRebuild = true;
+    struct FreshCord { internal int start, count; internal float born; }
+    readonly List<FreshCord> freshCords = new List<FreshCord>();
+    static Color CordColour(float fresh) => Color.Lerp(new Color(0.025f, 0.16f, 0.38f, 0.16f), new Color(0.15f, 0.95f, 0.27f, 0.9f), fresh);
+
     void RefreshMesh()
     {
         dirty = false;
-        if(!Mathf.Approximately(profileWidth,strandWidthMultiplier)){profiles.Clear();profileWidth=strandWidthMultiplier;}
-        vertices.Clear(); normals.Clear(); colours.Clear(); uv.Clear(); triangles.Clear(); origins.Clear(); timings.Clear();
-        for (int i = 1; i < nodes.Count; i++)
+        if(!Mathf.Approximately(profileWidth,strandWidthMultiplier)){profiles.Clear();profileWidth=strandWidthMultiplier;fullRebuild=true;}
+        if (fullRebuild)
+        {
+            vertices.Clear(); normals.Clear(); colours.Clear(); uv.Clear(); triangles.Clear(); origins.Clear(); timings.Clear();
+            freshCords.Clear(); emittedNodes = 1; fullRebuild = false;
+        }
+        for (int i = emittedNodes; i < nodes.Count; i++)
         {
             Node n = nodes[i], parent = nodes[n.parent]; if (!n.valid || !parent.valid) continue;
             Vector3 direction = (n.point - parent.point).normalized;
@@ -306,6 +332,15 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
                         AddCord(n.finePath[j-1],n.finePath[j],(fb-fa).normalized,0.0015f*strandWidthMultiplier,n.born+0.3f+j*0.03f,0.45f,i+j);
             if(n.hasKnot && n.knot.Resolve(out _,out _))
                 AddCord(n.anchor,n.knot,direction,0.016f*strandWidthMultiplier,n.born,0.4f,-i);
+        }
+        emittedNodes = nodes.Count;
+        for (int k = freshCords.Count - 1; k >= 0; k--)
+        {
+            FreshCord cord = freshCords[k];
+            float fresh = 1f - Mathf.Clamp01((clock - cord.born) / 2f);
+            Color c = CordColour(fresh);
+            for (int v = 0; v < cord.count; v++) colours[cord.start + v] = c;
+            if (fresh <= 0f) freshCords.RemoveAt(k);
         }
         mesh.Clear(); mesh.SetVertices(vertices); mesh.SetNormals(normals); mesh.SetColors(colours); mesh.SetUVs(0, uv);
         mesh.SetUVs(1, origins); mesh.SetUVs(2, timings); mesh.SetTriangles(triangles, 0); mesh.RecalculateBounds();
@@ -355,9 +390,10 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
             Vector3 localClosed = transform.InverseTransformPoint(closed);
             origins.Add(new Vector4(localClosed.x, localClosed.y, localClosed.z, born)); timings.Add(new Vector4(Mathf.Max(0.05f, duration), 1f, 0f, 0f));
             float fresh = 1f - Mathf.Clamp01((clock - born) / 2f);
-            colours.Add(id<0 ? new Color(0.12f,0.95f,0.22f,0.95f) : Color.Lerp(new Color(0.025f, 0.16f, 0.38f, 0.16f), new Color(0.15f, 0.95f, 0.27f, 0.9f), fresh));
+            colours.Add(id<0 ? new Color(0.12f,0.95f,0.22f,0.95f) : CordColour(fresh));
             uv.Add(new Vector2(id * 0.16f + ring * Vector3.Distance(a,b), col / (float)(sides - 1)));
         }
+        if (id >= 0 && clock - born < 2f) freshCords.Add(new FreshCord { start = start, count = sides * 2, born = born });
         for (int col = 0; col < sides - 1; col++)
         { int p = start + col; triangles.Add(p); triangles.Add(p + sides); triangles.Add(p + 1); triangles.Add(p + 1); triangles.Add(p + sides); triangles.Add(p + sides + 1); }
     }
@@ -369,7 +405,7 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
     }
     void Rebind()
     {
-        rebind = false; cells.Clear();profiles.Clear();
+        rebind = false; cells.Clear();profiles.Clear(); fullRebuild = true;
         for (int i = 0; i < nodes.Count; i++)
         {
             Node n = nodes[i];

@@ -291,6 +291,21 @@ private void FitCarryPoint(Creature creature)
     MeasureCreature(creature, out float above, out float sideways);
     heldCentreLocal = Vector3.zero;
     heldRadius = 0f;
+    gripActive = false;
+    // A grip point and hand rotation (HoldGrip on the thing, or its type in Resources/HoldGrips) wins over the rest.
+    if (!(creature is TentacleCreature) && HoldGripTable.TryResolve(creature, out gripPose))
+    {
+        gripActive = true;
+        if (CreatureBounds.TryMeasure(creature.transform, out Bounds body))
+        {
+            heldCentreLocal = Quaternion.Inverse(creature.transform.rotation) * (body.center - creature.transform.position);
+            heldRadius = Mathf.Max(body.extents.x, Mathf.Max(body.extents.y, body.extents.z));
+        }
+        // Big things still go further out, less what the grip already moves them away from the hand.
+        float push = Mathf.Max(0f, heldRadius * 2f - 0.3f - (heldCentreLocal - gripPose.gripLocal).magnitude);
+        carryPoint.localPosition = handRest + gripPose.handNudge + holdOutward.normalized * push;
+        return;
+    }
     if (adaptiveHold && !(creature is TentacleCreature) && CreatureBounds.TryMeasure(creature.transform, out Bounds seen))
     {
         // Held by its visual middle (many pivots sit at the feet or off to one side), in front of the right hand.
@@ -352,7 +367,8 @@ private void FitCarryPoint(Creature creature)
         if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
         carryTargetLocal = carryPoint.localPosition;
-        carryPoint.position = creature.transform.position + creature.transform.rotation * heldCentreLocal;
+        carryPoint.position = creature.transform.position + creature.transform.rotation * (gripActive ? gripPose.gripLocal : heldCentreLocal);
+        gripRotation = creature.transform.rotation;
         heldPull = 0f;
         bringingIn = true;
         // A held creature must never push the player: looking down onto it would lift the player into the air.
@@ -415,6 +431,21 @@ private void FitCarryPoint(Creature creature)
     {
         if (carryPoint == null) return;
         if (CarriedCreature is Chainsaw saw && saw.ApplyRidePose()) return;
+        if (gripActive)
+        {
+            // Turned into its hand pose (eased in after the grab), its grip point on the hand.
+            Quaternion view = gripPose.followPitch && carryCamera != null ? carryCamera.transform.rotation : CarryYaw();
+            gripRotation = Quaternion.Slerp(gripRotation, view * gripPose.heldRotation, bringingIn ? 1f - Mathf.Exp(-14f * Time.deltaTime) : 1f);
+            Vector3 at = carryPoint.position - gripRotation * gripPose.gripLocal;
+            if (adaptiveHold && heldRadius > 0f && !bringingIn)
+            {
+                Vector3 middle = at + gripRotation * heldCentreLocal;
+                at += KeepOutOfWalls(middle) - middle;
+            }
+            CarriedCreature.transform.SetPositionAndRotation(at, gripRotation);
+            if (heldBody != null) heldBody.position = at;
+            return;
+        }
         Quaternion rotation = CarryYaw() * heldYawOffset;
         Vector3 centre = carryPoint.position;
         if (adaptiveHold && heldRadius > 0f && !bringingIn) centre = KeepOutOfWalls(centre);
@@ -458,6 +489,9 @@ private void FitCarryPoint(Creature creature)
     }
 
     private float heldPull;
+    private bool gripActive;
+    private HoldPose gripPose;
+    private Quaternion gripRotation = Quaternion.identity;
 
     private Quaternion CarryYaw()
     {
@@ -507,6 +541,7 @@ private void FitCarryPoint(Creature creature)
         else SetPlayerCollision(carriedColliders, ignore: false);
         carriedColliders = null;
         if (carryPoint != null) carryPoint.localPosition = carryPointHome;
+        gripActive = false;
         if (dropped is TentacleCreature tentacle)
         {
             tentacle.PrepareForDrop();

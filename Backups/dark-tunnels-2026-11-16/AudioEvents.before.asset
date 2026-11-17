@@ -95,6 +95,42 @@ MonoBehaviour:
     fadeIn: 1.5
     fadeOut: 3
     placeholderVoice: 7
+  - name: BGM_island
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 4
+    fadeOut: 4
+    replacesBase: 1
+    placeholderVoice: -1
+  - name: BGM_hungrycave
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 4
+    fadeOut: 4
+    replacesBase: 1
+    placeholderVoice: -1
+  - name: BGM_flowers
+    kind: 1
+    clips: []
+    volume: 1
+    pitchRange: {x: 1, y: 1}
+    loop: 1
+    spatialBlend: 0
+    maxDistance: 30
+    fadeIn: 4
+    fadeOut: 4
+    replacesBase: 1
+    placeholderVoice: -1
   - name: BGM_climb
     kind: 1
     clips: []

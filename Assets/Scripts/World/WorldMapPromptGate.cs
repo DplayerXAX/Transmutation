@@ -1,11 +1,13 @@
 using UnityEngine;
 
-/// <summary>Ends the starting cave's interaction tutorial once the player reaches daylight.</summary>
+/// <summary>
+/// Ends the starting cave's interaction tutorial (the text hints) once the player reaches daylight.
+/// The crosshair keeps changing shape (pickup ring etc.) everywhere: that icon is the hint outside the cave.
+/// </summary>
 public sealed class WorldMapPromptGate : MonoBehaviour
 {
     private SmoothFirstPersonController player;
     private InteractionPromptHUD prompts;
-    private CrosshairHUD crosshair;
     private bool exited;
 
     private void Update()
@@ -19,8 +21,6 @@ public sealed class WorldMapPromptGate : MonoBehaviour
             exited = true;
         if (!exited) return;
         if (prompts == null) prompts = FindFirstObjectByType<InteractionPromptHUD>();
-        if (crosshair == null) crosshair = FindFirstObjectByType<CrosshairHUD>();
         if (prompts != null && prompts.HintsVisible) prompts.SetHintsVisible(false);
-        if (crosshair != null) crosshair.SetActionCuesVisible(false);
     }
 }

@@ -87,6 +87,77 @@ material is loaded from `Resources/GlyphCreatures/MAT_GlyphGold` when none is as
 it by adding the component and filling in its regions. Check: `Editor/WorldRegionTitlesSetup.PlayAndTest` with
 `-regionTitleTest` (opens Scene_World without saving, teleports the player into each region).
 
+## Flower meadow (FloraPatch, MeadowMotes)
+
+Scene_World's flower field is overlaid with a wildflower meadow: `FloraPatch` tiles (32 m squares under
+"Flower meadow (instanced wildflower tiles)") draw daisies with GPU instancing, no GameObjects or colliders.
+Drifts, colour bands and the ragged meadow rim come from world-space noise, so tiles join without seams; colours
+shift towards ice near the bone mother. Flowers grow round the `LilyField` lilies (real, pickable bubble flowers).
+Tiles grow one per frame when the terrain is ready (about 0.5 s for all 34), heights come from ray casts against
+the terrain chunk colliders. Far tiles draw a half, then a quarter, of their flowers. Meshes are in `FloraShapes`
+(petals are two-sided sheets so their tops are lit). Materials: `Assets/Generated/WorldMap/Flora`.
+`MeadowMotes` is the ambient pollen and light-mote particle system that follows the camera inside the meadow.
+`Editor/FloraSampleApply` is a request-file helper (Temp/Flora.request: `apply` lays the tiles, `capture` renders
+review shots to ArtCaptures/Flora).
+
+## Dark caves under the crack (`DarkTunnels`, `MarchingCubes/DarkTunnelShape`, `StrangeWater`)
+
+Underground content of Scene_World (moved 2026-11-16 from behind the spawn chamber to under the crack, Daniel's choice).
+The world's inner layer (open from about -33 to -65 under the whole map) is the open cavern. Round the west part of the
+crack `DarkTunnelShape` adds, in the world's own density (`Carve`, called at the end of `WorldMapTerrain.ShapeDensity`):
+
+- **Stair tower** at (-140, 115): a hollow rock column from the cavern floor to its ceiling with a spiral tunnel
+  inside, 3.6 turns; it starts as a pit in the ground south of the crack rim (`Mouth`) and opens north onto the cavern floor.
+- **Pillars**: six rock columns in the open cavern round the hub (-110, 160).
+- **Tunnels** dug into the cavern floor (a loop east of the hub, a branch to a grotto, dead ends, the descent to the
+  skeleton chamber at (-72, -75, 180)), the Tone Crate's cross-shaped trench at (-92, 132), and two tunnels in the
+  ceiling (only Glims and water reach them).
+
+**After changing the layout, bake the chunk meshes again** (`TerrainChunks.bytes`): write `bake` to
+`Temp/CaveBaton.request` with Scene_World open (`Editor/CaveBatonCheck`), otherwise the old saved meshes are used and the
+caves are missing (DarkTunnels then logs a warning and places nothing).
+
+`DarkTunnels` adds itself when Scene_World loads (like `SceneAudioBoot`). It puts the conductor baton in the player's hand
+at the start (`startWithBaton`, on), and when the terrain is built places 8 Bell Snails, 7 Glim Lanterns, 1 Lure Maw,
+three Tone Mesas over the holes into the floor tunnels (notes E, B, G), the strange water and the skeleton (with the baton in its fist when `startWithBaton` is off).
+Testing: `spawnUnderground` (on) moves the player to the cavern floor by the stair tower's door as soon as the caves are
+built (the dark snaps in at once). Turn it off on the runtime Dark Tunnels object (or in code) for the normal spawn.
+
+Light round the glow creatures: `CaveGlowCreature.LightStyle` = `Reveal` (default), like a stencil: within a light's
+radius (3x the old halo width, Glim about 7 m, snail 8 m) the terrain is drawn with its own normal look, cut cleanly out
+of the black fog, so a light far away shows the shape of the ground round it while everything else stays black. No extra
+brightness or pattern, a colour filter of the light's colour (`CaveReveal.TintAmount`, 0.55). `World/CaveReveal.cs`
+sends the nearest 16 lights each frame to `Shaders/World/CaveReveal.hlsl`, which `TerrainLinesLit` uses at its fog step
+(no lights = no change). Only terrain is revealed, not other objects. The baton tip reveals 2.5 m round it.
+`CaveGlowCreature.RevealShafts` (off) adds faint light shafts in the air.
+`Volume` draws `Capstone/Cave/LightVolume`: a
+sphere of light (twice the old halo width) whose air glows in hard banded shells clipped by the scene depth (volume), and
+whose surfaces inside are lit in hard bands with a thin rim where the light ends (mask). Close to the camera (a carried
+Glim) the volume fades and only the mask stays, so it never fogs the view. `LegacyHalo` brings back the old soft
+billboard (`Capstone/Cave/GlowHalo`).
+
+Darkness: below about -30 (the whole inner cavern) and down the spiral the fog turns black and close (`sight` 1.9 m,
+`deepSight` 1.2 m below the cavern floor, + `lanternSight` 2.5 m while carrying a Glim), ambient and reflections down to
+8%, the sun off. Everything goes back on the way out. Glows and the water's caustics are drawn without fog.
+
+**Mirror pools** (`MirrorPool`, shader `Capstone/Cave/MirrorPool`, Daniel's reference: a cave lake so still the lit
+rock above hangs upside down in it), replacing the hanging lenses (`StrangeWater.HangingLenses` brings those back):
+a lake lapping at a pillar's foot (-124, 164), a pool by the stair tower (-151, 140) and one in the grotto under
+stalactites; stalagmites round each (terrain material, colliders), and a reveal light of the pool's own colour (3x its
+radius) so the rock round it and its mirror image show. A planar reflection camera renders the mirrored view at half
+resolution for the nearest pool in view within 45 m only (one extra render a frame); the others show a dark tint.
+
+`StrangeWater` (shader `Capstone/Cave/StrangeWater`, after Daniel's toon water in ShaderLab_1 week 8: refracted background,
+banded depth colour, hard-edged caustics, banded light shafts marched through the volume, two-tone surface, fresnel
+opacity, hard highlight). Gravity is a property, so: **hanging pools** are water lenses stuck to the cavern ceiling with
+gravity reversed (surface underneath, shafts rising into the rock), dripping down to the floor; **floating blobs** wobble
+in the air, each with its own "down" (some drip sideways or upwards); drops leave a widening glowing ring where they hit
+rock. The caustics glow by themselves (the caves have no sun). Needs URP Opaque Texture (on in PC_RPAsset).
+
+Test: write `test` to `Temp/CaveBaton.request` (or run `CaveBatonCheck.Batch` with `-caveTest`, add `-caveBake` to bake
+first, in a batch copy): walks the spiral pit, tower door, hub and skeleton chamber, shoots the water, plays the Tone
+Crate and a Glim, and saves `Logs/CaveBatonTest.txt` and screenshots in `ArtCaptures/DarkTunnels/`.
+
 ## CaveHarvest
 
 Also listens to `ChunkCreated`, Play Mode only. In the inner world it hangs fruit bunches on thin stalks

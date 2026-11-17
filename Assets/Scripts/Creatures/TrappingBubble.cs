@@ -299,7 +299,11 @@ public sealed class TrappingBubble : LeashBubble
         if (Occupant != null) Occupant.Release();
         RestoreExpiredIgnores(true);
     }
-    protected override void OnDisable() { base.OnDisable(); if (!ReflectionPhysics.SwitchingWorldRoots) Pop(); }
+    /// <summary>Bubbles active in play right now (cheap budget check instead of a scene search).</summary>
+    public static int LiveCount { get; private set; }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)] private static void ResetCount() => LiveCount = 0;
+    protected override void OnEnable() { base.OnEnable(); if (Application.isPlaying) LiveCount++; }
+    protected override void OnDisable() { if (Application.isPlaying) LiveCount = Mathf.Max(0, LiveCount - 1); base.OnDisable(); if (!ReflectionPhysics.SwitchingWorldRoots) Pop(); }
     private void OnDestroy() => Pop();
 
     private void OnValidate()

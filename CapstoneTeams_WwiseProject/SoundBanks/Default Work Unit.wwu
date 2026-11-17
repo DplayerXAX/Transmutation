@@ -5,12 +5,17 @@
 			<ChildrenList>
 				<SoundBank Name="Transmutation" ID="{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}">
 					<ObjectInclusionList>
+						<ObjectRef Name="Play_Crate_B" ID="{5A702FA1-A6C8-414E-8783-9663D874DCF0}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Footstep_Left" ID="{68B83415-D24B-415C-A452-A8619448A65C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Drop" ID="{9F9A4CCA-07C8-4279-9DBE-080CF20F3857}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_ShootTentacle" ID="{61816451-2FCD-4328-AFE6-4627921E06D3}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_PickUp" ID="{3E76E931-6BCE-4335-8F07-641FE1E0A76B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Crate_D" ID="{4909440C-64CE-4477-8B58-245978F9CB47}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_BubblePop" ID="{D4BC598C-865F-44DE-9A15-BAD751981A83}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Crate_E" ID="{3D9F2B30-0E7B-46AF-A0A6-817940055197}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Crate_Thump" ID="{AA025761-6A35-46CD-9B8B-6BF0D8FEC12B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Footstep_Right" ID="{5C4F89C2-C554-474D-A9F1-088B610F61BD}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Crate_G" ID="{F5878F74-9320-48B1-BCF1-05536F6514CF}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Climb_Reach" ID="{FAC6352C-DFDB-48BB-A514-B0D401159B5B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="PlayBGM" ID="{35352506-54B6-4A54-9C06-399C44291C2C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_TentacleNear" ID="{FB444205-6D6B-4D10-8E27-78C6A98B0B26}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>

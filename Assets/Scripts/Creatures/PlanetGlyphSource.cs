@@ -23,6 +23,8 @@ public sealed class PlanetGlyphSource : MonoBehaviour, IDropletGlyphSource
     public const string Cave = "~door ^";
     public const string MushroomBasin = "shroom shroom U";
     public const string Tower = "spire@0.95 _";
+    /// <summary>The floating crystal island: land that rose (the updraft glyph over a ground bar).</summary>
+    public const string MiningIsland = "draft _";
 
     public bool TryGetStrokes(string key, List<Vector2[]> strokes) => TryBuild(key, strokes);
 

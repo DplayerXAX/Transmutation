@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -67,25 +70,41 @@ public sealed partial class ProceduralWorld
         UsedChunkCache = false;
         if (chunkCache == null || modifications.Count > 0) return false;
         var cached = new Dictionary<Vector3Int, ChunkResult>();
+        var timer = Stopwatch.StartNew();
+        double readMs, meshMs;
         try
         {
-            using var gzip = new GZipStream(new MemoryStream(chunkCache.bytes), CompressionMode.Decompress);
-            using var r = new BinaryReader(gzip);
-            if (r.ReadString() != CacheKey) { Debug.Log("Saved chunk meshes do not match this terrain any more; generating it.", this); return false; }
+            // Unpack the whole file once, then copy each array in one block (per-value reads were slow).
+            byte[] raw;
+            using (var gzip = new GZipStream(new MemoryStream(chunkCache.bytes), CompressionMode.Decompress))
+            using (var unpacked = new MemoryStream())
+            { gzip.CopyTo(unpacked); raw = unpacked.ToArray(); }
+            using var r = new BinaryReader(new MemoryStream(raw));
+            if (r.ReadString() != CacheKey) { UnityEngine.Debug.Log("Saved chunk meshes do not match this terrain any more; generating it.", this); return false; }
             int count = r.ReadInt32();
+            int at = (int)r.BaseStream.Position;
+            int ReadInt() { int v = System.BitConverter.ToInt32(raw, at); at += 4; return v; }
+            T[] ReadArray<T>(int n) where T : struct
+            {
+                var array = new T[n];
+                int bytes = n * Marshal.SizeOf<T>();
+                raw.AsSpan(at, bytes).CopyTo(MemoryMarshal.AsBytes(array.AsSpan()));
+                at += bytes;
+                return array;
+            }
             for (int c = 0; c < count; c++)
             {
-                var result = new ChunkResult { coord = new Vector3Int(r.ReadInt32(), r.ReadInt32(), r.ReadInt32()), epoch = epoch };
-                int n = r.ReadInt32();
-                result.vertices = new Vector3[n]; result.normals = new Vector3[n];
-                for (int i = 0; i < n; i++) result.vertices[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-                for (int i = 0; i < n; i++) result.normals[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
-                result.surfaceTriangles = new int[r.ReadInt32()]; for (int i = 0; i < result.surfaceTriangles.Length; i++) result.surfaceTriangles[i] = r.ReadInt32();
-                result.innerTriangles = new int[r.ReadInt32()]; for (int i = 0; i < result.innerTriangles.Length; i++) result.innerTriangles[i] = r.ReadInt32();
+                var result = new ChunkResult { coord = new Vector3Int(ReadInt(), ReadInt(), ReadInt()), epoch = epoch };
+                int n = ReadInt();
+                result.vertices = ReadArray<Vector3>(n);
+                result.normals = ReadArray<Vector3>(n);
+                result.surfaceTriangles = ReadArray<int>(ReadInt());
+                result.innerTriangles = ReadArray<int>(ReadInt());
                 cached[result.coord] = result;
             }
         }
-        catch (System.Exception e) { Debug.LogWarning("Could not read the saved chunk meshes; generating the terrain. " + e.Message, this); return false; }
+        catch (System.Exception e) { UnityEngine.Debug.LogWarning("Could not read the saved chunk meshes; generating the terrain. " + e.Message, this); return false; }
+        readMs = timer.Elapsed.TotalMilliseconds;
 
         var meshes = new List<Mesh>();
         var all = new List<ChunkResult>();
@@ -96,10 +115,15 @@ public sealed partial class ProceduralWorld
             if (result.vertices.Length > 0) { result.mesh = MakeMesh(result); meshes.Add(result.mesh); }
             all.Add(result);
         }
+        meshMs = timer.Elapsed.TotalMilliseconds - readMs;
         var ids = meshes.ConvertAll(mesh => mesh.GetEntityId());
         Parallel.For(0, ids.Count, new ParallelOptions { MaxDegreeOfParallelism = Mathf.Max(1, SystemInfo.processorCount - 1) },
             i => Physics.BakeMesh(ids[i], false, Cooking));
+        double bakeMs = timer.Elapsed.TotalMilliseconds - readMs - meshMs;
         foreach (ChunkResult result in all) { result.baked = true; Apply(result, false, default); }
+        double applyMs = timer.Elapsed.TotalMilliseconds - readMs - meshMs - bakeMs;
+        UnityEngine.Debug.Log($"Terrain from saved meshes: read {readMs:0} ms, meshes {meshMs:0} ms, collision bake {bakeMs:0} ms, " +
+            $"chunk objects {applyMs:0} ms ({meshes.Count} chunks).", this);
         generating = false;
         UsedChunkCache = true;
         return true;

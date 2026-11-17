@@ -10,7 +10,7 @@ using UnityEngine;
 public static class AudioSetup
 {
     private const string Folder = "Assets/Audio";
-    private const string BankPath = Folder + "/AudioEvents.asset";
+    private const string BankPath = Folder + "/Resources/AudioEvents.asset";
     private const string SfxFolder = Folder + "/SFX";
 
     [MenuItem("Tools/Capstone/Audio/Set Up Adaptive Music In Open Scene")]
@@ -171,6 +171,7 @@ public static class AudioSetup
         if (bank != null) return bank;
 
         if (!AssetDatabase.IsValidFolder(Folder)) AssetDatabase.CreateFolder("Assets", "Audio");
+        if (!AssetDatabase.IsValidFolder(Folder + "/Resources")) AssetDatabase.CreateFolder(Folder, "Resources");
         bank = ScriptableObject.CreateInstance<AudioEventBank>();
 
         bank.events.Add(Music("PlayBGM", AudioEventKind.MusicBase, 0, 0.7f));

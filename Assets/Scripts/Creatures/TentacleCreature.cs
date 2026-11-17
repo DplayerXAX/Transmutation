@@ -616,8 +616,8 @@ public sealed class TentacleCreature : Creature
         UpdateBodyVisual(deltaTime);
         // The skin is the costly part: rebuilt every frame up close, every few frames far off, not at all
         // while it is out of view (it catches up the moment it is seen again).
-        if (SkinWorthUpdating()) UpdateMembrane();
-        UpdateShaderState(deltaTime);
+        // The ring shader state only matters while the skin is drawn, so it follows the same view/distance budget.
+        if (SkinWorthUpdating()) { UpdateMembrane(); UpdateShaderState(deltaTime); }
     }
 
     private static readonly Plane[] ViewPlanes = new Plane[6];
