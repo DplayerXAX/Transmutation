@@ -311,6 +311,8 @@ public enum FoodTag
     /// <summary>Nutrition or special effects only. The feeding caller owns death and removal.</summary>
     public virtual void Consume(Creature consumer) { }
 
+    public virtual FurnaceIngredient IngredientKind => FurnaceIngredient.None;
+
     /// <summary>Ownership states may protect a creature from being removed as food.</summary>
     public virtual bool CanBeConsumed => true;
 

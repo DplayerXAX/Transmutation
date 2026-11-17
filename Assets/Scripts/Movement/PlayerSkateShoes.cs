@@ -38,7 +38,7 @@ public sealed class PlayerSkateShoes : MonoBehaviour
     public bool SuppressGrounding => Equipped && Time.time < ignoreGroundUntil;
     public bool CanDrive => Equipped && controller != null && controller.enabled && body != null &&
         !body.isKinematic && !controller.Restricted && !controller.Climbing && !controller.WallRunning &&
-        !controller.Flung && !controller.BubbleMovementBlocked && !BoneAwakeningCutscene.Playing &&
+        !controller.ChainsawRiding && !controller.Flung && !controller.BubbleMovementBlocked && !BoneAwakeningCutscene.Playing &&
         controller.State != SmoothFirstPersonController.MovementState.Freeze &&
         controller.State != SmoothFirstPersonController.MovementState.Unlimited &&
         controller.State != SmoothFirstPersonController.MovementState.Sliding &&
