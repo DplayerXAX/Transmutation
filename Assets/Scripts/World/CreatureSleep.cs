@@ -30,7 +30,7 @@ public sealed class CreatureSleep : MonoBehaviour
 
     /// <summary>Kinds that are safe to pause: nothing that is flying, falling or carried by the world's own motion.</summary>
     private static bool Sleepable(Creature c) =>
-        !(c is LeashBubble || c is BirdCreature || c is ErosiveFluidDroplet || c is ProjectileCreature || c is BlastCore ||
+        !(c is SeaAngelCreature || c is DimensionStone || c is LeashBubble || c is BirdCreature || c is ErosiveFluidDroplet || c is ProjectileCreature || c is BlastCore ||
           c is GlowBee || c is SquirrelFood || c is GlowHoney);
 
     private void Update()

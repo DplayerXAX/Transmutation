@@ -22,6 +22,7 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     private Volume sightVolume;
     private VolumeProfile profile;
     private GUIStyle panelStyle;
+    [field: SerializeField] public float FishSightRange { get; private set; } = 24;
     public bool HasHoneySight => isActiveAndEnabled && sightRemaining > 0f;
     public bool IsScented => isActiveAndEnabled && coating != null && coating.IsActive;
     public float SightRemaining => sightRemaining;
@@ -117,7 +118,7 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
     {
         foreach (Creature creature in FindObjectsByType<Creature>(FindObjectsSortMode.None))
         {
-            if (creature.gameObject.scene != gameObject.scene) continue;
+            if (creature is SeaAngelCreature || creature.gameObject.scene != gameObject.scene) continue;
             var visibility = creature.GetComponent<HoneyHiddenCreature>();
             bool tagged = HoneyHiddenCreature.HasTaggedVisual(creature);
             if (visibility == null && tagged) visibility = creature.gameObject.AddComponent<HoneyHiddenCreature>();
@@ -179,7 +180,6 @@ public sealed class PlayerHoneyEffects : MonoBehaviour
         if (BoneAwakeningCutscene.Playing || (carrier != null && carrier.PlayerController != null && !carrier.PlayerController.enabled)) return;
         if (panelStyle == null) panelStyle = new GUIStyle(GUI.skin.box)
         { fontSize = 17, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 8, 8), wordWrap = true };
-        if (nearbyNest != null) GUI.Box(new Rect(Screen.width * 0.5f - 210f, Screen.height * 0.67f, 420f, 88f), NestReadout, panelStyle);
         string status = HasHoneySight ? $"Honey sight  {Mathf.CeilToInt(sightRemaining)}s" : "";
         if (IsScented) status += (status.Length > 0 ? "\n" : "") + $"Glowing + sweet scent  {Mathf.CeilToInt(CoatingRemaining)}s";
         if (status.Length > 0)

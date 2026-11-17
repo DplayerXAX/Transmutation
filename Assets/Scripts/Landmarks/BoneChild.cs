@@ -847,6 +847,15 @@ public static class BoneRide
     /// Left click near a mount gets on. Right click gets off; so does left click when the hand holds nothing
     /// with its own left-click use (a tentacle aims, a fire source shoots).
     /// </summary>
+    public static bool HasAimedInteraction(PlayerCreatureCarrier carrier)
+    {
+        if (carrier == null || carrier.CarryCamera == null) return false;
+        var interactor = carrier.CarryCamera.GetComponentInParent<PlayerCreatureInteractor>();
+        if (interactor == null) return false;
+        var target = interactor.FindCreature();
+        return target != null && !string.IsNullOrEmpty(target.InteractionPrompt);
+    }
+
     public static bool HandleInput(PlayerCreatureCarrier carrier)
     {
         Mouse mouse = Mouse.current;
@@ -869,7 +878,7 @@ public static class BoneRide
             return true;
         }
         if (toggledFrame == Time.frameCount) return true;
-        if (!CanToggle || (leftIsBusy && !ScriptedToggle) || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
+        if (!CanToggle || (!ScriptedToggle && HasAimedInteraction(carrier)) || (leftIsBusy && !ScriptedToggle) || (!leftPress && !ScriptedToggle) || (!Application.isFocused && !Application.isBatchMode)) return false;
         if (!TryNearby(out Component mount, out Transform seat)) return false;
         ScriptedToggle = false;
         return BeginApproach(mount, seat, carrier);

@@ -11,6 +11,71 @@ public static class FishingSceneSetup
     const string Folder = "Assets/Prefabs/Creatures/Fishing";
     public const string PolePath = Folder + "/FishingPoleCreature.prefab";
     public const string FishPath = Folder + "/SeaAngelCreature.prefab";
+    const string StonePath = Folder + "/DimensionStone.prefab";
+    static void InstallDimensionalAssets()
+    {
+        var angel = SightMaterial("Dimensional Angel");
+        var window = SightMaterial("Dimension Window");
+        foreach (string name in new[] { "PC", "Mobile" })
+        {
+            var renderer = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.UniversalRendererData>("Assets/Settings/" + name + "_Renderer.asset");
+            var feature = renderer.rendererFeatures.Find(f => f is DimensionalSightFeature) as DimensionalSightFeature;
+            if (!feature)
+            {
+                feature = ScriptableObject.CreateInstance<DimensionalSightFeature>();
+                feature.name = "Dimensional sight";
+                AssetDatabase.AddObjectToAsset(feature, renderer);
+                renderer.rendererFeatures.Add(feature);
+                var serialized = new SerializedObject(renderer);
+                var map = serialized.FindProperty("m_RendererFeatureMap");
+                map.arraySize = renderer.rendererFeatures.Count;
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(feature,out string guid,out long id);
+                map.GetArrayElementAtIndex(map.arraySize-1).longValue = id;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+            feature.fishMaterial = angel; EditorUtility.SetDirty(feature); EditorUtility.SetDirty(renderer);
+        }
+        if (!AssetDatabase.LoadAssetAtPath<GameObject>(StonePath))
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "Dimension Stone"; go.layer=9; go.transform.localScale = Vector3.one*3;
+            go.GetComponent<Renderer>().sharedMaterial=window;
+            go.GetComponent<Renderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+            go.AddComponent<Rigidbody>().isKinematic=true;
+            Identity(go.AddComponent<DimensionStone>(),go.name);
+            PrefabUtility.SaveAsPrefabAsset(go,StonePath); Object.DestroyImmediate(go);
+        }
+    }
+    static Material SightMaterial(string name)
+    {
+        string path = Folder + "/" + name + ".mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (!mat) { mat = new Material(Shader.Find("Transmutation/"+name)); AssetDatabase.CreateAsset(mat,path); }
+        return mat;
+    }
+    [MenuItem("Tools/Creatures/Fishing/Install Dimensional Sight")]
+    public static void InstallSight()
+    {
+        InstallDimensionalAssets();
+        var scene = SceneManager.GetSceneByPath(ScenePath);
+        bool opened = !scene.isLoaded;
+        if (opened) scene=EditorSceneManager.OpenScene(ScenePath,OpenSceneMode.Additive);
+        try { PopulateSight(scene); EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets(); }
+        finally { if (opened) EditorSceneManager.CloseScene(scene,true); }
+    }
+    static void PopulateSight(Scene scene)
+    {
+        bool stone=false,honey=false;
+        foreach(var root in scene.GetRootGameObjects()) { stone |= root.GetComponentInChildren<DimensionStone>(true)!=null; honey |= root.GetComponentInChildren<GlowHoney>(true)!=null; }
+        if (!stone) Place(StonePath,new Vector3(1.8f,1.5f,0));
+        if (!honey) Place("Assets/Prefabs/Creatures/LightEcology/GlowHoney.prefab",new Vector3(1,.35f,-3.1f));
+        void Place(string path,Vector3 point)
+        {
+            var go=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(path),scene);
+            go.transform.position=point;
+            PrefabUtility.RecordPrefabInstancePropertyModifications(go.transform);
+        }
+    }
     static Material Material(string name, Color color, bool transparent = false)
     {
         string path = Folder + "/" + name + ".mat";
@@ -81,6 +146,7 @@ public static class FishingSceneSetup
         }
         SeaAngelMeshBuilder.Apply();
         UpgradePole();
+        InstallDimensionalAssets();
         AssetDatabase.SaveAssets();
     }
     public static void UpgradePole()
@@ -125,7 +191,7 @@ public static class FishingSceneSetup
         if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
         {
             if (!SceneManager.GetSceneByPath(ScenePath).isLoaded) EditorSceneManager.OpenScene(ScenePath,OpenSceneMode.Additive);
-            SceneManager.SetActiveScene(SceneManager.GetSceneByPath(ScenePath)); return;
+            var existing = SceneManager.GetSceneByPath(ScenePath); PopulateSight(existing); EditorSceneManager.SaveScene(existing); SceneManager.SetActiveScene(existing); return;
         }
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Additive); SceneManager.SetActiveScene(scene);
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; RenderSettings.ambientLight = new Color(.18f,.21f,.3f);
@@ -142,9 +208,10 @@ public static class FishingSceneSetup
         for (int i=0;i<8;i++)
         {
             var go=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(FishPath),scene);
-            go.name="Dimensional Sea Angel " +(i+1); go.transform.position=new Vector3((i%4-1.5f)*1.7f,1.5f+(i%3)*.45f,3+i/4*2);
+            go.name="Dimensional Sea Angel " +(i+1); go.transform.position=new Vector3((i%4-1.5f)*1.7f,1.5f+(i%3)*.45f,i < 2 ? -1.7f : 3+i/4*2);
             go.GetComponent<SeaAngelCreature>().Configure(Mathf.Lerp(.4f,1,i/7f),117+i*79);
         }
+        PopulateSight(scene);
         EditorSceneManager.SaveScene(scene,ScenePath); AssetDatabase.SaveAssets();
     }
 }

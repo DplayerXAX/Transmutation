@@ -152,7 +152,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             return;
 
         // Left click next to a bone creature climbs on (BoneRide), not an interaction.
-        if (BoneRide.Approaching || (BoneRide.Mount == null && !HeldHasOwnUse() && BoneRide.TryNearby(out _, out _)))
+        if (BoneRide.Approaching || (BoneRide.Mount == null && !HeldHasOwnUse() && !BoneRide.HasAimedInteraction(carrier) && BoneRide.TryNearby(out _, out _)))
             return;
 
         // Aria: Tentacle uses left mouse for its own actions.
@@ -246,26 +246,37 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     // Delay ground honey's click until release so a long press never drinks first.
     internal bool UpdateHoneyGesture(bool pressed, bool held, bool released, float deltaTime)
     {
-        if (pressed && !honeyGesture && carrier != null && carrier.CarriedCreature == null &&
-            carrier.PendingCreature == null && !BoneRide.Busy &&
-            !BoneRide.TryNearby(out _, out _) && FindCreature() is GlowHoney honey && !honey.IsCarried)
+        GlowHoney heldHoney = carrier != null ? carrier.CarriedCreature as GlowHoney : null;
+        if (pressed && !honeyGesture && carrier != null && carrier.PendingCreature == null &&
+            (heldHoney != null || (carrier.CarriedCreature == null && !BoneRide.Busy &&
+             FindCreature() is GlowHoney)))
         {
-            pressedHoney = honey;
+            pressedHoney = heldHoney != null ? heldHoney : FindCreature() as GlowHoney;
             honeyHeldTime = 0f;
             honeyGesture = true;
         }
         if (!honeyGesture) return false;
         if (pressedHoney != null)
         {
-            if (carrier == null || carrier.CarriedCreature != null || carrier.PendingCreature != null ||
-                pressedHoney.IsCarried || pressedHoney.IsDead || FindCreature() != pressedHoney)
+            bool carryingThisHoney = heldHoney == pressedHoney;
+            bool targetingGroundHoney = carrier != null && carrier.CarriedCreature == null &&
+                !pressedHoney.IsCarried && FindCreature() == pressedHoney;
+            if (carrier == null || carrier.PendingCreature != null || pressedHoney.IsDead ||
+                (!carryingThisHoney && !targetingGroundHoney))
                 pressedHoney = null;
             else
             {
                 honeyHeldTime += Mathf.Max(0f, deltaTime);
                 if (honeyHeldTime >= honeyCoatHoldTime)
                 {
-                    pressedHoney.TryUse(GlowHoney.Use.Coat, carrier);
+                    if (carryingThisHoney && TryGetSurfaceHit(out RaycastHit hit))
+                    {
+                        Creature target = hit.collider.GetComponentInParent<Creature>();
+                        GameObject owner = target != null ? target.gameObject :
+                            hit.rigidbody != null ? hit.rigidbody.gameObject : hit.collider.gameObject;
+                        pressedHoney.TryCoat(owner, hit.point + hit.normal * .05f);
+                    }
+                    else pressedHoney.TryUse(GlowHoney.Use.Coat, carrier);
                     pressedHoney = null;
                 }
                 else if (released)
@@ -402,13 +413,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
             if (held is GlowHoney honey)
             {
-                Creature target = FindCreature(out RaycastHit coatHit, out _);
-                if (coatHit.collider != null)
-                {
-                    GameObject owner = target != null ? target.gameObject
-                        : coatHit.rigidbody != null ? coatHit.rigidbody.gameObject : coatHit.collider.gameObject;
-                    honey.TryCoat(owner, coatHit.point + coatHit.normal * 0.05f);
-                }
+                honey.TryUse(GlowHoney.Use.Drink, carrier);
                 return;
             }
 

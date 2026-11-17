@@ -18,6 +18,14 @@ public sealed class FishingPoleCreature : Creature
     [SerializeField] float arrivalDistance = .2f, arrivalSpeed = .6f, stallTimeout = 2;
     [SerializeField] float minimumFightDistance = 4.5f, remainingFightDistance = .82f;
     [SerializeField] float catchWindup = .1f, catchArcDuration = .8f, catchLiftSpeed = 5.5f;
+    [field: SerializeField] public float PlayerWakeRange { get; private set; } = 3;
+    [field: SerializeField] public float FishWakeRange { get; private set; } = 14;
+    float nextBaitQuery;
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        if (Application.isPlaying) DimensionalSchool.For(this).Poles.Add(this);
+    }
     public FishingState State { get; private set; }
     public SeaAngelCreature TargetFish { get; private set; }
     public FishingStruggle Struggle { get; } = new FishingStruggle();
@@ -119,7 +127,7 @@ public sealed class FishingPoleCreature : Creature
         }
         castDestination = origin + direction * distance;
         castStart = transform.TransformPoint(new Vector3(0, .03f, .94f));
-        LurePosition = castStart; State = FishingState.Casting; flightTime = 0;
+        LurePosition = castStart; State = FishingState.Casting; flightTime = 0; nextBaitQuery = 0;
         flightDuration = Mathf.Lerp(.22f, .45f, charge);
         wait = Random.Range(biteDelay.x, biteDelay.y);
     }
@@ -149,14 +157,9 @@ public sealed class FishingPoleCreature : Creature
         {
             if (TargetFish == null)
             {
-                float best = attractionRadius * attractionRadius;
-                foreach (var fish in FindObjectsByType<SeaAngelCreature>(FindObjectsSortMode.None))
-                {
-                    if (fish.gameObject.scene != gameObject.scene || fish.Materialized || fish.ReservedBy != null || fish.IsDead) continue;
-                    float d = (fish.transform.position - LurePosition).sqrMagnitude;
-                    if (d < best) { best = d; TargetFish = fish; }
-                }
-                if (TargetFish != null && !TargetFish.TryReserve(this)) TargetFish = null;
+                if (Time.time < nextBaitQuery) return;
+                nextBaitQuery = Time.time + .2f;
+                TargetFish = DimensionalSchool.For(this).Reserve(LurePosition, attractionRadius, this);
             }
             if (TargetFish == null) return;
             if (wait > 0)
@@ -286,7 +289,7 @@ public sealed class FishingPoleCreature : Creature
         load.Reset(); virtualSteering = Vector3.zero; inwardSpeed = 0; TetherLength = 0; Unlock();
     }
     void Unlock() { if (lockedPlayer != null && lockedPlayer.FishingInputOwner == this) lockedPlayer.FishingInputOwner = null; lockedPlayer = null; }
-    protected override void OnDisable() { CancelFishing(); base.OnDisable(); }
+    protected override void OnDisable() { CancelFishing(); DimensionalSchool.Existing(this)?.Poles.Remove(this); base.OnDisable(); }
     protected override void OnDeath() { CancelFishing(); base.OnDeath(); }
     protected override void OnSimulationChanged() { if (!SimulationEnabled) CancelFishing(); base.OnSimulationChanged(); }
 }

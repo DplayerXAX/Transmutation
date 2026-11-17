@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Stationary hive: bounded nectar storage, timed fermentation, and physical honey harvest.</summary>
-[RequireComponent(typeof(SphereCollider))]
+/// <summary>Carryable hive: bounded nectar storage, timed fermentation, and physical honey harvest.</summary>
+[RequireComponent(typeof(SphereCollider), typeof(Rigidbody))]
 public sealed class GlowBeeNest : Creature
 {
     [Min(0.1f)] [SerializeField] private float fermentationSeconds = 14f;
@@ -18,15 +18,20 @@ public sealed class GlowBeeNest : Creature
     public int NectarPerHoney => nectarPerHoney;
     public float FermentationProgress => fermentation / fermentationSeconds;
     public int HoneyCount { get { RemoveHarvested(); return products.Count; } }
-    public override bool CanBeCarried => false;
-    protected override bool KeepCorpseStationary => true;
     public override string InteractionPrompt => !IsDead && HoneyCount > 0 ? "Harvest glowing honey" : null;
     internal void Configure(GlowBeeColony owner) => colony = owner;
     protected override void InitializeCreature()
     {
+        gameObject.layer = LayerMask.NameToLayer("Creature") >= 0 ? LayerMask.NameToLayer("Creature") : 9;
+        SetMovementPhysics(true, false);
         SetCreatureName("Glow Bee Nest");
         SetFoodAndDiet(FoodTag.Matter, FoodTag.None);
         GetComponent<SphereCollider>().radius = 0.48f;
+    }
+    protected override void OnCarryStarted()
+    {
+        transform.SetParent(null, true);
+        SetMovementPhysics(false, true);
     }
     public bool TryStoreNectar(float amount)
     {

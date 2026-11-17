@@ -8,7 +8,9 @@ public sealed class SeaAngelCreature : Creature
     [SerializeField] Transform visualRoot, leftFin, rightFin;
     [SerializeField] float swimSpeed = .5f, approachSpeed = .85f, turningSpeed = 110f;
     public float BodyLength => bodyLength;
-    public float RequiredPull => Mathf.Lerp(12, 28, Mathf.InverseLerp(.4f, 1f, bodyLength));
+    // Stable per individual, including across retries.
+    public float RequiredPull => Mathf.Lerp(18, 42, Mathf.InverseLerp(.4f, 1f, bodyLength)) *
+        Mathf.Lerp(.92f, 1.08f, unchecked((uint)appearanceSeed * 2654435761u) / (float)uint.MaxValue);
     public Vector3 MouthPosition => transform.position + transform.forward * bodyLength * .53f;
     public float SwimSpeed => currentSpeed;
     public bool Materialized => materialized;
@@ -18,6 +20,24 @@ public sealed class SeaAngelCreature : Creature
     public override bool CanBeCarried => materialized;
     public override bool CanBeCaptured => materialized;
     public override bool CanBeConsumed => materialized;
+    static readonly Unity.Profiling.ProfilerMarker swimMarker = new("SeaAngel.SwimAndFins");
+    internal bool SchoolAwake;
+    internal float SleepAfter;
+    internal bool Available => !materialized && !IsDead && SimulationEnabled && ReservedBy == null && Time.time >= freeAt;
+    internal MeshFilter[] Parts;
+    internal MaterialPropertyBlock[] Colors;
+    Renderer[] surfaces;
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        if (Application.isPlaying && !materialized && !IsDead) DimensionalSchool.For(this).Register(this);
+        else if (Application.isPlaying && materialized) DimensionalSchool.For(this).PhysicalFish.Add(this);
+    }
+    protected override void Update()
+    {
+        if (!materialized && !SchoolAwake) return;
+        using (swimMarker.Auto()) base.Update();
+    }
     Vector3 home;
     float clock, freeAt, flapPhase;
     float currentSpeed;
@@ -39,17 +59,25 @@ public sealed class SeaAngelCreature : Creature
         float hue = (float)rng.NextDouble();
         Color outer = Color.HSVToRGB(hue, .65f, 1); outer.a = .32f;
         Color inner = Color.HSVToRGB(Mathf.Repeat(hue + .25f + (float)rng.NextDouble() * .4f, 1), .85f, 1); inner.a = .78f;
-        var renderers = visualRoot.GetComponentsInChildren<Renderer>(); ownedMaterials = new Material[renderers.Length];
+        Parts = visualRoot.GetComponentsInChildren<MeshFilter>(); Colors = new MaterialPropertyBlock[Parts.Length];
+        var renderers = surfaces = visualRoot.GetComponentsInChildren<Renderer>(); ownedMaterials = new Material[renderers.Length];
         for (int i = 0; i < renderers.Length; i++)
         {
             var m = renderers[i].material; ownedMaterials[i] = m;
             Color color = renderers[i].name.Contains("Core") ? inner : outer;
             m.SetColor("_BaseColor", color); m.SetColor("_EmissionColor", color * .35f);
+            renderers[i].forceRenderingOff = !materialized;
+        }
+        for (int i=0; i<Parts.Length; i++)
+        {
+            Colors[i] = new MaterialPropertyBlock();
+            Colors[i].SetColor("_AngelColor", Parts[i].name.Contains("Core") ? inner : outer);
         }
     }
     public bool TryReserve(FishingPoleCreature pole)
     {
         if (materialized || IsDead || !SimulationEnabled || ReservedBy != null || Time.time < freeAt) return false;
+        DimensionalSchool.For(this).Wake(this);
         ReservedBy = pole; return true;
     }
     public void ReleaseReservation(FishingPoleCreature pole)
@@ -105,6 +133,9 @@ public sealed class SeaAngelCreature : Creature
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
             return false;
         }
+        DimensionalSchool.Existing(this)?.Remove(this);
+        DimensionalSchool.For(this).PhysicalFish.Add(this);
+        foreach (var surface in surfaces) surface.forceRenderingOff = false;
         currentSpeed = 0; struggleStroke = 0;
         var body = GetComponent<Rigidbody>();
         body.linearVelocity = body.angularVelocity = Vector3.zero;
@@ -136,8 +167,8 @@ public sealed class SeaAngelCreature : Creature
     protected override void OnCarryStarted() { if (ReservedBy != null) ReservedBy.CancelFishing(); home = transform.position; }
     protected override void OnCaptureStarted() { if (ReservedBy != null) ReservedBy.CancelFishing(); base.OnCaptureStarted(); }
     public override void PrepareForThrow(PlayerCreatureCarrier carrier) { freeAt = Time.time + 3; home = transform.position; }
-    protected override void OnDisable() { if (ReservedBy != null) ReservedBy.CancelFishing(); base.OnDisable(); }
-    protected override void OnDeath() { if (!CaughtRetrieval && ReservedBy != null) ReservedBy.CancelFishing(); base.OnDeath(); }
+    protected override void OnDisable() { if (ReservedBy != null) ReservedBy.CancelFishing(); DimensionalSchool.Existing(this)?.Remove(this); base.OnDisable(); }
+    protected override void OnDeath() { if (!CaughtRetrieval && ReservedBy != null) ReservedBy.CancelFishing(); DimensionalSchool.Existing(this)?.Remove(this); base.OnDeath(); }
     void OnDestroy() { if (ownedMaterials != null) foreach (var m in ownedMaterials) if (m != null) Destroy(m); }
 }
 

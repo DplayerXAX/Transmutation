@@ -22,7 +22,7 @@ public sealed class GlowHoney : Creature
             light.Configure(drop.GetComponent<Renderer>(), new Color(0.7f, 1f, 0.24f), 2.5f);
         }
     }
-    public override string CarriedPrompt => "[LMB] Coat aimed creature / surface with glowing honey";
+    public override string CarriedPrompt => "[Tap LMB] Drink honey    [Hold LMB] Coat aimed surface or yourself";
     public override string InteractionPrompt => !IsCarried && !IsDead ? "Eat honey    [Hold LMB] Coat yourself" : null;
     public override void ReceiveInteraction(CreatureInteraction interaction)
     {

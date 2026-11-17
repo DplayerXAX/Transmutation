@@ -259,7 +259,7 @@ public sealed class FishingPlayModeProbe : MonoBehaviour
     {
         foreach(var f in FindObjectsByType<SeaAngelCreature>(FindObjectsSortMode.None))
             if(!f.Materialized && f.ReservedBy==null) f.transform.position=new Vector3(30,10,30);
-        selected.transform.position=pole.LurePosition;
+        selected.transform.position=pole.LurePosition; DimensionalSchool.For(selected).Reindex(selected);
     }
     IEnumerator Cast(FishingPoleCreature pole, PlayerCreatureCarrier carrier)
     {
