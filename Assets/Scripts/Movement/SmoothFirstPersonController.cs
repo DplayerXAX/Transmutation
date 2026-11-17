@@ -21,7 +21,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         Climbing,
         Crouching,
         Sliding,
-        Air
+        Air,
+        ChainsawDrive
     }
 
     [Header("Feature Toggles")]
@@ -267,6 +268,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void Update()
     {
+        ValidateChainsaw();
         if (BubbleMovementBlocked)
         {
             horizontalInput = verticalInput = 0; jumpHeld = false; jumpPressedAt = float.MinValue;
@@ -281,12 +283,16 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             doubleJumpAvailable = allowDoubleJump;
 
         ReadMovementInput();
-        SpeedControl();
-        StateHandler();
+        if (chainsaw == null)
+        {
+            SpeedControl();
+            StateHandler();
+        }
+        else state = MovementState.ChainsawDrive;
         FollowCameraPosition();
         ReadCameraInput();
 
-        rb.linearDamping = grounded && !Flung && !ImpulseMotion && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
+        rb.linearDamping = chainsaw == null && grounded && !Flung && !ImpulseMotion && !(skateShoes != null && skateShoes.CanDrive) && groundAcceleration <= 0f ? groundDrag : 0f;
         currentVelocity = rb.linearVelocity.magnitude;
 
         if (!allowCrouch && crouching)
@@ -297,6 +303,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        ValidateChainsaw();
         if (FishingInputOwner != null && !IsFishingBlockedExternally)
         {
             // Fishing owns the keys, not the Rigidbody. Keep passive physics and
@@ -321,6 +328,13 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         }
         if (BubbleMovementBlocked) return;
         UpdateRideSupport();
+        if (chainsaw != null)
+        {
+            StepChainsaw();
+            ExtraGravity();
+            velocityBeforePhysics = rb.linearVelocity;
+            return;
+        }
         MovePlayer();
         ExtraGravity();
         Unstick();
@@ -329,6 +343,81 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             SlidingMovement();
         velocityBeforePhysics = rb.isKinematic ? Vector3.zero : rb.linearVelocity;
     }
+    private Chainsaw chainsaw;
+    internal bool ChainsawRiding => chainsaw != null;
+    private float sawHeading;
+    private Collider sawRiderCollider;
+    private bool SawMovementBlocked => rb == null || rb.isKinematic || BubbleMovementBlocked ||
+        freeze || restricted || unlimited || climbing || wallRunning || crouching || sliding || Flung;
+
+    internal bool EngageChainsaw(Chainsaw saw)
+    {
+        if (!isActiveAndEnabled || SawMovementBlocked || (chainsaw != null && chainsaw != saw)) return false;
+        if (chainsaw == null) sawHeading = LookYaw;
+        if (sawRiderCollider == null) sawRiderCollider = GetComponent<Collider>();
+        chainsaw = saw;
+        return true;
+    }
+
+    internal void EndChainsaw(Chainsaw saw)
+    {
+        if (chainsaw == saw) chainsaw = null;
+    }
+
+    private void ValidateChainsaw()
+    {
+        if (chainsaw != null && (SawMovementBlocked || !chainsaw.CanDrive(this)))
+            chainsaw.CancelRide();
+    }
+
+    private void OnDisable()
+    {
+        if (chainsaw != null) chainsaw.CancelRide();
+    }
+
+    private void StepChainsaw()
+    {
+        rb.useGravity = true;
+        rb.linearDamping = 0f;
+        RaycastHit ground = rideGround;
+        grounded = (rideSurface != null || CastGround(out ground)) &&
+            Vector3.Angle(ground.normal, Vector3.up) <= chainsaw.MaximumSlope &&
+            !(ownJumpRising && (exitingSlope || rb.linearVelocity.y > 0f));
+        float dt = Time.fixedDeltaTime;
+        Vector3 heading = Quaternion.Euler(0f, sawHeading, 0f) * Vector3.forward;
+        Vector3 relative = rb.linearVelocity - rideVelocity;
+        Vector3 tangent = Vector3.ProjectOnPlane(relative, ground.normal);
+        float speed = tangent.magnitude;
+        if (grounded)
+        {
+            float turn = horizontalInput * chainsaw.TurnRate * dt;
+            // Limit slip so sustained steering cannot wind the nose a full turn ahead of travel.
+            if (speed > 1f && turn != 0f)
+            {
+                float travelYaw = Mathf.Atan2(tangent.x, tangent.z) * Mathf.Rad2Deg;
+                float slip = Mathf.DeltaAngle(travelYaw, sawHeading);
+                if (Mathf.Sign(turn) == Mathf.Sign(slip))
+                    turn = Mathf.Sign(turn) * Mathf.Min(Mathf.Abs(turn), Mathf.Max(0f, 30f - Mathf.Abs(slip)));
+            }
+            sawHeading += turn;
+            yRotation += turn;
+            heading = Quaternion.Euler(0f, sawHeading, 0f) * Vector3.forward;
+            Vector3 wanted = Vector3.ProjectOnPlane(heading, ground.normal).normalized;
+            Vector3 direction = wanted;
+            if (speed >= 0.001f)
+            {
+                float maxDegrees = chainsaw.SideAcceleration * dt / speed * Mathf.Rad2Deg;
+                float angle = Vector3.SignedAngle(tangent, wanted, ground.normal);
+                direction = Quaternion.AngleAxis(Mathf.Clamp(angle, -maxDegrees, maxDegrees), ground.normal) * (tangent / speed);
+            }
+            float nextSpeed = Mathf.MoveTowards(speed, chainsaw.TopSpeed, chainsaw.Acceleration * dt);
+            rb.linearVelocity = rideVelocity + direction * nextSpeed;
+            // Teeth provide traction along the grade. Gravity still loads the body against the ground.
+            rb.AddForce(-Vector3.ProjectOnPlane(Physics.gravity, ground.normal), ForceMode.Acceleration);
+        }
+        chainsaw.UpdateRidePose(rb.position, heading, ground, grounded, speed);
+    }
+
     private Vector3 velocityBeforePhysics;
     public event System.Action<float> Landed;
     private void OnCollisionEnter(Collision collision)
@@ -385,11 +474,36 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private Vector3 GetGroundCheckOrigin()
     {
         float feetY = -playerHeight * 0.5f + groundCheckHalfExtents.y + groundCheckOriginYOffset;
-        return transform.position + Vector3.up * feetY;
+        return (chainsaw != null ? rb.position : transform.position) + Vector3.up * feetY;
+    }
+
+    private bool CastChainsawGround(out RaycastHit hit)
+    {
+        // Match the player's rounded foot. A thin box can begin inside an uphill face.
+        Bounds bounds = sawRiderCollider.bounds;
+        float radius = Mathf.Min(Mathf.Min(bounds.extents.x, bounds.extents.z), bounds.extents.y);
+        Vector3 footCenter = rb.position + Vector3.up * (bounds.min.y - transform.position.y + radius);
+        float lift = 0.35f;
+        int mask = groundOnAnyLayer ? AnyGroundMask | whatIsGround.value : whatIsGround.value;
+        int count = ReflectionPhysics.SphereCastNonAlloc(footCenter + Vector3.up * lift, radius * 0.94f,
+            Vector3.down, groundHits, lift + 0.22f, mask, QueryTriggerInteraction.Ignore);
+        hit = default;
+        float nearest = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            RaycastHit candidate = groundHits[i];
+            if (candidate.distance <= 0f || candidate.distance >= nearest ||
+                candidate.collider.attachedRigidbody == rb || candidate.collider.transform.IsChildOf(chainsaw.transform) ||
+                Vector3.Angle(candidate.normal, Vector3.up) > chainsaw.MaximumSlope) continue;
+            nearest = candidate.distance;
+            hit = candidate;
+        }
+        return hit.collider != null;
     }
 
     internal bool CastGround(out RaycastHit hit)
     {
+        if (chainsaw != null) return CastChainsawGround(out hit);
         if (WearingSkateShoes)
         {
             // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
@@ -458,6 +572,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             Jump();
         }
 
+        if (chainsaw != null) return;
+
         if (allowCrouch && keyboard[crouchAndSlideKey].wasPressedThisFrame &&
             horizontalInput == 0f && verticalInput == 0f)
         {
@@ -494,7 +610,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         float mouseX = mouseDelta.x * sensitivityX;
         float mouseY = mouseDelta.y * sensitivityY;
 
-        yRotation += mouseX;
+        yRotation = chainsaw == null ? yRotation + mouseX :
+            sawHeading + Mathf.Clamp(Mathf.DeltaAngle(sawHeading, yRotation) + mouseX, -85f, 85f);
         xRotation -= mouseY;
         // Positive xRotation looks down. When the limit tightens (starting a climb), ease up to it.
         float lookDown = climbing ? Mathf.Min(lookDownLimit, climbingLookDownLimit) : lookDownLimit;
@@ -925,7 +1042,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     /// <summary>Turns the view (used to turn the seated player towards a rest spot's scenic view).</summary>
     public void SetLook(float yaw, float pitch)
     {
-        yRotation = yaw;
+        yRotation = chainsaw == null ? yaw : sawHeading + Mathf.Clamp(Mathf.DeltaAngle(sawHeading, yaw), -85f, 85f);
         xRotation = pitch;
         if (cameraHolder != null) cameraHolder.rotation = Quaternion.Euler(xRotation, yRotation, 0f);
         if (orientation != null) orientation.rotation = Quaternion.Euler(0f, yRotation, 0f);

@@ -47,6 +47,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     private Creature pendingHeldUse;
     private FurnaceCreature stokedFurnace;
     private Spear pressedSpear;
+    private Chainsaw activeSaw;
     private float pendingHeldUseUntil;
     [SerializeField, Min(0.1f)] private float honeyCoatHoldTime = 0.45f;
     private GlowHoney pressedHoney;
@@ -68,10 +69,11 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
     private void Update()
     {
+        if (activeSaw != null && (carrier == null || carrier.CarriedCreature != activeSaw)) CancelSaw();
         if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick)
-        { stokedFurnace = null; CancelSpear(); return; }
+        { stokedFurnace = null; CancelSaw(); CancelSpear(); return; }
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
-        if (bugGrip != null && bugGrip.ConsumesInput) { stokedFurnace = null; pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSpear(); return; }
+        if (bugGrip != null && bugGrip.ConsumesInput) { stokedFurnace = null; pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSaw(); CancelSpear(); return; }
         // Daniel: Disable interaction during cutscenes,
         // bone riding, or when the application loses focus.
         // A mount without tentacle reins leaves left click to a held creature (a fire source lures it on).
@@ -85,9 +87,13 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             stokedFurnace = null;
             CancelHoneyGesture();
             UpdateHeldSqueeze(false);
+            CancelSaw();
             CancelSpear();
             return;
         }
+
+        if (activeSaw != null && (Mouse.current == null || !Mouse.current.leftButton.isPressed))
+            activeSaw.ReleaseTrigger();
 
         // Contextual coat owns this frame. Simultaneous F + LMB cannot also fire the held item.
         if (Keyboard.current != null && Keyboard.current[bloodCoatKey].wasPressedThisFrame &&
@@ -104,6 +110,18 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
                         Mouse.current.leftButton.isPressed;
 
         if (UpdateFurnace(Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame, leftHeld)) return;
+
+        if (carrier != null && carrier.CarriedCreature is Chainsaw saw)
+        {
+            CancelSpear();
+            if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                activeSaw = saw;
+                saw.PressTrigger();
+                if (!leftHeld) saw.ReleaseTrigger();
+            }
+            return;
+        }
 
         Spear spear = carrier != null ? carrier.CarriedCreature as Spear : null;
         if (spear != null)
@@ -265,8 +283,20 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         honeyGesture = false;
     }
 
+    private void CancelSaw()
+    {
+        if (activeSaw != null) activeSaw.CancelRide();
+        activeSaw = null;
+    }
+
+    private void OnApplicationFocus(bool focused)
+    {
+        if (!focused) CancelSaw();
+    }
+
     private void OnDisable()
     {
+        CancelSaw();
         stokedFurnace = null;
         if (squeezedSquirrel != null)
             squeezedSquirrel.SetSqueezeHeld(false, default);

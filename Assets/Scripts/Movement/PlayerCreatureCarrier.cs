@@ -414,6 +414,7 @@ private void FitCarryPoint(Creature creature)
     private void SnapHeld()
     {
         if (carryPoint == null) return;
+        if (CarriedCreature is Chainsaw saw && saw.ApplyRidePose()) return;
         Quaternion rotation = CarryYaw() * heldYawOffset;
         Vector3 centre = carryPoint.position;
         if (adaptiveHold && heldRadius > 0f && !bringingIn) centre = KeepOutOfWalls(centre);
@@ -492,6 +493,7 @@ private void FitCarryPoint(Creature creature)
         CancelRightMouse();
         pendingCreature = null;
         Creature dropped = CarriedCreature;
+        if (dropped is Chainsaw saw) saw.CancelRide();
         if (CarriedCreature != null) CarriedCreature.EndCarry(this);
         CarriedCreature = null;
         bringingIn = false;
