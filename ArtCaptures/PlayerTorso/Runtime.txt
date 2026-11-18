@@ -1,0 +1,2 @@
+PASS: 1 live player torso(s) generated in Play Mode; four render layers each, upright shoulder-to-hip pose and valid body scale; no added physics colliders.
+PASS: looking straight down with camera-space carry shoulders leaves torso pose stable; both hip cuffs overlap thigh roots (socket centres within 3.5 cm).
