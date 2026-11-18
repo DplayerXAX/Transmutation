@@ -25,6 +25,9 @@ public sealed class CreatureCombat : MonoBehaviour
     public CreatureCombatState State { get; private set; }
     public int Searches { get; private set; }
     public int Releases { get; private set; }
+    // Colony encounters opt in; authored encounters elsewhere preserve their existing target rules.
+    [SerializeField] private bool asuraOpponentsOnly;
+    public bool AsuraOpponentsOnly { get=>asuraOpponentsOnly; set=>asuraOpponentsOnly=value; }
     public event System.Action<CreatureCombatState> StateChanged;
 
     private void Awake()
@@ -37,7 +40,7 @@ public sealed class CreatureCombat : MonoBehaviour
 
     public bool Eligible(ICombatTarget candidate, float range)
     {
-        return CombatTarget.Eligible(owner, candidate) &&
+        return (!AsuraOpponentsOnly || (candidate is Creature other && AsuraTerritory.IsFighter(other))) && CombatTarget.Eligible(owner, candidate) &&
             CreatureSpatialQuery.TryGetSolid(candidate, out _) &&
             (candidate.AimPosition - owner.AimPosition).sqrMagnitude <= range * range;
     }

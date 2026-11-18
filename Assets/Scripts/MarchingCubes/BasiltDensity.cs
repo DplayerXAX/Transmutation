@@ -36,39 +36,36 @@ public sealed class BasiltDensity
     private readonly ConcurrentDictionary<Vector2Int,float> heights=new ConcurrentDictionary<Vector2Int,float>();
 
     private static Vector3 Buried(float x,float z,float radius)=>new Vector3(x,GroundHeight(x,z)-radius*0.8f,z);
+    // Deliberate traversable routes; density is concentrated in two forest pockets.
     private static Vector3[][] BuildRoads()=>new[]{
-        new[]{Buried(-24,-239,8),new Vector3(-41,16,-194),new Vector3(-62,30,-141),new Vector3(-74,19,-85),new Vector3(-83,48,-27),new Vector3(-54,34,38),new Vector3(-15,22,87),Buried(12,165,8)},
-        new[]{Buried(118,-211,9),new Vector3(85,27,-160),new Vector3(21,53,-113),new Vector3(-36,46,-60),new Vector3(-66,23,0),Buried(-91,85,9)},
-        new[]{Buried(-194,-143,8.5f),new Vector3(-143,37,-110),new Vector3(-81,48,-105),new Vector3(-20,26,-70),new Vector3(41,14,-32),Buried(97,2,8.5f)},
-        new[]{Buried(-184,163,10),new Vector3(-132,64,133),new Vector3(-89,79,74),new Vector3(-69,49,13),new Vector3(-27,23,-26),Buried(15,-54,10)},
-        new[]{Buried(21,216,7),new Vector3(-13,39,176),new Vector3(-51,63,122),new Vector3(-89,79,74),new Vector3(-126,44,22),Buried(-171,-4,7)},
-        new[]{Buried(185,-68,8),new Vector3(142,43,-32),new Vector3(95,58,2),new Vector3(47,39,21),new Vector3(14,14,4),Buried(-22,-27,8)}
+        new[]{Buried(-80,-205,8),new Vector3(-100,12,-160),new Vector3(-100,24,-115),new Vector3(-75,28,-80),new Vector3(-45,28,-62)},
+        new[]{Buried(-170,-30,9),new Vector3(-145,28,12),new Vector3(-110,62,46),new Vector3(-67,96,69),new Vector3(-40,85,95),Buried(-10,173,9)},
+        new[]{new Vector3(3,28,-12),new Vector3(39,22,-25),new Vector3(69,19,-44),new Vector3(105,17,-69),Buried(145,-105,8.5f)},
+        new[]{Buried(-204,135,10),new Vector3(-166,51,112),new Vector3(-131,75,99),new Vector3(-96,59,133),Buried(-65,208,10)},
+        new[]{Buried(191,28,7),new Vector3(158,28,42),new Vector3(137,48,82),new Vector3(141,32,131),Buried(180,193,7)},
+        new[]{Buried(26,198,8),new Vector3(62,43,197),new Vector3(104,67,191),new Vector3(150,47,211),Buried(202,238,8)}
     };
     private static Vine[] BuildCanopy()
     {
-        var result=new List<Vine>();var random=new System.Random(9271);
-        for(int i=0;i<32;i++)
+        var result=new List<Vine>();
+        void Arch(float ax,float az,float cx,float cz,float bx,float bz,float peak,float radius)
         {
-            float cx=-170+(i%6)*57+(float)random.NextDouble()*20;
-            float cz=-180+(i/6)*70+(float)random.NextDouble()*28;
-            if(cx>35 && cz>35 && cz<170)cx-=95;
-            float angle=(float)random.NextDouble()*Mathf.PI*2;
-            Vector2 direction=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle));
-            float span=58+(float)random.NextDouble()*70;
-            float radius=5.5f+(float)random.NextDouble()*6.5f;
-            Vector2 a=new Vector2(cx,cz)-direction*span,b=new Vector2(cx,cz)+direction*span;
-            a=new Vector2(Mathf.Clamp(a.x,-218,218),Mathf.Clamp(a.y,-259,259));b=new Vector2(Mathf.Clamp(b.x,-218,218),Mathf.Clamp(b.y,-259,259));
-            // Keep the winding valley as an exploration route; arches can roof it, their feet sit beside it.
-            float channelA=-24-18*Mathf.Sin(a.y*0.012f),channelB=-24-18*Mathf.Sin(b.y*0.012f);
-            if(Mathf.Abs(a.x-channelA)<24)a.x=channelA+(a.x<channelA?-32:32);
-            if(Mathf.Abs(b.x-channelB)<24)b.x=channelB+(b.x<channelB?-32:32);
-            float peak=32+(float)random.NextDouble()*56+GroundHeight(cx,cz);
-            result.Add(new Vine(new[]{Buried(a.x,a.y,radius),new Vector3(Mathf.Lerp(a.x,cx,0.55f),peak*0.8f,Mathf.Lerp(a.y,cz,0.55f)),new Vector3(cx,peak,cz),new Vector3(Mathf.Lerp(cx,b.x,0.55f),peak*0.7f,Mathf.Lerp(cz,b.y,0.55f)),Buried(b.x,b.y,radius)},radius));
+            result.Add(new Vine(new[]{Buried(ax,az,radius),new Vector3(Mathf.Lerp(ax,cx,0.55f),peak*0.78f,Mathf.Lerp(az,cz,0.55f)),new Vector3(cx,peak,cz),new Vector3(Mathf.Lerp(cx,bx,0.45f),peak*0.76f,Mathf.Lerp(cz,bz,0.45f)),Buried(bx,bz,radius)},radius));
         }
-        result.Add(new Vine(new[]{Buried(-220,-180,15),new Vector3(-160,67,-135),new Vector3(-85,113,-85),new Vector3(13,95,-45),new Vector3(112,63,-10),Buried(215,12,15)},15));
-        result.Add(new Vine(new[]{Buried(-205,188,13),new Vector3(-145,101,143),new Vector3(-50,123,87),new Vector3(38,98,38),Buried(171,-16,13)},13));
-        result.Add(new Vine(new[]{Buried(165,-227,12),new Vector3(107,80,-179),new Vector3(20,111,-126),new Vector3(-73,87,-69),Buried(-204,-23,12)},12));
-        result.Add(new Vine(new[]{Buried(195,240,14),new Vector3(160,75,197),new Vector3(86,105,179),new Vector3(8,74,198),Buried(-55,260,14)},14));
+        Arch(-210,-100,-170,-15,-155,104,52,9);
+        Arch(-200,10,-147,52,-113,165,76,11);
+        Arch(-216,162,-173,130,-115,187,58,8);
+        Arch(-178,-125,-143,-65,-172,24,39,6);
+        Arch(-210,205,-153,187,-77,230,64,9);
+        Arch(-125,-9,-142,69,-191,151,91,10);
+        Arch(135,-16,176,55,207,149,62,10);
+        Arch(195,-65,163,3,124,41,40,7);
+        Arch(126,158,164,174,218,209,72,12);
+        Arch(30,180,73,222,143,249,81,10);
+        Arch(162,57,196,113,211,219,91,9);
+        Arch(32,154,40,187,98,216,51,7);
+        Arch(125,-155,158,-108,197,-56,32,7);
+        Arch(70,-177,118,-147,167,-169,21,5);
         return result.ToArray();
     }
     public BasiltDensity(int seed,bool roots)
@@ -89,36 +86,31 @@ public sealed class BasiltDensity
     private static Column[] BuildColumns(int seed)
     {
         var result=new List<Column>();var random=new System.Random(seed);
-        void Patch(float cx,float cz,float extent,float radius,float top,float step)
+        void Patch(float cx,float cz,float rx,float rz,float radius,float top)
         {
-            int n=Mathf.CeilToInt(extent/radius);
-            for(int row=-n;row<=n;row++)for(int col=-n;col<=n;col++)
+            int nx=Mathf.CeilToInt(rx/(radius*1.5f)),nz=Mathf.CeilToInt(rz/(radius*1.732f));
+            for(int col=-nx;col<=nx;col++)for(int row=-nz;row<=nz;row++)
             {
-                Vector2 p=new Vector2(cx+col*radius*1.72f+(row&1)*radius*0.86f,cz+row*radius*1.49f);
-                float d=Vector2.Distance(p,new Vector2(cx,cz))/extent;
-                if(d>1 || Mathf.Abs(p.x)>222 || Mathf.Abs(p.y)>264)continue;
-                if(d>0.85f && random.NextDouble()<0.3)continue;
-                float tier=d<0.45f?2:d<0.73f?1:0;
-                result.Add(new Column(p,radius*(0.995f+(float)random.NextDouble()*0.025f),Mathf.Max(GroundHeight(p.x,p.y)+2,top+tier*step)));
+                Vector2 p=new Vector2(cx+col*radius*1.5f,cz+(row+(col&1)*0.5f)*radius*1.732f);
+                float d=new Vector2((p.x-cx)/rx,(p.y-cz)/rz).magnitude;
+                if(d>1 || (d>0.91f && random.NextDouble()<0.18))continue;
+                result.Add(new Column(p,radius*1.012f,Mathf.Max(GroundHeight(p.x,p.y)+3,top)));
             }
         }
-        Patch(-128,-82,87,5.2f,12,7);
-        Patch(-156,34,80,9.2f,32,11);
-        Patch(-132,132,70,12,55,14);
-        Patch(137,-103,60,6.5f,24,8);
-        Patch(157,-4,66,12,38,8);
-        Patch(-47,203,58,7,30,7);
-        Patch(159,204,45,9,31,6);
-        result.Add(new Column(new Vector2(-167,145),35,100));
-        result.Add(new Column(new Vector2(-129,182),26,116));
-        result.Add(new Column(new Vector2(159,26),35,62));
-        result.Add(new Column(new Vector2(-102,-155),22,33));
-        for(int i=0;i<76;i++)
-        {
-            float angle=i*Mathf.PI*2/76;float x=Mathf.Cos(angle)*212,z=Mathf.Sin(angle)*250;
-            if(z<-211 && Mathf.Abs(x)<57)continue;
-            result.Add(new Column(new Vector2(x,z),10+(float)random.NextDouble()*14,45+(float)random.NextDouble()*72+18*Mathf.Sin(angle*3)));
-        }
+        Patch(-36,-24,68,61,7,36);
+        Patch(-56,35,58,43,9,58);
+        Patch(-63,65,39,32,9,81);
+        Patch(-61,79,22,20,10,104);
+        Patch(-104,-30,28,39,6,27);
+        Patch(18,28,24,30,7,29);
+        Patch(-130,-151,29,23,6,23);
+        Patch(104,-92,35,28,8,26);
+        Patch(139,-124,18,22,8,41);
+        Patch(-161,154,32,25,9,49);
+        Patch(169,205,30,23,8,37);
+        Patch(13,218,23,19,6,23);
+        Patch(197,82,21,29,7,39);
+        Patch(-195,-207,18,20,7,32);
         return result.ToArray();
     }
     public static float GroundHeight(float x,float z)
@@ -157,3 +149,4 @@ public sealed class BasiltDensity
         points.Add(keys[keys.Length-1]);return points.ToArray();
     }
 }
+

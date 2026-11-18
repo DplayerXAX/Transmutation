@@ -28,13 +28,13 @@ public static partial class BasiltSceneSetup
         }
         basalt=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/BasiltColumns.mat");
         basalt.shader=Shader.Find("Capstone/World/BlackFlowContours");
-        basalt.SetColor("_BackgroundColor",new Color(0.105f,0.115f,0.108f));
-        basalt.SetColor("_LineColor",new Color(0.40f,0.43f,0.40f));basalt.SetColor("_DotColor",new Color(0.78f,0.80f,0.75f));
+        basalt.SetColor("_BackgroundColor",new Color(0.28f,0.30f,0.28f));
+        basalt.SetColor("_LineColor",new Color(0.46f,0.49f,0.44f));basalt.SetColor("_DotColor",new Color(0.78f,0.80f,0.75f));
         basalt.SetFloat("_PatternScale",0.11f);basalt.SetFloat("_LineDensity",8);basalt.SetFloat("_LineWidth",0.007f);
         basalt.SetFloat("_DotDensity",0.17f);basalt.SetFloat("_FlowSpeed",0.004f);basalt.SetFloat("_FacetStrength",0.7f);EditorUtility.SetDirty(basalt);
         vine=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/BasiltVines.mat");
-        vine.SetColor("_BaseColor",new Color(0.12f,0.24f,0.14f));vine.SetColor("_FiberColor",new Color(0.36f,0.49f,0.28f));
-        vine.SetColor("_ShadowColor",new Color(0.025f,0.047f,0.029f));vine.SetFloat("_GrainScale",0.6f);EditorUtility.SetDirty(vine);
+        vine.SetColor("_BaseColor",new Color(0.22f,0.36f,0.19f));vine.SetColor("_FiberColor",new Color(0.36f,0.49f,0.28f));
+        vine.SetColor("_ShadowColor",new Color(0.06f,0.09f,0.05f));vine.SetFloat("_GrainScale",0.6f);EditorUtility.SetDirty(vine);
         var ground=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/BasiltGround.mat");
         ground.SetColor("_LineColor",new Color(0.18f,0.23f,0.19f));ground.SetColor("_LineColor2",new Color(0.32f,0.36f,0.30f));
         ground.SetFloat("_HatchStrength",0.55f);EditorUtility.SetDirty(ground);
@@ -47,11 +47,11 @@ public static partial class BasiltSceneSetup
             s.FindProperty("surfaceMaterial").objectReferenceValue=roots?vine:ground;
             s.FindProperty("innerMaterial").objectReferenceValue=roots?vine:ground;
             s.FindProperty("placePlayerOnSurface").boolValue=false;
-            var recipe=s.FindProperty("generationRecipe");recipe.FindPropertyRelative("version").intValue=3;
-            recipe.FindPropertyRelative("verticalBounds").vector2Value=roots?new Vector2(-24,100):new Vector2(-30,86);
+            var recipe=s.FindProperty("generationRecipe");recipe.FindPropertyRelative("version").intValue=4;
+            recipe.FindPropertyRelative("verticalBounds").vector2Value=roots?new Vector2(-24,116):new Vector2(-30,86);
             recipe.FindPropertyRelative("safeSpawn").vector3Value=new Vector3(-24,GroundHeightAtSpawn()+1.25f,-267);
             s.ApplyModifiedPropertiesWithoutUndo();
-            w.SculptData.Freeze(w.CaptureLayout(out var checks),checks,"Basilt v3 / enclosing megavine jungle");EditorUtility.SetDirty(w.SculptData);
+            w.SculptData.Freeze(w.CaptureLayout(out var checks),checks,"Basilt v3 / central basalt battleground");EditorUtility.SetDirty(w.SculptData);
             string stem=roots?"BasiltRoots":"BasiltLand";
             File.WriteAllBytes(Folder+"/"+stem+"Chunks.bytes",w.BuildChunkCache());
             AssetDatabase.ImportAsset(Folder+"/"+stem+"Chunks.bytes",ImportAssetOptions.ForceUpdate);
@@ -59,7 +59,7 @@ public static partial class BasiltSceneSetup
         }
         meshIndex=40000;
         var environment=new GameObject(JungleRoot).transform;
-        var columns=new GameObject("Individual basalt - enclosing walls and shared terraces").transform;columns.SetParent(environment);
+        var columns=new GameObject("Individual basalt - central mountain and outcrops").transform;columns.SetParent(environment);
         foreach(var c in new BasiltDensity(1147,false).Columns)
         {
             float bottom=BasiltDensity.GroundHeight(c.centre.x,c.centre.y);
@@ -68,7 +68,7 @@ public static partial class BasiltSceneSetup
             bottom-=2;Hex(columns,new Vector3(c.centre.x,bottom,c.centre.y),c.radius,Mathf.Max(2,c.top-bottom));
         }
         var canopy=new GameObject("Independent giant arches and canopy sweeps").transform;canopy.SetParent(environment);
-        var thorns=new GameObject("Radial hooked thorns - all around the vines").transform;thorns.SetParent(environment);
+        var thorns=new GameObject("Hooked thorns - clear walking crowns").transform;thorns.SetParent(environment);
         for(int i=0;i<BasiltDensity.Canopy.Length;i++)
         {
             var v=BasiltDensity.Canopy[i];var path=BasiltDensity.SamplePath(v.keys,18);var radii=VaryingRadii(path,v.radius,i);
@@ -78,17 +78,18 @@ public static partial class BasiltSceneSetup
         for(int i=0;i<BasiltDensity.Roads.Length;i++)
         {var p=BasiltDensity.SampleRoad(i);ThornBelt(thorns,p,Enumerable.Repeat(BasiltDensity.RoadRadii[i],p.Length).ToArray(),i+100);}
         DressJungleFloor(environment);
+        BuildBattleApproaches(environment);
         var player=Object.FindFirstObjectByType<SmoothFirstPersonController>();
         Vector3 spawn=new Vector3(-24,GroundHeightAtSpawn()+1.25f,-267);
         player.transform.root.position+=spawn-player.transform.position;player.SetLook(0,-6);
         foreach(var c in player.transform.root.GetComponentsInChildren<Camera>(true))c.farClipPlane=1000;
         RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
-        RenderSettings.fogDensity=0.0018f;RenderSettings.fogColor=new Color(0.105f,0.15f,0.135f);
+        RenderSettings.fogDensity=0.0007f;RenderSettings.fogColor=new Color(0.105f,0.15f,0.135f);
         RenderSettings.ambientSkyColor=new Color(0.42f,0.50f,0.44f);RenderSettings.ambientEquatorColor=new Color(0.25f,0.32f,0.27f);
         if(RenderSettings.sun!=null){RenderSettings.sun.intensity=1.9f;RenderSettings.sun.transform.rotation=Quaternion.Euler(28,-37,0);}
         AssetDatabase.SaveAssets();EditorSceneManager.SaveScene(scene);
         var view=SceneView.lastActiveSceneView;if(view!=null){view.sceneLighting=true;view.drawGizmos=false;view.LookAt(new Vector3(-30,31,-35),Quaternion.Euler(18,-15,0),180,false,true);view.Repaint();}
-        Debug.Log("Basilt jungle rebuilt: 42 major vines, 480x576m rolling terrain, individual basalt colonnades, radial thorns.");
+        Debug.Log("Basilt jungle rebuilt: 20 major vines, central battle shelf and mountain, two vine groves, ground approaches.");
     }
     private static float GroundHeightAtSpawn()=>BasiltDensity.GroundHeight(-24,-267);
     private static float[] VaryingRadii(Vector3[] path,float r,int seed)
@@ -112,7 +113,7 @@ public static partial class BasiltSceneSetup
                 float angle=j*Mathf.PI*2/5+i*0.72f+seed;
                 Vector3 radial=(right*Mathf.Cos(angle)+up*Mathf.Sin(angle)).normalized;
                 Vector3 at=path[i]+radial*(radii[i]-0.15f);
-                if(at.y<BasiltDensity.GroundHeight(at.x,at.z)-0.3f)continue;
+                if(radial.y>0.35f || at.y<BasiltDensity.GroundHeight(at.x,at.z)-0.3f)continue;
                 float length=2.4f+radii[i]*0.38f+(float)random.NextDouble()*2;
                 float width=0.8f+radii[i]*0.09f;
                 Vector3 mid=at+radial*length*0.65f-forward*length*0.08f;
@@ -138,15 +139,19 @@ public static partial class BasiltSceneSetup
         for(int i=0;i<160;i++)
         {
             float x=R(-208,208),z=R(-248,250);if(x>35 && x<130 && z>40 && z<165)continue;
+            if(x>-115 && x<50 && z>-100 && z<125)continue;
             float y=BasiltDensity.GroundHeight(x,z),r=R(0.65f,2.7f);
             Hex(fragments,new Vector3(x,y-0.3f,z),r,R(0.6f,3.6f));
         }
-        for(int i=0;i<28;i++)
+        for(int i=0;i<12;i++)
         {
             float x=R(-175,150),z=R(-205,185),h=BasiltDensity.GroundHeight(x,z);
-            if(x>35 && z>40)continue;
+            if((x>35 && z>40) || (x>-115 && x<50 && z>-100 && z<125))continue;
             var path=BasiltDensity.SamplePath(new[]{new Vector3(x-15,h-2,z-15),new Vector3(x-5,h+3,z-2),new Vector3(x+6,h+2,z+8),new Vector3(x+18,BasiltDensity.GroundHeight(x+18,z+15)-2,z+15)},8);
             Tube("Ground rootlet",fragments,path,null,vine,true,10,1.8f,0.3f);
         }
     }
 }
+
+
+
