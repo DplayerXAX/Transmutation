@@ -12,7 +12,7 @@ public sealed class GlimLantern : CaveGlowCreature
 {
     [SerializeField] private float size = 0.32f;
     [SerializeField] private float driftSpeed = 0.7f;
-    [SerializeField] private float guidedSpeed = 2.6f;
+    [SerializeField] private float guidedSpeed = 7f;
     [SerializeField] private float fleeSpeed = 3.2f;
     [Tooltip("Seconds before an eaten glim buds again from a snail.")]
     [SerializeField] private float regrowSeconds = 25f;
@@ -98,7 +98,7 @@ public sealed class GlimLantern : CaveGlowCreature
                 desired = Vector3.zero;
             else if (Guide.HasValue)
             {
-                desired = Guide.Value - transform.position;
+                desired = GuidedTarget(size * 0.6f, false, Vector3.up) - transform.position;
                 speed = guidedSpeed;
                 // Wherever it is led, it settles there.
                 if (desired.magnitude < 1.5f) { home = transform.position; wander = home; }
@@ -137,7 +137,7 @@ public sealed class GlimLantern : CaveGlowCreature
             Vector3 want = desired.sqrMagnitude > 1e-4f ? Vector3.ClampMagnitude(desired, speed) : Vector3.zero;
             // A gentle bob even when it holds still.
             want += Vector3.up * Mathf.Sin(Time.time * 1.3f + phase) * 0.12f;
-            velocity = Follow(velocity, want, Guide.HasValue ? 2.5f : 1.4f, deltaTime);
+            velocity = Follow(velocity, want, Guide.HasValue ? 7f : 1.4f, deltaTime);
             Vector3 p = transform.position;
             Fly(ref p, velocity * deltaTime, size * 0.6f);
             MoveCreature(p - transform.position);

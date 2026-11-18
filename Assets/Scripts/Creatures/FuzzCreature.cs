@@ -438,12 +438,14 @@ public sealed class FuzzCreature : Creature
             chainIndex = -1;
             return;
         }
-        if (!following && distance < noticeRadius)
+        // With the creature song on, it joins only after its phrase has been played.
+        bool called = CreatureSong.IsFollowing(this);
+        if (!following && (CreatureSong.Active ? called : distance < noticeRadius))
         {
             Chain.Add(this);
             following = true;
         }
-        else if (following && distance > loseRadius)
+        else if (following && (CreatureSong.Active ? !called : distance > loseRadius))
         {
             LeaveChain();
             home = transform.position;

@@ -72,6 +72,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         if (activeSaw != null && (carrier == null || carrier.CarriedCreature != activeSaw)) CancelSaw();
         if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick)
         { stokedFurnace = null; CancelSaw(); CancelSpear(); return; }
+        if (CreatureSong.ConsumesMouse) { stokedFurnace = null; pendingHeldUse = null; CancelHoneyGesture(); CancelSaw(); CancelSpear(); return; } // playing notes to a creature
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
         if (bugGrip != null && bugGrip.ConsumesInput) { stokedFurnace = null; pendingHeldUse = null; UpdateHeldSqueeze(false); CancelSaw(); CancelSpear(); return; }
         // Daniel: Disable interaction during cutscenes,

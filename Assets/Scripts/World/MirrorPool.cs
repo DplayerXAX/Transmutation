@@ -66,7 +66,7 @@ public sealed class MirrorPool : MonoBehaviour
         var glowAt = new GameObject("Pool glow").transform;
         glowAt.SetParent(go.transform, false);
         glowAt.localPosition = Vector3.up * 1.5f;
-        CaveReveal.Add(glowAt, radius * 3f, glow, () => 1f);
+        CaveReveal.Add(glowAt, radius * 1.8f, glow, () => 0.55f);
 
         // Stalagmites round the rim (their mirror images hang down in the water), in the terrain's own material.
         for (int i = 0; i < stalagmites; i++)

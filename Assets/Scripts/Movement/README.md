@@ -144,11 +144,13 @@ The component wins over the table, so a value can be tried live on one object in
 
 ### Conductor baton (`ConductorBaton` + `BatonItem`, dark caves)
 
+Off by default now: `CreatureSong` (World README) replaced it. Set `DarkTunnels.UseBaton` to bring it back. While the player is facing a creature to play to it, `CreatureSong.ConsumesMouse` keeps the carrier and interactor off the mouse.
+
 A hand-held thing: `BatonItem` is a non-living `Creature` (like `CaveHarvestItem`), so the baton is carried in the hand,
 put down / thrown with RMB, picked up with RMB and put away on a body slot with the mouse wheel like any creature.
 It lives in an extra **tool slot** of the hotbar (`BodyMounts.SetTool`): a diamond a little apart to the right of the four
 dots, reached with the mouse wheel like the others. Selecting it puts the hand's creature away on its body part and brings
-the baton out; leaving it hides the baton. It can never be put down or thrown (RMB never drops a tool).
+the baton out; leaving it hides the baton. It can never be put down or thrown (RMB never drops a tool). If anything takes it out of the hand while its slot is selected, `BodyMounts` puts it straight back. It is self-lit and unfogged so it stays visible in the dark.
 For now the player has it from the start, tool slot selected (`DarkTunnels.startWithBaton`); with that off it is found in
 the fist of the skeleton in the deepest chamber, which opens only while a Glim is within 3.6 m (walk up to the open hand).
 It is held by its handle through a `HoldGrip` set in `ConductorBaton.Build` (`heldEuler` 74, 10, 0; `handNudge`).
@@ -159,6 +161,7 @@ While it is the thing in the hand (glow creatures within 45 m hear it):
 | RMB | next note (E, G, B, D); the tip takes the note's colour (E violet, G gold, B teal, D rose) and the creatures of that note glow a little brighter; the baton is never put down |
 | hold LMB | play the note (it sounds on every beat, Wwise `Play_Crate_<note>`): every creature of that note moves towards the rock under the crosshair, each its own way; every other creature clashes with it and is muted while it sounds (silent, dim, still, unheard); release to stop |
 
+Changing note pops a small glowing note off the tip (`BatonNotePop`, as many heads as the note's mesa crystals). The hand and arm take part, a little behind the baton (`PlayerCreatureCarrier.HeldViewOffset`): lifted while playing, bobbing on the beat, following the aim, a flick on a note change.
 A thin vibrating thread runs from the tip to the crosshair point while playing. In the hand the baton is drawn in the visible right hand (`FirstPersonBody.HandAnchor`) right after the arm is posed (`FirstPersonBody.LimbsPosed`), so looking up or down never separates them.
 
 ### Mouse lock after leaving the window (`UI/CursorRelock`)

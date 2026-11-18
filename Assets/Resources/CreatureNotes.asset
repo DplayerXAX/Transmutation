@@ -1,0 +1,235 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ab199ae217d49dea098c5b4f83fbad4, type: 3}
+  m_Name: CreatureNotes
+  m_EditorClassIdentifier: Assembly-CSharp::CreatureNoteTable
+  entries:
+  - creatureType: GlimLantern
+    note: 0
+    role: 0
+    motion: 1
+  - creatureType: LightMoth
+    note: 0
+    role: 0
+    motion: 1
+  - creatureType: GlowBee
+    note: 0
+    role: 0
+    motion: 1
+  - creatureType: GlowBeeNest
+    note: 0
+    role: 0
+    motion: 2
+  - creatureType: FlashBloom
+    note: 0
+    role: 0
+    motion: 2
+  - creatureType: AfterglowPod
+    note: 0
+    role: 0
+    motion: 3
+  - creatureType: MushroomEssence
+    note: 0
+    role: 0
+    motion: 3
+  - creatureType: SeaAngelCreature
+    note: 0
+    role: 0
+    motion: 1
+  - creatureType: GlyphDroplet
+    note: 0
+    role: 0
+    motion: 3
+  - creatureType: ErosiveFluidDroplet
+    note: 0
+    role: 0
+    motion: 3
+  - creatureType: BellSnail
+    note: 1
+    role: 1
+    motion: 0
+  - creatureType: CisternSnail
+    note: 1
+    role: 1
+    motion: 0
+  - creatureType: BubbleFlower
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: RecycleFlower
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: LeafGarden
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: LeafGardenWalker
+    note: 1
+    role: 1
+    motion: 0
+  - creatureType: MushroomTree
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: BounceShroom
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: Squirrel
+    note: 1
+    role: 1
+    motion: 0
+  - creatureType: SquirrelFood
+    note: 1
+    role: 1
+    motion: 3
+  - creatureType: SquirrelNest
+    note: 1
+    role: 1
+    motion: 2
+  - creatureType: GlowHoney
+    note: 1
+    role: 1
+    motion: 3
+  - creatureType: CaveHarvestItem
+    note: 1
+    role: 1
+    motion: 3
+  - creatureType: RestSpot
+    note: 1
+    role: 1
+    motion: 3
+  - creatureType: ToneCrate
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: OreColossus
+    note: 2
+    role: 2
+    motion: 2
+  - creatureType: GeodeLarva
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: CompostCreature
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: GooCreature
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: TentacleCreature
+    note: 2
+    role: 1
+    motion: 0
+  - creatureType: ChameleonCreature
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: FishingPoleCreature
+    note: 2
+    role: 2
+    motion: 2
+  - creatureType: BellowsCreature
+    note: 2
+    role: 2
+    motion: 0
+  - creatureType: TrappingBubble
+    note: 2
+    role: 2
+    motion: 3
+  - creatureType: LeashBubble
+    note: 2
+    role: 2
+    motion: 3
+  - creatureType: SkyWeb
+    note: 2
+    role: 1
+    motion: 2
+  - creatureType: RewindCoil
+    note: 2
+    role: 2
+    motion: 3
+  - creatureType: CorruptSeed
+    note: 2
+    role: 2
+    motion: 3
+  - creatureType: LureMaw
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: FireEater
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: FireBubble
+    note: 3
+    role: 2
+    motion: 3
+  - creatureType: FireFlower
+    note: 3
+    role: 2
+    motion: 2
+  - creatureType: FireSource
+    note: 3
+    role: 2
+    motion: 2
+  - creatureType: FuzzCreature
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: BlastCore
+    note: 3
+    role: 2
+    motion: 3
+  - creatureType: SkySpider
+    note: 3
+    role: 1
+    motion: 1
+  - creatureType: BirdCreature
+    note: 3
+    role: 0
+    motion: 1
+  - creatureType: BirdBones
+    note: 3
+    role: 2
+    motion: 3
+  - creatureType: CeilingBatBug
+    note: 3
+    role: 2
+    motion: 1
+  - creatureType: CeilingBatBugEgg
+    note: 3
+    role: 2
+    motion: 3
+  - creatureType: GeneralAsura
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: MeleeAsura
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: RangedAsura
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: RollingAsura
+    note: 3
+    role: 2
+    motion: 0
+  - creatureType: ProjectileCreature
+    note: 3
+    role: 2
+    motion: 3

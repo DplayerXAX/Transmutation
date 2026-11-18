@@ -22,6 +22,12 @@ public abstract class CaveGlowCreature : Creature
     [Tooltip("The baton note this creature answers to (it moves on its note; other notes mute it while they sound).")]
     [SerializeField] protected CaveNote note;
     public CaveNote Note { get => note; set => note = value; }
+    /// <summary>Its part in the music (melody, accompaniment, drums).</summary>
+    public SongRole Role => CreatureNoteTable.RoleFor(GetType());
+    /// <summary>It has been played to and is following the player (CreatureSong).</summary>
+    public bool Following { get; set; }
+    /// <summary>Rough radius for aiming at it.</summary>
+    public virtual float AimSize => 0.8f;
 
     private static readonly Color[] NoteColors =
     {
@@ -98,7 +104,11 @@ public abstract class CaveGlowCreature : Creature
         if (!Soloed) Guide = null;
     }
 
-    public void SetGuide(Vector3? point) => Guide = Soloed ? point : null;
+    public void SetGuide(Vector3? point)
+    {
+        Guide = Soloed ? point : null;
+        if (Guide == null) route.Clear();
+    }
 
     /// <summary>The loudest creature of type T this one hears, and how loud (0..1, 0 = none).</summary>
     protected T Hear<T>(out float loudness, float earBoost = 1f) where T : CaveGlowCreature
@@ -171,7 +181,7 @@ public abstract class CaveGlowCreature : Creature
             var revealAt = new GameObject("Reveal light").transform;
             revealAt.SetParent(parent, false);
             revealAt.localPosition = local;
-            reveals.Add(CaveReveal.Add(revealAt, size * 3f, glowColor, () => Hidden ? 0f : Mathf.Clamp01(shownGlow)));
+            reveals.Add(CaveReveal.Add(revealAt, size * 2.6f, glowColor, () => Hidden ? 0f : Mathf.Clamp01(shownGlow)));
             // Optional faint shafts of light in the air round it (off: the reveal alone, like a stencil).
             if (!RevealShafts) return null;
             if (volumeShader == null) volumeShader = Shader.Find("Capstone/Cave/LightVolume");
@@ -276,6 +286,9 @@ public abstract class CaveGlowCreature : Creature
         lamp.intensity = intensity;
         lamp.shadows = LightShadows.None;
         lamp.renderMode = LightRenderMode.ForcePixel;
+        // The terrain shader steps its light into flat levels, which would draw a hard ring where a lamp ends.
+        // Rock is lit only by the smooth reveal; the lamp still lights bodies.
+        if (LightStyle == LightLook.Reveal) lamp.cullingMask = ~(1 << 7);
         lampIntensity = intensity;
         return lamp;
     }
@@ -312,7 +325,7 @@ public abstract class CaveGlowCreature : Creature
     protected void UpdateGlow(float brightness, float deltaTime)
     {
         float target = Hidden ? 0f : brightness * (Aimed ? 1.35f : 1f) * (Soloed ? 1.25f : 1f);
-        shownGlow = Mathf.MoveTowards(shownGlow, target, deltaTime * 1.5f);
+        shownGlow = Mathf.MoveTowards(shownGlow, target, deltaTime * 5f);
         foreach (Material m in glowMaterials) m.SetFloat("_Glow", shownGlow);
         for (int i = 0; i < haloMaterials.Count; i++)
         {
@@ -385,6 +398,130 @@ public abstract class CaveGlowCreature : Creature
         return false;
     }
 
+    // ---------------- Finding a way round, while guided ----------------
+
+    private readonly List<Vector3> route = new List<Vector3>();
+    private Vector3 routeGoal, progressFrom;
+    private float progressTimer, nextPlan;
+    private bool progressStarted;
+    private static int planFrame = -1;
+    private const int MaxSearch = 700;
+
+    /// <summary>
+    /// The point to head for while guided: the guide itself while the way is open, otherwise the next point of a route
+    /// round whatever is in between. If no way is found it goes as near as it can and waits there.
+    /// Flyers (crawler false) search the open air; crawlers search along the rock with their own Crawl rules.
+    /// </summary>
+    protected Vector3 GuidedTarget(float radius, bool crawler, Vector3 surfaceNormal, float minUp = -2f)
+    {
+        Vector3 p = transform.position, goal = Guide ?? p;
+        if (!Guide.HasValue) { route.Clear(); progressStarted = false; return p; }
+        float reach = crawler ? 0.7f : 1.1f;
+        while (route.Count > 0 && Vector3.Distance(p, route[0]) < reach) route.RemoveAt(0);
+
+        // Not getting anywhere?
+        if (!progressStarted) { progressStarted = true; progressFrom = p; progressTimer = 0f; }
+        progressTimer += Time.deltaTime;
+        bool stuck = false;
+        if (progressTimer >= 0.45f)
+        {
+            stuck = Vector3.Distance(p, progressFrom) < 0.18f && Vector3.Distance(p, goal) > 1.6f;
+            progressFrom = p;
+            progressTimer = 0f;
+        }
+        bool blocked = !crawler && Physics.SphereCast(p, radius, (goal - p).normalized, out _,
+            Vector3.Distance(p, goal), TerrainMask, QueryTriggerInteraction.Ignore);
+        bool goalMoved = route.Count > 0 && Vector3.Distance(goal, routeGoal) > 3f;
+        if ((stuck || goalMoved || blocked && route.Count == 0) && Time.time >= nextPlan && planFrame != Time.frameCount)
+        {
+            planFrame = Time.frameCount;
+            nextPlan = Time.time + (stuck ? 0.5f : 0.8f) + Random.value * 0.2f;
+            routeGoal = goal;
+            FindRoute(p, goal, radius, crawler, surfaceNormal, minUp);
+        }
+        if (!crawler && !blocked) route.Clear();   // the way has opened
+        return route.Count > 0 ? route[0] : blocked ? p : goal;
+    }
+
+    private void FindRoute(Vector3 start, Vector3 goal, float radius, bool crawler, Vector3 startNormal, float minUp)
+    {
+        float cell = crawler ? 0.8f : 2f, step = crawler ? 1f : 2f;
+        var points = new List<Vector3> { start };
+        var normals = new List<Vector3> { startNormal };
+        var parents = new List<int> { -1 };
+        var costs = new List<float> { 0f };
+        var open = new List<int> { 0 };
+        var seen = new HashSet<Vector3Int> { Key(start, cell) };
+        int best = 0;
+        float bestLeft = Vector3.Distance(start, goal);
+        while (open.Count > 0 && points.Count < MaxSearch)
+        {
+            int at = 0;
+            float lowest = float.MaxValue;
+            for (int i = 0; i < open.Count; i++)
+            {
+                int n = open[i];
+                float score = costs[n] + Vector3.Distance(points[n], goal) * 1.4f;
+                if (score < lowest) { lowest = score; at = i; }
+            }
+            int current = open[at];
+            open.RemoveAt(at);
+            Vector3 from = points[current], normal = normals[current];
+            int count = crawler ? 8 : 6;
+            Vector3 side = crawler ? Vector3.Cross(normal, Mathf.Abs(normal.y) < 0.9f ? Vector3.up : Vector3.right).normalized : Vector3.zero;
+            for (int d = 0; d < count; d++)
+            {
+                Vector3 q = from, qn = normal;
+                if (crawler)
+                {
+                    Vector3 dir = Quaternion.AngleAxis(d * 45f, normal) * side;
+                    if (!Crawl(ref q, ref qn, dir, step, minUp)) continue;
+                }
+                else
+                {
+                    Vector3 dir = d == 0 ? Vector3.right : d == 1 ? Vector3.left : d == 2 ? Vector3.forward : d == 3 ? Vector3.back : d == 4 ? Vector3.up : Vector3.down;
+                    if (Physics.SphereCast(from, radius, dir, out _, step + 0.1f, TerrainMask, QueryTriggerInteraction.Ignore)) continue;
+                    q = from + dir * step;
+                }
+                if (!seen.Add(Key(q, cell))) continue;
+                points.Add(q);
+                normals.Add(qn);
+                parents.Add(current);
+                costs.Add(costs[current] + step);
+                open.Add(points.Count - 1);
+                float left = Vector3.Distance(q, goal);
+                if (left < bestLeft) { bestLeft = left; best = points.Count - 1; }
+            }
+            if (bestLeft < step) break;
+        }
+        route.Clear();
+        for (int n = best; n > 0; n = parents[n]) route.Insert(0, points[n]);
+        if (!crawler) Shorten(start, radius);
+        if (bestLeft < step * 1.5f) route.Add(goal);
+    }
+
+    // A flyer skips the points it can see past, so it does not trace the grid.
+    private void Shorten(Vector3 start, float radius)
+    {
+        Vector3 from = start;
+        int write = 0;
+        for (int i = 0; i < route.Count; )
+        {
+            int far = i;
+            for (int j = Mathf.Min(route.Count - 1, i + 8); j > i; j--)
+            {
+                Vector3 d = route[j] - from;
+                if (!Physics.SphereCast(from, radius, d.normalized, out _, d.magnitude, TerrainMask, QueryTriggerInteraction.Ignore)) { far = j; break; }
+            }
+            from = route[far];
+            route[write++] = from;
+            i = far + 1;
+        }
+        route.RemoveRange(write, route.Count - write);
+    }
+
+    private static Vector3Int Key(Vector3 p, float cell) => Vector3Int.RoundToInt(p / cell);
+
     /// <summary>Damped follow used for every body part: slow, phase-delayed, never overshooting.</summary>
     protected static Vector3 Follow(Vector3 current, Vector3 target, float rate, float deltaTime) =>
         Vector3.Lerp(current, target, 1f - Mathf.Exp(-rate * deltaTime));
@@ -392,6 +529,7 @@ public abstract class CaveGlowCreature : Creature
     protected override void InitializeCreature()
     {
         base.InitializeCreature();
+        note = CreatureNoteTable.For(GetType());
         SetLuminosity(1f);
     }
 }

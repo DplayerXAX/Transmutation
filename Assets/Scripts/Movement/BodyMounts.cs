@@ -138,6 +138,12 @@ public sealed class BodyMounts : MonoBehaviour
         // The hand is the selected slot: note pickups, putdowns and throws.
         Creature hand = HandCreature();
         if (selected < mounts.Length && hand != inHand[selected]) { inHand[selected] = hand; LastChange = Time.time; }
+        // The tool can never be lost: if anything took it out of the hand, it comes straight back.
+        if (selected == ToolSlot && tool != null && hand == null && carrier.PendingCreature == null)
+        {
+            tool.gameObject.SetActive(true);
+            if (!tool.IsCarried) carrier.TryCarryFromInteraction(tool);
+        }
 
         Mouse mouse = Mouse.current;
         if (mouse == null) return;

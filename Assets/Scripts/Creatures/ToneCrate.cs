@@ -17,22 +17,28 @@ public sealed class ToneCrate : CaveGlowCreature
     [SerializeField] private float size = 7f;
     [SerializeField] private float height = 4.5f;
     [Tooltip("Speed its note gives it (m/s).")]
-    [SerializeField] private float kick = 5f;
+    [SerializeField] private float kick = 9f;
     [Tooltip("How fast it slows down while sliding (m/s each second).")]
-    [SerializeField] private float friction = 1.1f;
+    [SerializeField] private float friction = 1.6f;
     [Tooltip("How far the crosshair point must be from its edge before its note moves it (m).")]
     [SerializeField] private float pickDistance = 1f;
 
     public override string MusicLayer => "";
     public override bool CanBeCarried => false;
-    public override Vector3 AimPoint => transform.position + Vector3.up * height * 0.85f;
+    public override Vector3 AimPoint => transform.position + Vector3.up * (height + 0.5f);
+    public override float AimSize => size * 0.5f;
     protected override float Loudness => 1f + thump * 3f;
     /// <summary>Just hit something hard: the others hear a bang.</summary>
     public bool Thumping => thump > 0.2f;
+    /// <summary>Note Seeds its note must hold before it will move.</summary>
+    public int SeedsNeeded => needed;
 
     private Vector3 velocity, lastGround;
     private bool grounded, built;
     private float fall, cooldown, thump, wobble, flash;
+    private Vector3 blockedDir;
+    private float stuckFor;
+    private int needed; // Note Seeds of its note the baton must hold before this heavy one will move
     private Material bandGlow;
     private Transform body;
     private Mesh mesh;
@@ -40,11 +46,14 @@ public sealed class ToneCrate : CaveGlowCreature
     private readonly RaycastHit[] castHits = new RaycastHit[16];
 
     /// <summary>Sets it down on a floor point with a note.</summary>
-    public void Settle(Vector3 floorPoint, CaveNote tone)
+    public void Settle(Vector3 floorPoint, CaveNote tone, float width = 7f, float tall = 4.5f, int seedsNeeded = 0)
     {
         transform.SetPositionAndRotation(floorPoint, Quaternion.identity);
         velocity = Vector3.zero;
         note = tone;
+        size = width;
+        height = tall;
+        needed = seedsNeeded;
         Build();
     }
 
@@ -106,7 +115,7 @@ public sealed class ToneCrate : CaveGlowCreature
                 }
             }
         }
-        AddHalo(body, new Vector3(0f, height * 0.85f, 0f), size * 0.55f, 0.6f);
+        AddHalo(body, new Vector3(0f, height + 0.6f, 0f), 1.6f + size * 0.12f, 0.6f);
         AddLamp(body, size * 0.9f, 1.2f);
         lastGround = transform.position;
     }
@@ -184,13 +193,40 @@ public sealed class ToneCrate : CaveGlowCreature
         {
             Vector3 off = Guide.Value - transform.position;
             off.y = 0f;
-            if (off.magnitude > size * 0.5f + pickDistance)
+            float keep = CreatureSong.Active ? size * 0.5f + 4f : size * 0.5f + pickDistance;
+            if (off.magnitude > keep)
             {
                 Vector3 dir = Mathf.Abs(off.x) > Mathf.Abs(off.z) ? new Vector3(Mathf.Sign(off.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(off.z));
-                velocity = dir * kick;
-                cooldown = 0.6f;
+                // Following and stopped by rock this way: try the other axis.
+                bool stuck = false;
+                if (CreatureSong.Active && dir == blockedDir)
+                {
+                    Vector3 side = dir.x != 0f ? new Vector3(0f, 0f, Mathf.Sign(off.z)) : new Vector3(Mathf.Sign(off.x), 0f, 0f);
+                    if (Mathf.Abs(Vector3.Dot(off, side)) > 1.5f) { dir = side; blockedDir = Vector3.zero; }
+                    else stuck = true; // waits quietly until the player's direction changes
+                }
+                cooldown = 0.2f;
+                if (stuck)
+                {
+                    // Tries that way again after a while: what stopped it may have moved on.
+                    cooldown = 0.5f;
+                    if ((stuckFor += 0.5f) >= 2.5f) { blockedDir = Vector3.zero; stuckFor = 0f; }
+                }
+                else
+                {
                 flash = 1f;
+                // Too heavy for the note as the baton has it now: it only shudders.
+                int held = CreatureSong.Active ? CreatureSong.Instance.SeedCount(Role)
+                    : ConductorBaton.Instance != null ? ConductorBaton.Instance.Seeds(note) : needed;
+                if (held < needed) { wobble = 0.6f; cooldown = 0.6f; }
+                else
+                {
+                    // Following the player it slides just far enough to stop short of them.
+                    float along = Mathf.Abs(Vector3.Dot(off, dir)) - (size * 0.5f + 3f);
+                    velocity = dir * (CreatureSong.Active ? Mathf.Min(kick, Mathf.Sqrt(2f * friction * Mathf.Max(0.5f, along))) : kick);
+                }
                 AudioManager.PostEventOnGrid("Play_Crate_" + note, gameObject, 2);
+                }
             }
         }
 
@@ -208,6 +244,7 @@ public sealed class ToneCrate : CaveGlowCreature
                 p += dir * Mathf.Max(0f, hit.distance - 0.05f);
                 Thump(speed);
                 velocity = Vector3.zero;
+                if (CreatureSong.Active) { blockedDir = dir; cooldown = 1.2f; }
             }
             else
             {
@@ -230,7 +267,7 @@ public sealed class ToneCrate : CaveGlowCreature
             fall += 12f * deltaTime;
             p.y -= fall * deltaTime;
             // Never lost through the world: a long fall puts it back where it last stood.
-            if (grounded && lastGround.y - p.y > 10f) { p = lastGround; fall = 0f; velocity = Vector3.zero; }
+            if (grounded && (lastGround.y - p.y > 45f || p.y < -90f)) { p = lastGround; fall = 0f; velocity = Vector3.zero; }
         }
         MoveCreature(p - transform.position);
 

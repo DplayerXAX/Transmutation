@@ -127,6 +127,11 @@ public static class CaveBatonCheck
     private static CaveGlowCreature conducted;
     private static Vector3 conductedFrom, conductedTo, droppedFrom;
     private static Creature held;
+    private static NoteSeed seedTest;
+    private static CaveGlowCreature navCreature;
+    private static Vector3 navGoal;
+    private static float navStart;
+    private static string navName;
 
     private static void TestStep(ProceduralWorld world)
     {
@@ -142,6 +147,7 @@ public static class CaveBatonCheck
         double now = EditorApplication.timeSinceStartup;
         if (now < stepTime) return;
         File.WriteAllText(Status, "test step " + step);
+        if (!DarkTunnels.UseBaton) { SongStep(world, tunnels, body, cam); step++; return; }
         switch (step)
         {
             case 0:
@@ -202,7 +208,9 @@ public static class CaveBatonCheck
                 if (pool != null) ShotFrom(cam, pool.transform.position + new Vector3(6f, -7f, 2f), pool.transform.position, "05_hanging_pool");
                 if (blob != null) ShotFrom(cam, blob.transform.position + new Vector3(3.5f, 0.5f, 1.5f), blob.transform.position, "06_floating_blob");
                 // Conduct the Tone Crate: play it alone and point to its east.
-                var crate = Object.FindFirstObjectByType<ToneCrate>();
+                ToneCrate crate = null;
+                foreach (var m in Object.FindObjectsByType<ToneCrate>(FindObjectsSortMode.None))
+                    if (m.SeedsNeeded == 0 && m.transform.position.y < -60f) { crate = m; break; }
                 var baton = tunnels.Baton;
                 if (crate != null && baton != null)
                 {
@@ -299,12 +307,276 @@ public static class CaveBatonCheck
                     Write($"glim held: pivot in view (right {Vector3.Dot(rel, cam.transform.right):0.00}, up {Vector3.Dot(rel, cam.transform.up):0.00}, forward {Vector3.Dot(rel, cam.transform.forward):0.00})");
                     Shot(cam, "10_glim_in_hand");
                 }
+                int rockPoints = 0, tunnelPoints = 0;
+                foreach (Vector3 p in DarkTunnelShape.TunnelPoints()) { tunnelPoints++; if (world.SampleDensity(p) > 0f) rockPoints++; }
+                Write($"tunnel centre points in rock: {rockPoints} of {tunnelPoints}");
+                Write($"mesas {Object.FindObjectsByType<ToneCrate>(FindObjectsSortMode.None).Length}, seeds {Object.FindObjectsByType<NoteSeed>(FindObjectsSortMode.None).Length}, hanging lakes {Object.FindObjectsByType<HangingLake>(FindObjectsSortMode.None).Length}, floating balls {Object.FindObjectsByType<StrangeWater>(FindObjectsSortMode.None).Length}");
+                foreach (var lake in Object.FindObjectsByType<HangingLake>(FindObjectsSortMode.None))
+                {
+                    ShotFrom(cam, lake.transform.position + new Vector3(5f, -1f, -5f), lake.transform.position + Vector3.up * 3f, "11_lake");
+                    break;
+                }
+                var slots9 = Object.FindFirstObjectByType<BodyMounts>();
+                if (held != null) carrier.Drop();
+                if (slots9 != null) slots9.Select(slots9.ToolSlot);
+                foreach (var candidate in Object.FindObjectsByType<NoteSeed>(FindObjectsSortMode.None))
+                    if (Physics.Raycast(candidate.transform.position + Vector3.up * 0.3f, Vector3.up, 2.5f, DarkTunnels.TerrainMask) == false) { seedTest = candidate; break; }
+                if (seedTest != null && tunnels.Baton != null)
+                {
+                    Place(body, cam, seedTest.transform.position + new Vector3(0.5f, 1.2f, 0.3f), seedTest.transform.position);
+                    tunnels.Baton.DebugConduct(seedTest.Note, seedTest.transform.position, 1.5f);
+                }
+                Wait(4);
+                break;
+            }
+            case 10:
+            {
+                Write($"seed taken after playing its note: baton holds {(tunnels.Baton != null ? tunnels.Baton.SeedTotal : -1)}; held {tunnels.Baton != null && tunnels.Baton.Held}, pod open {(seedTest != null ? seedTest.Openness : -1f):0.00}, player {body.position}, seed {(seedTest != null ? seedTest.transform.position.ToString() : "none")}");
+                carrier.Release(); // something takes it out of the hand: it must come back by itself
+                if (tunnels.Baton != null) tunnels.Baton.DebugNextNote();
+                Wait(0.12);
+                break;
+            }
+            case 11:
+            {
+                Write("baton back in the hand after being taken away: " + (tunnels.Baton != null && tunnels.Baton.Held));
+                Shot(cam, "12_note_pop");
+                ShotFrom(cam, new Vector3(-28f, -54f, 160f), new Vector3(8f, -30f, 160f), "16_mother_from_below");
+                var noteCount = new int[4];
+                foreach (var c in Object.FindObjectsByType<Creature>(FindObjectsSortMode.None)) noteCount[(int)CreatureNoteTable.For(c)]++;
+                Write($"creatures per note E {noteCount[0]} G {noteCount[1]} B {noteCount[2]} D {noteCount[3]}; fog end {RenderSettings.fogEndDistance:0.0}");
+                DarkTunnels.DebugBright = true;
+                Wait(2.5);
+                break;
+            }
+            case 12:
+            case 13:
+            case 14:
+            {
+                // Way round: start one side of the south-west pillar, lead it to the other side.
+                if (step > 12) Write($"round the pillar, {navName}: {Vector3.Distance(navCreature.transform.position, navGoal):0.0} m from the goal (started {navStart:0.0})");
+                Place(body, cam, new Vector3(-142f, -62.5f, 150f), new Vector3(-128f, -60f, 150f));
+                Vector3 west = new Vector3(-138f, -60f, 150f), east = new Vector3(-118f, -60f, 150f);
+                Physics.Raycast(east + Vector3.up, Vector3.down, out RaycastHit eastFloor, 8f, DarkTunnels.TerrainMask);
+                Physics.Raycast(west + Vector3.up, Vector3.down, out RaycastHit westFloor, 8f, DarkTunnels.TerrainMask);
+                if (step == 12)
+                {
+                    var g = Object.FindFirstObjectByType<GlimLantern>();
+                    g.transform.position = west; g.SetHome(west);
+                    navCreature = g; navGoal = east; navName = "glim";
+                }
+                else if (step == 13)
+                {
+                    var maw = Object.FindFirstObjectByType<LureMaw>();
+                    maw.SetDen(westFloor.point, Vector3.right);
+                    navCreature = maw; navGoal = eastFloor.point; navName = "maw";
+                }
+                else
+                {
+                    var snail = Object.FindFirstObjectByType<BellSnail>();
+                    snail.Attach(westFloor.point, westFloor.normal);
+                    navCreature = snail; navGoal = eastFloor.point; navName = "snail";
+                }
+                navStart = Vector3.Distance(navCreature.transform.position, navGoal);
+                tunnels.Baton.DebugConduct(navCreature.Note, navGoal, 9f);
+                Wait(10);
+                break;
+            }
+            case 15:
+            {
+                Write($"round the pillar, {navName}: {Vector3.Distance(navCreature.transform.position, navGoal):0.0} m from the goal (started {navStart:0.0})");
+                ShotFrom(cam, new Vector3(-62f, -46f, 150f), new Vector3(-120f, -54f, 165f), "13_overview_east");
+                ShotFrom(cam, new Vector3(-118f, -38f, 112f), new Vector3(-115f, -56f, 180f), "14_overview_south");
+                ShotFrom(cam, new Vector3(-138f, -36f, 205f), new Vector3(-110f, -56f, 140f), "15_overview_north");
+                DarkTunnels.DebugBright = false;
                 Write("done");
                 Finish("test done");
                 break;
             }
         }
         step++;
+    }
+
+    // The creature song: phrase by inputs, following by role, the full chord and its door, a seed, a mesa.
+    private static CaveGlowCreature songGlim, songMaw, songSnail;
+    private static void SongStep(ProceduralWorld world, DarkTunnels tunnels, Rigidbody body, Camera cam)
+    {
+        CreatureSong song = CreatureSong.Instance;
+        Vector3 hub = tunnels.HallWorld + Vector3.up * 0.5f;
+        switch (step)
+        {
+            case 0:
+                log.Clear();
+                songGlim = Object.FindFirstObjectByType<GlimLantern>();
+                songMaw = Object.FindFirstObjectByType<LureMaw>();
+                songSnail = Object.FindFirstObjectByType<BellSnail>();
+                foreach (var c in new[] { songGlim, songMaw, songSnail })
+                    Write($"{c.GetType().Name}: role {c.Role}, phrase {string.Join(" ", song.PhraseOf(c))}");
+                foreach (var m in Object.FindObjectsByType<ToneCrate>(FindObjectsSortMode.None))
+                    Write($"mesa {m.Note}: role {m.Role}, phrase {string.Join(" ", song.PhraseOf(m))}, needs {m.SeedsNeeded}");
+                Write("baton in the scene: " + (Object.FindFirstObjectByType<ConductorBaton>() != null));
+                // Look works from the camera's old place, so aim it by the direction from the new one.
+                Vector3 doorView = new Vector3(-68.6f, -74.3f, 169.3f);
+                Place(body, cam, doorView, cam.transform.position + (new Vector3(-69.2f, -74.8f, 172.8f) - doorView - Vector3.up * 0.6f));
+                Wait(1.5);
+                break;
+            case 1:
+            {
+                Vector3 eye = cam.transform.position;
+                bool hit = Physics.Linecast(eye, new Vector3(-70f, -75.5f, 176f), out RaycastHit stop, DarkTunnels.TerrainMask, QueryTriggerInteraction.Ignore);
+                Write("way to the skeleton before the chord is stopped by: " + (hit ? stop.collider.name : "nothing"));
+                Shot(cam, "33_chord_door_shut");
+                Place(body, cam, hub, hub + Vector3.back * 8f);
+                songGlim.transform.position = hub + new Vector3(0f, 0.7f, -8f);
+                ((GlimLantern)songGlim).SetHome(songGlim.transform.position);
+                Wait(1.2);
+                break;
+            }
+            case 2:
+                songGlim.transform.position = hub + new Vector3(0f, 0.7f, -8f);
+                Look(body, cam, songGlim.AimPoint);
+                Wait(0.6);
+                break;
+            case 3:
+            {
+                Look(body, cam, songGlim.AimPoint);
+                Write($"facing the glim: target {(song.Target != null ? song.Target.GetType().Name : "none")}, mouse taken {CreatureSong.ConsumesMouse}");
+                Shot(cam, "30_phrase_above_creature");
+                if (song.Target == null) Write("(no target: test presses go nowhere)");
+                SongInput[] p = song.PhraseOf(songGlim);
+                song.DebugPress(p[0]);
+                Write("after one right input, progress " + song.Progress);
+                song.DebugPress(p[0] == SongInput.W ? SongInput.S : SongInput.W);
+                Write("after a wrong input, progress " + song.Progress);
+                foreach (SongInput i in p) song.DebugPress(i);
+                Write($"after the whole phrase: glim following {songGlim.Following}");
+                if (!songGlim.Following) song.DebugFollow(songGlim);
+                Wait(3);
+                break;
+            }
+            case 4:
+            {
+                Vector3 to = songGlim.transform.position - body.position;
+                Write($"melody leads: {to.magnitude:0.0} m away, {Vector3.Dot(to, cam.transform.forward):0.0} m ahead of the view");
+                Physics.Raycast(hub + Vector3.right * 4f, Vector3.down, out RaycastHit floor, 6f, DarkTunnels.TerrainMask);
+                ((LureMaw)songMaw).SetDen(floor.point, Vector3.forward);
+                ((BellSnail)songSnail).Attach(floor.point + Vector3.back * 3f, floor.normal);
+                song.DebugFollow(songMaw);
+                song.DebugFollow(songSnail);
+                Wait(4);
+                break;
+            }
+            case 5:
+                Write($"full chord {CreatureSong.FullChord}, followers {song.FollowerCount}; maw {Vector3.Distance(songMaw.transform.position, body.position):0.0} m, snail {Vector3.Distance(songSnail.transform.position, body.position):0.0} m from the player");
+                Write($"music layers: glim {AudioManager.GetLayerWeight("BGM_glim"):0.00} bell {AudioManager.GetLayerWeight("BGM_bell"):0.00} maw {AudioManager.GetLayerWeight("BGM_maw"):0.00}");
+                Shot(cam, "31_three_following");
+                Place(body, cam, new Vector3(-73f, -71.5f, 165f), new Vector3(-69.2f, -74.8f, 172.8f));
+                Wait(4.5);
+                break;
+            case 6:
+            {
+                var door = Object.FindFirstObjectByType<ChordDoor>();
+                Write("chord door open: " + (door != null && door.Open) + ", at y " + (door != null ? door.transform.position.y.ToString("0.0") : "-"));
+                Shot(cam, "32_chord_door");
+                NoteSeed melodySeed = null;
+                foreach (var s in Object.FindObjectsByType<NoteSeed>(FindObjectsSortMode.None))
+                    if (s.Note == CaveNote.E && !Physics.Raycast(s.transform.position + Vector3.up * 0.3f, Vector3.up, 2.5f, DarkTunnels.TerrainMask)) { melodySeed = s; break; }
+                seedTest = melodySeed;
+                if (melodySeed != null)
+                {
+                    Place(body, cam, melodySeed.transform.position + new Vector3(0.5f, 1.2f, 0.3f), melodySeed.transform.position);
+                    songGlim.transform.position = melodySeed.transform.position + Vector3.up * 2f;
+                }
+                Wait(4);
+                break;
+            }
+            case 7:
+            {
+                Write("melody seeds held after bringing the glim to a pod: " + song.SeedCount(SongRole.Melody));
+                ToneCrate light = null;
+                foreach (var m in Object.FindObjectsByType<ToneCrate>(FindObjectsSortMode.None))
+                    if (m.SeedsNeeded == 0 && m.transform.position.y < -60f) { light = m; break; }
+                conducted = light;
+                conductedFrom = light.transform.position;
+                Vector3 stand = light.transform.position + Vector3.up * 2f;
+                foreach (Vector3 side in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right })
+                    for (float reach = 16f; reach >= 10f; reach -= 2f)
+                    {
+                        Vector3 spot = light.transform.position + side * reach + Vector3.up * 1.2f;
+                        if (Physics.CheckSphere(spot, 0.7f, DarkTunnels.TerrainMask) || !Physics.Raycast(spot, Vector3.down, 4f, DarkTunnels.TerrainMask)) continue;
+                        if (Physics.SphereCast(spot + Vector3.down * 0.2f, 0.7f, -side, out _, reach - 5f, DarkTunnels.TerrainMask)) continue;
+                        stand = spot; goto found;
+                    }
+                found:
+                Place(body, cam, stand, light.transform.position);
+                Write($"mesa starts {Vector3.Distance(stand, conductedFrom):0.0} m from the player");
+                song.DebugFollow(light);
+                Wait(6);
+                break;
+            }
+            case 8:
+                Write($"mesa following: moved {Vector3.Distance(conducted.transform.position, conductedFrom):0.0} m, now {Vector3.Distance(conducted.transform.position, body.position):0.0} m from the player");
+                songFuzz = Object.FindFirstObjectByType<FuzzCreature>();
+                songTentacle = Object.FindFirstObjectByType<TentacleCreature>();
+                foreach (SongMotion m in System.Enum.GetValues(typeof(SongMotion)))
+                {
+                    var names = new System.Collections.Generic.SortedSet<string>();
+                    foreach (var c in Object.FindObjectsByType<Creature>(FindObjectsSortMode.None))
+                        if (CreatureNoteTable.MotionFor(c.GetType()) == m) names.Add(c.GetType().Name);
+                    Write($"{m} in this scene: {string.Join(", ", names)}");
+                }
+                Write($"fuzz found {songFuzz != null}, tentacle found {songTentacle != null}");
+                Place(body, cam, hub + Vector3.right * 6f, hub + Vector3.right * 6f + Vector3.back * 9f);
+                if (songFuzz == null) { var go = new GameObject("Test fuzz"); songFuzz = go.AddComponent<FuzzCreature>(); }
+                if (songTentacle == null) { var go = new GameObject("Test tentacle"); songTentacle = go.AddComponent<TentacleCreature>(); }
+                PutOnFloor(songTentacle, hub + Vector3.right * 6f + Vector3.back * 9f, 1f);
+                PutOnFloor(songFuzz, hub + Vector3.right * 2f + Vector3.back * 9f, 0.3f);
+                Wait(1);
+                break;
+            case 9:
+                Look(body, cam, songTentacle.transform.position);
+                Wait(0.5);
+                break;
+            case 10:
+            {
+                Write($"tentacle: role {songTentacle.GetType().Name} {CreatureNoteTable.RoleFor(songTentacle.GetType())}, phrase {string.Join(" ", song.PhraseOf(songTentacle))}; facing {(song.Target != null ? song.Target.GetType().Name : "none")}, mouse taken {CreatureSong.ConsumesMouse}");
+                Shot(cam, "34_tentacle_phrase");
+                if (song.Target == songTentacle) foreach (SongInput i in song.PhraseOf(songTentacle)) song.DebugPress(i);
+                Write("tentacle following after its phrase: " + CreatureSong.IsFollowing(songTentacle));
+                if (!CreatureSong.IsFollowing(songTentacle)) song.DebugFollow(songTentacle);
+                songFrom = songTentacle.transform.position;
+                Look(body, cam, songFuzz.transform.position);
+                Wait(0.5);
+                break;
+            }
+            case 11:
+            {
+                Write($"fuzz: role {CreatureNoteTable.RoleFor(typeof(FuzzCreature))}, phrase {string.Join(" ", song.PhraseOf(songFuzz))}; facing {(song.Target != null ? song.Target.GetType().Name : "none")}");
+                if (song.Target == songFuzz) foreach (SongInput i in song.PhraseOf(songFuzz)) song.DebugPress(i);
+                Write("fuzz following after its phrase: " + CreatureSong.IsFollowing(songFuzz));
+                if (!CreatureSong.IsFollowing(songFuzz)) song.DebugFollow(songFuzz);
+                Wait(5);
+                break;
+            }
+            case 12:
+                Write($"after 5 s: tentacle moved {Vector3.Distance(songTentacle.transform.position, songFrom):0.0} m, {Vector3.Distance(songTentacle.transform.position, body.position):0.0} m from the player; fuzz {Vector3.Distance(songFuzz.transform.position, body.position):0.0} m from the player");
+                Shot(cam, "35_all_creatures_following");
+                Write("done");
+                Finish("test done");
+                break;
+        }
+    }
+
+    private static FuzzCreature songFuzz;
+    private static TentacleCreature songTentacle;
+    private static Vector3 songFrom;
+
+    private static void PutOnFloor(Creature c, Vector3 near, float above)
+    {
+        Vector3 at = near;
+        if (Physics.Raycast(near + Vector3.up * 3f, Vector3.down, out RaycastHit floor, 10f, DarkTunnels.TerrainMask)) at = floor.point + Vector3.up * above;
+        c.transform.position = at;
+        if (c.TryGetComponent<Rigidbody>(out var r)) { r.position = at; if (!r.isKinematic) r.linearVelocity = Vector3.zero; }
     }
 
     private static void Wait(double seconds) => stepTime = EditorApplication.timeSinceStartup + seconds;
