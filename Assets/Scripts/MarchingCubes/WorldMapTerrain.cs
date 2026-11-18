@@ -4,7 +4,7 @@
 /// Shape of Scene_World, the combined map from Daniel's whiteboard (world metres, +z = forward from the spawn).
 /// South: the spawn clearing in a placeholder forest, yoyo's Goo cave grafted in beside it (Scene_Goo).
 /// Middle: the flower slope to the north-west, marcus's mushroom basin (Scene_FungalHollow) sunk to the east, a gentle
-/// ramp between them; the crystal sky island (Scene_CisternBasin, grafted) floats above them.
+/// ramp between them; the crystal sky island (Scene_CisternBasin, grafted) floats above where they meet Flame Canyon.
 /// North: Flame Canyon (Scene_FlameCanyon, grafted) runs east-west where the great crack used to be, the bone mother
 /// asleep in her sinkhole beside it, and beyond it the terraced plateau of the tower ruins round the Hanging Spire.
 /// Placeholder mountains ring it all.
@@ -41,8 +41,9 @@ public static class WorldMapTerrain
     /// <summary>The mushroom hollow's centre follows the donor floor; its sides are part of the world mesh.</summary>
     public const float MushroomRadius = 64f;
     public static readonly Vector3 MushroomOffset = new Vector3(125f, -36f, 40f);
-    /// <summary>Scene_CisternBasin is grafted onto a floating island: donor origin moves here.</summary>
-    public static readonly Vector3 IslandOffset = new Vector3(0f, 92f, 60f);
+    /// <summary>Scene_CisternBasin is grafted onto a floating island: donor origin moves here. It floats over the
+    /// point where the flower field, the mushroom basin and Flame Canyon meet (moved from (0, 92, 60) on 2026-11-18).</summary>
+    public static readonly Vector3 IslandOffset = new Vector3(32f, 92f, 100f);
     public const float IslandRadius = 88f;
     public static readonly Vector2 SpireSpot = new Vector2(0f, 250f);
     public const float SpireHoleRadius = 7f;

@@ -61,7 +61,7 @@ public static class WorldMapDress
     /// A wide, wandering climb from the flower field to the island, mixing small steps with broad resting platforms.
     /// More outlying islands break up the single tight column of stones.
     /// </summary>
-    private static void Stones(Transform root, List<string> log)
+    internal static void Stones(Transform root, List<string> log)
     {
         var islands = root.GetComponentInChildren<SkyIslands>(true);
         if (islands == null) { log.Add("No SkyIslands component to reuse."); return; }
@@ -77,17 +77,19 @@ public static class WorldMapDress
         Vector2 island = new Vector2(WorldMapTerrain.IslandOffset.x, WorldMapTerrain.IslandOffset.z);
 
         var stones = new List<Vector3>(); var radii = new List<float>(); var scenery = new List<bool>();
-        Vector2 start2 = new Vector2(-150f, 62f);
+        // The climb starts in the middle of the flower field and winds over its open west half (clear of the island,
+        // which now overhangs the field's north-east) up to the altar on the island's west edge.
+        Vector2 start2 = new Vector2(-75f, 0f);
         Vector3 at = new Vector3(start2.x, WorldMapTerrain.Height(start2.x, start2.y) + 1.6f, start2.y);
         float startY = at.y;
         stones.Add(at); radii.Add(3.4f); scenery.Add(false);
         // The broad landings are pauses; some smaller gaps deliberately need a bubble flower.
         // The bends make the ascent visible across the field rather than as one narrow stack.
         Vector3[] bends = {
-            new Vector3(-185f, 0.13f, 45f), new Vector3(-215f, 0.25f, 62f),
-            new Vector3(-185f, 0.37f, 115f), new Vector3(-140f, 0.49f, 120f),
-            new Vector3(-116f, 0.60f, 96f), new Vector3(-160f, 0.71f, 70f),
-            new Vector3(-128f, 0.82f, 30f), new Vector3(-104f, 0.92f, 42f),
+            new Vector3(-110f, 0.13f, -10f), new Vector3(-140f, 0.25f, 25f),
+            new Vector3(-125f, 0.37f, 70f), new Vector3(-85f, 0.49f, 50f),
+            new Vector3(-65f, 0.60f, 15f), new Vector3(-100f, 0.71f, 95f),
+            new Vector3(-135f, 0.82f, 120f), new Vector3(-100f, 0.92f, 140f),
             new Vector3(altar.x, 1f, altar.z) };
         foreach (Vector3 bend in bends)
         {
@@ -142,7 +144,7 @@ public static class WorldMapDress
             float radius = random.NextDouble() < 0.22 ? R(7f, 11f) : random.NextDouble() < 0.5 ? R(3.5f, 6.5f) : R(1.5f, 3f);
             Vector3 decoy = near + new Vector3(R(-42f, 42f), R(-8f, 10f), R(-40f, 40f));
             // Southern outliers sit on the ground instead of hanging over the Goo approach.
-            if (decoy.z < 35f) decoy.y = WorldMapTerrain.Height(decoy.x, decoy.z) + radius * 1.95f;
+            if (decoy.z < -25f) decoy.y = WorldMapTerrain.Height(decoy.x, decoy.z) + radius * 1.95f;
             if (decoy.y < WorldMapTerrain.Height(decoy.x, decoy.z) + Mathf.Min(radius * 1.6f, 12f)) continue;
             if (WorldMapBuild.IslandRadial(decoy.x - island.x, decoy.z - island.y) < WorldMapTerrain.IslandRadius + 5f &&
                 decoy.y < WorldMapTerrain.IslandOffset.y - 8f) continue;
