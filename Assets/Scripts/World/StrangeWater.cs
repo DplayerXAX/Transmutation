@@ -30,6 +30,8 @@ public sealed class StrangeWater : MonoBehaviour
 
     /// <summary>Off (default): still mirror pools on the floor (MirrorPool). On: the older water lenses hanging from the ceiling.</summary>
     public static bool HangingLenses = false;
+    /// <summary>The older floating balls of water (off: the water hangs as lakes under the rock, HangingLake).</summary>
+    public static bool FloatingBlobs = false;
 
     // Still mirror pools with stalagmites (and stalactites in the grotto), each with a faint glow of its own.
     private static void MirrorPools(Transform parent, int mask)
@@ -52,7 +54,7 @@ public sealed class StrangeWater : MonoBehaviour
             }
         }
         // Open cavern: a wide still lake between two pillars, and a smaller one by the stair tower's door.
-        Vector3[] spots = { new Vector3(-124f, -58f, 164f), new Vector3(-151f, -58f, 140f) }; // the lake laps at a pillar's foot
+        Vector3[] spots = { new Vector3(-124f, -60f, 164f), new Vector3(-151f, -60f, 140f) }; // the lake laps at a pillar's foot
         float[] sizes = { 6f, 4.5f };
         Color[] glows = { new Color(0.3f, 0.95f, 0.85f), new Color(0.7f, 0.45f, 1f) };
         for (int i = 0; i < spots.Length; i++)
@@ -74,9 +76,18 @@ public sealed class StrangeWater : MonoBehaviour
         }
         else MirrorPools(parent, mask);
         // Blobs floating in the dark air, each with its own gravity.
-        Vector3[] blobs = { new Vector3(-112f, -50f, 140f), new Vector3(-100f, -46f, 178f), new Vector3(-134f, -52f, 176f), new Vector3(-120f, -56f, 160f), new Vector3(-88f, -52f, 156f) };
+        Vector3[] blobs = { new Vector3(-112f, -50f, 140f), new Vector3(-100f, -46f, 178f), new Vector3(-134f, -52f, 176f), new Vector3(-120f, -56f, 160f), new Vector3(-104f, -57f, 146f) };
         Vector3[] downs = { Vector3.up, new Vector3(1f, 0.2f, 0f), Vector3.down, new Vector3(0f, 0.4f, -1f), new Vector3(-0.6f, 1f, 0.3f) };
-        for (int i = 0; i < blobs.Length; i++) Blob(parent, blobs[i], downs[i].normalized, 1.2f + (i % 3) * 0.7f);
+        if (FloatingBlobs)
+            for (int i = 0; i < blobs.Length; i++) Blob(parent, blobs[i], downs[i].normalized, 1.2f + (i % 3) * 0.7f);
+        // Lakes hanging under the rock, flowing to the points they drip from: under the shelves and on the high ceiling.
+        Vector3[] lakes =
+        {
+            new Vector3(-126f, -60f, 131f), new Vector3(-116f, -58.5f, 175f), new Vector3(-88f, -53f, 140f),
+            new Vector3(-150f, -56f, 160f), new Vector3(-90f, -55f, 161f), new Vector3(-136f, -40f, 192f), new Vector3(-72f, -40f, 128f),
+        };
+        float[] sizes = { 10f, 9f, 9f, 10f, 8f, 15f, 15f };
+        for (int i = 0; i < lakes.Length; i++) HangingLake.Create(parent, lakes[i], sizes[i], mask);
     }
 
     private static StrangeWater Make(Transform parent, string name, Vector3 position, Vector3 scale, Quaternion rotation)

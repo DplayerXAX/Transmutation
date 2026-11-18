@@ -113,6 +113,16 @@ crack `DarkTunnelShape` adds, in the world's own density (`Carve`, called at the
   skeleton chamber at (-72, -75, 180)), the Tone Crate's cross-shaped trench at (-92, 132), and two tunnels in the
   ceiling (only Glims and water reach them).
 
+**Layers (2026-11-18):** deep galleries under the floor; the cavern floor; eight rock shelves round the pillars and walls at
+different heights (climb their sides, drop through shafts in them); two massifs with tunnels and rooms inside (north one:
+walk in at its foot, up through a room to its flat top, then a steep climb through its neck into the ceiling galleries;
+west one: a chimney from the grotto to its top). Nothing bridges the gaps. Ten Tone Mesas: on the floor, on shelves
+(slide one off and it falls and stays as a step), some heavy.
+
+**Note Seeds** (`NoteSeed`, what the player gathers here): twelve shut pods, three per note, in the hard places. Playing a
+pod's note within 14 m opens it; walking up takes the seed, which stays as a coloured bead on the baton's shaft (no menu
+or text). Heavy mesas move only for a note holding enough seeds. Kept for the play session only for now.
+
 **After changing the layout, bake the chunk meshes again** (`TerrainChunks.bytes`): write `bake` to
 `Temp/CaveBaton.request` with Scene_World open (`Editor/CaveBatonCheck`), otherwise the old saved meshes are used and the
 caves are missing (DarkTunnels then logs a warning and places nothing).
@@ -123,6 +133,7 @@ three Tone Mesas over the holes into the floor tunnels (notes E, B, G), the stra
 Testing: `spawnUnderground` (on) moves the player to the cavern floor by the stair tower's door as soon as the caves are
 built (the dark snaps in at once). Turn it off on the runtime Dark Tunnels object (or in code) for the normal spawn.
 
+Revealed ground is a dim light in the dark (`CaveReveal.SoftEdge`, reach `SoftReach` 2): strong only near the source, a long continuous tail, and rock turned away from the light sinks into black. Off = the clean stencil edge below. The baton adds no light while held. Glow creatures' point lights skip the terrain layer, because `LineWorldLight` steps light into flat levels and would draw a hard ring.
 Light round the glow creatures: `CaveGlowCreature.LightStyle` = `Reveal` (default), like a stencil: within a light's
 radius (3x the old halo width, Glim about 7 m, snail 8 m) the terrain is drawn with its own normal look, cut cleanly out
 of the black fog, so a light far away shows the shape of the ground round it while everything else stays black. No extra
@@ -146,6 +157,10 @@ a lake lapping at a pillar's foot (-124, 164), a pool by the stair tower (-151, 
 stalactites; stalagmites round each (terrain material, colliders), and a reveal light of the pool's own colour (3x its
 radius) so the rock round it and its mirror image show. A planar reflection camera renders the mirrored view at half
 resolution for the nearest pool in view within 45 m only (one extra render a frame); the others show a dark tint.
+
+**Hanging lakes** (`HangingLake`, shader `Capstone/Cave/HangingLake`): sheets of water draped under shelves and the ceiling,
+following the rock to an irregular rim. Ripple bands flow in to pendants where the water sags; a drop swells, necks,
+falls and leaves a ring on the rock. They replace the floating balls (`StrangeWater.FloatingBlobs` brings those back).
 
 `StrangeWater` (shader `Capstone/Cave/StrangeWater`, after Daniel's toon water in ShaderLab_1 week 8: refracted background,
 banded depth colour, hard-edged caustics, banded light shafts marched through the volume, two-tone surface, fresnel
@@ -203,3 +218,17 @@ On the Procedural World object. There is no haze near the player, then a long ge
 **Scale Height** (the air thins as the eye climbs, so the far land clears from up the spire), a sun tint (brighter
 and warmer looking into the sun, cooler away; Mie-style phase), and a separate violet haze in the inner world.
 Line detail fades at given haze strengths. While chunks load, the haze is thickened to hide the unloaded edge.
+
+## Creature song (`CreatureSong`, `ChordDoor`)
+
+Replaces the conductor baton in Scene_World, for every living creature. `DarkTunnels.UseBaton = true` brings the baton back; its code is all still here.
+
+- `Resources/CreatureNotes.asset` gives each species a `role` (melody, accompaniment, drums; each has a planet glyph in `SongGlyphs`) and a `motion`: Walk, Fly, Rooted, or Silent. Silent is for objects, food, eggs and shots, and is the default for a species not in the table.
+- Every species has a fixed phrase of 3-4 inputs (each Tone Mesa its own). Drums use WASD, jump and Shift, accompaniment uses the two mouse buttons, melody uses all of them.
+- Face a creature within 16 m with clear sight and its phrase appears above it, drawn over rock. Press the inputs in order, with no timing. A wrong input starts the phrase again. Only presses made while facing a creature count.
+- The mouse keeps its normal work within 6 m and while carrying, so pick up, pet and throw still work. Mouse notes are played from further off, or to finish a phrase already begun.
+- A finished phrase makes the creature follow for 30 s (replay it in the last 10 s to renew): melody leads ahead, accompaniment circles, drums come behind. Its music layer plays while it follows.
+- Cave glow creatures use their own routing, fuzz uses its chain (with the song on it joins only when played to), Tone Mesas slide. Everything else is moved by `CreatureSongDrive` after its own logic: physics bodies by velocity, others by position with terrain checks. Walkers stop at ledges and cliffs. Rooted species stay and send up notes, and count while the player is within 20 m.
+- The three role glyphs at the bottom of the view light up for the roles following, with collected seeds as dots under them.
+- All three roles following is the full chord. `ChordDoor` in the deep descent to the skeleton sinks open when you bring it within 18 m, and stays open.
+- A Note Seed pod opens when a following creature of its role comes within 9 m. Heavy mesas need that many drum seeds.

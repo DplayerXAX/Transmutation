@@ -46,6 +46,7 @@ public sealed class ConductorBaton : MonoBehaviour
     private CaveNote note;
     private bool playing;
     private Vector3 guidePoint;
+    private readonly System.Collections.Generic.List<Creature> quieted = new System.Collections.Generic.List<Creature>();
     private readonly System.Collections.Generic.List<CaveGlowCreature> silenced = new System.Collections.Generic.List<CaveGlowCreature>();
     private float flick, takeFlash, raise;
     private PlayerCreatureCarrier carrier;
@@ -82,15 +83,15 @@ public sealed class ConductorBaton : MonoBehaviour
 
         Shader glowShader = Shader.Find("Capstone/Cave/Glow");
         Shader lit = Shader.Find("Universal Render Pipeline/Lit");
-        var grip = new Material(lit) { name = "Baton grip" };
-        grip.SetColor("_BaseColor", new Color(0.03f, 0.03f, 0.03f));
-        grip.SetFloat("_Smoothness", 0.6f);
-        // Pale ivory shaft with a faint light of its own, so it reads in the hand even in the dark tunnels.
-        var shaft = new Material(lit) { name = "Baton shaft" };
-        shaft.SetColor("_BaseColor", new Color(0.86f, 0.83f, 0.76f));
-        shaft.SetFloat("_Smoothness", 0.5f);
-        shaft.EnableKeyword("_EMISSION");
-        shaft.SetColor("_EmissionColor", new Color(0.12f, 0.115f, 0.1f));
+        // Self-lit and unfogged: it must stay readable in the hand however dark the cave is.
+        var grip = new Material(glowShader) { name = "Baton grip" };
+        grip.SetColor("_Color", new Color(0.2f, 0.16f, 0.12f));
+        grip.SetFloat("_Core", 0.8f);
+        grip.SetFloat("_Rim", 0.6f);
+        var shaft = new Material(glowShader) { name = "Baton shaft" };
+        shaft.SetColor("_Color", new Color(0.72f, 0.68f, 0.58f));
+        shaft.SetFloat("_Core", 0.75f);
+        shaft.SetFloat("_Rim", 0.35f);
         tipMaterial = new Material(glowShader) { name = "Baton tip" };
         tipMaterial.SetColor("_Color", new Color(1f, 0.95f, 0.8f) * 2f);
 
@@ -98,7 +99,7 @@ public sealed class ConductorBaton : MonoBehaviour
         pose.SetParent(transform, false);
         Part(PrimitiveType.Cylinder, pose, new Vector3(0f, 0.06f, 0f), new Vector3(0.034f, 0.06f, 0.034f), grip);      // grip
         Part(PrimitiveType.Sphere, pose, new Vector3(0f, 0.125f, 0f), new Vector3(0.05f, 0.022f, 0.05f), grip);        // guard
-        Part(PrimitiveType.Cylinder, pose, new Vector3(0f, 0.125f + length * 0.37f, 0f), new Vector3(0.008f, length * 0.37f, 0.008f), shaft);
+        Part(PrimitiveType.Cylinder, pose, new Vector3(0f, 0.125f + length * 0.37f, 0f), new Vector3(0.012f, length * 0.37f, 0.012f), shaft);
         tip = Part(PrimitiveType.Sphere, pose, new Vector3(0f, 0.125f + length * 0.74f, 0f), Vector3.one * 0.018f, tipMaterial).transform;
 
         // A small crisp pool of light round the tip while it is not in a hand: the one thing to find in the dark chamber.
@@ -119,11 +120,12 @@ public sealed class ConductorBaton : MonoBehaviour
             tipHalo = ballObject;
         }
 
-        // The tip uncovers the rock right round it from the dark (a small reveal light), whether lying or in the hand.
+        // Lying somewhere, the tip shows a little rock round it so it can be found; in the hand it adds no light,
+        // so it never widens what the player can see.
         if (CaveGlowCreature.LightStyle == CaveGlowCreature.LightLook.Reveal)
         {
             if (tipHalo != null) { Destroy(tipHalo); tipHalo = null; }
-            CaveReveal.Add(tip, 2.5f, new Color(1f, 0.92f, 0.75f), () => 1f);
+            CaveReveal.Add(tip, 1.8f, new Color(1f, 0.92f, 0.75f), () => item != null && item.IsCarried ? 0f : 0.6f);
         }
 
         Shader lineShader = Shader.Find("Capstone/Cave/GlowLine");
@@ -273,6 +275,11 @@ public sealed class ConductorBaton : MonoBehaviour
         if (!pressed) return true;
         note = (CaveNote)(((int)note + 1) % 4);
         flick = 1f;
+        if (cam != null && tip != null)
+        {
+            BatonNotePop.Spawn(cam.transform, tip.position, note);
+            MarkCreaturesOfNote();
+        }
         // A soft taste of the new note, on the beat.
         AudioManager.PostEventOnGrid("Play_Crate_" + note, gameObject, 2);
         return true;
@@ -288,6 +295,7 @@ public sealed class ConductorBaton : MonoBehaviour
         float beat = Held && playing ? Mathf.Sin(Time.time * Mathf.PI * 2f) * 6f : 0f;
         Quaternion wrist = Quaternion.Euler(-raise * 18f + beat - flick * 25f, 0f, 0f);
         wristNow = wrist;
+        MoveHand(beat);
         if (!PlaceInHand())
         {
             pose.localPosition = Vector3.zero;
@@ -301,6 +309,30 @@ public sealed class ConductorBaton : MonoBehaviour
     }
 
     private Quaternion wristNow = Quaternion.identity;
+    private Quaternion lastView = Quaternion.identity;
+    private Vector3 handMove;
+
+    // The whole hand and arm take part in the gesture, a little behind the baton: lifted while playing, bobbing on the
+    // beat, following the swing of the aim, and a small flick when the note changes.
+    private void MoveHand(float beatDegrees)
+    {
+        if (carrier == null || cam == null) return;
+        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+        Quaternion turn = Quaternion.Inverse(lastView) * cam.transform.rotation;
+        lastView = cam.transform.rotation;
+        Vector3 e = turn.eulerAngles;
+        float yaw = Mathf.DeltaAngle(0f, e.y) / dt, pitch = Mathf.DeltaAngle(0f, e.x) / dt;
+        Vector3 want = Vector3.zero;
+        if (Held)
+        {
+            float swing = playing ? 1f : 0.35f;
+            want = new Vector3(Mathf.Clamp(yaw * 0.0007f, -0.05f, 0.05f) * swing - flick * 0.018f,
+                raise * 0.04f + beatDegrees * 0.0035f + flick * 0.045f - Mathf.Clamp(pitch * 0.0006f, -0.04f, 0.04f) * swing,
+                raise * 0.05f + flick * 0.035f);
+        }
+        handMove = Vector3.Lerp(handMove, want, 1f - Mathf.Exp(-10f * dt));
+        if (Held) carrier.HeldViewOffset = handMove;
+    }
 
     private void OnEnable() => FirstPersonBody.LimbsPosed += OnLimbsPosed;
     private void OnLimbsPosed() => PlaceInHand();
@@ -321,10 +353,53 @@ public sealed class ConductorBaton : MonoBehaviour
         return true;
     }
 
+    private readonly int[] seeds = new int[4];
+    private int seedTotal;
+    private Material seedLit;
+
+    /// <summary>Note Seeds of this note the baton holds. Heavy Tone Mesas move only for a note with enough of them.</summary>
+    public int Seeds(CaveNote n) => seeds[(int)n];
+    public int SeedTotal => seedTotal;
+
+    /// <summary>A collected Note Seed becomes a small bead of its colour on the shaft: the baton is the inventory.</summary>
+    public void AddSeed(CaveNote n)
+    {
+        seeds[(int)n]++;
+        var bead = new Material(tipMaterial) { name = "Baton seed" };
+        bead.SetColor("_Color", CaveGlowCreature.NoteColor(n) * 2f);
+        bead.SetFloat("_Glow", 1f);
+        Part(PrimitiveType.Sphere, pose, new Vector3(0f, 0.15f + seedTotal * 0.022f, 0f), Vector3.one * 0.017f, bead);
+        seedTotal++;
+        takeFlash = 1f;
+        AudioManager.PostEventOnGrid("Play_Crate_" + n, gameObject, 4);
+    }
+
+    // A small note rises over the nearest creatures of any kind that belong to the chosen note.
+    private void MarkCreaturesOfNote()
+    {
+        Vector3 eye = cam.transform.position;
+        int shown = 0;
+        foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None))
+        {
+            if (shown >= 10 || c == item || c.IsDead || c.IsCarried || CreatureNoteTable.For(c) != note) continue;
+            if ((c.AimPosition - eye).sqrMagnitude > 30f * 30f) continue;
+            if (c is CaveGlowCreature g && g.Hidden) continue;
+            BatonNotePop.SpawnOver(cam.transform, c.AimPosition + Vector3.up * 0.9f, note);
+            shown++;
+        }
+    }
+
     private void StartPlaying()
     {
         playing = true;
         silenced.Clear();
+        // Other creatures of the world drop out of the music too while a different note sounds.
+        foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None))
+            if (!(c is CaveGlowCreature) && c != item && CreatureNoteTable.For(c) != note && InReach(c.AimPosition))
+            {
+                AudioManager.SetCreatureMuted(c, true);
+                quieted.Add(c);
+            }
     }
 
     private void StopPlaying()
@@ -335,6 +410,8 @@ public sealed class ConductorBaton : MonoBehaviour
         foreach (CaveGlowCreature c in silenced)
             if (c != null) c.SetMuted(false);
         silenced.Clear();
+        foreach (Creature c in quieted) if (c != null) AudioManager.SetCreatureMuted(c, false);
+        quieted.Clear();
         debugUntil = -1f;
     }
 
@@ -347,7 +424,8 @@ public sealed class ConductorBaton : MonoBehaviour
 
     private void OnDestroy() { if (Instance == this) Instance = null; }
 
-    private bool InReach(CaveGlowCreature c) => cam != null && Vector3.Distance(cam.transform.position, c.AimPoint) <= maxRange;
+    private bool InReach(CaveGlowCreature c) => InReach(c.AimPoint);
+    private bool InReach(Vector3 point) => cam != null && Vector3.Distance(cam.transform.position, point) <= maxRange;
 
     /// <summary>Where the crosshair meets the rock (or a point far ahead in the open).</summary>
     private Vector3 CrosshairPoint()
@@ -395,6 +473,7 @@ public sealed class ConductorBaton : MonoBehaviour
     // ---------------- Test hooks (Editor/CaveBatonCheck) ----------------
 
     public void DebugGive() { if (!Held) Take(); }
+    public void DebugNextNote() => HandleRightMouse(true, true, false);
 
     /// <summary>Plays a note at a point for some seconds, as a held LMB with the crosshair there would.</summary>
     public void DebugConduct(CaveNote played, Vector3 point, float seconds)

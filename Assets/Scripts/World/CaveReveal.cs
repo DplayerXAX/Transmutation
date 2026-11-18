@@ -28,6 +28,7 @@ public sealed class CaveReveal : MonoBehaviour
     private static readonly int CentresId = Shader.PropertyToID("_CaveReveal");
     private static readonly int TintsId = Shader.PropertyToID("_CaveRevealTint");
     private static readonly int CountId = Shader.PropertyToID("_CaveRevealCount");
+    private static readonly int SoftId = Shader.PropertyToID("_CaveRevealSoft");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics()
@@ -39,8 +40,12 @@ public sealed class CaveReveal : MonoBehaviour
 
     /// <summary>How much of its own colour an uncovered patch takes (0 = none, 1 = fully tinted).</summary>
     public static float TintAmount = 0.55f;
+    /// <summary>On: the revealed ground fades gradually into the dark. Off: the older clean stencil edge.</summary>
+    public static bool SoftEdge = true;
+    /// <summary>A soft light reaches this much further, since its outer part is faint.</summary>
+    public static float SoftReach = 2f;
 
-    public static Light Add(Transform anchor, float radius, Color color, Func<float> strength)
+    public static Light Add(Transform anchor, float radius, Color color, Func<float> strength = null)
     {
         if (runner == null)
         {
@@ -80,15 +85,19 @@ public sealed class CaveReveal : MonoBehaviour
             {
                 Light l = sorted[i];
                 Vector3 p = l.anchor.position;
-                centres[i] = new Vector4(p.x, p.y, p.z, l.radius);
+                centres[i] = new Vector4(p.x, p.y, p.z, l.radius * (SoftEdge ? SoftReach : 1f));
                 float s = l.strength != null ? Mathf.Clamp01(l.strength()) : 1f;
+                // The last few of the nearest lights fade out, so none pops when the order changes.
+                s *= Mathf.Clamp01((Max - i) / 4f);
                 tints[i] = new Vector4(l.tint.r, l.tint.g, l.tint.b, s);
             }
             else { centres[i] = Vector4.zero; tints[i] = Vector4.zero; }
         }
+        Shader.SetGlobalFloat(SoftId, SoftEdge ? 1f : 0f);
         Shader.SetGlobalVectorArray(CentresId, centres);
         Shader.SetGlobalVectorArray(TintsId, tints);
-        Shader.SetGlobalFloat(CountId, n);
+        // Above ground nothing is hidden, so the terrain shader need not loop over the lights.
+        Shader.SetGlobalFloat(CountId, DarkTunnels.Darkness > 0.001f ? n : 0);
     }
 
     private void OnDestroy()

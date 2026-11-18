@@ -146,7 +146,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
         if (CarriedCreature != null && !CarriedCreature.isActiveAndEnabled)
             ReleaseCarriedCreature();
         Mouse mouse = Mouse.current;
-        if (mouse == null) { CancelRightMouse(); return; }
+        if (mouse == null || CreatureSong.ConsumesMouse) { CancelRightMouse(); return; } // the mouse may be playing notes
         UpdateRightMouse(mouse.rightButton.wasPressedThisFrame, mouse.rightButton.isPressed,
             mouse.rightButton.wasReleasedThisFrame, Time.deltaTime);
         UpdatePendingGrab();
@@ -435,7 +435,9 @@ private void FitCarryPoint(Creature creature)
             // Turned into its hand pose (eased in after the grab), its grip point on the hand.
             Quaternion view = gripPose.followPitch && carryCamera != null ? carryCamera.transform.rotation : CarryYaw();
             gripRotation = Quaternion.Slerp(gripRotation, view * gripPose.heldRotation, bringingIn ? 1f - Mathf.Exp(-14f * Time.deltaTime) : 1f);
-            Vector3 at = carryPoint.position - gripRotation * gripPose.gripLocal;
+            Vector3 hand = carryPoint.position;
+            if (carryCamera != null) hand += carryCamera.transform.TransformVector(HeldViewOffset);
+            Vector3 at = hand - gripRotation * gripPose.gripLocal;
             if (adaptiveHold && heldRadius > 0f && !bringingIn)
             {
                 Vector3 middle = at + gripRotation * heldCentreLocal;
@@ -488,6 +490,8 @@ private void FitCarryPoint(Creature creature)
     }
 
     private float heldPull;
+    /// <summary>A small extra move of the hand in view space (right, up, forward), for tools that gesture.</summary>
+    public Vector3 HeldViewOffset { get; set; }
     private bool gripActive;
     private HoldPose gripPose;
     private Quaternion gripRotation = Quaternion.identity;
@@ -540,6 +544,7 @@ private void FitCarryPoint(Creature creature)
         carriedColliders = null;
         if (carryPoint != null) carryPoint.localPosition = carryPointHome;
         gripActive = false;
+        HeldViewOffset = Vector3.zero;
         if (dropped is TentacleCreature tentacle)
         {
             tentacle.PrepareForDrop();

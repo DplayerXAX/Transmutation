@@ -1,12 +1,17 @@
 // Thin glowing line (the baton's sounding thread): additive vertex colour, not fogged.
 Shader "Capstone/Cave/GlowLine"
 {
-    Properties { _Glow("Glow Amount", Range(0, 4)) = 2 }
+    Properties
+    {
+        _Glow("Glow Amount", Range(0, 4)) = 2
+        [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest("Depth Test", Float) = 4
+    }
     SubShader
     {
         Tags { "RenderType" = "Transparent" "Queue" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
         Blend One One
         ZWrite Off
+        ZTest [_ZTest]
         Cull Off
         Pass
         {

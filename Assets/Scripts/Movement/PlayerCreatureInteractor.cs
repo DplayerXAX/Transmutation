@@ -51,6 +51,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     private void Update()
     {
         if (RestSpotSystem.BlocksInteraction || MeditationController.BlocksPlayerInput || ReflectionVisitor.ConsumedClick) return;
+        if (CreatureSong.ConsumesMouse) { pendingHeldUse = null; CancelHoneyGesture(); return; } // playing notes to a creature
         var bugGrip = carrier != null && carrier.PlayerController != null ? carrier.PlayerController.GetComponent<PlayerBugGrip>() : null;
         if (bugGrip != null && bugGrip.ConsumesInput) { pendingHeldUse = null; UpdateHeldSqueeze(false); return; }
         // Daniel: Disable interaction during cutscenes,

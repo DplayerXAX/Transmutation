@@ -31,10 +31,15 @@ public sealed class DarkTunnels : MonoBehaviour
     [Tooltip("On: once the caves are built the player is moved down to the cavern floor by the stair tower's door. Off: normal spawn.")]
     [SerializeField] private bool spawnUnderground = true;
 
+    /// <summary>Off (default): creatures are played with the body's controls (CreatureSong). On: the older conductor baton.</summary>
+    public static bool UseBaton = false;
+
     public static DarkTunnels Instance { get; private set; }
     public static int TerrainMask { get; private set; } = 1 << 7;
     /// <summary>0..1 how far the dark has closed in on the camera now.</summary>
     public static float Darkness { get; private set; }
+    /// <summary>Test hook: no fog or darkness, to look at the shape of the caves.</summary>
+    public static bool DebugBright;
     public bool Built { get; private set; }
 
     public Vector3 EntranceWorld => DarkTunnelShape.TowerExit;
@@ -76,7 +81,11 @@ public sealed class DarkTunnels : MonoBehaviour
         go.AddComponent<DarkTunnels>();
     }
 
-    private void Awake() => Instance = this;
+    private void Awake()
+    {
+        Instance = this;
+        if (!UseBaton) gameObject.AddComponent<CreatureSong>();
+    }
 
     private void OnDestroy()
     {
@@ -91,7 +100,7 @@ public sealed class DarkTunnels : MonoBehaviour
         if (world == null) world = FindFirstObjectByType<ProceduralWorld>();
         if (world == null) return;
         TerrainMask = 1 << world.TerrainLayer;
-        if (startWithBaton && Baton == null) GiveBaton();
+        if (UseBaton && startWithBaton && Baton == null) GiveBaton();
         if (!Built && world.GenerationComplete) TryBuild();
         UpdateDarkness();
     }
@@ -133,14 +142,19 @@ public sealed class DarkTunnels : MonoBehaviour
             Snail(new Vector3(-80f, -73f, 150f), Vector3.down),              // floor loop
             Snail(new Vector3(-74f, -72f, 163f), Vector3.down),              // top of the deep descent
             Snail(new Vector3(-120f, -25f, 180f), Vector3.up),               // ceiling tunnel
+            Snail(new Vector3(-126f, -54f, 131f), Vector3.down),             // first shelf
+            Snail(new Vector3(-90f, -43f, 136f), Vector3.down),              // shelf with the shaft
+            Snail(new Vector3(-142f, -47f, 165f), Vector3.down),             // west shelf
+            Snail(new Vector3(-120f, -39f, 192f), Vector3.down),             // high north-west shelf
+            Snail(new Vector3(-92f, -41.5f, 196f), Vector3.down),            // top of the north massif
+            Snail(DarkTunnelShape.MassifRoom, Vector3.up),                   // room inside it
+            Snail(DarkTunnelShape.GalleryRoom, Vector3.up),                  // ceiling gallery room
+            Snail(new Vector3(-118f, -76f, 180f), Vector3.down),             // deep gallery
         };
         // Glims round the snails.
-        int[] at = { 0, 0, 1, 4, 4, 7, 3 };
+        int[] at = { 0, 0, 1, 4, 4, 7, 3, 8, 9, 10, 11, 12, 13, 15 };
         foreach (int i in at)
-            if (snails[i] != null) Glim(snails[i].transform.position + snails[i].SurfaceNormal * 1.2f + Random.insideUnitSphere * 0.6f)
-                .Note = i % 2 == 0 ? CaveNote.E : CaveNote.B;
-        // Notes: snails G, the Maw D, Glims E or B (above), the mesas one each.
-        foreach (BellSnail sn in snails) if (sn != null) sn.Note = CaveNote.G;
+            if (snails[i] != null) Glim(snails[i].transform.position + snails[i].SurfaceNormal * 1.2f + Random.insideUnitSphere * 0.6f);
 
         // One Lure Maw, its den on the cavern floor north of the hub.
         Vector3 den = new Vector3(-104f, -58f, 176f);
@@ -148,7 +162,6 @@ public sealed class DarkTunnels : MonoBehaviour
         {
             var maw = Make<LureMaw>("Lure Maw", denFloor.point);
             maw.SetDen(denFloor.point, new Vector3(-1f, 0f, -0.6f));
-            maw.Note = CaveNote.D;
         }
 
         // Tone Mesas: huge slabs of living rock lying over the holes down into the floor tunnels; play their note to
@@ -156,6 +169,37 @@ public sealed class DarkTunnels : MonoBehaviour
         Mesa(new Vector3(-100f, -64f, 152f), CaveNote.E);   // over the floor loop (and the way to the skeleton)
         Mesa(new Vector3(-130f, -64f, 166f), CaveNote.B);   // over the branch to the grotto
         Mesa(new Vector3(-112f, -64f, 186f), CaveNote.G);   // over the north dead end
+        // Higher up and smaller, or bigger and heavy: slide them off a shelf and they fall, and stay as steps below.
+        Mesa(new Vector3(-74f, -64f, 192f), CaveNote.G, 5f, 3.6f);            // in the north massif's door
+        Mesa(new Vector3(-128f, -56f, 130f), CaveNote.D, 5f, 3.2f);           // first shelf
+        Mesa(new Vector3(-103f, -50f, 127f), CaveNote.E, 6f, 3.8f);           // second shelf
+        Mesa(new Vector3(-88f, -45f, 140f), CaveNote.G, 6f, 3.8f, 1);         // on the shaft in the third shelf (heavy)
+        Mesa(new Vector3(-150f, -49f, 158f), CaveNote.B, 7f, 4f, 1);          // west shelf (heavy)
+        Mesa(new Vector3(-86f, -43.5f, 198f), CaveNote.D, 6f, 3.8f, 2);       // on the way up to the ceiling (heaviest)
+        Mesa(new Vector3(-140f, -64f, 150f), CaveNote.D, 10f, 6f, 1);         // a great one near the door: a step up to the shelves
+
+        // Note Seeds: what this place is for. Three of each note, in the hard places.
+        Seed(new Vector3(-95f, -48.5f, 124f), CaveNote.E);                   // second shelf
+        Seed(DarkTunnelShape.MassifRoom, CaveNote.E);                         // room in the north massif
+        Seed(new Vector3(-118f, -75f, 180f), CaveNote.E);                     // deep gallery
+        Seed(new Vector3(-83f, -44f, 144f), CaveNote.G);                      // third shelf
+        Seed(DarkTunnelShape.GalleryRoom, CaveNote.G);                        // ceiling gallery
+        Seed(new Vector3(-112f, -52.5f, 171f), CaveNote.G);                   // hub pillar's shelf
+        Seed(new Vector3(-156f, -48f, 155f), CaveNote.B);                     // west shelf
+        Seed(new Vector3(-168f, -48f, 180f), CaveNote.B);                     // top of the west massif
+        Seed(new Vector3(-155f, -73f, 189f), CaveNote.B);                     // grotto
+        Seed(new Vector3(-122f, -40f, 192f), CaveNote.D);                     // high north-west shelf
+        Seed(new Vector3(-98f, -30.5f, 203f), CaveNote.D);                    // in the neck, behind the heaviest mesa
+        Seed(new Vector3(-67f, -76f, 184f), CaveNote.D);                      // skeleton chamber
+
+        // The way down to the skeleton is shut until all three parts of the music come together.
+        if (!UseBaton)
+        {
+            Material rock = null;
+            foreach (MeshRenderer r in world.GetComponentsInChildren<MeshRenderer>())
+                if (r.gameObject.layer == world.TerrainLayer && r.sharedMaterial != null) { rock = r.sharedMaterial; break; }
+            if (rock != null) ChordDoor.Create(transform, new Vector3(-69.2f, -74.8f, 172.8f), new Vector3(0.32f, 0f, -0.95f), 2.9f, rock);
+        }
 
         // Strange water: pools hanging from the cavern ceiling (dripping down), blobs floating in the dark.
         StrangeWater.Build(transform);
@@ -167,7 +211,7 @@ public sealed class DarkTunnels : MonoBehaviour
             bones.transform.SetParent(transform, true);
             bones.Build(boneFloor.point + Vector3.down * 0.35f, new Vector3(-0.3f, 0f, 1f));
             if (Baton != null) Baton.SetSkeleton(bones);
-            else
+            else if (UseBaton)
             {
                 Baton = new GameObject("Conductor Baton").AddComponent<ConductorBaton>();
                 Baton.Build(bones);
@@ -199,10 +243,32 @@ public sealed class DarkTunnels : MonoBehaviour
         if (controller != null) controller.SetLook(Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg, 0f);
     }
 
-    private void Mesa(Vector3 at, CaveNote tone)
+    private void Mesa(Vector3 at, CaveNote tone, float width = 7f, float tall = 4.5f, int seedsNeeded = 0)
     {
-        if (!Physics.Raycast(at + Vector3.up * 6f, Vector3.down, out RaycastHit floor, 14f, TerrainMask)) return;
-        Make<ToneCrate>("Tone Mesa (" + tone + ")", floor.point).Settle(floor.point, tone);
+        // It rests on the highest ground under its middle and corners, so it can lie across a hole.
+        float top = float.MinValue, r = width * 0.38f;
+        for (int i = 0; i < 5; i++)
+        {
+            Vector3 from = at + Vector3.up * 3f + (i == 0 ? Vector3.zero : new Vector3(i % 2 == 0 ? r : -r, 0f, i < 3 ? r : -r));
+            if (Physics.Raycast(from, Vector3.down, out RaycastHit hit, 12f, TerrainMask)) top = Mathf.Max(top, hit.point.y);
+        }
+        if (top == float.MinValue)
+        {
+            Debug.LogWarning("[DarkTunnels] No floor for a Tone Mesa at " + at, this);
+            return;
+        }
+        Vector3 rest = new Vector3(at.x, top, at.z);
+        Make<ToneCrate>("Tone Mesa (" + tone + ")", rest).Settle(rest, tone, width, tall, seedsNeeded);
+    }
+
+    private void Seed(Vector3 air, CaveNote tone)
+    {
+        if (!Physics.Raycast(air + Vector3.up * 0.5f, Vector3.down, out RaycastHit floor, 8f, TerrainMask))
+        {
+            Debug.LogWarning("[DarkTunnels] No floor for a Note Seed at " + air, this);
+            return;
+        }
+        NoteSeed.Create(transform, floor.point, floor.normal, tone);
     }
 
     private BellSnail Snail(Vector3 air, Vector3 direction)
@@ -248,7 +314,7 @@ public sealed class DarkTunnels : MonoBehaviour
         Camera cam = Camera.main;
         if (cam == null) return;
         Vector3 eye = cam.transform.position;
-        float dark = DarkTunnelShape.Darkness(eye);
+        float dark = DebugBright ? 0f : DarkTunnelShape.Darkness(eye);
         if (carrier == null) carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
         bool lantern = carrier != null && carrier.CarriedCreature is GlimLantern;
         float want = Mathf.Lerp(sight, deepSight, DarkTunnelShape.Deep(eye)) + (lantern ? lanternSight : 0f);

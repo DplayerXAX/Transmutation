@@ -11,7 +11,7 @@ public sealed class BellSnail : CaveGlowCreature
 {
     [SerializeField] private float size = 0.55f;
     [SerializeField] private float creepSpeed = 0.18f;
-    [SerializeField] private float guidedSpeed = 0.8f;
+    [SerializeField] private float guidedSpeed = 2.6f;
     [Tooltip("How far it wanders from where it was placed (or last led).")]
     [SerializeField] private float roam = 3f;
 
@@ -98,7 +98,7 @@ public sealed class BellSnail : CaveGlowCreature
             Vector3 p = transform.position;
             if (Guide.HasValue)
             {
-                Vector3 to = Guide.Value - p;
+                Vector3 to = GuidedTarget(0f, true, normal) - p;
                 if (to.magnitude > 0.4f && Crawl(ref p, ref normal, to, guidedSpeed * deltaTime))
                 {
                     heading = Vector3.ProjectOnPlane(to, normal).normalized;

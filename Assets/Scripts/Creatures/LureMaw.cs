@@ -14,7 +14,7 @@ using UnityEngine;
 public sealed class LureMaw : CaveGlowCreature
 {
     [SerializeField] private float crawlSpeed = 1.3f;
-    [SerializeField] private float guidedSpeed = 1.9f;
+    [SerializeField] private float guidedSpeed = 5f;
     [Tooltip("Metres from its den it roams while nothing calls it.")]
     [SerializeField] private float roam = 5f;
     [Tooltip("Seconds it rests after eating.")]
@@ -123,7 +123,7 @@ public sealed class LureMaw : CaveGlowCreature
         float speed = 0f;
         prey = null;
         if (Muted) { }
-        else if (Guide.HasValue) { target = Guide.Value; speed = guidedSpeed; }
+        else if (Guide.HasValue) { target = GuidedTarget(0f, true, normal, 0.55f); speed = guidedSpeed; }
         else if (rest <= 0f)
         {
             prey = Hear<GlimLantern>(out float heard, hearing);
@@ -150,7 +150,7 @@ public sealed class LureMaw : CaveGlowCreature
         Vector3 to = Vector3.ProjectOnPlane(target - p, normal);
         if (speed > 0f && to.magnitude > 0.5f)
         {
-            heading = Vector3.Slerp(heading, to.normalized, 1f - Mathf.Exp(-2.2f * deltaTime)).normalized;
+            heading = Vector3.Slerp(heading, to.normalized, 1f - Mathf.Exp((Guide.HasValue ? -8f : -2.2f) * deltaTime)).normalized;
             if (Crawl(ref p, ref normal, heading, speed * deltaTime, 0.55f))
             {
                 normal = Vector3.Slerp(normal, Vector3.up, 0.3f).normalized;

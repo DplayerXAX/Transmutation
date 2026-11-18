@@ -23,6 +23,8 @@ internal static class CreatureRegistry
             if (creature.isActiveAndEnabled) Register(creature);
     }
 
+    internal static IReadOnlyList<Creature> All => creatures;
+
     internal static void Register(Creature creature)
     {
         if (creature != null && !creature.IsConsumptionPending && !creatures.Contains(creature)) creatures.Add(creature);
