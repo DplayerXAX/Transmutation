@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -95,7 +95,7 @@ public static class WorldMapPlaceholders
         if (WorldMapTerrain.InGooExterior(x, z)) return false;
         if (Vector2.Distance(p, WorldMapTerrain.MushroomCentre) < 118f) return false;
         if (new Vector2((x - WorldMapTerrain.FlowerCentre.x) / 100f, (z - WorldMapTerrain.FlowerCentre.y) / 92f).magnitude < 0.85f) return false;
-        if (WorldMapTerrain.CrackDistance(p, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 10f) return false;
+        if (WorldMapTerrain.CanyonDistance(p) < 10f) return false;
         // Keep the walk from the spawn to the regions open.
         if (WorldMapTerrain.Distance(p, new Vector2(-10f, -40f), new Vector2(-70f, 62f), out _) < 9f) return false;
         if (WorldMapTerrain.Distance(p, new Vector2(5f, -20f), new Vector2(82f, 40f), out _) < 10f) return false;
@@ -128,7 +128,7 @@ public static class WorldMapPlaceholders
                 if (random.NextDouble() < 0.22) continue;
                 float a = (i + (float)random.NextDouble() * 0.3f) / columns * Mathf.PI * 2f;
                 float x = spire.x + Mathf.Cos(a) * rx, z = spire.y + Mathf.Sin(a) * rz;
-                if (WorldMapTerrain.CrackDistance(new Vector2(x, z), out float t) < WorldMapTerrain.CrackHalfWidth(t) + 6f) continue;
+                if (WorldMapTerrain.CanyonDistance(new Vector2(x, z)) < 6f) continue;
                 float y = WorldMapTerrain.Height(x, z);
                 bool fallen = random.NextDouble() < 0.18;
                 float tall = fallen ? Mathf.Lerp(6f, 12f, (float)random.NextDouble()) : Mathf.Lerp(3f, 16f, (float)random.NextDouble()) * (1f + ring * 0.25f);
@@ -146,7 +146,7 @@ public static class WorldMapPlaceholders
         {
             float a = (float)random.NextDouble() * Mathf.PI * 2f, d = Mathf.Lerp(0.35f, 1.05f, (float)random.NextDouble());
             float x = spire.x + Mathf.Cos(a) * 150f * d, z = spire.y - 10f + Mathf.Sin(a) * 72f * d;
-            if (WorldMapTerrain.CrackDistance(new Vector2(x, z), out float t) < WorldMapTerrain.CrackHalfWidth(t) + 8f) continue;
+            if (WorldMapTerrain.CanyonDistance(new Vector2(x, z)) < 8f) continue;
             if (Vector2.Distance(new Vector2(x, z), spire) < 34f) continue;
             float y = WorldMapTerrain.Height(x, z);
             Quaternion rot = Quaternion.LookRotation(new Vector3(spire.x - x, 0f, spire.y - z)) * Quaternion.Euler(0f, 90f, 0f);

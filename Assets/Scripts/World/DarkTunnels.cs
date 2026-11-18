@@ -29,7 +29,7 @@ public sealed class DarkTunnels : MonoBehaviour
 
     [Header("Testing")]
     [Tooltip("On: once the caves are built the player is moved down to the cavern floor by the stair tower's door. Off: normal spawn.")]
-    [SerializeField] private bool spawnUnderground = true;
+    [SerializeField] private bool spawnUnderground = false;
 
     public static DarkTunnels Instance { get; private set; }
     public static int TerrainMask { get; private set; } = 1 << 7;

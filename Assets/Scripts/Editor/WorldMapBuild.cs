@@ -12,7 +12,7 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// Builds Scene_World (the combined map from Daniel's whiteboard) from a copy of Scene_LeafMap.
 /// Source scenes are never saved. A live Editor rebuild opens Scene_World additively so another dirty scene remains open.
-/// Phase 1: terrain layout (WorldMapTerrain), Goo region + Cistern sky island grafted into the saved terrain, spire and
+/// Phase 1: terrain layout (WorldMapTerrain), Goo region, Cistern sky island and Flame Canyon grafted into the saved terrain, spire and
 /// bone mother moved onto their sinkholes, placeholder forest and ruins, review captures.
 /// </summary>
 public static class WorldMapBuild
@@ -40,12 +40,14 @@ public static class WorldMapBuild
             Graft(world, GooPath, WorldMapTerrain.GooOffset, WorldMapTerrain.GooLower, WorldMapTerrain.GooUpper, SurfaceGoo, log);
             Vector3 r = new Vector3(WorldMapTerrain.IslandRadius * 1.2f, 0f, WorldMapTerrain.IslandRadius * 1.2f);
             Graft(world, CisternPath, WorldMapTerrain.IslandOffset, new Vector3(-r.x, -76f, -r.z), new Vector3(r.x, 48f, r.z), Island, log);
+            WorldMapFlameCanyon.GraftTerrain(world, log);
             AssetDatabase.SaveAssetIfDirty(world.SculptData);
             PrepareSampler(world);
             Landmarks(scene, world, log);
             Player(scene, world, log);
             Transform root = scene.GetRootGameObjects().First(g => g.name == RootName).transform;
             WorldMapPlaceholders.Build(root, log);
+            WorldMapSilkTrees.Replace(scene, root, log);
             WorldMapImport.All(scene, root, log);
             WorldMapDress.All(scene, root, log);
             Cameras(root);
@@ -170,7 +172,7 @@ public static class WorldMapBuild
         "{\"position\":{\"x\":" + F(at.x) + ",\"y\":" + F(at.y) + "},\"radius\":" + F(radius) + "}";
     private static string F(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static void PrepareSampler(ProceduralWorld world)
+    internal static void PrepareSampler(ProceduralWorld world)
     {
         typeof(ProceduralWorld).GetMethod("UseSavedLayout", Private).Invoke(world, null);
         typeof(ProceduralWorld).GetMethod("PrepareGrid", Private).Invoke(world, new object[] { world.SculptData != null ? world.SculptData.Headroom : 0f });
@@ -405,7 +407,7 @@ public static class WorldMapBuild
         var mother = FindInScene<BoneKiln>(scene);
         Vector2 s = WorldMapTerrain.SpireSpot, m = WorldMapTerrain.MotherHole;
         spire.transform.position = new Vector3(s.x, WorldMapTerrain.Height(s.x, s.y), s.y);
-        mother.transform.position = new Vector3(m.x, WorldMapTerrain.LedgeTop, m.y);
+        mother.transform.position = new Vector3(m.x, WorldMapTerrain.Height(m.x, m.y), m.y);
         foreach (var (target, index) in new (Object, int)[] { (spire, 0), (mother, 1) })
         {
             var so = new SerializedObject(target);
@@ -414,7 +416,7 @@ public static class WorldMapBuild
             so.ApplyModifiedPropertiesWithoutUndo();
         }
         spire.transform.parent.name = "04 Tower ruins — Hanging Spire";
-        mother.transform.parent.name = "05 Great crack — bone mother wedged in it";
+        mother.transform.parent.name = WorldMapFlameCanyon.MotherGroup;
         log.Add("Spire on sinkhole 0 at " + spire.transform.position + ", mother on sinkhole 1 at " + mother.transform.position);
     }
 
@@ -447,7 +449,7 @@ public static class WorldMapBuild
         Cam("01_TopDown", new Vector3(0, 900, 15), new Vector3(0, 0, 15.01f), 30, true, 335);
         Cam("02_Oblique", new Vector3(30, 330, -470), new Vector3(10, 0, 70), 42);
         Cam("03_SpawnView", new Vector3(-173, -7, -105), new Vector3(-157, -6, -98), 70);
-        Cam("04_CrackAndMother", new Vector3(-45, 30, 128), new Vector3(12, -16, 162), 60);
+        Cam("04_FlameCanyonAndMother", new Vector3(-150, 60, 120), new Vector3(0, -20, 162), 60);
         Cam("05_RuinsFromCrack", new Vector3(10, 22, 135), new Vector3(0, 30, 250), 60);
         Cam("06_CaveMouth", new Vector3(8, 52, -218), new Vector3(8, 2, -176), 65);
         Cam("07_IslandFromFlowers", new Vector3(-150, 40, 20), new Vector3(0, 99, 60), 60);

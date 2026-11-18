@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -257,7 +257,7 @@ public static class WorldMapDress
                 var p2 = new Vector2(px, pz);
                 if (Vector2.Distance(p2, WorldMapTerrain.Spawn) < 14f) continue;
                 if (WorldMapTerrain.InGooExterior(px, pz)) continue;
-                if (WorldMapTerrain.CrackDistance(p2, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 3f) continue;
+                if (WorldMapTerrain.CanyonDistance(p2) < 3f) continue;
                 if (Vector2.Distance(p2, WorldMapTerrain.MushroomCentre) < WorldMapTerrain.MushroomRadius + 6f) continue;
                 float h = WorldMapTerrain.Height(px, pz);
                 Vector3 n = new Vector3(WorldMapTerrain.Height(px - 0.6f, pz) - WorldMapTerrain.Height(px + 0.6f, pz), 1.2f,
@@ -382,8 +382,8 @@ public static class WorldMapDress
             ("Mushroom basin rim", Load("Mushrooms", "GlowSacs", "Bladders", "Polyps"), 90,
                 p => { float r = Vector2.Distance(p, WorldMapTerrain.MushroomCentre); return r > WorldMapTerrain.MushroomRadius + 4f && r < WorldMapTerrain.MushroomRadius + 34f; }, new Vector2(0.9f, 1.8f)),
             ("Forest floor", Load("Creepers", "CavePebbles", "Pebbles", "Fronds", "NeedleBeards"), 170, p => p.y < -20f && Oval(p, WorldMapTerrain.FlowerCentre, 92f, 82f) > 1f, new Vector2(0.8f, 1.5f)),
-            ("Crack lips", Load("Crystals", "Shards", "NeedleBeards", "HangingVeils"), 110,
-                p => { float d = WorldMapTerrain.CrackDistance(p, out float t); float w = WorldMapTerrain.CrackHalfWidth(t); return d > w + 1.5f && d < w + 14f; }, new Vector2(0.9f, 2f)),
+            ("Canyon lips", Load("Crystals", "Shards", "NeedleBeards", "HangingVeils"), 110,
+                p => { float d = WorldMapTerrain.CanyonDistance(p); return d > 1.5f && d < 14f; }, new Vector2(0.9f, 2f)),
             ("Ruins", Load("Obelisks", "Totems", "Cairns", "Halos", "Arches"), 80,
                 p => p.y > 190f && Vector2.Distance(p, WorldMapTerrain.SpireSpot) > 36f, new Vector2(1f, 2.2f)),
         };
@@ -399,7 +399,7 @@ public static class WorldMapDress
                 if (!region.where(p)) continue;
                 if (WorldMapTerrain.InGooExterior(p.x, p.y)) continue;
                 if (Vector2.Distance(p, WorldMapTerrain.Spawn) < 12f || Vector2.Distance(p, WorldMapTerrain.CaveMouth) < WorldMapTerrain.GooMouthRadius + 4f) continue;
-                if (WorldMapTerrain.CrackDistance(p, out float t) < WorldMapTerrain.CrackHalfWidth(t) + 1.5f) continue;
+                if (WorldMapTerrain.CanyonDistance(p) < 1.5f) continue;
                 if (Vector2.Distance(p, WorldMapTerrain.MushroomCentre) < WorldMapTerrain.MushroomRadius + 2f) continue;
                 float h = WorldMapTerrain.Height(p.x, p.y);
                 if (h > 45f) continue;
