@@ -14,10 +14,10 @@ public static class BasiltSceneChecks
         var land=worlds.Single(w=>w.name.Contains("hexagonal"));
         var jungle=GameObject.Find(BasiltSceneSetup.JungleRoot);
         Require(jungle!=null,"The megavine jungle is missing.");
-        var columns=jungle.transform.Find("Individual basalt - enclosing walls and shared terraces");
+        var columns=jungle.transform.Find("Individual basalt - central mountain and outcrops");
         var canopy=jungle.transform.Find("Independent giant arches and canopy sweeps");
-        var thorns=jungle.transform.Find("Radial hooked thorns - all around the vines");
-        Require(columns!=null && columns.childCount>400,"The enclosing basalt formations are missing.");
+        var thorns=jungle.transform.Find("Hooked thorns - clear walking crowns");
+        Require(columns!=null && columns.childCount>150,"The central basalt formations are missing.");
         Require(canopy!=null && canopy.childCount==BasiltDensity.Canopy.Length,"Some independent arches are missing.");
         Require(thorns!=null && thorns.childCount==BasiltDensity.Roads.Length+BasiltDensity.Canopy.Length,"Some radial thorn belts are missing.");
         Require(columns.GetComponentsInChildren<MeshRenderer>().All(r=>r.sharedMaterial.shader.name=="Capstone/World/BlackFlowContours"),"Basalt must use BlackFlowContours.");
@@ -29,10 +29,29 @@ public static class BasiltSceneChecks
             Require(hit,"Generated ground is missing at "+x+", "+z);supported++;
         }
         Require(max-min>20,"The ground needs substantial elevation changes.");
+        int shelfSamples=0,rampSamples=0;
+        for(int z=-58;z<=-18;z+=5)for(int x=-65;x<=-10;x+=5)
+        {
+            Require(Physics.RaycastAll(new Vector3(x,37,z),Vector3.down,2,1<<7).Any(h=>Mathf.Abs(h.point.y-36)<0.1f),"Battle shelf has a gap at "+x+", "+z);
+            shelfSamples++;
+        }
+        var approaches=jungle.transform.Find("Broad basalt approaches");
+        Require(approaches!=null && approaches.childCount==2,"Both broad approaches are required.");
+        foreach(var collider in approaches.GetComponentsInChildren<MeshCollider>())
+        {
+            var vertices=collider.sharedMesh.vertices;
+            for(int i=0;i<25;i++)
+            {
+                var p=(vertices[i*4]+vertices[i*4+2])*0.5f;
+                Require(collider.Raycast(new Ray(p+Vector3.up,Vector3.down),out var hit,2),"Approach collider has a gap.");
+                Require(hit.normal.y>0.9f,"Approach is too steep for a broad ground route.");rampSamples++;
+            }
+        }
         var player=UnityEngine.Object.FindFirstObjectByType<SmoothFirstPersonController>();Require(player!=null,"Player is missing.");
         var playerGround=Physics.RaycastAll(player.transform.position+Vector3.up*2,Vector3.down,10,1<<7).Where(h=>land.OwnsCollider(h.collider)).ToArray();
         Require(playerGround.Length>0,"The arrival has no ground support.");
-        return new {worldSize=land.WorldSize,allCached=worlds.All(w=>w.UsedChunkCache),majorVines=BasiltDensity.Roads.Length+canopy.childCount,canopyArches=canopy.childCount,thickestDiameter=BasiltDensity.Canopy.Max(v=>v.radius)*2,basaltColumns=columns.childCount,radialThornBelts=thorns.childCount,supportedGroundSamples=supported,groundHeightRange=new Vector2(min,max),playerSupported=true,basaltShader="BlackFlowContours"};
+        return new {worldSize=land.WorldSize,allCached=worlds.All(w=>w.UsedChunkCache),majorVines=BasiltDensity.Roads.Length+canopy.childCount,canopyArches=canopy.childCount,thickestDiameter=BasiltDensity.Canopy.Max(v=>v.radius)*2,basaltColumns=columns.childCount,radialThornBelts=thorns.childCount,supportedGroundSamples=supported,shelfSamples,rampSamples,groundHeightRange=new Vector2(min,max),playerSupported=true,basaltShader="BlackFlowContours"};
     }
     private static void Require(bool condition,string message){if(!condition)throw new InvalidOperationException(message);}
 }
+

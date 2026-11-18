@@ -56,6 +56,15 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
 
     public Creature CarriedCreature { get; private set; }
     public Camera CarryCamera => carryCamera;
+    public float ThrowHoldThreshold => throwHoldThreshold;
+    public float FullThrowHoldTime => fullThrowHoldTime;
+    public Vector3 CatchPosition => carryPoint != null ? carryPoint.position : transform.position;
+    public bool CanRetrieve(Creature creature) => creature != null && creature.isActiveAndEnabled &&
+        !creature.IsDead && !creature.IsConsumptionPending && !creature.IsCarried && !creature.IsBubbleCaptured &&
+        !BoneChild.IsCradled(creature) && !(creature.TryGetComponent<WebCapture>(out var web) && web.IsCaptured) &&
+        creature.CanBeCarried && !ReflectionSpotlight.IsFrozen(creature) &&
+        string.IsNullOrEmpty(creature.PickupActionPrompt) &&
+        (creature.IgnoreCarrySizeLimit || MeasureCreature(creature, out _, out _) <= maxCarrySize);
     public bool TryCarryFromInteraction(Creature creature)
     {
         if (CarriedCreature != null || pendingCreature != null || creature == null ||
@@ -257,12 +266,7 @@ if (creature == null || creature.IsBubbleCaptured || !creature.isActiveAndEnable
     return null;
 
 if (!string.IsNullOrEmpty(creature.PickupActionPrompt)) return creature;
-if (!creature.CanBeCarried || ReflectionSpotlight.IsFrozen(creature)) return null;
-
-// Too big to hold in one hand: no prompt, no pickup. Tentacle creatures shrink onto the hand, so any size works.
-// A Bellows can always be picked up, however full it is: it is a bag of air, and carrying it is how its stream is aimed.
-if (!creature.IgnoreCarrySizeLimit && MeasureCreature(creature, out _, out _) > maxCarrySize)
-    return null;
+if (!CanRetrieve(creature)) return null;
 
 return creature;
 }

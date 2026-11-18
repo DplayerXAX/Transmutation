@@ -109,6 +109,8 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
         bool leftHeld = Mouse.current != null &&
                         Mouse.current.leftButton.isPressed;
 
+        if (carrier != null && carrier.CarriedCreature is Boomerang) return;
+
         if (UpdateFurnace(Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame, leftHeld)) return;
 
         if (carrier != null && carrier.CarriedCreature is Chainsaw saw)

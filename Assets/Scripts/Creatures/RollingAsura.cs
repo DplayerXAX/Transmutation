@@ -32,19 +32,19 @@ public sealed class RollingAsura : Creature
         if (target != null && !Valid(target)) { target = null; Armed = false; fuse = 0f; }
         if (Armed)
         {
-            motor.Stop(); fuse -= dt;
+            motor.Stop(); fuse -= dt * AsuraBreachMomentum.AttackSpeed(this);
             if (fuse <= 0f && !detonated)
             {
                 detonated = true; Armed = false;
-                ExplosionResolver.Request(gameObject.scene, AimPosition, 2.8f, 45f, 9f, this);
+                ExplosionResolver.Request(gameObject.scene, AimPosition, 2.8f, 45f * AsuraBreachMomentum.Damage(this) * Random.Range(0.75f, 1.25f), 9f, this);
                 Die();
             }
             return;
         }
         if (target == null && Time.time >= nextSearch)
         {
-            nextSearch = Time.time + 0.25f;
-            CreatureSpatialQuery.NearbyCombat(gameObject.scene, AimPosition, 20f, nearby, indices);
+            nextSearch = Time.time + AsuraTerritoryMember.SearchInterval(this, 0.25f);
+            CreatureSpatialQuery.NearbyCombat(gameObject.scene, AimPosition, AsuraTerritoryMember.DetectionRange(this, 20f), nearby, indices);
             float best = float.PositiveInfinity;
             foreach (var candidate in nearby)
             {
@@ -55,7 +55,7 @@ public sealed class RollingAsura : Creature
         }
         if (target == null) { motor.Stop(); return; }
         Vector3 delta = target.AimPosition - AimPosition;
-        motor.SetIntent(delta.normalized * speed, delta);
+        motor.SetIntent(delta.normalized * speed * AsuraBreachMomentum.Speed(this), delta);
         if (CreatureSpatialQuery.TryGetSolid(target, out var solid) && CreatureSpatialQuery.TryGetSolid(this, out var own))
         {
             Vector3 point = solid.ClosestPoint(own.bounds.center);
@@ -63,11 +63,14 @@ public sealed class RollingAsura : Creature
             { Armed = true; fuse = fuseSeconds; motor.Stop(); }
         }
     }
-    private bool Valid(ICombatTarget other) => CombatTarget.Eligible(this, other) &&
-        (other.AimPosition - AimPosition).sqrMagnitude < 625f && CreatureSpatialQuery.TryGetSolid(other, out _);
+    private bool Valid(ICombatTarget other) => CombatTarget.Eligible(this, other) && (!(TryGetComponent<AsuraTerritoryMember>(out _)) || (other is Creature c && (AsuraTerritory.IsFighter(c) || (c is AsuraLinkage link && !link.Permanent)))) &&
+        (other.AimPosition - AimPosition).sqrMagnitude < Mathf.Pow(AsuraTerritoryMember.DetectionRange(this, 25f, true),2) && CreatureSpatialQuery.TryGetSolid(other, out _);
     private void Disarm() { Armed = false; spent = true; motor.Stop(); }
     protected override void OnCarryStarted() => Disarm();
     protected override void OnCaptureStarted() => Disarm();
     protected override void OnSimulationChanged() { if (!SimulationEnabled) motor.Stop(); }
     protected override void OnDeath() { Armed = false; motor.Stop(); }
 }
+
+
+

@@ -8,9 +8,11 @@ public abstract class CreatureAttack : MonoBehaviour
     [Min(0f)] [SerializeField] private float windup = 0.2f;
     public float Range => range;
     public float Damage => damage;
+    protected float RollDamage(Creature owner) => Damage * AsuraBreachMomentum.Damage(owner) * (owner!=null && AsuraTerritory.IsFighter(owner)?Random.Range(0.75f,1.25f):1f);
     public float Interval => Mathf.Max(interval, windup + 0.01f);
     public float Windup => windup;
     public virtual bool InReach(Creature owner, ICombatTarget target) => CombatTarget.Exists(target) &&
         (target.AimPosition - owner.AimPosition).sqrMagnitude <= Range * Range;
     public abstract bool Release(Creature owner, ICombatTarget target, Transform muzzle);
 }
+

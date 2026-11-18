@@ -25,6 +25,9 @@ public sealed class CreatureCombat : MonoBehaviour
     public CreatureCombatState State { get; private set; }
     public int Searches { get; private set; }
     public int Releases { get; private set; }
+    // Colony encounters opt in; authored encounters elsewhere preserve their existing target rules.
+    [SerializeField] private bool asuraOpponentsOnly;
+    public bool AsuraOpponentsOnly { get=>asuraOpponentsOnly; set=>asuraOpponentsOnly=value; }
     public event System.Action<CreatureCombatState> StateChanged;
 
     private void Awake()
@@ -37,7 +40,7 @@ public sealed class CreatureCombat : MonoBehaviour
 
     public bool Eligible(ICombatTarget candidate, float range)
     {
-        return CombatTarget.Eligible(owner, candidate) &&
+        return (!AsuraOpponentsOnly || (candidate is Creature other && (AsuraTerritory.IsFighter(other) || (other is AsuraLinkage link && !link.Permanent)))) && CombatTarget.Eligible(owner, candidate) &&
             CreatureSpatialQuery.TryGetSolid(candidate, out _) &&
             (candidate.AimPosition - owner.AimPosition).sqrMagnitude <= range * range;
     }
@@ -46,17 +49,17 @@ public sealed class CreatureCombat : MonoBehaviour
     {
         if (owner == null || !owner.SimulationEnabled || owner.IsConsumptionPending || attack == null ||
             FlashBlindness.IsBlinded(owner)) { Cancel(); return; }
-        if (Target != null && !Eligible(Target, retentionRange)) Cancel();
+        if (Target != null && !Eligible(Target, AsuraTerritoryMember.DetectionRange(owner, retentionRange, true))) Cancel();
         if (Target == null && Time.time >= nextSearch)
         {
-            nextSearch = Time.time + searchInterval; Searches++;
-            CreatureSpatialQuery.NearbyCombat(gameObject.scene, owner.AimPosition, detectionRange, candidates, indices);
+            nextSearch = Time.time + AsuraTerritoryMember.SearchInterval(owner, searchInterval); Searches++;
+            CreatureSpatialQuery.NearbyCombat(gameObject.scene, owner.AimPosition, AsuraTerritoryMember.DetectionRange(owner, detectionRange), candidates, indices);
             float best = float.PositiveInfinity;
             for (int i = 0; i < candidates.Count; i++)
             {
                 ICombatTarget candidate = candidates[i];
-                if (!Eligible(candidate, detectionRange)) continue;
-                float distance = (candidate.AimPosition - owner.AimPosition).sqrMagnitude;
+                if (!Eligible(candidate, AsuraTerritoryMember.DetectionRange(owner, detectionRange))) continue;
+                float distance = (candidate.AimPosition - owner.AimPosition).sqrMagnitude + (candidate is AsuraLinkage ? 100000f : 0f);
                 if (distance >= best || !CreatureSpatialQuery.Visible(owner, candidate, owner.AimPosition, ref hits)) continue;
                 Target = candidate; best = distance;
             }
@@ -66,7 +69,7 @@ public sealed class CreatureCombat : MonoBehaviour
         Vector3 aimOrigin = muzzle != null ? muzzle.position : owner.AimPosition;
         bool visible = CreatureSpatialQuery.Visible(owner, Target, aimOrigin, ref hits);
         obstructed = visible ? 0f : obstructed + deltaTime;
-        if (obstructed > obstructionGrace) { Cancel(); nextSearch = Time.time + searchInterval; return; }
+        if (obstructed > obstructionGrace) { Cancel(); nextSearch = Time.time + AsuraTerritoryMember.SearchInterval(owner, searchInterval); return; }
         if (firingPivot != null)
         {
             Vector3 aim = Target.AimPosition - firingPivot.position;
@@ -77,27 +80,27 @@ public sealed class CreatureCombat : MonoBehaviour
         if (State == CreatureCombatState.Windup)
         {
             motor?.SetIntent(Vector3.zero, delta);
-            windupRemaining -= deltaTime;
+            windupRemaining -= deltaTime * AsuraBreachMomentum.AttackSpeed(owner);
             if (windupRemaining > 0f) return;
-            if (Eligible(Target, retentionRange) && attack.InReach(owner, Target) && visible)
+            if (Eligible(Target, AsuraTerritoryMember.DetectionRange(owner, retentionRange, true)) && attack.InReach(owner, Target) && visible)
             {
                 SetState(CreatureCombatState.Release);
                 if (attack.Release(owner, Target, muzzle)) Releases++;
-                nextRelease = Time.time + attack.Interval;
+                nextRelease = Time.time + attack.Interval / AsuraBreachMomentum.AttackSpeed(owner);
                 SetState(CreatureCombatState.Recovery);
             }
-            else { nextRelease = Time.time + attack.Interval; SetState(CreatureCombatState.Approach); }
+            else { nextRelease = Time.time + attack.Interval / AsuraBreachMomentum.AttackSpeed(owner); SetState(CreatureCombatState.Approach); }
             return;
         }
         // Recovery is mobile; only the committed windup stops pursuit.
         if (!inRange)
         {
-            motor?.SetIntent(delta.normalized * moveSpeed, delta);
+            motor?.SetIntent(delta.normalized * moveSpeed * AsuraBreachMomentum.Speed(owner), delta);
             SetState(CreatureCombatState.Approach);
             return;
         }
         motor?.SetIntent(Vector3.zero, delta);
-        if (Time.time < nextRelease - attack.Windup) { SetState(CreatureCombatState.Recovery); return; }
+        if (Time.time < nextRelease - attack.Windup / AsuraBreachMomentum.AttackSpeed(owner)) { SetState(CreatureCombatState.Recovery); return; }
         Vector3 forward = firingPivot != null ? firingPivot.forward : transform.forward;
         if (!visible || Vector3.Angle(forward, Target.AimPosition - aimOrigin) > 10f) return;
         windupRemaining = attack.Windup;
@@ -117,3 +120,5 @@ public sealed class CreatureCombat : MonoBehaviour
         catch (System.Exception exception) { Debug.LogException(exception, this); }
     }
 }
+
+
