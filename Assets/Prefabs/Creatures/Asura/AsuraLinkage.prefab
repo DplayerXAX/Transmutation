@@ -1099,7 +1099,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AsuraLinkage
   creatureName: Unnamed Creature
   minimumImpactSpeed: 15.6
-  maxHealth: 100
+  maxHealth: 300
   initialPolarity: 3
   health: 0
   polarity: 0

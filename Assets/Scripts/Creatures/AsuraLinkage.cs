@@ -3,7 +3,7 @@ using UnityEngine;
 
 public enum AsuraLinkState { Forming, Active, Disconnected, Collapsing }
 
-/// <summary>A rooted territory organism. Presence pressure, not incidental projectile damage, removes it.</summary>
+/// <summary>A rooted, damageable territory organism. Permanent homes remain protected.</summary>
 public class AsuraLinkage : Creature
 {
     public AsuraHome home;
@@ -14,7 +14,10 @@ public class AsuraLinkage : Creature
     public float Pressure {get; internal set;}
     public float DisconnectedTime {get; internal set;}
     public virtual bool Permanent=>false;
-    public override bool Invulnerable=>true;
+    public override bool Invulnerable=>Permanent;
+    public float LastAttackedAt {get; private set;}=float.NegativeInfinity;
+    public Creature LastAttacker {get; private set;}
+    public float SpawnWeight=>Time.time-LastAttackedAt<8?0.2f:1;
     public override bool CanBeCarried=>false;
     public override bool CanBeCaptured=>false;
     public override bool CanBeConsumed=>false;
@@ -27,7 +30,12 @@ public class AsuraLinkage : Creature
     {
         SetCreatureName(Permanent?"Asura Home":"Asura Linkage");SetFoodAndDiet(FoodTag.None,FoodTag.None);
         ConfigureLifespan(1,0);visuals=GetComponentsInChildren<Renderer>();tint=new MaterialPropertyBlock();
+        Damaged-=OnDamaged;Damaged+=OnDamaged;
     }
+    private void OnDamaged(Creature victim,float amount,Creature source)
+    {LastAttackedAt=Time.time;LastAttacker=source;}
+    protected override void OnDeath()
+    {GetComponentInParent<AsuraTerritory>()?.LinkageDied(this);}
     protected override void TickCreature(float dt)
     {
         if(home==null)return;

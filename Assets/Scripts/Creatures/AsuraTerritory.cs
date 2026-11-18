@@ -10,6 +10,9 @@ public sealed class AsuraTerritory : MonoBehaviour
     public AsuraLinkage linkagePrefab;
     public Creature[] fighterPrefabs;
     public Material tendrilMaterial;
+    [Header("Territory awareness")]
+    [Tooltip("Enemy detection inside connected friendly territory. Outside it, normal creature range applies.")]
+    [Min(0)] public float territoryDetectionRange=60;
     [Header("Surface territory")]
     [Min(1)] public float influenceRadius=65;
     [Min(1)] public float minimumLinkDistance=50;
@@ -115,8 +118,7 @@ public sealed class AsuraTerritory : MonoBehaviour
                 continue;
             }
             node.DisconnectedTime=0;node.state=AsuraLinkState.Active;
-            node.Pressure=enemy>friendly?node.Pressure+dt:Mathf.Max(0,node.Pressure-dt*1.5f);
-            if(node.Pressure>=collapseSeconds)RemoveNode(node);
+            node.Pressure=(1-node.Health/node.MaxHealth)*12;
         }
         // Collapse disconnects descendants before this tick's spawning.
         RefreshConnections();
@@ -124,8 +126,8 @@ public sealed class AsuraTerritory : MonoBehaviour
         {
             if(!home.SimulationEnabled)continue;
             home.budget=Mathf.Min(2,home.budget+home.spawnsPerSecond*dt);
-            if(home.budget>=1 && home.Living<home.populationCap)
-            {if(TrySpawn(home,false))home.budget-=1;else home.budget=Mathf.Min(home.budget,1);}
+            for(int attempt=0;attempt<2 && home.budget>=1 && home.Living<home.populationCap;attempt++)
+            {if(TrySpawn(home,false))home.budget-=1;else {home.budget=Mathf.Min(home.budget,1);break;}}
             home.expansionClock+=dt;
             if(home.expansionClock>=4){home.expansionClock=0;TryExpand(home);}
         }
@@ -133,6 +135,7 @@ public sealed class AsuraTerritory : MonoBehaviour
     public bool CanLink(AsuraLinkage a,AsuraLinkage b)=>a.distances!=null && a.distances.TryGetValue(b.surfaceIndex,out float d) && d<=Mathf.Min(maximumLinkDistance,2*influenceRadius);
     public void RefreshConnections()
     {
+        foreach(var member in members)if(member!=null)member.TerritoryDetectionRange=0;
         foreach(var node in nodes)node.Connected=false;
         foreach(var home in homes)
         {
@@ -149,6 +152,10 @@ public sealed class AsuraTerritory : MonoBehaviour
             }
             var union=new HashSet<int>();foreach(var node in nodes)if(node.home==home && node.Connected)foreach(int i in node.patch)union.Add(i);
             home.TerritoryArea=0;foreach(int i in union)home.TerritoryArea+=surfaceMap.surfaces[i].area;
+            foreach(var member in members)
+                if(member!=null && member.home==home && member.Creature!=null && member.Creature.Polarity==home.Polarity &&
+                    fighterSurfaces.TryGetValue(member.Creature,out int surface) && union.Contains(surface))
+                    member.TerritoryDetectionRange=territoryDetectionRange;
         }
         foreach(var pair in tendrils)if(pair.Value!=null)pair.Value.enabled=pair.Key!=null && pair.Key.Connected;
     }
@@ -233,13 +240,17 @@ public sealed class AsuraTerritory : MonoBehaviour
     public bool TrySpawn(AsuraHome home,bool initial)
     {
         if(home.Living>=home.populationCap || !home.SimulationEnabled)return false;
+        var prefab=ChooseFighter();if(prefab==null)return false;
+        float bodyRadius=prefab is GeneralAsura?1.45f:0.9f;
+        float bodyHeight=prefab is GeneralAsura?3.3f:2.6f;
         var available=nodes.Where(n=>n.home==home && n.Connected && n.patch.Count>0).ToArray();if(available.Length==0)return false;
-        bool quiet=!initial && Random.value<quietSpawnChance;
+        bool quiet=Random.value<(initial?0.65f:quietSpawnChance);
         int expansionSite=!initial && Random.value<expansionSpawnChance?ExpansionSite(home):-1;
         float bestScore=float.NegativeInfinity;int best=-1;
         for(int attempt=0;attempt<70;attempt++)
         {
-            var node=available[Random.Range(0,available.Length)];int index=node.patch[Random.Range(0,node.patch.Count)];Vector3 p=surfaceMap.surfaces[index].position;
+            var node=available[Random.Range(0,available.Length)];if(Random.value>node.SpawnWeight)continue;
+            int index=node.patch[Random.Range(0,node.patch.Count)];Vector3 p=surfaceMap.surfaces[index].position;
             if(!surfaceMap.bounds.Contains(p) || nodes.Any(n=>(n.transform.position-p).sqrMagnitude<25))continue;
             int density=0;bool safe=true;float nearestEnemy=float.PositiveInfinity;
             foreach(var f in fighters)
@@ -249,7 +260,7 @@ public sealed class AsuraTerritory : MonoBehaviour
                 if(d<minimumSpacing || (f.Polarity!=home.Polarity && d<enemyClearance)){safe=false;break;}
                 if(f.Polarity==home.Polarity && d<densityRadius)density++;
             }
-            if(!safe || density>=localPopulationLimit || !Clear(p,0.9f,2.6f))continue;
+            if(!safe || density>=localPopulationLimit || !Clear(p,bodyRadius,bodyHeight))continue;
             // Recheck ground at runtime: the bake does not authorize spawning on removed/sculpted surfaces.
             if(!Physics.Raycast(p+Vector3.up*0.6f,Vector3.down,out var hit,1.2f,groundLayers,QueryTriggerInteraction.Ignore) || hit.normal.y<0.7f)continue;
             // A broad engagement band, not a race to the one closest opposing beacon.
@@ -259,7 +270,6 @@ public sealed class AsuraTerritory : MonoBehaviour
         }
         if(best<0){FailedSpawns++;return false;}
         Vector3 position=surfaceMap.surfaces[best].position+Vector3.up*0.15f;
-        var prefab=fighterPrefabs[Random.Range(0,fighterPrefabs.Length)];
         var fighter=Instantiate(prefab,position,Quaternion.Euler(0,Random.Range(0,360),0),transform);
         fighter.SetResolvedPolarity(home.Polarity);fighter.name=home.Polarity+" colony "+prefab.name;
         if(fighter.TryGetComponent<CreatureCombat>(out var combat))combat.AsuraOpponentsOnly=true;
@@ -278,6 +288,25 @@ public sealed class AsuraTerritory : MonoBehaviour
         int count=Physics.OverlapCapsuleNonAlloc(floor+Vector3.up*(radius+0.2f),floor+Vector3.up*(height-radius+0.2f),radius,overlaps,~0,QueryTriggerInteraction.Ignore);
         return count==0;
     }
+    public Creature ChooseFighter()
+    {
+        float Weight(Creature c)=>c is MeleeAsura?62:c is RangedAsura?23:c is RollingAsura?10:c is GeneralAsura?5:0;
+        float total=0;foreach(var p in fighterPrefabs)if(p!=null)total+=Weight(p);
+        float roll=Random.value*total;
+        foreach(var p in fighterPrefabs)if(p!=null){roll-=Weight(p);if(roll<0)return p;}
+        return fighterPrefabs.FirstOrDefault(p=>p!=null);
+    }
+    public void LinkageDied(AsuraLinkage node)
+    {
+        if(node.Permanent || !nodes.Contains(node))return;
+        if(node.DeathCause==CreatureDeathCause.Damage && node.LastAttacker!=null && IsFighter(node.LastAttacker) && node.LastAttacker.Polarity!=node.Polarity)
+        {
+            RefreshFighters();var area=surfaceMap.Distances(node.surfaceIndex,65);
+            foreach(var f in fighters)if(f.Polarity==node.LastAttacker.Polarity && fighterSurfaces.TryGetValue(f,out int i) && area.ContainsKey(i))
+            {var buff=f.GetComponent<AsuraBreachMomentum>();if(buff==null)buff=f.gameObject.AddComponent<AsuraBreachMomentum>();buff.Refresh();}
+        }
+        RemoveNode(node);RefreshConnections();
+    }
     public void RemoveNode(AsuraLinkage node)
     {
         if(node==null || node.Permanent)return;
@@ -291,3 +320,4 @@ public sealed class AsuraTerritory : MonoBehaviour
         {Gizmos.color=AsuraBloodPalette.For(node.home.Polarity);foreach(int i in node.patch)Gizmos.DrawSphere(surfaceMap.surfaces[i].position+Vector3.up*0.3f,0.35f);}
     }
 }
+

@@ -20,7 +20,7 @@ public sealed class MeleeAttack : CreatureAttack
         if (!CombatTarget.Eligible(owner, target) || !InReach(owner, target) || !CreatureSpatialQuery.Visible(owner, target, owner.AimPosition, ref hits)) return false;
         Vector3 direction = Vector3.ProjectOnPlane(target.AimPosition - owner.AimPosition, Vector3.up).normalized;
         if (direction.sqrMagnitude < 0.001f) direction = owner.transform.forward;
-        if (Vector3.Dot(owner.transform.forward, direction) < 0.25f || !target.ApplyDamage(Damage, owner)) return false;
+        if (Vector3.Dot(owner.transform.forward, direction) < 0.25f || !target.ApplyDamage(RollDamage(owner), owner)) return false;
         if (target.CombatRoot.TryGetComponent<Rigidbody>(out var body))
         {
             bool grounded = target.CombatRoot.TryGetComponent<AsuraMotor>(out var motor) && motor.Grounded;
@@ -30,3 +30,4 @@ public sealed class MeleeAttack : CreatureAttack
         return true;
     }
 }
+

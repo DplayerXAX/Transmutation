@@ -36,6 +36,7 @@ public sealed class ProjectileAttack : CreatureAttack
             return null;
         }
         return ProjectileCreature.Spawn(projectilePrefab, owner, firingPlayer, origin, direction.normalized * projectileSpeed,
-            Damage, blastRadius, blastPush);
+            RollDamage(owner), blastRadius, blastPush);
     }
 }
+

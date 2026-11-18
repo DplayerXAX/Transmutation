@@ -1,3 +1,18 @@
+## Combat and replenishment revision — November 18
+
+This section supersedes the historical prototype settings below.
+
+- Spawn mix: 62% melee, 23% ranged, 10% rollers, 5% generals. Each shared home attempt draws a type first, then searches for a valid position with enough clearance for that type. Location failures can affect the observed successful mix.
+- Basilt: 140 initial fighters per side, fixed cap 180 per side, shared replenishment budget of 2.5 fighters/second per home. Extra linkages divide that budget; they do not multiply production. Two credits maximum; failed placement retains at most one.
+- Linkages: 300 HP, no regeneration. Opposing fighters can target and damage them using normal melee, projectile and explosion attacks. Enemy presence alone no longer destroys them. Permanent home roots remain protected. Disconnected branches still stop spawning and expire after ten seconds without reconnection.
+- Damage suppresses a linkage's candidate-selection weight to 0.2 for eight seconds after its latest hit. This reduces its opportunities to receive reinforcements; it is not a guaranteed 80% reduction in final spawn counts because candidates are also scored for space and combat proximity.
+- Destroying an enemy linkage grants allied fighters within 65 metres of connected surface travel a 12-second breach buff: +15% damage, +25% attack/fire speed, +15% movement speed, and 1.5x detection/retention range. Repeated victories refresh the duration without stacking. No healing. Administrative/disconnection removal grants no buff.
+- Damage retains independent 0.75–1.25 random rolls. Growing territory spreads a fixed capped army and shared production more thinly, while the temporary breach buff supports a local push. Balance is provisional.
+
+Light verification: successful Unity compilation; advancing Play frames; controlled 300-HP linkage damage/destruction removed one node, set spawn weight to 0.2, and granted all four expected buff multipliers. Both homes stayed at the 180 cap. A 10,000-draw composition check yielded 61.52% melee, 22.81% ranged, 10.91% rollers and 4.76% generals. Reviewed death callbacks, projectile attribution, shared budget accounting, buff timing and roller cleanup. This is not a long balance soak.
+
+Current Basilt population revision (November 18): see Docs/AsuraPushPullPlans.md. The saved scene now has 82 initial linkages plus two homes, targets 140 starting fighters per side, caps each side at 180, and replenishes at 2.5/second. All 5,429 reachable surface samples are initially covered. The earlier tuning below records the prior prototype settings.
+
 # Asura homes and surface territory — first playable version
 
 Scene: `Assets/Scenes/Scene Basilt.unity`. The `Asura territory battleground` root owns the encounter. Enter Play to populate it. No manual activation is required.
@@ -42,3 +57,12 @@ Off by default. In Play mode, press **F8**, use the top-right **Territory: OFF/O
 The overlay includes baked unclaimed surfaces that may be unreachable from either current network; grey does not promise a location can currently be colonized. Side growth still requires a reachable link, spacing, sustained local friendly support, and available population/node budgets. No territory is granted solely by showing the overlay.
 
 A roughly 33-second smoke check verified default-off, on/off toggling, Game-view controls, surface rendering, and two newly formed linkages with no fresh runtime errors. Side-area distribution remains a tuning pass rather than a long-run balance guarantee.
+
+
+
+## Territory awareness revision
+
+Connected friendly coverage now grants colony members 60m detection and 75m retention, configured by Territory Detection Range on the AsuraTerritory component. The existing 1.5x breach multiplier applies afterward (90m/112.5m during a breach). Outside coverage the creature's normal 20m/25m ranges apply. Acquisition and attack line-of-sight checks and attack reach remain intact.
+
+The manager caches coverage on members using its existing surface lookup and coverage union, twice per second and on network refresh. Fighters do not scan for linkages. Territory searches use the shared spatial index at a 0.5-second interval and only while targetless. A larger radius still increases candidate/raycast work; no profiling claim is made. Light runtime validation confirmed 60 -> 20 -> 60 on leaving/re-entering coverage, 0.5s cadence, and 35 targets farther than 25m. Compilation passed and the Editor console reported zero errors.
+

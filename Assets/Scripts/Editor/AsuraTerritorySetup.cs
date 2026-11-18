@@ -40,7 +40,7 @@ public static class AsuraTerritorySetup
         var root=new GameObject(RootName);var territory=root.AddComponent<AsuraTerritory>();
         territory.surfaceMap=map;territory.linkagePrefab=linkPrefab.GetComponent<AsuraLinkage>();territory.tendrilMaterial=tendril;
         AddCoverageOverlay(territory);
-        territory.fighterPrefabs=new[]{AssetDatabase.LoadAssetAtPath<MeleeAsura>(AsuraPrototypeSetup.Folder+"/MeleeAsura.prefab") as Creature,AssetDatabase.LoadAssetAtPath<RangedAsura>(AsuraPrototypeSetup.Folder+"/RangedAsura.prefab")};
+        territory.fighterPrefabs=new[]{AssetDatabase.LoadAssetAtPath<MeleeAsura>(AsuraPrototypeSetup.Folder+"/MeleeAsura.prefab") as Creature,AssetDatabase.LoadAssetAtPath<RangedAsura>(AsuraPrototypeSetup.Folder+"/RangedAsura.prefab"),AssetDatabase.LoadAssetAtPath<RollingAsura>(AsuraPrototypeSetup.Folder+"/RollingAsura.prefab"),AssetDatabase.LoadAssetAtPath<GeneralAsura>(AsuraPrototypeSetup.Folder+"/GeneralAsura.prefab")};
         for(int side=0;side<2;side++)
         {
             int index=ids[side==0?0:3];var homeObject=(GameObject)PrefabUtility.InstantiatePrefab(homePrefab);
@@ -94,6 +94,9 @@ public static class AsuraTerritorySetup
             var body=root.AddComponent<Rigidbody>();body.isKinematic=true;body.useGravity=false;
             var collider=root.AddComponent<CapsuleCollider>();collider.radius=home?2.5f:1.1f;collider.height=home?7:3.4f;collider.center=Vector3.up*collider.height*0.5f;
             if(home)root.AddComponent<AsuraHome>();else root.AddComponent<AsuraLinkage>();
+            var healthSettings=new SerializedObject(root.GetComponent<AsuraLinkage>());
+            healthSettings.FindProperty("maxHealth").floatValue=300;
+            healthSettings.ApplyModifiedPropertiesWithoutUndo();
             float scale=home?2:1;
             Part(root.transform,PrimitiveType.Sphere,"Living core",new Vector3(0,1.6f*scale,0),new Vector3(1.7f,2.3f,1.7f)*scale,material);
             for(int claw=0;claw<5;claw++)
@@ -166,3 +169,4 @@ public static class AsuraTerritorySetup
         map.surfaces=samples.ToArray();EditorUtility.SetDirty(map);AssetDatabase.SaveAssets();return map;
     }
 }
+
