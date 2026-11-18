@@ -1,12 +1,13 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Shape of Scene_World, the combined map from Daniel's whiteboard (world metres, +z = forward from the spawn).
 /// South: the spawn clearing in a placeholder forest, yoyo's Goo cave grafted in beside it (Scene_Goo).
 /// Middle: the flower slope to the north-west, marcus's mushroom basin (Scene_FungalHollow) sunk to the east, a gentle
-/// ramp between them; the crystal sky island (Scene_CisternBasin, grafted) floats above them.
-/// North: a great east-west crack through the crust into the inner world, the bone mother wedged on a ledge in it,
-/// and beyond it the terraced plateau of the tower ruins round the Hanging Spire. Placeholder mountains ring it all.
+/// ramp between them; the crystal sky island (Scene_CisternBasin, grafted) floats above where they meet Flame Canyon.
+/// North: Flame Canyon (Scene_FlameCanyon, grafted) runs east-west where the great crack used to be, the bone mother
+/// asleep in her sinkhole beside it, and beyond it the terraced plateau of the tower ruins round the Hanging Spire.
+/// Placeholder mountains ring it all.
 /// Pure sampling, safe on terrain workers.
 /// </summary>
 public static class WorldMapTerrain
@@ -40,56 +41,63 @@ public static class WorldMapTerrain
     /// <summary>The mushroom hollow's centre follows the donor floor; its sides are part of the world mesh.</summary>
     public const float MushroomRadius = 64f;
     public static readonly Vector3 MushroomOffset = new Vector3(125f, -36f, 40f);
-    /// <summary>Scene_CisternBasin is grafted onto a floating island: donor origin moves here.</summary>
-    public static readonly Vector3 IslandOffset = new Vector3(0f, 92f, 60f);
+    /// <summary>Scene_CisternBasin is grafted onto a floating island: donor origin moves here. It floats over the
+    /// point where the flower field, the mushroom basin and Flame Canyon meet (moved from (0, 92, 60) on 2026-11-18).</summary>
+    public static readonly Vector3 IslandOffset = new Vector3(32f, 92f, 100f);
     public const float IslandRadius = 88f;
     public static readonly Vector2 SpireSpot = new Vector2(0f, 250f);
     public const float SpireHoleRadius = 7f;
-    public static readonly Vector2 MotherHole = new Vector2(2f, 161f);
+    /// <summary>The bone mother's sinkhole, on open ground beside Flame Canyon.</summary>
+    public static readonly Vector2 MotherHole = new Vector2(2f, 112f);
     public const float MotherHoleRadius = 5.5f;
-    /// <summary>Where she is jammed: rubble fills the crack wall to wall between these x, its top at LedgeTop.</summary>
-    public static readonly Vector2 JamRange = new Vector2(-24f, 58f);
-    public const float LedgeTop = -16f;
-    public const float InnerGround = -65f, CrackFloor = -74f;
+    public const float InnerGround = -65f;
     public static readonly Vector2 WorldSize = new Vector2(560f, 640f);
     public const float GridBottom = -84f, GridTop = 134f;
 
-    // The crack runs east-west across the whole map, into the mountains at both ends.
-    private static readonly Vector2[] CrackKeys = {
-        new Vector2(-262f, 141f), new Vector2(-205f, 152f), new Vector2(-150f, 146f), new Vector2(-95f, 158f),
-        new Vector2(-45f, 155f), new Vector2(-14f, 161f), new Vector2(22f, 161f), new Vector2(60f, 158f),
-        new Vector2(105f, 168f), new Vector2(155f, 163f), new Vector2(205f, 174f), new Vector2(262f, 168f) };
-    private static readonly float[] CrackLength = Lengths(CrackKeys);
+    // ---------------- Flame Canyon placement ----------------
+    // Scene_FlameCanyon's terrain and life are grafted in (WorldMapFlameCanyon). Its origin lands on CanyonOrigin,
+    // turned so its south-to-north length runs west to east, and its floor (donor y = 0) sits at CanyonFloor.
+
+    public static readonly Vector2 CanyonOrigin = new Vector2(0f, 162f);
+    public const float CanyonYaw = 90f;
+    public const float CanyonFloor = -34f;
+    public static Quaternion CanyonRotation => Quaternion.Euler(0f, CanyonYaw, 0f);
+    public static Vector3 FromCanyon(Vector3 donor) => new Vector3(CanyonOrigin.x, CanyonFloor, CanyonOrigin.y) + CanyonRotation * donor;
+    public static Vector3 ToCanyon(Vector3 world) => Quaternion.Inverse(CanyonRotation) * (world - new Vector3(CanyonOrigin.x, CanyonFloor, CanyonOrigin.y));
+
+    // Footprint of the canyon in donor metres (same layout as FlameCanyonSetup): the main slot, the side canyon and
+    // the chambers, each with its rim half-width (cut radius plus the widest terrace).
+    private static readonly Vector2[] CanyonMain = {
+        new Vector2(-6f, -108f), new Vector2(-28f, -80f), new Vector2(-20f, -46f), new Vector2(8f, -6f),
+        new Vector2(34f, 30f), new Vector2(24f, 62f), new Vector2(-4f, 84f), new Vector2(-12f, 108f) };
+    private static readonly Vector2[] CanyonDen = { new Vector2(8f, -6f), new Vector2(-16f, 6f), new Vector2(-34f, 14f) };
+    private static readonly Vector3[] CanyonChambers = {
+        new Vector3(-6f, -108f, 12f), new Vector3(8f, -6f, 19f), new Vector3(34f, 30f, 11f), new Vector3(-12f, 108f, 17f), new Vector3(-34f, 14f, 10f) };
+    private const float CanyonWiden = 6.6f;
+
+    /// <summary>Horizontal distance from (x, z) to the canyon's rim: negative over the canyon, positive outside.</summary>
+    public static float CanyonDistance(Vector2 p)
+    {
+        Vector3 local = ToCanyon(new Vector3(p.x, 0f, p.y));
+        Vector2 q = new Vector2(local.x, local.z);
+        float best = float.MaxValue;
+        for (int i = 1; i < CanyonMain.Length; i++) best = Mathf.Min(best, Distance(q, CanyonMain[i - 1], CanyonMain[i], out _) - 5f - CanyonWiden);
+        for (int i = 1; i < CanyonDen.Length; i++) best = Mathf.Min(best, Distance(q, CanyonDen[i - 1], CanyonDen[i], out _) - 4.5f - CanyonWiden);
+        foreach (Vector3 c in CanyonChambers) best = Mathf.Min(best, Vector2.Distance(q, new Vector2(c.x, c.y)) - c.z - CanyonWiden);
+        return best;
+    }
 
     // Walked routes that stay smooth: spawn -> flowers, spawn -> mushroom ramp -> basin floor, middle -> crack rim.
     private static readonly Vector3[] RampRoute = {
         new Vector3(5f, 6f, -20f), new Vector3(28f, 6f, 22f), new Vector3(42f, 0f, 36f), new Vector3(52f, -8f, 40f) };
     private static readonly Vector3[] FlowerRoute = {
         new Vector3(-10f, 5f, -40f), new Vector3(-28f, 7f, -5f), new Vector3(-45f, 11f, 30f), new Vector3(-70f, 18f, 62f) };
-    private static float motherT = -1f;
-    /// <summary>Crack parameter at the mother's hole, where the crack pinches round her.</summary>
-    private static float MotherT { get { if (motherT < 0f) CrackDistance(MotherHole, out motherT); return motherT; } }
-
-    private static float[] Lengths(Vector2[] keys)
-    {
-        var length = new float[keys.Length];
-        for (int i = 1; i < keys.Length; i++) length[i] = length[i - 1] + Vector2.Distance(keys[i - 1], keys[i]);
-        return length;
-    }
-
     // ---------------- Surface ----------------
 
-    /// <summary>Surface height of a column (the crack floor or the mother's ledge inside the crack).</summary>
-    public static float Height(float x, float z)
-    {
-        float h = BaseHeight(x, z);
-        float d = CrackDistance(new Vector2(x, z), out float t), w = CrackHalfWidth(t);
-        float inside = 1f - Mathf.SmoothStep(0f, 1f, (d - w + 0.9f) / 1.7f);
-        if (inside <= 0f) return h;
-        return Mathf.Lerp(h, Mathf.Max(CrackFloor, JamTop(x, z)), inside);
-    }
+    /// <summary>Surface height of a column of the generated ground (Flame Canyon is cut into it by saved edits).</summary>
+    public static float Height(float x, float z) => BaseHeight(x, z);
 
-    /// <summary>Ground before the crack is cut.</summary>
+    /// <summary>Generated ground height.</summary>
     public static float BaseHeight(float x, float z)
     {
         // Soft rolling ground everywhere: warped, so it never lines up.
@@ -136,10 +144,6 @@ public static class WorldMapTerrain
         h = Path(h, x, z, FlowerRoute, 5f, 7f);
         // The former narrow mushroom ramp is now the broad west flank of the hollow.
         // The forest start is a carved room beneath this intact surface, not a flat clearing.
-
-        // The ground falls in gently towards the crack rim, so it reads from a distance.
-        float d = CrackDistance(new Vector2(x, z), out float t);
-        h -= 3f * (1f - Mathf.SmoothStep(0f, 1f, (d - CrackHalfWidth(t)) / 22f));
 
         return Mountains(h, x, z);
     }
@@ -189,67 +193,10 @@ public static class WorldMapTerrain
         return Mathf.Lerp(h, Mathf.Max(h, peaks), rise);
     }
 
-    // ---------------- The crack ----------------
-
-    public static float CrackDistance(Vector2 p, out float t)
-    {
-        float best = float.MaxValue; t = 0f;
-        float total = CrackLength[CrackKeys.Length - 1];
-        for (int i = 1; i < CrackKeys.Length; i++)
-        {
-            float d = Distance(p, CrackKeys[i - 1], CrackKeys[i], out float u);
-            if (d < best) { best = d; t = Mathf.Lerp(CrackLength[i - 1], CrackLength[i], u) / total; }
-        }
-        return best;
-    }
-
-    public static Vector2 CrackPoint(float t)
-    {
-        float at = Mathf.Clamp01(t) * CrackLength[CrackKeys.Length - 1];
-        int i = 1; while (i < CrackKeys.Length - 1 && CrackLength[i] < at) i++;
-        return Vector2.Lerp(CrackKeys[i - 1], CrackKeys[i], Mathf.InverseLerp(CrackLength[i - 1], CrackLength[i], at));
-    }
-
-    /// <summary>About 26 m across, pinching to about 20 m where the mother is jammed, narrowing to slots in the mountains.</summary>
-    public static float CrackHalfWidth(float t)
-    {
-        float ends = Mathf.SmoothStep(0f, 1f, t / 0.12f) * Mathf.SmoothStep(0f, 1f, (1f - t) / 0.12f);
-        float wave = Mathf.Sin(t * 23f + 0.4f) * 1.8f + Mathf.Sin(t * 57f) * 0.9f;
-        return Mathf.Lerp(4f, 13f + wave, ends) - 3f * Mathf.Exp(-Mathf.Pow((t - MotherT) / 0.05f, 2f));
-    }
-
-    /// <summary>Top of the rubble jam that holds the mother (below the crack floor away from her).</summary>
-    public static float JamTop(float x, float z)
-    {
-        float inside = Mathf.SmoothStep(0f, 1f, (x - JamRange.x) / 12f) * Mathf.SmoothStep(0f, 1f, (JamRange.y - x) / 12f);
-        float rubble = (Mathf.PerlinNoise(x * 0.18f + 4f, z * 0.18f + 9f) - 0.5f) * 2.2f;
-        return Mathf.Lerp(CrackFloor - 6f, LedgeTop + rubble * inside, Mathf.Pow(inside, 0.35f));
-    }
-
-    public static bool IsOpenCrackSurface(Vector3 p)
-    {
-        float d = CrackDistance(new Vector2(p.x, p.z), out float t);
-        return d < CrackHalfWidth(t) + 6f && p.y > -34f && p.y < BaseHeight(p.x, p.z) - 1.5f;
-    }
-
-    /// <summary>Applied after the base crust / inner world density: cuts the crack and keeps the mother's ledge.</summary>
+    /// <summary>Applied after the base crust / inner world density: the spawn chamber and the dark tunnels.</summary>
     public static float ShapeDensity(Vector3 p, float density)
     {
         density = SpawnCave(p, density);
-        float d = CrackDistance(new Vector2(p.x, p.z), out float t), w = CrackHalfWidth(t);
-        if (d < w + 6f)
-        {
-            float surface = BaseHeight(p.x, p.z);
-            float crust = Mathf.Min(surface - p.y, p.y + 32f + Mathf.Max(0f, surface) * 0.15f);
-            float inner = InnerGround + Mathf.PerlinNoise(p.x * 0.025f + 71f, p.z * 0.025f + 31f) * 2f - p.y;
-            // Strata ledges and rough breaks make the walls three dimensional.
-            float ledges = Mathf.Sin(p.y * 0.6f + t * 31f) * 0.8f + Mathf.Sin(p.y * 1.37f - t * 47f) * 0.3f;
-            float rough = (Mathf.PerlinNoise(t * 41f + 21f, p.y * 0.17f + 39f) - 0.5f) * 1.8f;
-            float cut = Mathf.Max(d - w - ledges - rough, CrackFloor - p.y);
-            density = Mathf.Max(Mathf.Min(crust, cut), inner);
-            // Where the mother is jammed, fallen rubble fills the crack from wall to wall under her body.
-            density = Mathf.Max(density, JamTop(p.x, p.z) - p.y);
-        }
         // Dark tunnels behind the spawn chamber (DarkTunnelShape).
         return DarkTunnelShape.Carve(p, density);
     }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -19,6 +19,9 @@ public sealed class CanyonSteam : MonoBehaviour
     [SerializeField] private List<Vector3> seeps = new List<Vector3>();
     [Tooltip("World height of the canyon rim.")]
     [SerializeField] private float rimHeight = 42f;
+    [Tooltip("World height of the canyon floor. Fire bubbles stop rising at a fixed world height meant for a floor at y = 0; " +
+             "bubbles born in this canyon have it moved by this much, so a canyon set lower in a bigger map behaves the same.")]
+    [SerializeField] private float floorHeight = 0f;
 
     [Header("Steam")]
     [Tooltip("Puffs per second from each seep.")]
@@ -40,6 +43,7 @@ public sealed class CanyonSteam : MonoBehaviour
 
     private readonly List<ParticleSystem> plumes = new List<ParticleSystem>();
     private GeothermalVent[] vents;
+    private readonly HashSet<FireBubble> lowered = new HashSet<FireBubble>();
     private float nextScan;
 
     public void Setup(List<Vector3> seepPoints, float rim)
@@ -60,13 +64,23 @@ public sealed class CanyonSteam : MonoBehaviour
         // Time to climb out, plus a little drifting once over the plateau.
         float ceiling = rimHeight + liftAboveRim;
         if (vents == null) vents = FindObjectsByType<GeothermalVent>(FindObjectsSortMode.None);
+        if (lowered.Count > 256) lowered.RemoveWhere(b => b == null);
         foreach (FireBubble bubble in FindObjectsByType<FireBubble>(FindObjectsSortMode.None))
         {
             if (bubble.gameObject.scene != gameObject.scene) continue;
             Vector3 at = bubble.transform.position;
+            if (floorHeight != 0f && at.y < rimHeight && NearSeep(at, 30f) && lowered.Add(bubble))
+                bubble.FallStartWorldY += floorHeight;
             if (at.y < rimHeight && InColumn(at))
                 bubble.Updraft(ceiling, liftSpeed, (ceiling - at.y) / liftSpeed + 8f);
         }
+    }
+
+    private bool NearSeep(Vector3 at, float range)
+    {
+        foreach (Vector3 seep in seeps)
+            if (new Vector2(at.x - seep.x, at.z - seep.z).sqrMagnitude < range * range) return true;
+        return false;
     }
 
     /// <summary>Inside the rising column of warm air straight above a vent.</summary>

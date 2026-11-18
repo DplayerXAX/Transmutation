@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -82,6 +82,17 @@ public sealed partial class ProceduralWorld : MonoBehaviour
     [Header("Rendering")]
     [SerializeField] private Material surfaceMaterial;
     [SerializeField] private Material innerMaterial;
+    [Tooltip("Chunks overlapping one of these world boxes draw their inner rock with its material instead.")]
+    [SerializeField] private InnerMaterialZone[] innerMaterialZones = new InnerMaterialZone[0];
+
+    [System.Serializable]
+    public struct InnerMaterialZone
+    {
+        public Bounds bounds;
+        public Material material;
+    }
+
+    public InnerMaterialZone[] InnerMaterialZones { get => innerMaterialZones; set => innerMaterialZones = value ?? new InnerMaterialZone[0]; }
     [Tooltip("Layer for the generated chunks; Ground lets the player jump and creatures grip.")]
     [SerializeField] private int chunkLayer = 7;
 
