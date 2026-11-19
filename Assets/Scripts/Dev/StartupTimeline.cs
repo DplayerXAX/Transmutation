@@ -23,6 +23,9 @@ public sealed class StartupTimeline : MonoBehaviour
     {
         lines.Clear();
         last = 0;
+#if UNITY_EDITOR
+        Creature.AwakeTicks.Clear(); // statics survive between Plays while script reload is off
+#endif
         clock.Restart();
         recording = true;
         Application.logMessageReceived -= OnLog;
@@ -34,6 +37,20 @@ public sealed class StartupTimeline : MonoBehaviour
     private static void AfterScene()
     {
         Mark("all scene objects awake (Start comes next, inside the first frame)");
+#if UNITY_EDITOR
+        double total = 0;
+        var species = new System.Collections.Generic.List<(double ms, string name)>();
+        foreach (var pair in Creature.AwakeTicks)
+        {
+            double ms = pair.Value * 1000.0 / Stopwatch.Frequency;
+            total += ms;
+            species.Add((ms, pair.Key.Name));
+        }
+        species.Sort((a, b) => b.ms.CompareTo(a.ms));
+        var text = new StringBuilder($"creature setup in Awake: {total:0} ms total;");
+        for (int i = 0; i < species.Count && i < 14; i++) text.Append($" {species[i].name} {species[i].ms:0}");
+        Mark(text.ToString());
+#endif
         var go = new GameObject("Startup timeline") { hideFlags = HideFlags.HideAndDontSave };
         DontDestroyOnLoad(go);
         go.AddComponent<StartupTimeline>();

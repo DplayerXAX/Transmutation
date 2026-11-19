@@ -10,11 +10,19 @@
     "Type": "User",
     "GUID": "{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}",
     "Language": "SFX",
-    "Hash": "{248A80FC-4648-ED0E-2D12-B2D40E0CEDA9}",
+    "Hash": "{AB7F699F-EF56-FFC5-52BD-17BDC3294998}",
     "ObjectPath": "\\SoundBanks\\Default Work Unit\\Transmutation",
     "ShortName": "Transmutation",
     "Path": "Transmutation.bnk",
     "Media": [
+     {
+      "Id": "3085112",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_D4.wav",
+      "CachePath": "D0/{D0E14775-950E-CDFA-A07C-258B5DD06CE4}.wem"
+     },
      {
       "Id": "11987434",
       "Language": "SFX",
@@ -32,6 +40,14 @@
       "CachePath": "E6/{E61DC268-FEA5-8A6E-6E9D-026ADE5FCB95}.wem"
      },
      {
+      "Id": "51672418",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_A3.wav",
+      "CachePath": "C4/{C41A0015-C5C1-863A-F6BC-79DC22017440}.wem"
+     },
+     {
       "Id": "55465272",
       "Language": "SFX",
       "Streaming": "false",
@@ -46,6 +62,14 @@
       "Location": "Memory",
       "ShortName": "basic_test.wav",
       "CachePath": "21/{21CDDAED-218E-71D2-824D-C49641294AB1}.wem"
+     },
+     {
+      "Id": "114883503",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_E3.wav",
+      "CachePath": "BA/{BA013C38-12CB-0759-1048-25C2EAADD07D}.wem"
      },
      {
       "Id": "115744844",
@@ -104,6 +128,14 @@
       "CachePath": "65/{65F03AB4-A8BF-36B3-1ED7-E181B79BB075}.wem"
      },
      {
+      "Id": "316013940",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_B3.wav",
+      "CachePath": "3A/{3AFED7B9-E850-62E7-53B0-F80B76C21E37}.wem"
+     },
+     {
       "Id": "352086038",
       "Language": "SFX",
       "Streaming": "false",
@@ -118,6 +150,14 @@
       "Location": "Memory",
       "ShortName": "hungry cave.wav",
       "CachePath": "4D/{4DB74638-1757-9802-C5A1-BE4630F89D4E}.wem"
+     },
+     {
+      "Id": "445693686",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_Fs3.wav",
+      "CachePath": "C2/{C2FBA575-3D10-9BFC-73EB-242BD02477CB}.wem"
      },
      {
       "Id": "453822448",
@@ -150,6 +190,14 @@
       "Location": "Memory",
       "ShortName": "right.wav",
       "CachePath": "A5/{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem"
+     },
+     {
+      "Id": "522326831",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_C4.wav",
+      "CachePath": "B3/{B310BDC5-1FE0-EE07-7B34-77F9FD420DC3}.wem"
      },
      {
       "Id": "557442941",
@@ -264,12 +312,28 @@
       "CachePath": "22/{227E6133-CADA-9152-460B-47542797FB75}.wem"
      },
      {
+      "Id": "1019235382",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_E4.wav",
+      "CachePath": "3B/{3BEA8776-A09F-D004-57CA-A2E2AC873A63}.wem"
+     },
+     {
       "Id": "1052475880",
       "Language": "SFX",
       "Streaming": "false",
       "Location": "Memory",
       "ShortName": "SFX\\crate_D.wav",
       "CachePath": "D0/{D0AE8086-FBA6-0C7F-77A1-8B6B6AF83693}.wem"
+     },
+     {
+      "Id": "1063203631",
+      "Language": "SFX",
+      "Streaming": "false",
+      "Location": "Memory",
+      "ShortName": "SFX\\song_G3.wav",
+      "CachePath": "4C/{4CFF1AB5-33BA-A0A0-E746-31D0847B0FBE}.wem"
      }
     ],
     "Events": [
@@ -456,6 +520,126 @@
        },
        {
         "Id": "766320165"
+       }
+      ]
+     },
+     {
+      "Id": "729569016",
+      "Name": "Play_Song_A3",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_A3",
+      "GUID": "{D4888A4C-E9E9-4FFC-BFA4-9C9DC587D078}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "51672418"
+       }
+      ]
+     },
+     {
+      "Id": "746346605",
+      "Name": "Play_Song_B3",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_B3",
+      "GUID": "{6C30DF99-FD84-4E53-920E-AF089CB52FF6}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "316013940"
+       }
+      ]
+     },
+     {
+      "Id": "763124165",
+      "Name": "Play_Song_C4",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_C4",
+      "GUID": "{DCF9D0AE-649A-4C9E-9986-4ABCAAFB3EE1}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "522326831"
+       }
+      ]
+     },
+     {
+      "Id": "779901872",
+      "Name": "Play_Song_D4",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_D4",
+      "GUID": "{A233C47D-F6BE-40A2-B5DE-A0F7E694E4F4}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "3085112"
+       }
+      ]
+     },
+     {
+      "Id": "796679460",
+      "Name": "Play_Song_E3",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_E3",
+      "GUID": "{00DD28FE-6872-4847-9F65-2B02F1F93906}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "114883503"
+       }
+      ]
+     },
+     {
+      "Id": "796679459",
+      "Name": "Play_Song_E4",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_E4",
+      "GUID": "{BF7BBC9F-5C90-4BCD-8192-A2B53E9D885C}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "1019235382"
+       }
+      ]
+     },
+     {
+      "Id": "751390632",
+      "Name": "Play_Song_Fs3",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_Fs3",
+      "GUID": "{6903427F-56CA-4702-90E6-FA60E6B3E950}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "445693686"
+       }
+      ]
+     },
+     {
+      "Id": "830234638",
+      "Name": "Play_Song_G3",
+      "ObjectPath": "\\Events\\Default Work Unit\\Play_Song_G3",
+      "GUID": "{F2A9449A-FBD9-4AC2-B2F6-E92485C1AF54}",
+      "MaxAttenuation": "30",
+      "DurationType": "OneShot",
+      "DurationMin": "1.25",
+      "DurationMax": "1.25",
+      "MediaRefs": [
+       {
+        "Id": "1063203631"
        }
       ]
      },
@@ -657,6 +841,6 @@
     ]
    }
   ],
-  "FileHash": "{0588348C-9491-6E3D-5EBD-430477A4CCF0}"
+  "FileHash": "{8C1D2C64-B7B8-C023-3EF1-3D973C7F0AF3}"
  }
 }

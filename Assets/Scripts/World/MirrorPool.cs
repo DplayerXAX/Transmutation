@@ -10,6 +10,8 @@ using UnityEngine.Rendering.Universal;
 /// from afar), and a planar reflection: a second camera renders the view mirrored in the water plane.
 /// Only the nearest visible pool within `mirrorRange` is mirrored each frame (one extra half-resolution render); the
 /// others show their dark tint. DarkTunnels places them through StrangeWater.Build.
+/// Attach gives the same mirror to a HangingLake, which lies on the rock: looking up, the floor lies upside down in the
+/// water, and each drop that leaves sends rings across it.
 /// </summary>
 [DefaultExecutionOrder(2000)] // after the camera has moved this frame
 public sealed class MirrorPool : MonoBehaviour
@@ -34,6 +36,10 @@ public sealed class MirrorPool : MonoBehaviour
     private Material material;
     private Renderer surface;
     private float radius;
+    private WaterDrips drips;
+    private readonly Vector4[] tipData = new Vector4[6];
+    public float Radius => radius;
+    private Vector3 centre, planePoint, planeNormal = Vector3.up;
 
     /// <summary>Makes a pool on the floor round a point: radius in metres, glow colour for its reveal light.</summary>
     public static MirrorPool Create(Transform parent, Vector3 floorPoint, float radius, Color glow, int stalagmites, int mask, Material rock)
@@ -55,6 +61,7 @@ public sealed class MirrorPool : MonoBehaviour
         go.layer = WaterLayer;
         var pool = go.AddComponent<MirrorPool>();
         pool.radius = radius;
+        pool.centre = pool.planePoint = go.transform.position;
         go.AddComponent<MeshFilter>().sharedMesh = PoolMesh(radius, Random.Range(0f, 50f));
         pool.surface = go.AddComponent<MeshRenderer>();
         pool.surface.shadowCastingMode = ShadowCastingMode.Off;
@@ -79,6 +86,34 @@ public sealed class MirrorPool : MonoBehaviour
         return pool;
     }
 
+    /// <summary>Gives a hanging lake its mirror: the lake's own mesh and water, reflecting in a level plane through it.</summary>
+    public static MirrorPool Attach(GameObject lake, Renderer renderer, Material water, float planeY, Vector3 centre, float radius, WaterDrips drips)
+    {
+        lake.layer = WaterLayer;
+        var pool = lake.AddComponent<MirrorPool>();
+        pool.surface = renderer;
+        pool.material = water;
+        pool.radius = radius;
+        pool.drips = drips;
+        pool.centre = centre;
+        pool.planePoint = new Vector3(centre.x, planeY, centre.z);
+        pool.planeNormal = Vector3.down;
+        return pool;
+    }
+
+    private void Update()
+    {
+        if (drips == null) return;
+        int n = Mathf.Min(drips.TipCount, tipData.Length);
+        for (int i = 0; i < n; i++)
+        {
+            Vector3 p = drips.TipPoint(i);
+            tipData[i] = new Vector4(p.x, p.z, drips.SinceDrop(i), 0f);
+        }
+        material.SetVectorArray("_Tips", tipData);
+        material.SetInt("_TipCount", n);
+    }
+
     private void OnEnable() => All.Add(this);
     private void OnDisable() { All.Remove(this); if (mirrored == this) mirrored = null; }
 
@@ -96,9 +131,9 @@ public sealed class MirrorPool : MonoBehaviour
         {
             foreach (MirrorPool p in All)
             {
-                float d = Vector3.Distance(main.transform.position, p.transform.position) - p.radius;
+                float d = Vector3.Distance(main.transform.position, p.centre) - p.radius;
                 // In front of the view (a wide cone, so a pool at the edge of the screen still counts), or underfoot.
-                Vector3 to = p.transform.position - main.transform.position;
+                Vector3 to = p.centre - main.transform.position;
                 bool seen = p.surface != null && (to.magnitude < p.radius + 2f || Vector3.Angle(main.transform.forward, to) < main.fieldOfView * 0.5f + 35f);
                 if (d < DebugNearest) { DebugNearest = d; DebugNearestSeen = seen; DebugCamera = main.name + " " + main.transform.position; }
                 if (!seen) continue;
@@ -139,7 +174,7 @@ public sealed class MirrorPool : MonoBehaviour
         cam.targetTexture = mirrorTexture;
 
         // Mirror the view in the water plane, and clip everything below the water (oblique near plane).
-        Vector3 n = Vector3.up, p0 = transform.position;
+        Vector3 n = planeNormal, p0 = planePoint;
         float d = -Vector3.Dot(n, p0);
         Matrix4x4 reflect = Reflection(new Vector4(n.x, n.y, n.z, d));
         cam.worldToCameraMatrix = main.worldToCameraMatrix * reflect;

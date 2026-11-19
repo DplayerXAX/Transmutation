@@ -308,8 +308,7 @@ public sealed class CreatureThrower : MonoBehaviour
             arc.material.SetColor("_BaseColor", new Color(1f, 0.92f, 0.75f));
             arc.shadowCastingMode = ShadowCastingMode.Off;
             arc.textureMode = LineTextureMode.Tile;
-            GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(ring.GetComponent<Collider>());
+            GameObject ring = VisualPrimitive.Create(PrimitiveType.Cylinder);
             ring.name = "Throw Marker";
             ring.GetComponent<Renderer>().sharedMaterial = arc.material;
             marker = ring.transform;

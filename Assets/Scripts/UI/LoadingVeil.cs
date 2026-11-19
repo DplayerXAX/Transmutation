@@ -22,6 +22,7 @@ public sealed class LoadingVeil : MonoBehaviour
     private readonly List<BoneKiln> kilns = new List<BoneKiln>();
     private readonly List<FloraPatch> flora = new List<FloraPatch>();
     private int settleAtStart;
+    private bool nearObjectsCounted;
     private float shown, target, started, fadeFrom = -1f, nextScan;
     private static Texture2D dot;
 
@@ -94,6 +95,9 @@ public sealed class LoadingVeil : MonoBehaviour
             float settled = 1f - Mathf.Clamp01((float)left / settleAtStart);
             sum += Time.realtimeSinceStartup - started > 15f ? 1f : Mathf.Clamp01(settled / 0.9f); parts++;
         }
+        if (WorldStreaming.LoadingNearPlayer) { sum += WorldStreaming.NearProgress; parts++; }
+        else if (nearObjectsCounted) { sum += 1f; parts++; }
+        nearObjectsCounted |= WorldStreaming.LoadingNearPlayer;
         return parts == 0 ? 1f : sum / parts;
     }
 

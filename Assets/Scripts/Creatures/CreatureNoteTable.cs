@@ -21,9 +21,22 @@ public sealed class CreatureNoteTable : ScriptableObject
         public SongRole role;
         [Tooltip("How it follows after its phrase: walks, flies, stays and sings where it is, or takes no part (objects, food, shots).")]
         public SongMotion motion;
+        [Tooltip("Its phrase, taken from its own music. Empty: a fixed phrase is made from its name.")]
+        public List<SongInput> phrase = new List<SongInput>();
+    }
+
+    /// <summary>The note one of the player's controls plays.</summary>
+    [Serializable]
+    public sealed class InputNote
+    {
+        public SongInput input;
+        [Tooltip("Wwise event of the note.")]
+        public string wwiseEvent;
     }
 
     public List<Entry> entries = new List<Entry>();
+    [Tooltip("The player's scale: E natural minor from E3 to E4, low on the movement keys, high on the mouse.")]
+    public List<InputNote> inputNotes = new List<InputNote>();
 
     private static CreatureNoteTable loaded;
     private static bool tried;
@@ -66,6 +79,27 @@ public sealed class CreatureNoteTable : ScriptableObject
         }
         roleCache[type] = result;
         return result;
+    }
+
+    /// <summary>The Wwise event of the note a control plays.</summary>
+    public static string EventFor(SongInput input)
+    {
+        For(typeof(Creature)); // loads the table
+        if (loaded != null)
+            foreach (InputNote n in loaded.inputNotes)
+                if (n != null && n.input == input && !string.IsNullOrEmpty(n.wwiseEvent)) return n.wwiseEvent;
+        return "Play_Song_E3";
+    }
+
+    /// <summary>The phrase set for a species, or null if it has none.</summary>
+    public static SongInput[] PhraseFor(Type type)
+    {
+        For(type); // loads the table
+        if (loaded == null) return null;
+        for (Type t = type; t != null && t != typeof(MonoBehaviour); t = t.BaseType)
+            foreach (Entry e in loaded.entries)
+                if (e != null && e.creatureType == t.Name) return e.phrase != null && e.phrase.Count > 0 ? e.phrase.ToArray() : null;
+        return null;
     }
 
     /// <summary>How a species takes part in the song. A species not in the table takes no part.</summary>

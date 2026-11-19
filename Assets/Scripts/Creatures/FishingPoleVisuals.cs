@@ -27,12 +27,12 @@ public sealed class FishingPoleVisuals : MonoBehaviour
         line = new GameObject("Lure Filament").AddComponent<LineRenderer>(); line.transform.SetParent(transform, false);
         lineGlow = new Material(glow); pulseGlow = new Material(glow); pulseGlow.color = Color.white;
         line.sharedMaterial = lineGlow; line.positionCount = 24; line.startWidth = .014f; line.endWidth = .006f;
-        var orb = GameObject.CreatePrimitive(PrimitiveType.Sphere); orb.name = "Floating Lure";
-        Destroy(orb.GetComponent<Collider>()); lure = orb.transform; lure.SetParent(transform, false);
+        var orb = VisualPrimitive.Create(PrimitiveType.Sphere); orb.name = "Floating Lure";
+        lure = orb.transform; lure.SetParent(transform, false);
         orb.GetComponent<Renderer>().sharedMaterial = lineGlow;
         veinRenderer.sharedMaterial = glow;
-        var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere); bead.name = "Pull Pulse";
-        Destroy(bead.GetComponent<Collider>()); pulse = bead.transform; pulse.SetParent(transform, false);
+        var bead = VisualPrimitive.Create(PrimitiveType.Sphere); bead.name = "Pull Pulse";
+        pulse = bead.transform; pulse.SetParent(transform, false);
         bead.GetComponent<Renderer>().sharedMaterial = pulseGlow; pulse.localScale = Vector3.one * .07f;
         pulse.gameObject.SetActive(false);
         CreateCatchMist();

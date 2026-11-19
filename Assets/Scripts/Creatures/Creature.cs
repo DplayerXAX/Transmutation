@@ -515,6 +515,11 @@ public enum FoodTag
     /// Unity initialization entry point.
     /// Calls the subclass hook once when the creature instance is created.
     /// </summary>
+#if UNITY_EDITOR
+    public static readonly System.Collections.Generic.Dictionary<System.Type, long> AwakeTicks =
+        new System.Collections.Generic.Dictionary<System.Type, long>();
+#endif
+
     protected virtual void Awake()
     {
         // The owner id survives script reloads, while instantiated copies have a new id.
@@ -525,7 +530,15 @@ public enum FoodTag
             polarity = initialPolarity == CreaturePolarity.Random ?
                 (Random.value < 0.5f ? CreaturePolarity.Light : CreaturePolarity.Dark) : initialPolarity;
         }
+#if UNITY_EDITOR
+        long setupStart = System.Diagnostics.Stopwatch.GetTimestamp();
+#endif
         InitializeCreature();
+#if UNITY_EDITOR
+        // Read by Dev/StartupTimeline: what each species costs to set up when the scene wakes.
+        AwakeTicks.TryGetValue(GetType(), out long spent);
+        AwakeTicks[GetType()] = spent + System.Diagnostics.Stopwatch.GetTimestamp() - setupStart;
+#endif
         // Keep physics messages separate from subclass OnCollisionEnter methods.
         if (Application.isPlaying)
         {

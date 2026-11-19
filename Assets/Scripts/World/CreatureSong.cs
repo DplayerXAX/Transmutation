@@ -24,8 +24,8 @@ public enum SongInput { W, A, S, D, Jump, Shift, LMB, RMB }
 [DefaultExecutionOrder(-50)] // before the carrier and interactor read the mouse
 public sealed class CreatureSong : MonoBehaviour
 {
-    public const float ListenRange = 16f, FollowSeconds = 30f;
-    private const float LoseTargetAfter = 0.7f, MaxFollowDistance = 70f, CloseReach = 6f, SingRange = 20f, RenewBelow = 10f;
+    public const float ListenRange = 16f;
+    private const float LoseTargetAfter = 0.7f, CloseReach = 6f, SingRange = 20f;
     private const float WalkSpeed = 4f, FlySpeed = 5.5f;
 
     public static CreatureSong Instance { get; private set; }
@@ -49,7 +49,7 @@ public sealed class CreatureSong : MonoBehaviour
         public bool dynamicBody, ownMotion;
         public Vector3 lastPosition, goal;
         public Quaternion lastRotation;
-        public float left, groundOffset, radius, nextPop;
+        public float groundOffset, radius, nextPop;
         public int slot;
     }
 
@@ -65,12 +65,16 @@ public sealed class CreatureSong : MonoBehaviour
     private int progress;
     private float lost;
     private bool mouseTaken;
+    private SongInput walkNote = SongInput.W;
+    private float walkNoteAt = -10f;
     private Camera cam;
     private Rigidbody player;
     private PlayerCreatureCarrier carrier;
     private GlyphRow row;
     private GlyphRow[] hudRoles;
     private Transform hud;
+    private readonly Transform[] hudHolders = new Transform[3];
+    private readonly bool[] roleFollowing = new bool[3];
     private readonly List<Renderer>[] hudSeeds = { new List<Renderer>(), new List<Renderer>(), new List<Renderer>() };
     private Material glowLine, seedDot;
 
@@ -97,7 +101,10 @@ public sealed class CreatureSong : MonoBehaviour
     public SongInput[] PhraseOf(Creature c)
     {
         if (phrases.TryGetValue(c, out SongInput[] known)) return known;
-        // Each species keeps its phrase, so it can be learned; every Tone Mesa has its own.
+        // A species with its own music plays a motif from it (set in CreatureNotes.asset).
+        SongInput[] motif = c is ToneCrate ? null : CreatureNoteTable.PhraseFor(c.GetType());
+        if (motif != null) { phrases[c] = motif; return motif; }
+        // The others keep a fixed phrase, so it can be learned; every Tone Mesa has its own.
         int seed = 17;
         foreach (char ch in c.GetType().Name) seed = seed * 31 + ch;
         if (c is ToneCrate) seed += Mathf.RoundToInt(c.transform.position.x * 3f) * 101 + Mathf.RoundToInt(c.transform.position.z * 3f);
@@ -141,8 +148,8 @@ public sealed class CreatureSong : MonoBehaviour
             if (target is CaveGlowCreature glow) glow.Aimed = true;
             mouseTaken = carrier.CarriedCreature == null && carrier.PendingCreature == null &&
                          (progress > 0 || Vector3.Distance(cam.transform.position, AimOf(target)) > CloseReach);
-            if (seen != null) ReadInputs();
         }
+        if (!blocked && Time.timeScale > 0f) ReadInputs(seen != null);
         UpdateFollowers();
     }
 
@@ -178,7 +185,7 @@ public sealed class CreatureSong : MonoBehaviour
             if (CreatureNoteTable.MotionFor(c.GetType()) == SongMotion.Silent) continue;
             if (c.IsDead || c.IsCarried || !c.isActiveAndEnabled || !c.IsInPhysicalWorld || c.IsBubbleCaptured) continue;
             if (c is CaveGlowCreature g && g.Hidden) continue;
-            if (byCreature.TryGetValue(c, out Follower f) && f.left > RenewBelow) continue;
+            if (byCreature.ContainsKey(c)) continue;
             Vector3 aim = AimOf(c);
             Vector3 to = aim - eye;
             float d = to.magnitude;
@@ -194,24 +201,65 @@ public sealed class CreatureSong : MonoBehaviour
         return best;
     }
 
-    private void ReadInputs()
+    // Every control always sounds its note (these replace the old click, pick-up and drop sounds).
+    // Only presses made while facing a creature count towards its phrase.
+    private void ReadInputs(bool facing)
     {
         Keyboard k = Keyboard.current;
         Mouse m = Mouse.current;
         if (k != null)
         {
-            if (k.wKey.wasPressedThisFrame) Press(SongInput.W);
-            if (k.aKey.wasPressedThisFrame) Press(SongInput.A);
-            if (k.sKey.wasPressedThisFrame) Press(SongInput.S);
-            if (k.dKey.wasPressedThisFrame) Press(SongInput.D);
-            if (k.spaceKey.wasPressedThisFrame) Press(SongInput.Jump);
-            if (k.leftShiftKey.wasPressedThisFrame) Press(SongInput.Shift);
+            if (k.wKey.wasPressedThisFrame) Hit(SongInput.W, facing);
+            if (k.aKey.wasPressedThisFrame) Hit(SongInput.A, facing);
+            if (k.sKey.wasPressedThisFrame) Hit(SongInput.S, facing);
+            if (k.dKey.wasPressedThisFrame) Hit(SongInput.D, facing);
+            if (k.spaceKey.wasPressedThisFrame) Hit(SongInput.Jump, facing);
+            if (k.leftShiftKey.wasPressedThisFrame) Hit(SongInput.Shift, facing);
         }
-        if (m != null && mouseTaken)
+        if (m != null)
         {
-            if (m.leftButton.wasPressedThisFrame) Press(SongInput.LMB);
-            if (m.rightButton.wasPressedThisFrame) Press(SongInput.RMB);
+            if (m.leftButton.wasPressedThisFrame) Hit(SongInput.LMB, facing && mouseTaken);
+            if (m.rightButton.wasPressedThisFrame) Hit(SongInput.RMB, facing && mouseTaken);
         }
+    }
+
+    private void Hit(SongInput input, bool counts)
+    {
+        AudioManager.PostEvent(CreatureNoteTable.EventFor(input), player.gameObject);
+        if (input <= SongInput.D) { walkNote = input; walkNoteAt = Time.time; }
+        if (counts) Press(input);
+    }
+
+    private static bool Held(SongInput i)
+    {
+        Keyboard k = Keyboard.current;
+        if (k == null) return false;
+        return i == SongInput.W ? k.wKey.isPressed : i == SongInput.A ? k.aKey.isPressed : i == SongInput.S ? k.sKey.isPressed : k.dKey.isPressed;
+    }
+
+    /// <summary>A footstep sounds the note of the movement key being held. True if the song took the step.</summary>
+    public static bool PlayStep(GameObject emitter, int gridDivision)
+    {
+        if (!Active) return false;
+        CreatureSong s = Instance;
+        SongInput note = s.walkNote;
+        if (!Held(note))
+        {
+            bool found = false;
+            for (SongInput i = SongInput.W; i <= SongInput.D && !found; i++)
+                if (Held(i)) { note = i; found = true; }
+            if (!found) return true; // moving without a key (a slide, a push): no step note
+            s.walkNote = note;
+        }
+        // The key press has just sounded this note.
+        if (Time.time - s.walkNoteAt > 0.18f) AudioManager.PostEventOnGrid(CreatureNoteTable.EventFor(note), emitter, gridDivision);
+        return true;
+    }
+
+    /// <summary>The older action sounds, kept for scenes without the song.</summary>
+    public static void ActionSound(string eventName, GameObject emitter)
+    {
+        if (!Active) AudioManager.PostEvent(eventName, emitter);
     }
 
     private void Press(SongInput input)
@@ -220,7 +268,6 @@ public sealed class CreatureSong : MonoBehaviour
         SongInput[] phrase = PhraseOf(target);
         if (input == phrase[progress])
         {
-            AudioManager.PostEvent("Play_Crate_" + Notes[progress % 4], target.gameObject);
             progress++;
             if (progress >= phrase.Length) Complete();
             return;
@@ -242,13 +289,16 @@ public sealed class CreatureSong : MonoBehaviour
 
     private void Follow(Creature c)
     {
-        if (byCreature.TryGetValue(c, out Follower known)) { known.left = FollowSeconds; return; }
+        if (byCreature.ContainsKey(c)) return;
+        // One follower for each kind of note: a new one takes the place of the last.
+        SongRole role = RoleOf(c);
+        for (int i = followers.Count - 1; i >= 0; i--)
+            if (followers[i].creature == null || RoleOf(followers[i].creature) == role) Release(i);
         var f = new Follower
         {
             creature = c,
             glow = c as CaveGlowCreature,
             motion = CreatureNoteTable.MotionFor(c.GetType()),
-            left = FollowSeconds,
             body = c.GetComponent<Rigidbody>(),
             lastPosition = c.transform.position,
             lastRotation = c.transform.rotation,
@@ -284,11 +334,10 @@ public sealed class CreatureSong : MonoBehaviour
         for (int i = followers.Count - 1; i >= 0; i--)
         {
             Follower f = followers[i];
-            f.left -= Time.deltaTime;
             Creature c = f.creature;
             bool gone = c == null || c.IsDead || !c.isActiveAndEnabled || f.glow != null && f.glow.Hidden;
             float distance = gone ? 0f : Vector3.Distance(c.transform.position, p);
-            if (gone || f.left <= 0f || f.motion != SongMotion.Rooted && distance > MaxFollowDistance)
+            if (gone)
             {
                 Release(i);
                 continue;
@@ -439,12 +488,12 @@ public sealed class CreatureSong : MonoBehaviour
         seedDot = new Material(Shader.Find("Capstone/Cave/Glow")) { name = "Song seed" };
         hud = new GameObject("Song roles").transform;
         hud.SetParent(cam.transform, false);
-        hud.localPosition = new Vector3(0f, -0.31f, 0.62f);
         hudRoles = new GlyphRow[3];
         for (int i = 0; i < 3; i++)
         {
-            hudRoles[i] = new GlyphRow("Role " + (SongRole)i, hud, glowLine);
-            hudRoles[i].Root.localPosition = new Vector3((i - 1) * 0.075f, 0f, 0f);
+            hudHolders[i] = new GameObject("Role " + (SongRole)i).transform;
+            hudHolders[i].SetParent(hud, false);
+            hudRoles[i] = new GlyphRow("Glyph", hudHolders[i], glowLine);
             hudRoles[i].Root.localScale = Vector3.one * 0.035f;
             hudRoles[i].Set(new[] { SongGlyphs.Role((SongRole)i) });
         }
@@ -457,9 +506,8 @@ public sealed class CreatureSong : MonoBehaviour
         if (target != null)
         {
             SongInput[] phrase = PhraseOf(target);
-            var glyphs = new List<Vector2[]>[phrase.Length + 1];
-            glyphs[0] = SongGlyphs.Role(RoleOf(target));
-            for (int i = 0; i < phrase.Length; i++) glyphs[i + 1] = SongGlyphs.Input(phrase[i]);
+            var glyphs = new List<Vector2[]>[phrase.Length];
+            for (int i = 0; i < phrase.Length; i++) glyphs[i] = SongGlyphs.Input(phrase[i]);
             row.Set(glyphs);
             Vector3 aim = AimOf(target);
             float d = Vector3.Distance(cam.transform.position, aim);
@@ -467,24 +515,30 @@ public sealed class CreatureSong : MonoBehaviour
             row.Root.rotation = cam.transform.rotation;
             row.Root.localScale = Vector3.one * Mathf.Clamp(d * 0.05f, 0.16f, 0.7f);
             Color c = RoleColor(RoleOf(target));
-            row.Paint(0, c * 0.8f);
             for (int i = 0; i < phrase.Length; i++)
-                row.Paint(i + 1, i < progress ? c * 1.5f : i == progress ? c * (0.75f + 0.2f * Mathf.Sin(Time.time * 6f)) : c * 0.3f);
+                row.Paint(i, i < progress ? c * 1.5f : i == progress ? c * (0.75f + 0.2f * Mathf.Sin(Time.time * 6f)) : c * 0.3f);
             row.Animate();
         }
+        // Bottom left of the view: only the kinds of note following now, side by side.
+        float halfH = 0.62f * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad), halfW = halfH * cam.aspect;
+        hud.localPosition = new Vector3(-halfW * 0.88f, -halfH * 0.8f, 0.62f);
+        for (int i = 0; i < 3; i++) roleFollowing[i] = false;
+        foreach (Follower f in followers) if (f.creature != null) roleFollowing[(int)RoleOf(f.creature)] = true;
+        int shown = 0;
         for (int i = 0; i < 3; i++)
         {
+            hudHolders[i].gameObject.SetActive(roleFollowing[i]);
+            if (roleFollowing[i]) hudHolders[i].localPosition = new Vector3(shown++ * 0.06f, 0f, 0f);
             Color c = RoleColors[i];
-            float lit = roleCount[i] > 0 ? 1.2f : 0.1f;
+            float lit = roleCount[i] > 0 ? 1.2f : 0.45f;
             if (FullChord) lit = 1.3f + 0.3f * Mathf.Sin(Time.time * Mathf.PI * 2f);
             hudRoles[i].Paint(0, c * lit);
             while (hudSeeds[i].Count < seeds[i])
             {
-                var dot = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Destroy(dot.GetComponent<Collider>());
-                dot.transform.SetParent(hud, false);
+                var dot = VisualPrimitive.Create(PrimitiveType.Sphere);
+                dot.transform.SetParent(hudHolders[i], false);
                 dot.transform.localScale = Vector3.one * 0.006f;
-                dot.transform.localPosition = new Vector3((i - 1) * 0.075f - 0.02f + hudSeeds[i].Count * 0.01f, -0.012f, 0f);
+                dot.transform.localPosition = new Vector3(-0.02f + hudSeeds[i].Count * 0.01f, -0.012f, 0f);
                 var r = dot.GetComponent<Renderer>();
                 var m = new Material(seedDot);
                 m.SetColor("_Color", c * 1.5f);

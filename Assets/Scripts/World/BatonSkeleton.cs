@@ -134,8 +134,7 @@ public sealed class BatonSkeleton : MonoBehaviour
 
     private GameObject Part(PrimitiveType type, Vector3 local, Quaternion rotation, Vector3 scale, Material material, Transform parent = null)
     {
-        var go = GameObject.CreatePrimitive(type);
-        Destroy(go.GetComponent<Collider>());
+        var go = VisualPrimitive.Create(type);
         go.transform.SetParent(parent != null ? parent : transform, false);
         go.transform.localPosition = local;
         go.transform.localRotation = rotation;

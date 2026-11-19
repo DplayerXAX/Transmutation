@@ -29,7 +29,7 @@ public sealed class DarkTunnels : MonoBehaviour
 
     [Header("Testing")]
     [Tooltip("On: once the caves are built the player is moved down to the cavern floor by the stair tower's door. Off: normal spawn.")]
-    [SerializeField] private bool spawnUnderground = false;
+    [SerializeField] private bool spawnUnderground = false; // true starts in the caves (testing)
 
     /// <summary>Off (default): creatures are played with the body's controls (CreatureSong). On: the older conductor baton.</summary>
     public static bool UseBaton = false;

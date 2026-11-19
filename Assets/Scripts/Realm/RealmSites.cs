@@ -184,8 +184,7 @@ public static class RealmSites
         var holder = new GameObject("Seed " + id);
         holder.transform.SetParent(parent, true);
         holder.transform.position = position;
-        GameObject pod = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        Object.Destroy(pod.GetComponent<Collider>());
+        GameObject pod = VisualPrimitive.Create(PrimitiveType.Sphere);
         pod.name = "Pod";
         pod.transform.SetParent(holder.transform, false);
         pod.transform.localScale = new Vector3(0.45f, 0.6f, 0.45f);

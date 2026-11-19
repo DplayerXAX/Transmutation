@@ -318,9 +318,8 @@ public sealed class BoneScar : MonoBehaviour
     {
         int i = NearestIndex(point);
         // A glowing split in the inner floor with a light: where the fire comes from.
-        var glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        var glow = VisualPrimitive.Create(PrimitiveType.Sphere);
         glow.name = "Crack Vent";
-        Destroy(glow.GetComponent<Collider>());
         glow.transform.SetParent(parent, true);
         glow.transform.SetPositionAndRotation(point + Vector3.up * 0.1f, Quaternion.LookRotation(Along(i), Vector3.up));
         glow.transform.localScale = new Vector3(1.1f, 0.35f, 2.6f);

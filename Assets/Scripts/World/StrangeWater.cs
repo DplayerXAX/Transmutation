@@ -30,6 +30,9 @@ public sealed class StrangeWater : MonoBehaviour
 
     /// <summary>Off (default): still mirror pools on the floor (MirrorPool). On: the older water lenses hanging from the ceiling.</summary>
     public static bool HangingLenses = false;
+    /// <summary>On (default): the only water is the clear lakes on the rock, which mirror the floor. Off: also the older floor pools.</summary>
+    public static bool CeilingMirrors = true;
+
     /// <summary>The older floating balls of water (off: the water hangs as lakes under the rock, HangingLake).</summary>
     public static bool FloatingBlobs = false;
 
@@ -74,7 +77,7 @@ public sealed class StrangeWater : MonoBehaviour
                 if (Physics.Raycast(spot, Vector3.up, out RaycastHit hit, 30f, mask))
                     Pool(parent, hit.point, hit.normal);
         }
-        else MirrorPools(parent, mask);
+        else if (!CeilingMirrors) MirrorPools(parent, mask);
         // Blobs floating in the dark air, each with its own gravity.
         Vector3[] blobs = { new Vector3(-112f, -50f, 140f), new Vector3(-100f, -46f, 178f), new Vector3(-134f, -52f, 176f), new Vector3(-120f, -56f, 160f), new Vector3(-104f, -57f, 146f) };
         Vector3[] downs = { Vector3.up, new Vector3(1f, 0.2f, 0f), Vector3.down, new Vector3(0f, 0.4f, -1f), new Vector3(-0.6f, 1f, 0.3f) };
@@ -88,6 +91,7 @@ public sealed class StrangeWater : MonoBehaviour
         };
         float[] sizes = { 10f, 9f, 9f, 10f, 8f, 15f, 15f };
         for (int i = 0; i < lakes.Length; i++) HangingLake.Create(parent, lakes[i], sizes[i], mask);
+        if (CeilingMirrors) HangingLake.Create(parent, DarkTunnelShape.Grotto, 4.5f, mask);
     }
 
     private static StrangeWater Make(Transform parent, string name, Vector3 position, Vector3 scale, Quaternion rotation)

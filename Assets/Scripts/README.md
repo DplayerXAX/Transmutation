@@ -77,10 +77,11 @@ Creatures
   the enter-Play freeze, profiles startup / idle / walking / walking with the Game view maximised, exits Play and writes
   `Logs/PerfReport.txt` (EditorLoop = editor-only cost, PlayerLoop = the game). Creature.Update is split per species
   in the Profiler as "Creature tick: <type>".
+  `Editor/StallCapture` (no menu): write `x y z seconds` to `Temp/Stall.request`; the editor plays with the player at that point, notes what is awake every 20 s, profiles when frames stay slow and writes `Logs/StallReport.txt`.
   `StartupTimeline` runs by itself in editor play: `Logs/StartupTimeline.txt` lists every log message and milestone
   (scene objects awake, first frame, terrain complete, loading veil gone) with its time since the scene began loading.
 - `RenderingTests/` — experiments: dither renderer feature, photo capture, sphere post-process volume.
-- `Utilities/` — `DestroyAfterSeconds`, `Emitter` (spawn and launch a prefab), `XRotator`.
+- `Utilities/` — `VisualPrimitive` (display-only primitive with no collider; use it instead of CreatePrimitive plus destroying the collider, which costs about 5 ms each in Scene_World), `DestroyAfterSeconds`, `Emitter` (spawn and launch a prefab), `XRotator`.
 
 ## Habitat block (art bible reference)
 

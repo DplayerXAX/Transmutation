@@ -100,6 +100,12 @@ the terrain chunk colliders. Far tiles draw a half, then a quarter, of their flo
 `Editor/FloraSampleApply` is a request-file helper (Temp/Flora.request: `apply` lays the tiles, `capture` renders
 review shots to ArtCaptures/Flora).
 
+## Distance wake-up for far decoration (`WorldStreaming`, `Editor/WorldStreamingScenePrep`)
+
+Scene_World's decoration groups (region decor, placeholder forest and ruins, Cistern decor) are switched off just before Play copies the open scene (and back on when Play ends), and in built scenes, so they cost nothing while it loads. The scene file is unchanged, though the open scene shows as modified after Play. `WorldStreaming` wakes each object when the player comes within its group's radius (150 to 220 m), nearest first, inside a per-frame time budget; `LoadingVeil` waits for the objects around the start. Add only groups that gameplay code does not look up: an object still asleep has not run Awake and is not found by Find calls. To check it, write `run` to `Temp/StreamCheck.request` with Scene_World open (`Editor/WorldStreamingCheck`): it visits surface spots in Play, reports near objects still off in `Temp/StreamCheck.status`, and saves shots to `ArtCaptures/Streaming`.
+
+Water follows the player too: `FluidNearPlayer` stops springs and rain and clears droplets while the player is in the caves (below y -30, back on above -22), and pauses water for 30 s if frames stay above 120 ms while it flows.
+
 ## Dark caves under the crack (`DarkTunnels`, `MarchingCubes/DarkTunnelShape`, `StrangeWater`)
 
 Underground content of Scene_World (moved 2026-11-16 from behind the spawn chamber to under the crack, Daniel's choice).
@@ -130,7 +136,7 @@ caves are missing (DarkTunnels then logs a warning and places nothing).
 `DarkTunnels` adds itself when Scene_World loads (like `SceneAudioBoot`). It puts the conductor baton in the player's hand
 at the start (`startWithBaton`, on), and when the terrain is built places 8 Bell Snails, 7 Glim Lanterns, 1 Lure Maw,
 three Tone Mesas over the holes into the floor tunnels (notes E, B, G), the strange water and the skeleton (with the baton in its fist when `startWithBaton` is off).
-Testing: `spawnUnderground` (on) moves the player to the cavern floor by the stair tower's door as soon as the caves are
+Testing: `spawnUnderground` (off since 2026-11-19; Play starts in the tutorial cave) moves the player to the cavern floor by the stair tower's door as soon as the caves are
 built (the dark snaps in at once). Turn it off on the runtime Dark Tunnels object (or in code) for the normal spawn.
 
 Revealed ground is a dim light in the dark (`CaveReveal.SoftEdge`, reach `SoftReach` 2): strong only near the source, a long continuous tail, and rock turned away from the light sinks into black. Off = the clean stencil edge below. The baton adds no light while held. Glow creatures' point lights skip the terrain layer, because `LineWorldLight` steps light into flat levels and would draw a hard ring.
@@ -225,10 +231,16 @@ Replaces the conductor baton in Scene_World, for every living creature. `DarkTun
 
 - `Resources/CreatureNotes.asset` gives each species a `role` (melody, accompaniment, drums; each has a planet glyph in `SongGlyphs`) and a `motion`: Walk, Fly, Rooted, or Silent. Silent is for objects, food, eggs and shots, and is the default for a species not in the table.
 - Every species has a fixed phrase of 3-4 inputs (each Tone Mesa its own). Drums use WASD, jump and Shift, accompaniment uses the two mouse buttons, melody uses all of them.
-- Face a creature within 16 m with clear sight and its phrase appears above it, drawn over rock. Press the inputs in order, with no timing. A wrong input starts the phrase again. Only presses made while facing a creature count.
+- Face a creature within 16 m with clear sight and its phrase appears above it, drawn over rock, in its role's colour. Press the inputs in order, with no timing. A wrong input starts the phrase again. Only presses made while facing a creature count.
+- With the song on, each control always plays its own note of E natural minor, in place of the old click, pick-up, drop and footstep sounds (a footstep sounds the held movement key's note, on the music grid) (`inputNotes` in the same asset; Wwise events `Play_Song_*`): S low E, A F#, D G, W A, Shift B, jump C, LMB D, RMB high E. The sounds are Daniel's E2 to E3 samples (the events keep their first names, `Play_Song_E3` to `Play_Song_E4`).
+- Fuzz, Fire Eater, Time Spider, Bird, Tentacle, Glim, Bell Snail and Lure Maw play a four-note motif from their own music (`phrase` in the asset). Glim, snail and Maw come from their MIDI; the others were transcribed from audio, so check them by ear.
 - The mouse keeps its normal work within 6 m and while carrying, so pick up, pet and throw still work. Mouse notes are played from further off, or to finish a phrase already begun.
-- A finished phrase makes the creature follow for 30 s (replay it in the last 10 s to renew): melody leads ahead, accompaniment circles, drums come behind. Its music layer plays while it follows.
+- A finished phrase makes the creature follow for good, one for each kind of note: playing to another creature of the same kind (melody, accompaniment or drums) makes it take the place of the last one. melody leads ahead, accompaniment circles, drums come behind. Its music layer plays while it follows.
 - Cave glow creatures use their own routing, fuzz uses its chain (with the song on it joins only when played to), Tone Mesas slide. Everything else is moved by `CreatureSongDrive` after its own logic: physics bodies by velocity, others by position with terrain checks. Walkers stop at ledges and cliffs. Rooted species stay and send up notes, and count while the player is within 20 m.
-- The three role glyphs at the bottom of the view light up for the roles following, with collected seeds as dots under them.
+- Nothing is shown while no creature follows. The glyph of each kind that has a follower appears at the bottom left of the view, with collected seeds as dots under it.
 - All three roles following is the full chord. `ChordDoor` in the deep descent to the skeleton sinks open when you bring it within 18 m, and stays open.
 - A Note Seed pod opens when a following creature of its role comes within 9 m. Heavy mesas need that many drum seeds.
+
+## Hanging water
+
+The cave water is one kind: clear lakes lying on the rock (`HangingLake`, shader `Capstone/Cave/HangingWater`). The rock shows through sharply, thin webs of light move inside, and the water fades out towards its rim and near rock, so it has no visible edge. The nearest lake within 45 m also mirrors the floor below (`MirrorPool.Attach`, one extra half-size render). Drops come from `WaterDrips` and send rings across the surface. `StrangeWater.CeilingMirrors` off brings back the floor pools, `HangingLake.ToonRipples` the older ripple bands. Earlier versions are in `Backups/ceiling-water-2026-11-18`.

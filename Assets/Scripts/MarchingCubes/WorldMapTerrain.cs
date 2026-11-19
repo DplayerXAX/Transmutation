@@ -213,9 +213,9 @@ public static class WorldMapTerrain
             Distance(q, new Vector2(13f, 8f), new Vector2(27f, 8f), out _));
         float corridor = Mathf.Max(turn - 3.8f + rough * 0.35f,
             Mathf.Max(-10.5f - p.y, p.y - 2.8f));
-        // The first rise is about 70% of the old hard jump. The remaining height unfolds
+        // The first rise (lowered 1.5 m on 2026-11-19 so the mushroom jump clears it). The remaining height unfolds
         // over a long walkable ramp, open to daylight beyond the turn.
-        float exitFloor = Mathf.Lerp(-0.3f, 6f, Mathf.SmoothStep(0f, 1f, (q.x - 27f) / 13f));
+        float exitFloor = Mathf.Lerp(-1.8f, 6f, Mathf.SmoothStep(0f, 1f, (q.x - 27f) / 13f));
         float exit = Mathf.Max(Mathf.Abs(q.y - 8f) - 5.5f,
             Mathf.Max(exitFloor - p.y, Mathf.Max(24f - q.x, q.x - 40f)));
         return Mathf.Min(density, Mathf.Min(room, Mathf.Min(corridor, exit)));

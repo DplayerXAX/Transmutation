@@ -1869,6 +1869,230 @@
 								<ActiveSource Name="crate_thump" ID="{0C2D40D0-FD4A-495D-80DD-9A4E657D1061}" Platform="Linked"/>
 							</ActiveSourceList>
 						</Sound>
+						<Sound Name="Song_E3" ID="{B2D3E4F7-85C2-4028-9789-CF46AA4C344E}" ShortID="470347728">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_E3" ID="{5DA998CF-CA4D-468C-B69C-BE5B82DF3FFA}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_E3.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="114883503"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_E3" ID="{5DA998CF-CA4D-468C-B69C-BE5B82DF3FFA}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_Fs3" ID="{1A0D8684-E9D4-4E61-A66F-95C8410BEF52}" ShortID="397773004">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_Fs3" ID="{63D1EBC8-DB7A-4D6C-9A26-E17584977653}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_Fs3.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="445693686"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_Fs3" ID="{63D1EBC8-DB7A-4D6C-9A26-E17584977653}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_G3" ID="{BFA345ED-0182-4900-9278-7B9D379A00BF}" ShortID="288691455">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_G3" ID="{0C670D9A-3C97-4CEE-84F5-0920DFE1C940}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_G3.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="1063203631"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_G3" ID="{0C670D9A-3C97-4CEE-84F5-0920DFE1C940}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_A3" ID="{8575681E-C824-4E40-B3A7-5622A142025D}" ShortID="191009425">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_A3" ID="{AD6BEE96-D55E-4E91-A4B9-4C0AA2F5C771}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_A3.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="51672418"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_A3" ID="{AD6BEE96-D55E-4E91-A4B9-4C0AA2F5C771}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_B3" ID="{E61AEA4A-5659-493A-88AE-DB05F449B232}" ShortID="494755694">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_B3" ID="{21FBE852-4470-4507-8DE6-440DB873FC49}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_B3.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="316013940"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_B3" ID="{21FBE852-4470-4507-8DE6-440DB873FC49}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_C4" ID="{F8036157-C4A8-4029-B7AF-B27231EC6EFF}" ShortID="978385766">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_C4" ID="{8167E336-94F4-4C98-9BCA-5656A45781C2}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_C4.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="522326831"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_C4" ID="{8167E336-94F4-4C98-9BCA-5656A45781C2}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_D4" ID="{C9EC7FF3-7D73-4D9F-98F0-C82BF17E9E89}" ShortID="551684362">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_D4" ID="{8F8A3E34-F8B2-441C-90FD-F92B9FC83E2C}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_D4.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="3085112"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_D4" ID="{8F8A3E34-F8B2-441C-90FD-F92B9FC83E2C}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
+						<Sound Name="Song_E4" ID="{EAFEDC3A-BBCB-4BB4-B2D2-AC8CB24743A8}" ShortID="117269181">
+							<PropertyList>
+								<Property Name="3DSpatialization" Type="int16" Value="1"/>
+							</PropertyList>
+							<ReferenceList>
+								<Reference Name="Attenuation">
+									<ObjectRef Name="Near_30m" ID="{03256EAE-CD13-4063-8C1A-AB98E0839200}" WorkUnitID="{31459947-4856-46BD-BD12-2A22AC8F3D4E}"/>
+								</Reference>
+								<Reference Name="Conversion">
+									<ObjectRef Name="Default Conversion Settings" ID="{6D1B890C-9826-4384-BF07-C15223E9FB56}" WorkUnitID="{4739EF2E-283E-4301-B981-B4F784BD999F}"/>
+								</Reference>
+								<Reference Name="OutputBus">
+									<ObjectRef Name="Master Audio Bus" ID="{1514A4D8-1DA6-412A-A17E-75CA0C2149F3}" WorkUnitID="{7F1C08E8-1FBE-4891-9861-1AB2BA5DC460}"/>
+								</Reference>
+							</ReferenceList>
+							<ChildrenList>
+								<AudioFileSource Name="song_E4" ID="{2DEF8620-12E8-4E64-9ADD-66EA41937F6D}">
+									<Language>SFX</Language>
+									<AudioFile>SFX\song_E4.wav</AudioFile>
+									<MediaIDList>
+										<MediaID ID="1019235382"/>
+									</MediaIDList>
+								</AudioFileSource>
+							</ChildrenList>
+							<ActiveSourceList>
+								<ActiveSource Name="song_E4" ID="{2DEF8620-12E8-4E64-9ADD-66EA41937F6D}" Platform="Linked"/>
+							</ActiveSourceList>
+						</Sound>
 					</ChildrenList>
 				</Folder>
 				<MusicPlaylistContainer Name="Tutorial" ID="{871A11E8-AA82-469B-A4C6-70D836E40149}" ShortID="160450458">
