@@ -1,0 +1,4 @@
+Added 1981 trees, 516 nectar flowers, 18 bee colonies. 18 squirrels, 18 separated root-side nests, 180 sideways foods generated after terrain colliders are ready. Source scene not saved or changed. Existing repaired tree meshes shared.
+Habitat 1, centre (-120.00, -110.00): 700 trees in 96x96 m (625 added); 438 low-crown root anchors; 6 bee colonies; 198 nectar flowers.
+Habitat 2, centre (-185.00, -210.00): 700 trees in 96x96 m (688 added); 436 low-crown root anchors; 6 bee colonies; 120 nectar flowers.
+Habitat 3, centre (145.00, -175.00): 700 trees in 96x96 m (668 added); 471 low-crown root anchors; 6 bee colonies; 198 nectar flowers.

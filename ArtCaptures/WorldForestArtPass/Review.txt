@@ -1,0 +1,1 @@
+PASS: three tree variants rendered. 0 hive anchors moved from stack crowns to nearby bare regular trunks. Colony references retained.

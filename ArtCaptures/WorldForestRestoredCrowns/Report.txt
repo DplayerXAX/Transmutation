@@ -1,0 +1,2 @@
+Restored authored organic crown surfaces and rounded holes. Twisted trunks retained. 2501 trees; rendered heights 6.40-16.00m, 1999 between 9.6-12.8m; 402 tall stack trees. Near triangles 23,861,696, far 15,491,468; mutually exclusive LODs. No high-poly originals assigned to renderers.
+Final surface budget: near 8,500,616, far 4,060,988. Internal flat curtains removed; authored outer crowns and pore shapes retained.

@@ -1,0 +1,1 @@
+PASS: three representative reduced trees rendered; finite vertices and valid triangle indices.

@@ -1,0 +1,15 @@
+Full scene brightness 0.9916992
+All renderers disabled brightness 0
+Subset 1609: 2.354383E-05
+Subset 804: 0.9916992
+Subset 402: 0.9916992
+Subset 201: 0.9916992
+Subset 101: 0
+Subset 50: 0
+Subset 25: 0
+Subset 13: 0.9916992
+Subset 7: 0
+Subset 3: 0.9916992
+Subset 2: 0.9916992
+Subset 1: 0
+Glare candidate: World — combined map/02 Placeholder forest/Silk tree 365/Dense silk tree 635 - Silk tree 36 · 2 crowns + 2 buds/Crown membranes; MAT_SilkPearl Capstone/Silk Forest/Pearlescent Silk

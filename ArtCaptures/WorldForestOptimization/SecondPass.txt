@@ -1,0 +1,176 @@
+Second pass: 39,161,816 -> 23,523,253 instanced triangles (39.9% additional reduction). Relative to original 111,744,304 triangles: 78.9% reduction.
+174 shared meshes updated in place; material, placement, collider and LOD references retained. Clustering cell width = longest mesh dimension / 140.
+Crown membranes (forest reduced): 52,085 -> 35,258 triangles
+Tensioned silk strands (forest reduced): 7,998 -> 2,468 triangles
+Crown membranes (forest reduced): 90,314 -> 42,759 triangles
+Tensioned silk strands (forest reduced): 6,505 -> 1,727 triangles
+Crown membranes (forest reduced): 50,336 -> 25,909 triangles
+Tensioned silk strands (forest reduced): 8,052 -> 2,237 triangles
+Crown membranes (forest reduced): 105,299 -> 85,120 triangles
+Tensioned silk strands (forest reduced): 7,614 -> 1,883 triangles
+Crown membranes (forest reduced): 96,344 -> 51,191 triangles
+Tensioned silk strands (forest reduced): 6,286 -> 1,597 triangles
+Crown membranes (forest reduced): 37,906 -> 34,306 triangles
+Tensioned silk strands (forest reduced): 6,462 -> 1,679 triangles
+Crown membranes (forest reduced): 67,682 -> 31,810 triangles
+Tensioned silk strands (forest reduced): 6,648 -> 1,677 triangles
+Crown membranes (forest reduced): 38,010 -> 34,889 triangles
+Tensioned silk strands (forest reduced): 6,476 -> 1,941 triangles
+Crown membranes (forest reduced): 38,629 -> 35,271 triangles
+Tensioned silk strands (forest reduced): 5,799 -> 1,363 triangles
+Crown membranes (forest reduced): 106,806 -> 69,410 triangles
+Tensioned silk strands (forest reduced): 7,243 -> 2,081 triangles
+Crown membranes (forest reduced): 99,584 -> 75,024 triangles
+Tensioned silk strands (forest reduced): 8,403 -> 2,116 triangles
+Crown membranes (forest reduced): 103,260 -> 84,367 triangles
+Tensioned silk strands (forest reduced): 6,214 -> 1,353 triangles
+Crown membranes (forest reduced): 58,599 -> 24,947 triangles
+Tensioned silk strands (forest reduced): 6,792 -> 1,850 triangles
+Crown membranes (forest reduced): 81,371 -> 35,823 triangles
+Tensioned silk strands (forest reduced): 7,796 -> 2,472 triangles
+Crown membranes (forest reduced): 40,695 -> 17,889 triangles
+Tensioned silk strands (forest reduced): 6,961 -> 1,562 triangles
+Crown membranes (forest reduced): 88,717 -> 48,901 triangles
+Tensioned silk strands (forest reduced): 6,944 -> 1,723 triangles
+Crown membranes (forest reduced): 68,360 -> 32,108 triangles
+Tensioned silk strands (forest reduced): 6,781 -> 2,081 triangles
+Crown membranes (forest reduced): 30,057 -> 12,034 triangles
+Tensioned silk strands (forest reduced): 4,677 -> 1,117 triangles
+Crown membranes (forest reduced): 104,519 -> 84,228 triangles
+Tensioned silk strands (forest reduced): 7,300 -> 1,759 triangles
+Crown membranes (forest reduced): 71,296 -> 59,177 triangles
+Tensioned silk strands (forest reduced): 6,985 -> 1,698 triangles
+Crown membranes (forest reduced): 38,260 -> 35,249 triangles
+Tensioned silk strands (forest reduced): 7,053 -> 1,894 triangles
+Crown membranes (forest reduced): 63,295 -> 33,556 triangles
+Tensioned silk strands (forest reduced): 8,524 -> 2,144 triangles
+Crown membranes (forest reduced): 104,425 -> 84,205 triangles
+Tensioned silk strands (forest reduced): 8,664 -> 2,248 triangles
+Crown membranes (forest reduced): 64,514 -> 30,451 triangles
+Tensioned silk strands (forest reduced): 5,751 -> 1,613 triangles
+Crown membranes (forest reduced): 91,640 -> 65,958 triangles
+Tensioned silk strands (forest reduced): 7,817 -> 2,193 triangles
+Crown membranes (forest reduced): 47,252 -> 23,839 triangles
+Tensioned silk strands (forest reduced): 6,389 -> 1,753 triangles
+Crown membranes (forest reduced): 67,480 -> 41,877 triangles
+Tensioned silk strands (forest reduced): 6,181 -> 1,595 triangles
+Crown membranes (forest reduced): 77,632 -> 40,411 triangles
+Tensioned silk strands (forest reduced): 4,749 -> 1,255 triangles
+Crown membranes (forest reduced): 100,757 -> 78,857 triangles
+Tensioned silk strands (forest reduced): 9,625 -> 2,828 triangles
+Crown membranes (forest reduced): 81,937 -> 47,588 triangles
+Tensioned silk strands (forest reduced): 7,877 -> 1,972 triangles
+Crown membranes (forest reduced): 72,587 -> 30,100 triangles
+Tensioned silk strands (forest reduced): 6,483 -> 1,460 triangles
+Crown membranes (forest reduced): 43,400 -> 20,193 triangles
+Tensioned silk strands (forest reduced): 6,976 -> 1,810 triangles
+Crown membranes (forest reduced): 38,012 -> 34,795 triangles
+Tensioned silk strands (forest reduced): 5,919 -> 1,348 triangles
+Crown membranes (forest reduced): 37,647 -> 34,333 triangles
+Tensioned silk strands (forest reduced): 6,226 -> 1,629 triangles
+Crown membranes (forest reduced): 74,726 -> 35,888 triangles
+Tensioned silk strands (forest reduced): 7,511 -> 2,385 triangles
+Crown membranes (forest reduced): 73,189 -> 63,104 triangles
+Tensioned silk strands (forest reduced): 5,193 -> 1,392 triangles
+Crown membranes (forest reduced): 103,420 -> 83,184 triangles
+Tensioned silk strands (forest reduced): 8,037 -> 2,347 triangles
+Crown membranes (forest reduced): 104,542 -> 56,117 triangles
+Tensioned silk strands (forest reduced): 6,619 -> 1,510 triangles
+Crown membranes (forest reduced): 34,738 -> 11,591 triangles
+Tensioned silk strands (forest reduced): 4,134 -> 994 triangles
+Crown membranes (forest reduced): 42,626 -> 14,959 triangles
+Tensioned silk strands (forest reduced): 5,170 -> 1,215 triangles
+Crown membranes (forest reduced): 78,295 -> 44,840 triangles
+Tensioned silk strands (forest reduced): 5,571 -> 1,267 triangles
+Crown membranes (forest reduced): 110,098 -> 56,374 triangles
+Tensioned silk strands (forest reduced): 7,803 -> 1,996 triangles
+Crown membranes (forest reduced): 70,420 -> 41,324 triangles
+Tensioned silk strands (forest reduced): 9,494 -> 3,149 triangles
+Crown membranes (forest reduced): 101,685 -> 79,449 triangles
+Tensioned silk strands (forest reduced): 8,662 -> 2,453 triangles
+Crown membranes (forest reduced): 34,975 -> 13,463 triangles
+Tensioned silk strands (forest reduced): 6,594 -> 1,572 triangles
+Crown membranes (forest reduced): 38,047 -> 34,854 triangles
+Tensioned silk strands (forest reduced): 7,673 -> 2,177 triangles
+Crown membranes (forest reduced): 103,888 -> 84,047 triangles
+Tensioned silk strands (forest reduced): 8,065 -> 1,880 triangles
+Crown membranes (forest reduced): 32,632 -> 13,808 triangles
+Tensioned silk strands (forest reduced): 4,433 -> 1,004 triangles
+Crown membranes (forest reduced): 105,994 -> 88,647 triangles
+Tensioned silk strands (forest reduced): 6,311 -> 1,610 triangles
+Crown membranes (forest reduced): 66,021 -> 31,315 triangles
+Tensioned silk strands (forest reduced): 7,216 -> 2,304 triangles
+Crown membranes (forest reduced): 79,338 -> 55,326 triangles
+Tensioned silk strands (forest reduced): 8,278 -> 2,400 triangles
+Crown membranes (forest reduced): 38,481 -> 35,075 triangles
+Tensioned silk strands (forest reduced): 8,142 -> 2,253 triangles
+Crown membranes (forest reduced): 85,295 -> 42,307 triangles
+Tensioned silk strands (forest reduced): 7,840 -> 2,236 triangles
+Crown membranes (forest reduced): 53,766 -> 26,534 triangles
+Tensioned silk strands (forest reduced): 7,683 -> 2,529 triangles
+Crown membranes (forest reduced): 41,475 -> 24,115 triangles
+Tensioned silk strands (forest reduced): 7,248 -> 1,946 triangles
+Crown membranes (forest reduced): 41,691 -> 18,408 triangles
+Tensioned silk strands (forest reduced): 5,272 -> 1,361 triangles
+Crown membranes (forest reduced): 38,570 -> 35,098 triangles
+Tensioned silk strands (forest reduced): 5,529 -> 1,817 triangles
+Crown membranes (forest reduced): 107,929 -> 63,741 triangles
+Tensioned silk strands (forest reduced): 5,831 -> 1,456 triangles
+Crown membranes (forest reduced): 50,047 -> 27,559 triangles
+Tensioned silk strands (forest reduced): 6,335 -> 2,013 triangles
+Crown membranes (forest reduced): 77,137 -> 38,862 triangles
+Tensioned silk strands (forest reduced): 5,297 -> 1,277 triangles
+Crown membranes (forest reduced): 38,209 -> 34,930 triangles
+Tensioned silk strands (forest reduced): 7,118 -> 1,934 triangles
+Crown membranes (forest reduced): 72,320 -> 61,732 triangles
+Tensioned silk strands (forest reduced): 4,859 -> 985 triangles
+Crown membranes (forest reduced): 83,415 -> 41,384 triangles
+Tensioned silk strands (forest reduced): 8,642 -> 2,267 triangles
+Crown membranes (forest reduced): 60,922 -> 28,533 triangles
+Tensioned silk strands (forest reduced): 7,703 -> 1,844 triangles
+Crown membranes (forest reduced): 35,723 -> 13,563 triangles
+Tensioned silk strands (forest reduced): 4,883 -> 1,074 triangles
+Crown membranes (forest reduced): 69,018 -> 54,163 triangles
+Tensioned silk strands (forest reduced): 7,330 -> 2,098 triangles
+Crown membranes (forest reduced): 72,579 -> 61,615 triangles
+Tensioned silk strands (forest reduced): 6,990 -> 1,875 triangles
+Crown membranes (forest reduced): 78,508 -> 31,054 triangles
+Tensioned silk strands (forest reduced): 5,679 -> 1,141 triangles
+Crown membranes (forest reduced): 103,179 -> 84,326 triangles
+Tensioned silk strands (forest reduced): 5,628 -> 1,295 triangles
+Crown membranes (forest reduced): 40,299 -> 21,848 triangles
+Tensioned silk strands (forest reduced): 6,283 -> 1,613 triangles
+Crown membranes (forest reduced): 32,544 -> 18,708 triangles
+Tensioned silk strands (forest reduced): 5,668 -> 1,405 triangles
+Crown membranes (forest reduced): 109,861 -> 59,979 triangles
+Tensioned silk strands (forest reduced): 7,973 -> 2,249 triangles
+Crown membranes (forest reduced): 54,116 -> 36,131 triangles
+Tensioned silk strands (forest reduced): 6,430 -> 1,963 triangles
+Crown membranes (forest reduced): 73,098 -> 62,731 triangles
+Tensioned silk strands (forest reduced): 9,015 -> 2,443 triangles
+Crown membranes (forest reduced): 38,269 -> 35,022 triangles
+Tensioned silk strands (forest reduced): 5,707 -> 1,659 triangles
+Crown membranes (forest reduced): 65,685 -> 29,689 triangles
+Tensioned silk strands (forest reduced): 5,832 -> 1,578 triangles
+Crown membranes (forest reduced): 38,212 -> 34,876 triangles
+Tensioned silk strands (forest reduced): 7,065 -> 1,939 triangles
+Crown membranes (forest reduced): 38,285 -> 14,658 triangles
+Tensioned silk strands (forest reduced): 5,935 -> 1,584 triangles
+Crown membranes (forest reduced): 84,770 -> 42,751 triangles
+Tensioned silk strands (forest reduced): 7,474 -> 2,052 triangles
+Crown membranes (forest reduced): 78,258 -> 41,101 triangles
+Tensioned silk strands (forest reduced): 5,840 -> 1,704 triangles
+Crown membranes (forest reduced): 81,719 -> 37,654 triangles
+Tensioned silk strands (forest reduced): 7,752 -> 2,171 triangles
+Crown membranes (forest reduced): 38,181 -> 34,809 triangles
+Tensioned silk strands (forest reduced): 7,394 -> 2,514 triangles
+Crown membranes (forest reduced): 79,161 -> 33,934 triangles
+Tensioned silk strands (forest reduced): 6,024 -> 1,447 triangles
+Crown membranes (forest reduced): 101,663 -> 78,433 triangles
+Tensioned silk strands (forest reduced): 6,676 -> 1,971 triangles
+Crown membranes (forest reduced): 76,730 -> 47,280 triangles
+Tensioned silk strands (forest reduced): 7,536 -> 2,057 triangles
+Crown membranes (forest reduced): 38,308 -> 34,957 triangles
+Tensioned silk strands (forest reduced): 6,441 -> 1,734 triangles
+Crown membranes (forest reduced): 79,044 -> 30,983 triangles
+Tensioned silk strands (forest reduced): 5,630 -> 1,401 triangles
