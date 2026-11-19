@@ -1,0 +1,176 @@
+Forest mesh instances: 1040; unique meshes: 174. Instanced triangle total: 111,744,304 -> 39,161,816 (65.0% reduction). Materials, transforms, colliders and LOD distances unchanged. Original mesh assets retained.
+Maximum clustering cell width = mesh longest dimension / 240.
+Crown membranes: 82,848 -> 52,085 triangles; 49,900 -> 21,244 vertices
+Tensioned silk strands: 76,064 -> 7,998 triangles; 38,284 -> 3,930 vertices
+Crown membranes: 169,344 -> 90,314 triangles; 101,700 -> 32,834 vertices
+Tensioned silk strands: 102,144 -> 6,505 triangles; 51,434 -> 3,485 vertices
+Crown membranes: 124,848 -> 50,336 triangles; 75,150 -> 18,852 vertices
+Tensioned silk strands: 96,048 -> 8,052 triangles; 48,336 -> 3,276 vertices
+Crown membranes: 126,384 -> 105,299 triangles; 75,950 -> 45,666 vertices
+Tensioned silk strands: 92,928 -> 7,614 triangles; 46,776 -> 3,414 vertices
+Crown membranes: 165,888 -> 96,344 triangles; 99,900 -> 35,968 vertices
+Tensioned silk strands: 88,080 -> 6,286 triangles; 44,328 -> 2,903 vertices
+Crown membranes: 41,616 -> 37,906 triangles; 25,050 -> 17,956 vertices
+Tensioned silk strands: 93,808 -> 6,462 triangles; 47,192 -> 2,929 vertices
+Crown membranes: 125,424 -> 67,682 triangles; 75,450 -> 24,705 vertices
+Tensioned silk strands: 89,152 -> 6,648 triangles; 44,872 -> 2,992 vertices
+Crown membranes: 41,616 -> 38,010 triangles; 25,050 -> 18,128 vertices
+Tensioned silk strands: 54,624 -> 6,476 triangles; 27,478 -> 3,138 vertices
+Crown membranes: 42,000 -> 38,629 triangles; 25,250 -> 18,389 vertices
+Tensioned silk strands: 74,928 -> 5,799 triangles; 37,696 -> 2,760 vertices
+Crown membranes: 167,808 -> 106,806 triangles; 100,900 -> 42,618 vertices
+Tensioned silk strands: 75,856 -> 7,243 triangles; 38,192 -> 3,705 vertices
+Crown membranes: 126,192 -> 99,584 triangles; 75,850 -> 42,514 vertices
+Tensioned silk strands: 109,824 -> 8,403 triangles; 55,264 -> 3,582 vertices
+Crown membranes: 124,272 -> 103,260 triangles; 74,850 -> 44,908 vertices
+Tensioned silk strands: 125,600 -> 6,214 triangles; 63,200 -> 2,818 vertices
+Crown membranes: 126,576 -> 58,599 triangles; 76,050 -> 20,988 vertices
+Tensioned silk strands: 76,336 -> 6,792 triangles; 38,424 -> 3,472 vertices
+Crown membranes: 167,808 -> 81,371 triangles; 100,900 -> 29,202 vertices
+Tensioned silk strands: 87,280 -> 7,796 triangles; 43,932 -> 3,782 vertices
+Crown membranes: 83,616 -> 40,695 triangles; 50,300 -> 14,774 vertices
+Tensioned silk strands: 85,392 -> 6,961 triangles; 42,952 -> 2,961 vertices
+Crown membranes: 165,696 -> 88,717 triangles; 99,800 -> 33,743 vertices
+Tensioned silk strands: 102,944 -> 6,944 triangles; 51,812 -> 3,079 vertices
+Crown membranes: 166,656 -> 68,360 triangles; 100,300 -> 24,828 vertices
+Tensioned silk strands: 75,504 -> 6,781 triangles; 38,006 -> 3,391 vertices
+Crown membranes: 83,040 -> 30,057 triangles; 50,000 -> 10,716 vertices
+Tensioned silk strands: 106,800 -> 4,677 triangles; 53,730 -> 2,348 vertices
+Crown membranes: 125,616 -> 104,519 triangles; 75,550 -> 45,491 vertices
+Tensioned silk strands: 95,568 -> 7,300 triangles; 48,070 -> 3,026 vertices
+Crown membranes: 83,808 -> 71,296 triangles; 50,400 -> 31,656 vertices
+Tensioned silk strands: 79,264 -> 6,985 triangles; 39,874 -> 2,872 vertices
+Crown membranes: 41,808 -> 38,260 triangles; 25,150 -> 18,261 vertices
+Tensioned silk strands: 84,384 -> 7,053 triangles; 42,452 -> 3,474 vertices
+Crown membranes: 166,272 -> 63,295 triangles; 100,100 -> 23,786 vertices
+Tensioned silk strands: 104,112 -> 8,524 triangles; 52,418 -> 4,115 vertices
+Crown membranes: 126,000 -> 104,425 triangles; 75,750 -> 45,224 vertices
+Tensioned silk strands: 97,664 -> 8,664 triangles; 49,146 -> 3,729 vertices
+Crown membranes: 124,656 -> 64,514 triangles; 75,050 -> 23,532 vertices
+Tensioned silk strands: 87,696 -> 5,751 triangles; 44,138 -> 2,986 vertices
+Crown membranes: 126,576 -> 91,640 triangles; 76,050 -> 38,692 vertices
+Tensioned silk strands: 85,328 -> 7,817 triangles; 42,950 -> 3,314 vertices
+Crown membranes: 125,424 -> 47,252 triangles; 75,450 -> 17,635 vertices
+Tensioned silk strands: 106,864 -> 6,389 triangles; 53,766 -> 3,018 vertices
+Crown membranes: 124,848 -> 67,480 triangles; 75,150 -> 26,508 vertices
+Tensioned silk strands: 85,072 -> 6,181 triangles; 42,818 -> 2,860 vertices
+Crown membranes: 165,312 -> 77,632 triangles; 99,600 -> 29,007 vertices
+Tensioned silk strands: 101,984 -> 4,749 triangles; 51,316 -> 2,692 vertices
+Crown membranes: 125,616 -> 100,757 triangles; 75,550 -> 43,249 vertices
+Tensioned silk strands: 93,440 -> 9,625 triangles; 47,044 -> 4,367 vertices
+Crown membranes: 165,120 -> 81,937 triangles; 99,500 -> 31,731 vertices
+Tensioned silk strands: 107,424 -> 7,877 triangles; 54,066 -> 3,232 vertices
+Crown membranes: 206,736 -> 72,587 triangles; 124,550 -> 25,148 vertices
+Tensioned silk strands: 123,440 -> 6,483 triangles; 62,128 -> 2,943 vertices
+Crown membranes: 124,848 -> 43,400 triangles; 75,150 -> 15,802 vertices
+Tensioned silk strands: 114,416 -> 6,976 triangles; 57,582 -> 2,875 vertices
+Crown membranes: 41,616 -> 38,012 triangles; 25,050 -> 18,117 vertices
+Tensioned silk strands: 101,216 -> 5,919 triangles; 50,904 -> 2,508 vertices
+Crown membranes: 41,424 -> 37,647 triangles; 24,950 -> 17,911 vertices
+Tensioned silk strands: 68,960 -> 6,226 triangles; 34,718 -> 3,099 vertices
+Crown membranes: 168,576 -> 74,726 triangles; 101,300 -> 27,432 vertices
+Tensioned silk strands: 72,464 -> 7,511 triangles; 36,474 -> 3,471 vertices
+Crown membranes: 83,808 -> 73,189 triangles; 50,400 -> 32,919 vertices
+Tensioned silk strands: 92,992 -> 5,193 triangles; 46,784 -> 2,355 vertices
+Crown membranes: 125,232 -> 103,420 triangles; 75,350 -> 44,918 vertices
+Tensioned silk strands: 72,496 -> 8,037 triangles; 36,486 -> 3,929 vertices
+Crown membranes: 208,464 -> 104,542 triangles; 125,450 -> 39,316 vertices
+Tensioned silk strands: 116,272 -> 6,619 triangles; 58,544 -> 3,286 vertices
+Crown membranes: 125,232 -> 34,738 triangles; 75,350 -> 11,948 vertices
+Tensioned silk strands: 96,224 -> 4,134 triangles; 48,400 -> 2,146 vertices
+Crown membranes: 166,464 -> 42,626 triangles; 100,200 -> 14,740 vertices
+Tensioned silk strands: 92,288 -> 5,170 triangles; 46,424 -> 2,416 vertices
+Crown membranes: 123,888 -> 78,295 triangles; 74,650 -> 29,784 vertices
+Tensioned silk strands: 102,480 -> 5,571 triangles; 51,558 -> 2,239 vertices
+Crown membranes: 210,768 -> 110,098 triangles; 126,650 -> 41,034 vertices
+Tensioned silk strands: 96,352 -> 7,803 triangles; 48,516 -> 3,835 vertices
+Crown membranes: 126,576 -> 70,420 triangles; 76,050 -> 27,365 vertices
+Tensioned silk strands: 80,128 -> 9,494 triangles; 40,346 -> 4,261 vertices
+Crown membranes: 125,616 -> 101,685 triangles; 75,550 -> 43,437 vertices
+Tensioned silk strands: 89,520 -> 8,662 triangles; 45,068 -> 3,995 vertices
+Crown membranes: 124,272 -> 34,975 triangles; 74,850 -> 12,259 vertices
+Tensioned silk strands: 92,784 -> 6,594 triangles; 46,674 -> 2,406 vertices
+Crown membranes: 41,616 -> 38,047 triangles; 25,050 -> 18,084 vertices
+Tensioned silk strands: 87,712 -> 7,673 triangles; 44,154 -> 3,759 vertices
+Crown membranes: 125,424 -> 103,888 triangles; 75,450 -> 45,250 vertices
+Tensioned silk strands: 90,992 -> 8,065 triangles; 45,784 -> 3,772 vertices
+Crown membranes: 123,888 -> 32,632 triangles; 74,650 -> 11,745 vertices
+Tensioned silk strands: 121,168 -> 4,433 triangles; 60,974 -> 2,299 vertices
+Crown membranes: 124,848 -> 105,994 triangles; 75,150 -> 46,836 vertices
+Tensioned silk strands: 87,312 -> 6,311 triangles; 43,922 -> 2,929 vertices
+Crown membranes: 126,768 -> 66,021 triangles; 76,150 -> 24,077 vertices
+Tensioned silk strands: 82,352 -> 7,216 triangles; 41,472 -> 3,576 vertices
+Crown membranes: 125,808 -> 79,338 triangles; 75,650 -> 32,531 vertices
+Tensioned silk strands: 78,672 -> 8,278 triangles; 39,608 -> 4,079 vertices
+Crown membranes: 42,000 -> 38,481 triangles; 25,250 -> 18,274 vertices
+Tensioned silk strands: 88,656 -> 8,142 triangles; 44,606 -> 3,633 vertices
+Crown membranes: 169,728 -> 85,295 triangles; 101,900 -> 31,189 vertices
+Tensioned silk strands: 84,096 -> 7,840 triangles; 42,344 -> 3,877 vertices
+Crown membranes: 125,808 -> 53,766 triangles; 75,650 -> 19,897 vertices
+Tensioned silk strands: 66,064 -> 7,683 triangles; 33,256 -> 3,364 vertices
+Crown membranes: 125,616 -> 41,475 triangles; 75,550 -> 16,072 vertices
+Tensioned silk strands: 90,896 -> 7,248 triangles; 45,756 -> 3,438 vertices
+Crown membranes: 83,808 -> 41,691 triangles; 50,400 -> 15,058 vertices
+Tensioned silk strands: 81,152 -> 5,272 triangles; 40,812 -> 2,441 vertices
+Crown membranes: 42,000 -> 38,570 triangles; 25,250 -> 18,362 vertices
+Tensioned silk strands: 68,704 -> 5,529 triangles; 34,586 -> 3,074 vertices
+Crown membranes: 166,848 -> 107,929 triangles; 100,400 -> 41,653 vertices
+Tensioned silk strands: 119,312 -> 5,831 triangles; 60,034 -> 2,714 vertices
+Crown membranes: 84,192 -> 50,047 triangles; 50,600 -> 19,113 vertices
+Tensioned silk strands: 77,280 -> 6,335 triangles; 38,890 -> 2,939 vertices
+Crown membranes: 166,272 -> 77,137 triangles; 100,100 -> 28,439 vertices
+Tensioned silk strands: 103,408 -> 5,297 triangles; 52,028 -> 2,416 vertices
+Crown membranes: 41,808 -> 38,209 triangles; 25,150 -> 18,167 vertices
+Tensioned silk strands: 63,952 -> 7,118 triangles; 32,170 -> 2,936 vertices
+Crown membranes: 83,424 -> 72,320 triangles; 50,200 -> 32,435 vertices
+Tensioned silk strands: 94,272 -> 4,859 triangles; 47,424 -> 2,175 vertices
+Crown membranes: 208,272 -> 83,415 triangles; 125,350 -> 30,685 vertices
+Tensioned silk strands: 101,872 -> 8,642 triangles; 51,276 -> 3,845 vertices
+Crown membranes: 166,656 -> 60,922 triangles; 100,300 -> 22,099 vertices
+Tensioned silk strands: 116,704 -> 7,703 triangles; 58,728 -> 3,191 vertices
+Crown membranes: 124,848 -> 35,723 triangles; 75,150 -> 12,554 vertices
+Tensioned silk strands: 96,688 -> 4,883 triangles; 48,642 -> 2,650 vertices
+Crown membranes: 84,960 -> 69,018 triangles; 51,000 -> 30,224 vertices
+Tensioned silk strands: 92,112 -> 7,330 triangles; 46,354 -> 3,281 vertices
+Crown membranes: 84,000 -> 72,579 triangles; 50,500 -> 32,504 vertices
+Tensioned silk strands: 76,432 -> 6,990 triangles; 38,460 -> 3,502 vertices
+Crown membranes: 208,272 -> 78,508 triangles; 125,350 -> 27,598 vertices
+Tensioned silk strands: 120,864 -> 5,679 triangles; 60,828 -> 2,588 vertices
+Crown membranes: 124,080 -> 103,179 triangles; 74,750 -> 44,864 vertices
+Tensioned silk strands: 118,288 -> 5,628 triangles; 59,524 -> 2,519 vertices
+Crown membranes: 124,080 -> 40,299 triangles; 74,750 -> 15,416 vertices
+Tensioned silk strands: 81,488 -> 6,283 triangles; 40,992 -> 2,914 vertices
+Crown membranes: 83,040 -> 32,544 triangles; 50,000 -> 12,558 vertices
+Tensioned silk strands: 91,008 -> 5,668 triangles; 45,796 -> 2,602 vertices
+Crown membranes: 210,000 -> 109,861 triangles; 126,250 -> 41,137 vertices
+Tensioned silk strands: 110,688 -> 7,973 triangles; 55,740 -> 3,665 vertices
+Crown membranes: 83,040 -> 54,116 triangles; 50,000 -> 21,674 vertices
+Tensioned silk strands: 79,776 -> 6,430 triangles; 40,164 -> 2,997 vertices
+Crown membranes: 83,808 -> 73,098 triangles; 50,400 -> 32,974 vertices
+Tensioned silk strands: 96,704 -> 9,015 triangles; 48,652 -> 3,868 vertices
+Crown membranes: 41,808 -> 38,269 triangles; 25,150 -> 18,233 vertices
+Tensioned silk strands: 79,856 -> 5,707 triangles; 40,162 -> 2,674 vertices
+Crown membranes: 168,384 -> 65,685 triangles; 101,200 -> 23,506 vertices
+Tensioned silk strands: 87,504 -> 5,832 triangles; 44,064 -> 2,753 vertices
+Crown membranes: 41,808 -> 38,212 triangles; 25,150 -> 18,165 vertices
+Tensioned silk strands: 75,392 -> 7,065 triangles; 37,908 -> 2,862 vertices
+Crown membranes: 124,656 -> 38,285 triangles; 75,050 -> 13,440 vertices
+Tensioned silk strands: 107,968 -> 5,935 triangles; 54,320 -> 2,627 vertices
+Crown membranes: 166,848 -> 84,770 triangles; 100,400 -> 31,159 vertices
+Tensioned silk strands: 103,248 -> 7,474 triangles; 51,994 -> 3,541 vertices
+Crown membranes: 169,344 -> 78,258 triangles; 101,700 -> 29,154 vertices
+Tensioned silk strands: 86,128 -> 5,840 triangles; 43,372 -> 2,922 vertices
+Crown membranes: 168,000 -> 81,719 triangles; 101,000 -> 29,513 vertices
+Tensioned silk strands: 110,496 -> 7,752 triangles; 55,636 -> 3,567 vertices
+Crown membranes: 41,808 -> 38,181 triangles; 25,150 -> 18,133 vertices
+Tensioned silk strands: 59,056 -> 7,394 triangles; 29,714 -> 3,274 vertices
+Crown membranes: 206,928 -> 79,161 triangles; 124,650 -> 28,010 vertices
+Tensioned silk strands: 115,056 -> 6,024 triangles; 57,896 -> 2,837 vertices
+Crown membranes: 126,000 -> 101,663 triangles; 75,750 -> 43,385 vertices
+Tensioned silk strands: 75,952 -> 6,676 triangles; 38,220 -> 3,505 vertices
+Crown membranes: 125,424 -> 76,730 triangles; 75,450 -> 30,084 vertices
+Tensioned silk strands: 90,032 -> 7,536 triangles; 45,330 -> 3,529 vertices
+Crown membranes: 41,808 -> 38,308 triangles; 25,150 -> 18,161 vertices
+Tensioned silk strands: 88,560 -> 6,441 triangles; 44,554 -> 2,908 vertices
+Crown membranes: 210,768 -> 79,044 triangles; 126,650 -> 27,515 vertices
+Tensioned silk strands: 103,360 -> 5,630 triangles; 52,040 -> 3,061 vertices

@@ -1,0 +1,1 @@
+Trees 2501; previous summed triangles 187,107,656; near LOD total 2,959,900; far LOD total 390,233; maximum near tree 1,289. Reduction 98.42%. Near/far transition 9% screen height; cull 1.2%. LODs are mutually exclusive.

@@ -1,0 +1,1 @@
+PASS: tree hatch/dots/grid/strata/rings/glitch/inversion disabled; soft muted green-grey shading and subtle rim only. Squirrel moving rings/highlight flashes disabled, retained simple creature shading. Geometry, flowers and ecosystem configuration unchanged.

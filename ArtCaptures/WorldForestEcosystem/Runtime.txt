@@ -1,0 +1,3 @@
+PASS habitat 1: streamed-terrain startup, 6 squirrels / 6 nests / 60 foods, 12 mounted hives / 72 bees with authored hyacinth nectar sources; squirrel creature materials and moving contour centres validated.
+PASS habitat 2: streamed-terrain startup, 6 squirrels / 6 nests / 60 foods, 12 mounted hives / 72 bees with authored hyacinth nectar sources; squirrel creature materials and moving contour centres validated.
+PASS habitat 3: streamed-terrain startup, 6 squirrels / 6 nests / 60 foods, 12 mounted hives / 72 bees with authored hyacinth nectar sources; squirrel creature materials and moving contour centres validated.

@@ -6,6 +6,7 @@ Shader "Capstone/Creatures/Membrane"
     // Uses mesh UVs from TentacleCreature: uv0 = stable surface position, uv1.x = limb id.
     Properties
     {
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull("Face Culling", Float) = 0
         [MainColor] _BaseColor("Skin Color", Color) = (0.05, 0.05, 0.06, 1)
         _LineColor("Line Color", Color) = (1, 1, 1, 1)
         _InnerColor("Inner Flesh Color", Color) = (0.32, 0.02, 0.05, 1)
@@ -121,7 +122,7 @@ Shader "Capstone/Creatures/Membrane"
             Name "Forward"
             Tags { "LightMode" = "UniversalForward" }
             // Both sides: through a tear you see the raw inside of the skin.
-            Cull Off
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.0
@@ -216,7 +217,7 @@ Shader "Capstone/Creatures/Membrane"
             Name "ShadowCaster"
             Tags { "LightMode" = "ShadowCaster" }
             ColorMask 0
-            Cull Off
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma target 3.0
@@ -272,7 +273,7 @@ Shader "Capstone/Creatures/Membrane"
             Tags { "LightMode" = "DepthOnly" }
             ZWrite On
             ColorMask R
-            Cull Off
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma vertex DepthVert
@@ -307,7 +308,7 @@ Shader "Capstone/Creatures/Membrane"
             Name "DepthNormals"
             Tags { "LightMode" = "DepthNormals" }
             ZWrite On
-            Cull Off
+            Cull [_Cull]
 
             HLSLPROGRAM
             #pragma vertex NormalsVert

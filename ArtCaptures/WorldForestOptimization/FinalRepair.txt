@@ -1,0 +1,2 @@
+Original crown mesh references restored. Fresh trunk meshes with 2.2x ribbon cross-section radius, intact capped paths and 1/3 longitudinal samples.
+Forest triangles: 111,744,304 -> 81,229,728. LOD cull height 1%; bounds recalculated.
