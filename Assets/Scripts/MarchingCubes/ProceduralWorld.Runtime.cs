@@ -332,7 +332,9 @@ public sealed partial class ProceduralWorld
             if (state.revision > 0 && scheduledEdits.Contains((coord, state.revision))) continue;
             if (state.revision > 0) scheduledEdits.Add((coord, state.revision));
             int version = state.revision, generation = epoch;
-            var snapshot = CopyModifications(coord);
+            // Edit snapshots are reused: a new one per rebuilt chunk made hundreds of KB of garbage a frame while eroding.
+            if (!snapshotPool.TryTake(out var snapshot)) snapshot = new Dictionary<Vector3Int, float>();
+            CopyModifications(coord, snapshot);
             var immutableField = field;
             Vector3 origin = gridMin;
             CancellationToken token = cancellation.Token;
@@ -341,6 +343,7 @@ public sealed partial class ProceduralWorld
                 try { finished.Enqueue(BuildChunk(immutableField, origin, coord, generation, version, snapshot, token)); }
                 catch (OperationCanceledException) { }
                 catch (Exception error) { finished.Enqueue(new ChunkResult { coord = coord, epoch = generation, revision = version, error = error }); }
+                finally { snapshot.Clear(); snapshotPool.Add(snapshot); }
             }));
         }
         for (int i = initialReady.Count - 1; i >= 0; i--)
@@ -364,9 +367,11 @@ public sealed partial class ProceduralWorld
     }
     private readonly List<ChunkResult> initialReady = new List<ChunkResult>();
     private readonly HashSet<(Vector3Int, int)> scheduledEdits = new HashSet<(Vector3Int, int)>();
-    private Dictionary<Vector3Int, float> CopyModifications(Vector3Int coord)
+    private readonly ConcurrentBag<Dictionary<Vector3Int, float>> snapshotPool = new ConcurrentBag<Dictionary<Vector3Int, float>>();
+    private Dictionary<Vector3Int, float> CopyModifications(Vector3Int coord, Dictionary<Vector3Int, float> into = null)
     {
-        var copy = new Dictionary<Vector3Int, float>();
+        var copy = into ?? new Dictionary<Vector3Int, float>();
+        copy.Clear();
         bool sculpted = sculptChunks.Contains(coord);
         if (modifications.Count == 0 && !sculpted) return copy;
         Vector3Int lo = coord * GridChunkCells - Vector3Int.one, hi = (coord + Vector3Int.one) * GridChunkCells + Vector3Int.one;

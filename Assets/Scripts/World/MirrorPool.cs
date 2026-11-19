@@ -16,7 +16,11 @@ using UnityEngine.Rendering.Universal;
 [DefaultExecutionOrder(2000)] // after the camera has moved this frame
 public sealed class MirrorPool : MonoBehaviour
 {
-    private const float MirrorRange = 45f;
+    // Only a pool this close (metres from its edge) mirrors; further off the water shows its plain look.
+    private const float MirrorRange = 25f;
+    // The mirror camera stops drawing here; the dark caves hide anything further anyway.
+    private const float MirrorFarClip = 60f;
+    private static readonly Plane[] ViewPlanes = new Plane[6];
     private static readonly List<MirrorPool> All = new List<MirrorPool>();
     private static Camera mirrorCamera;
     private static RenderTexture mirrorTexture;
@@ -129,12 +133,14 @@ public sealed class MirrorPool : MonoBehaviour
         float bestD = MirrorRange;
         if (main != null)
         {
+            GeometryUtility.CalculateFrustumPlanes(main, ViewPlanes);
             foreach (MirrorPool p in All)
             {
                 float d = Vector3.Distance(main.transform.position, p.centre) - p.radius;
                 // In front of the view (a wide cone, so a pool at the edge of the screen still counts), or underfoot.
                 Vector3 to = p.centre - main.transform.position;
-                bool seen = p.surface != null && (to.magnitude < p.radius + 2f || Vector3.Angle(main.transform.forward, to) < main.fieldOfView * 0.5f + 35f);
+                bool seen = p.surface != null && (to.magnitude < p.radius + 2f ||
+                    GeometryUtility.TestPlanesAABB(ViewPlanes, new Bounds(p.centre, new Vector3(p.radius * 2f, 2f, p.radius * 2f))));
                 if (d < DebugNearest) { DebugNearest = d; DebugNearestSeen = seen; DebugCamera = main.name + " " + main.transform.position; }
                 if (!seen) continue;
                 if (d < bestD) { bestD = d; best = p; }
@@ -172,6 +178,7 @@ public sealed class MirrorPool : MonoBehaviour
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Color.black;
         cam.targetTexture = mirrorTexture;
+        cam.farClipPlane = Mathf.Min(main.farClipPlane, MirrorFarClip);
 
         // Mirror the view in the water plane, and clip everything below the water (oblique near plane).
         Vector3 n = planeNormal, p0 = planePoint;
@@ -181,7 +188,8 @@ public sealed class MirrorPool : MonoBehaviour
         Vector3 eye = reflect.MultiplyPoint(main.transform.position);
         cam.transform.position = eye;
         Vector4 clip = CameraSpacePlane(cam, p0, n);
-        cam.projectionMatrix = main.CalculateObliqueMatrix(clip);
+        cam.ResetProjectionMatrix();
+        cam.projectionMatrix = cam.CalculateObliqueMatrix(clip);
 
         var request = new UniversalRenderPipeline.SingleCameraRequest { destination = mirrorTexture };
         bool invert = GL.invertCulling;

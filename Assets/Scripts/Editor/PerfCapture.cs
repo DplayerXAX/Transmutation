@@ -40,6 +40,7 @@ public static class PerfCapture
     private static void PlayModeChanged(PlayModeStateChange change)
     {
         if (Stage == 0) return;
+        if (change == PlayModeStateChange.EnteredEditMode) { Stage = 0; phaseStart = -1; File.WriteAllText(Status, "stopped: Play ended early"); return; }
         if (change == PlayModeStateChange.EnteredPlayMode)
             SessionState.SetString(Key + ".entered", System.DateTime.Now.Ticks.ToString());
     }

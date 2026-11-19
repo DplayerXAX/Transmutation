@@ -104,7 +104,7 @@ review shots to ArtCaptures/Flora).
 
 Scene_World's decoration groups (region decor, placeholder forest and ruins, Cistern decor) are switched off just before Play copies the open scene (and back on when Play ends), and in built scenes, so they cost nothing while it loads. The scene file is unchanged, though the open scene shows as modified after Play. `WorldStreaming` wakes each object when the player comes within its group's radius (150 to 220 m), nearest first, inside a per-frame time budget; `LoadingVeil` waits for the objects around the start. Add only groups that gameplay code does not look up: an object still asleep has not run Awake and is not found by Find calls. To check it, write `run` to `Temp/StreamCheck.request` with Scene_World open (`Editor/WorldStreamingCheck`): it visits surface spots in Play, reports near objects still off in `Temp/StreamCheck.status`, and saves shots to `ArtCaptures/Streaming`.
 
-Water follows the player too: `FluidNearPlayer` stops springs and rain and clears droplets while the player is in the caves (below y -30, back on above -22), and pauses water for 30 s if frames stay above 120 ms while it flows.
+Water follows the player too: `FluidNearPlayer` runs the water only within the fluid system's visual distance (+10 m) of its springs, stops springs and rain and clears droplets while the player is in the caves (below y -30, back on above -22), and pauses water for 30 s if frames stay above 120 ms while it flows.
 
 ## Dark caves under the crack (`DarkTunnels`, `MarchingCubes/DarkTunnelShape`, `StrangeWater`)
 

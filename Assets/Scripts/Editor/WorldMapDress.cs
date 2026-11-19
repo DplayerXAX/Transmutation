@@ -291,6 +291,50 @@ public static class WorldMapDress
         log.Add("Flower field: " + count + " bubble lilies (all pickable near the player).");
     }
 
+    // ---------------- Bone mother back in the crack ----------------
+
+    /// <summary>
+    /// Batch, incremental: moves the bone mother's sinkhole into Flame Canyon's main slot (WorldMapTerrain.MotherHole),
+    /// wedges her there on the canyon floor, gives her a wider, always-visible heat haze, and re-bakes the saved chunks.
+    /// -executeMethod WorldMapDress.MotherIntoCanyon
+    /// </summary>
+    public static void MotherIntoCanyon()
+    {
+        var scene = EditorSceneManager.OpenScene(WorldMapBuild.ScenePath, OpenSceneMode.Single);
+        var world = scene.GetRootGameObjects().Select(r => r.GetComponent<ProceduralWorld>()).First(w => w != null);
+        var log = new List<string>();
+        typeof(WorldMapFlameCanyon).GetMethod("Relayout", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .Invoke(null, new object[] { world, log });
+        AssetDatabase.SaveAssetIfDirty(world.SculptData);
+
+        var mother = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<BoneKiln>(true)).First();
+        Vector2 m = WorldMapTerrain.MotherHole;
+        mother.transform.position = new Vector3(m.x, WorldMapTerrain.CanyonFloor, m.y);
+        var so = new SerializedObject(mother);
+        so.FindProperty("sinkholeOverride").intValue = 1;
+        so.FindProperty("placeAtThisObject").boolValue = false;
+        so.FindProperty("groundBelow").floatValue = 0f;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        if (mother.transform.parent != null && mother.transform.parent.name.StartsWith("05 "))
+            mother.transform.parent.name = "05 Bone mother — wedged in Flame Canyon (where the crack was)";
+
+        // A bigger heat haze than the default for the mother (HeatHaze.Attach keeps an existing one): wider shells,
+        // deeper folds, one more shell, and a faint glow even while she is cold.
+        var haze = mother.GetComponent<HeatHaze>() ?? mother.gameObject.AddComponent<HeatHaze>();
+        haze.inner = 3f; haze.radius = 20f; haze.shells = 5; haze.dotsPerShell = 3600; haze.cycle = 6.5f; haze.fold = 0.11f;
+        haze.baseline = 0.3f; haze.opacity = 0.5f; haze.heatColor = new Color(1f, 0.45f, 0.06f);
+        EditorUtility.SetDirty(haze);
+        log.Add("Bone mother at " + mother.transform.position + " on sinkhole 1; heat haze radius 20 m (was 14), fold 0.11 (was 0.05), 5 shells, baseline 0.3.");
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        BakeChunks(world, log);
+        EditorSceneManager.SaveScene(scene);
+        AssetDatabase.SaveAssets();
+        Directory.CreateDirectory("ArtCaptures/WorldMap");
+        File.WriteAllText("ArtCaptures/WorldMap/MotherCanyon.txt", string.Join("\n", log));
+    }
+
     // ---------------- Field bubbles ----------------
 
     /// <summary>

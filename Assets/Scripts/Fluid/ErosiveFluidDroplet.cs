@@ -54,7 +54,9 @@ public sealed class ErosiveFluidDroplet : Creature
         properties = new MaterialPropertyBlock();
         body.mass = 0.05f; body.useGravity = true; body.linearDamping = 0.05f; body.angularDamping = 0.05f;
         body.interpolation = RigidbodyInterpolation.Interpolate;
-        body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+        // Speculative continuous detection: far cheaper than ContinuousDynamic for hundreds of drops, still no tunnelling
+        // at the speeds water reaches here (capped by the system's maximum speed).
+        body.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
         body.maxDepenetrationVelocity = 4f;
         sphere.sharedMaterial = friction;
         // Local overrides preserve the project's collision matrix and existing actor layers.
@@ -107,10 +109,14 @@ public sealed class ErosiveFluidDroplet : Creature
             {
                 // Raycast from the centre avoids sphere-cast overlap ambiguity, including sleeping bodies.
                 valid = touch.collider.Raycast(new Ray(body.position, -touch.normal), out RaycastHit hit, source.Radius + 0.06f);
-                if (valid) { touch.point = hit.point; touch.normal = hit.normal; touches[i] = touch;
+                // Slid round a bend since the last check: the old normal may miss, so also look straight down.
+                if (!valid) valid = touch.collider.Raycast(new Ray(body.position, Vector3.down), out hit, source.Radius + 0.1f);
+                if (valid) { touch.point = hit.point; touch.normal = hit.normal; touch.step = Time.fixedTime; touches[i] = touch;
                     if (!touch.isTarget) { effectContact = touch; effectContact.step = Time.fixedTime; } }
             }
-            if (!valid || (!body.IsSleeping() && Time.fixedTime - touch.step > dt * 2.1f))
+            // Between checks the contact follows the drop as it slides (contacts arrive on enter/exit only, see below).
+            else if (valid) { touch.point = body.position - touch.normal * source.Radius; touches[i] = touch; }
+            if (!valid || (!body.IsSleeping() && Time.fixedTime - touch.step > fluid.SampleInterval * 1.5f + dt))
             { touches[i] = touches[--touchCount]; }
         }
         float activity = 0f;
@@ -219,7 +225,8 @@ public sealed class ErosiveFluidDroplet : Creature
         body.linearVelocity = body.angularVelocity = Vector3.zero;
     }
     private void OnCollisionEnter(Collision collision) => ReadContact(collision);
-    private void OnCollisionStay(Collision collision) => ReadContact(collision);
+    // No OnCollisionStay: called for every touching drop on every physics step (about 10,000 calls a frame with a few
+    // hundred drops). The raycast check in Simulate keeps a touch alive and its point current instead.
     private void OnCollisionExit(Collision collision)
     { for (int i = touchCount - 1; i >= 0; i--) if (touches[i].collider == collision.collider) touches[i] = touches[--touchCount]; }
     private void ReadContact(Collision collision)

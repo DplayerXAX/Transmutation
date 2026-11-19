@@ -27,7 +27,12 @@ public static class WorldStreamingCheck
     private static int spot = -1;
     private static readonly StringBuilder report = new StringBuilder();
 
-    static WorldStreamingCheck() => EditorApplication.update += Tick;
+    static WorldStreamingCheck()
+    {
+        EditorApplication.update += Tick;
+        // Play stopped by hand before the check finished: forget it, so the next Play is a normal one.
+        EditorApplication.playModeStateChanged += change => { if (change == PlayModeStateChange.EnteredEditMode && SessionState.GetInt(Key, 0) != 0) { SessionState.SetInt(Key, 0); stepStart = -1; File.WriteAllText(Status, "stopped: Play ended early"); } };
+    }
 
     private static void Tick()
     {

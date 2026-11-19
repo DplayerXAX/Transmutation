@@ -36,6 +36,8 @@ public sealed class BoneKiln : MonoBehaviour
     [SerializeField] private int sinkholeOverride = -1;
     [Tooltip("Use the sinkhole nearest to this object (not the spire's). Move the object in the Scene view to move her.")]
     [SerializeField] private bool placeAtThisObject;
+    [Tooltip("0 = off. Otherwise her ground is looked for below this world height, so terrain floating above her (a sky island over the crack) is ignored.")]
+    [SerializeField] private float groundBelow = 0f;
 
     [Header("Shape")]
     [SerializeField] private int seed = 5;
@@ -360,7 +362,7 @@ public sealed class BoneKiln : MonoBehaviour
 
         // The mouth: the lowest ground round the hole is the rim.
         Vector3 approx = world.SinkholeCentre(sinkholeIndex, world.transform.position.y, out float holeRadius);
-        world.ColumnHeights(approx, out float surfaceAtCentre, out float ceilingAtCentre, out float innerGroundAtCentre);
+        Column(approx, out float surfaceAtCentre, out float ceilingAtCentre, out float innerGroundAtCentre);
         Vector3 mouthApprox = world.SinkholeCentre(sinkholeIndex, surfaceAtCentre, out _);
         float rimY = float.MaxValue;
         for (int i = 0; i < 12; i++)
@@ -1134,16 +1136,31 @@ public sealed class BoneKiln : MonoBehaviour
     }
 
     /// <summary>Top surface height at a world point: the generated terrain, or its base height before it exists.</summary>
+    /// <summary>
+    /// The world's column heights; with groundBelow set, a surface above that height (a floating island) is skipped and
+    /// the real ground below it is found by walking the density down.
+    /// </summary>
+    private void Column(Vector3 at, out float surface, out float ceiling, out float innerGround)
+    {
+        world.ColumnHeights(at, out surface, out ceiling, out innerGround);
+        if (groundBelow == 0f || surface <= groundBelow) return;
+        for (float y = groundBelow; y > innerGround; y -= 0.5f)
+            if (world.SampleDensity(new Vector3(at.x, y, at.z), false) > 0f) { surface = y + 0.25f; return; }
+        surface = innerGround;
+    }
+
     private float GroundHeight(Vector3 worldPoint)
     {
-        world.ColumnHeights(worldPoint, out float surface, out _, out _);
-        Vector3 from = new Vector3(worldPoint.x, surface + 120f, worldPoint.z);
+        Column(worldPoint, out float surface, out _, out _);
+        float start = surface + 120f;
+        if (groundBelow != 0f) start = Mathf.Min(start, Mathf.Max(surface + 2f, groundBelow));
+        Vector3 from = new Vector3(worldPoint.x, start, worldPoint.z);
         return Physics.Raycast(from, Vector3.down, out RaycastHit hit, 260f, GroundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : surface;
     }
 
     private float GroundBelowHead()
     {
-        world.ColumnHeights(head, out float surface, out _, out float innerGround);
+        Column(head, out float surface, out _, out float innerGround);
         float fallback = head.y < surface - 2f ? innerGround : surface;
         int count = Physics.RaycastNonAlloc(head + Vector3.up * 2f, Vector3.down, floorHits, 600f, GroundMask, QueryTriggerInteraction.Ignore);
         RaycastHit[] results = floorHits;
@@ -1323,7 +1340,7 @@ public sealed class BoneKiln : MonoBehaviour
 
     private bool TryTentacleGround(Vector3 at, out RaycastHit ground)
     {
-        world.ColumnHeights(at, out float surface, out _, out _);
+        Column(at, out float surface, out _, out _);
         Vector3 from = new Vector3(at.x, surface + 40f, at.z);
         float nearest = float.PositiveInfinity;
         ground = default;

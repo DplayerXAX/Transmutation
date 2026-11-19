@@ -52,6 +52,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     public int CollisionLayers => collisionLayers.value | (1 << TerrainLayer) | (1 << 4);
     public int ActiveCount => active.Count;
     public int Capacity => maximumDroplets;
+    /// <summary>Beyond this distance from the camera the water is not worth showing (also caps where it runs).</summary>
+    public float VisualDistance => visualDistance;
     public IReadOnlyList<ErosiveFluidDroplet> Droplets => active;
     public int SkippedSpawns { get; private set; }
     public float ContactAgeMultiplier => contactAgeMultiplier;

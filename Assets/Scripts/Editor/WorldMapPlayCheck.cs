@@ -78,6 +78,15 @@ public static class WorldMapPlayCheck
             lines.Add("Fell out of the world: " + fallen.Length + (fallen.Length > 0 ? " — " + string.Join(", ", fallen.Take(10).Select(c => c.name)) : ""));
             var cam = Camera.main != null ? Camera.main : Object.FindObjectsByType<Camera>(FindObjectsSortMode.None).FirstOrDefault(c => c.isActiveAndEnabled);
             if (cam != null) Shot(cam, "Play_Spawn");
+            if (kiln != null && kiln.Root != null)
+            {
+                var look = new GameObject("Mother review camera").AddComponent<Camera>();
+                look.transform.position = kiln.Root.position + new Vector3(-22f, 26f, -26f);
+                look.transform.LookAt(kiln.Root.position + Vector3.up * 2f);
+                look.fieldOfView = 60f; look.farClipPlane = 800f;
+                Shot(look, "Play_Mother");
+                Object.Destroy(look.gameObject);
+            }
             lines.Add("Errors logged: " + errors.Count);
             lines.AddRange(errors);
             Directory.CreateDirectory(Path.GetDirectoryName(Out));

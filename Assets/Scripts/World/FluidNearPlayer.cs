@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Runs an ErosiveFluidSystem only where it can matter: the player must be near its springs and above the cave system.
+/// Runs an ErosiveFluidSystem only where it can matter: the player must be near its springs (no further than the water
+/// can be seen, the system's visual distance) and above the cave system.
 /// Otherwise the springs and rain stop and the water already flowing is cleared, so water out of sight costs no physics
 /// and no terrain rebuilding. If frames stay very slow while water is flowing, it is also paused for a while.
 /// </summary>
@@ -51,7 +52,9 @@ public sealed class FluidNearPlayer : MonoBehaviour
         float nearest = float.MaxValue;
         foreach (ErosiveFluidSource s in springs) if (s != null) nearest = Mathf.Min(nearest, (s.transform.position - player.position).magnitude);
         underground = hasCaves && (underground ? player.position.y < surfaceAbove : player.position.y < undergroundBelow);
-        bool inRange = running ? nearest < activeRange + margin : nearest < activeRange;
+        // Never further than the water can be seen.
+        float range = Mathf.Min(activeRange, fluid.VisualDistance + 10f);
+        bool inRange = running ? nearest < range + margin : nearest < range;
         SetRunning(inRange && !underground && Time.time >= pausedUntil);
     }
 

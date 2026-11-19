@@ -24,7 +24,12 @@ public static class StallCapture
     private static readonly StringBuilder notes = new StringBuilder();
     private static string trigger;
 
-    static StallCapture() => EditorApplication.update += Tick;
+    static StallCapture()
+    {
+        EditorApplication.update += Tick;
+        // Play stopped by hand before the capture finished: forget it, so the next Play is a normal one.
+        EditorApplication.playModeStateChanged += change => { if (change == PlayModeStateChange.EnteredEditMode && SessionState.GetInt(Key, 0) != 0) { SessionState.SetInt(Key, 0); placedAt = profileAt = -1; nextNote = 0; File.WriteAllText(Status, "stopped: Play ended early"); } };
+    }
 
     private static void Tick()
     {

@@ -47,8 +47,12 @@ public static class WorldMapTerrain
     public const float IslandRadius = 88f;
     public static readonly Vector2 SpireSpot = new Vector2(0f, 250f);
     public const float SpireHoleRadius = 7f;
-    /// <summary>The bone mother's sinkhole, on open ground beside Flame Canyon.</summary>
-    public static readonly Vector2 MotherHole = new Vector2(2f, 112f);
+    /// <summary>
+    /// The bone mother's sinkhole, wedged in Flame Canyon's main slot where the great crack used to run (Daniel,
+    /// 2026-11-19: back in the crack as before). Canyon donor point (-24, -63) on a straight stretch, clear of the sky
+    /// island. Was (2, 112) on open ground beside the canyon, which the moved sky island covered.
+    /// </summary>
+    public static readonly Vector2 MotherHole = new Vector2(-63f, 186f);
     public const float MotherHoleRadius = 5.5f;
     public const float InnerGround = -65f;
     public static readonly Vector2 WorldSize = new Vector2(560f, 640f);
@@ -211,8 +215,10 @@ public static class WorldMapTerrain
         room = Mathf.Max(room, Mathf.Max(-10.5f - p.y, p.y - 1.2f - rough));
         float turn = Mathf.Min(Distance(q, new Vector2(6f, -1f), new Vector2(13f, 8f), out _),
             Distance(q, new Vector2(13f, 8f), new Vector2(27f, 8f), out _));
+        // The corridor floor rises 1 m towards the exit (2026-11-19), so the mushroom jump reaches the first step.
+        float corridorFloor = -10.5f + Mathf.SmoothStep(0f, 1f, (q.x - 16f) / 8f);
         float corridor = Mathf.Max(turn - 3.8f + rough * 0.35f,
-            Mathf.Max(-10.5f - p.y, p.y - 2.8f));
+            Mathf.Max(corridorFloor - p.y, p.y - 2.8f));
         // The first rise (lowered 1.5 m on 2026-11-19 so the mushroom jump clears it). The remaining height unfolds
         // over a long walkable ramp, open to daylight beyond the turn.
         float exitFloor = Mathf.Lerp(-1.8f, 6f, Mathf.SmoothStep(0f, 1f, (q.x - 27f) / 13f));

@@ -121,7 +121,7 @@ public sealed class HeatHaze : MonoBehaviour
 
     private float ReadIntensity()
     {
-        if (boneKiln != null) return boneKiln.Warmth;
+        if (boneKiln != null) return Mathf.Max(baseline, boneKiln.Warmth);
         if (boneChild != null) return boneChild.Warmth;
         if (creature == null || creature.IsDead) return 0f;
         return Mathf.Max(baseline, Mathf.Clamp01(creature.Heat / fullHeat));

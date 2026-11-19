@@ -547,6 +547,11 @@ public static class CaveBatonCheck
             {
                 Write($"tentacle: role {songTentacle.GetType().Name} {CreatureNoteTable.RoleFor(songTentacle.GetType())}, phrase {string.Join(" ", song.PhraseOf(songTentacle))}; facing {(song.Target != null ? song.Target.GetType().Name : "none")}, mouse taken {CreatureSong.ConsumesMouse}");
                 Shot(cam, "34_tentacle_phrase");
+                {
+                    Vector3 aim = songTentacle.AimPosition, eye = cam.transform.position;
+                    bool blocked = Physics.Linecast(eye, aim, out RaycastHit why, DarkTunnels.TerrainMask, QueryTriggerInteraction.Ignore);
+                    Write($"tentacle check: {Vector3.Distance(eye, aim):0.0} m, {Vector3.Angle(cam.transform.forward, aim - eye):0.0} deg off the view, blocked by {(blocked ? why.collider.name : "nothing")}, dead {songTentacle.IsDead}, carried {songTentacle.IsCarried}, physical {songTentacle.IsInPhysicalWorld}, captured {songTentacle.IsBubbleCaptured}, active {songTentacle.isActiveAndEnabled}, motion {CreatureNoteTable.MotionFor(songTentacle.GetType())}");
+                }
                 if (song.Target == songTentacle) foreach (SongInput i in song.PhraseOf(songTentacle)) song.DebugPress(i);
                 Write("tentacle following after its phrase: " + CreatureSong.IsFollowing(songTentacle));
                 if (!CreatureSong.IsFollowing(songTentacle)) song.DebugFollow(songTentacle);

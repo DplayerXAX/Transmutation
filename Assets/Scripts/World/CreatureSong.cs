@@ -166,7 +166,8 @@ public sealed class CreatureSong : MonoBehaviour
         return s;
     }
 
-    private Vector3 AimOf(Creature c) => c is CaveGlowCreature glow ? glow.AimPoint : c.transform.position + ShapeOf(c).offset;
+    // The creature's own aim point: its measured bounds can swing far with long limbs (tentacles).
+    private Vector3 AimOf(Creature c) => c is CaveGlowCreature glow ? glow.AimPoint : c.AimPosition;
     private float SizeOf(Creature c) => c is CaveGlowCreature glow ? glow.AimSize : ShapeOf(c).size;
 
     private Creature FindFaced()

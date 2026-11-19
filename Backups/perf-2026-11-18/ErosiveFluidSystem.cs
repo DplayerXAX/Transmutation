@@ -27,6 +27,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     private float drainTokens;
     private readonly List<Creature> soakedScratch = new List<Creature>();
     private readonly Stack<ErosiveFluidDroplet> pool = new Stack<ErosiveFluidDroplet>();
+    private const int FirstDroplets = 64, DropletsPerFrame = 8;
+    private int dropletsMade;
     private readonly List<ErosiveFluidDroplet> active = new List<ErosiveFluidDroplet>();
     private readonly Dictionary<Vector3Int, Request> requests = new Dictionary<Vector3Int, Request>();
     private ErosiveFluidSource[] sources;
@@ -102,7 +104,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         RefreshActors();
         friction = new PhysicsMaterial("Fluid friction") { dynamicFriction = 0f, staticFriction = 0f, bounciness = 0f,
             frictionCombine = PhysicsMaterialCombine.Minimum, bounceCombine = PhysicsMaterialCombine.Minimum };
-        for (int i = 0; i < maximumDroplets; i++) pool.Push(CreateDroplet());
+        // A first batch now; the rest of the pool is made a few per frame (see Update).
+        for (dropletsMade = 0; dropletsMade < Mathf.Min(FirstDroplets, maximumDroplets); dropletsMade++) pool.Push(CreateDroplet());
         if (world == null) return;
         world.TerrainChanged += Invalidate;
         world.ErosionApplied += EmitDebris;
@@ -118,9 +121,8 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
         debris.Play();
         for (int i = 0; i < rippleAges.Length; i++)
         {
-            GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            GameObject ring = VisualPrimitive.Create(PrimitiveType.Quad);
             ring.name = "Pooled Contact Ripple"; ring.transform.SetParent(transform, false);
-            Destroy(ring.GetComponent<Collider>());
             var renderer = ring.GetComponent<Renderer>(); renderer.sharedMaterial = rippleMaterial;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             ring.SetActive(false); ripples.Add(ring); rippleProperties.Add(new MaterialPropertyBlock());
@@ -306,6 +308,7 @@ public sealed class ErosiveFluidSystem : MonoBehaviour
     }
     private void Update()
     {
+        for (int i = 0; i < DropletsPerFrame && sources != null && dropletsMade < maximumDroplets; i++, dropletsMade++) pool.Push(CreateDroplet());
         for (int i = 0; i < ripples.Count; i++)
         {
             if (!ripples[i].activeSelf) continue;
