@@ -415,6 +415,12 @@ public static class CaveBatonCheck
                 foreach (var m in Object.FindObjectsByType<ToneCrate>(FindObjectsSortMode.None))
                     Write($"mesa {m.Note}: role {m.Role}, phrase {string.Join(" ", song.PhraseOf(m))}, needs {m.SeedsNeeded}");
                 Write("baton in the scene: " + (Object.FindFirstObjectByType<ConductorBaton>() != null));
+                foreach (var t in new[] { typeof(GlimLantern), typeof(BellSnail), typeof(LureMaw), typeof(FuzzCreature), typeof(FireEater), typeof(SkySpider), typeof(BirdCreature), typeof(TentacleCreature), typeof(Squirrel) })
+                {
+                    SongInput[] motif = CreatureNoteTable.PhraseFor(t);
+                    Write($"motif {t.Name}: {(motif == null ? "none" : string.Join(" ", motif))}");
+                }
+                foreach (SongInput i in System.Enum.GetValues(typeof(SongInput))) Write($"input {i} plays {CreatureNoteTable.EventFor(i)}");
                 // Look works from the camera's old place, so aim it by the direction from the new one.
                 Vector3 doorView = new Vector3(-68.6f, -74.3f, 169.3f);
                 Place(body, cam, doorView, cam.transform.position + (new Vector3(-69.2f, -74.8f, 172.8f) - doorView - Vector3.up * 0.6f));
@@ -554,6 +560,7 @@ public static class CaveBatonCheck
                 Write($"fuzz: role {CreatureNoteTable.RoleFor(typeof(FuzzCreature))}, phrase {string.Join(" ", song.PhraseOf(songFuzz))}; facing {(song.Target != null ? song.Target.GetType().Name : "none")}");
                 if (song.Target == songFuzz) foreach (SongInput i in song.PhraseOf(songFuzz)) song.DebugPress(i);
                 Write("fuzz following after its phrase: " + CreatureSong.IsFollowing(songFuzz));
+                Write($"one per kind: drums now fuzz {CreatureSong.IsFollowing(songFuzz)}, maw {CreatureSong.IsFollowing(songMaw)}, mesa {CreatureSong.IsFollowing(conducted)}; melody glim {CreatureSong.IsFollowing(songGlim)}; followers {song.FollowerCount}");
                 if (!CreatureSong.IsFollowing(songFuzz)) song.DebugFollow(songFuzz);
                 Wait(5);
                 break;
@@ -561,6 +568,25 @@ public static class CaveBatonCheck
             case 12:
                 Write($"after 5 s: tentacle moved {Vector3.Distance(songTentacle.transform.position, songFrom):0.0} m, {Vector3.Distance(songTentacle.transform.position, body.position):0.0} m from the player; fuzz {Vector3.Distance(songFuzz.transform.position, body.position):0.0} m from the player");
                 Shot(cam, "35_all_creatures_following");
+                foreach (var c in new Creature[] { songGlim, songMaw, songSnail, songTentacle, songFuzz }) if (c != null) c.gameObject.SetActive(false);
+                songLakes = Object.FindObjectsByType<HangingLake>(FindObjectsSortMode.None);
+                Write($"hanging lakes {songLakes.Length}, with mirrors {Object.FindObjectsByType<MirrorPool>(FindObjectsSortMode.None).Length}");
+                StandUnderLake(body, cam, songLakes[0]);
+                Wait(4);
+                break;
+            case 13:
+                Write($"mirror renders {MirrorPool.DebugRenders}, supported {MirrorPool.DebugSupported}, drops falling in the air: {Object.FindObjectsByType<WaterDrips>(FindObjectsSortMode.None).Length} drippers");
+                Shot(cam, "36_ceiling_mirror");
+                if (songLakes.Length > 0) StandUnderLake(body, cam, songLakes[0]);
+                Wait(3);
+                break;
+            case 14:
+                Shot(cam, "37_volume_water");
+                if (songLakes.Length > 1) StandUnderLake(body, cam, songLakes[1]);
+                Wait(3);
+                break;
+            case 15:
+                Shot(cam, "38_volume_water_2");
                 Write("done");
                 Finish("test done");
                 break;
@@ -570,6 +596,27 @@ public static class CaveBatonCheck
     private static FuzzCreature songFuzz;
     private static TentacleCreature songTentacle;
     private static Vector3 songFrom;
+
+    private static HangingLake[] songLakes;
+
+    private static void StandUnderLake(Rigidbody body, Camera cam, HangingLake lake)
+    {
+        Bounds b = lake.GetComponent<MeshRenderer>().bounds;
+        Vector3 point = new Vector3(b.center.x, b.min.y, b.center.z);
+        Vector3 stand = point + Vector3.down * 3f;
+        foreach (float reach in new[] { 0.55f, 0.3f, 0.8f })
+            foreach (Vector3 side in new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
+            {
+                Vector3 from = point + side * b.extents.x * reach + Vector3.down * 0.6f;
+                if (!Physics.Raycast(from, Vector3.down, out RaycastHit floor, 25f, DarkTunnels.TerrainMask)) continue;
+                Vector3 at = floor.point + Vector3.up * 1.1f;
+                if (Physics.Linecast(at + Vector3.up * 0.6f, point + Vector3.down * 0.2f, DarkTunnels.TerrainMask)) continue;
+                stand = at;
+                goto chosen;
+            }
+        chosen:
+        Place(body, cam, stand, cam.transform.position + (point - (stand + Vector3.up * 0.6f)));
+    }
 
     private static void PutOnFloor(Creature c, Vector3 near, float above)
     {

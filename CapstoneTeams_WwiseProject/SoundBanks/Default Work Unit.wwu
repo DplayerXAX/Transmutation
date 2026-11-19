@@ -5,6 +5,7 @@
 			<ChildrenList>
 				<SoundBank Name="Transmutation" ID="{5294736A-9C0E-45BF-B3B4-A66EA5C2B922}">
 					<ObjectInclusionList>
+						<ObjectRef Name="Play_Song_D4" ID="{A233C47D-F6BE-40A2-B5DE-A0F7E694E4F4}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Crate_B" ID="{5A702FA1-A6C8-414E-8783-9663D874DCF0}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Footstep_Left" ID="{68B83415-D24B-415C-A452-A8619448A65C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Drop" ID="{9F9A4CCA-07C8-4279-9DBE-080CF20F3857}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
@@ -14,13 +15,20 @@
 						<ObjectRef Name="Play_BubblePop" ID="{D4BC598C-865F-44DE-9A15-BAD751981A83}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Crate_E" ID="{3D9F2B30-0E7B-46AF-A0A6-817940055197}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Crate_Thump" ID="{AA025761-6A35-46CD-9B8B-6BF0D8FEC12B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_Fs3" ID="{6903427F-56CA-4702-90E6-FA60E6B3E950}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Footstep_Right" ID="{5C4F89C2-C554-474D-A9F1-088B610F61BD}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_E3" ID="{00DD28FE-6872-4847-9F65-2B02F1F93906}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Crate_G" ID="{F5878F74-9320-48B1-BCF1-05536F6514CF}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Climb_Reach" ID="{FAC6352C-DFDB-48BB-A514-B0D401159B5B}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="PlayBGM" ID="{35352506-54B6-4A54-9C06-399C44291C2C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_G3" ID="{F2A9449A-FBD9-4AC2-B2F6-E92485C1AF54}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_E4" ID="{BF7BBC9F-5C90-4BCD-8192-A2B53E9D885C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_C4" ID="{DCF9D0AE-649A-4C9E-9986-4ABCAAFB3EE1}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_TentacleNear" ID="{FB444205-6D6B-4D10-8E27-78C6A98B0B26}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_Tutorial" ID="{E9FA5187-5530-4DB3-A3A1-AA8E1CFF345C}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_B3" ID="{6C30DF99-FD84-4E53-920E-AF089CB52FF6}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 						<ObjectRef Name="Play_LMB" ID="{9838F8BC-F7E4-4F21-B214-7408FD250FD7}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
+						<ObjectRef Name="Play_Song_A3" ID="{D4888A4C-E9E9-4FFC-BFA4-9C9DC587D078}" WorkUnitID="{37CC203E-6D30-45D9-9C60-022F9A5BC353}" Origin="Manual" Filter="7"/>
 					</ObjectInclusionList>
 					<ObjectExclusionList/>
 					<GameSyncExclusionList/>

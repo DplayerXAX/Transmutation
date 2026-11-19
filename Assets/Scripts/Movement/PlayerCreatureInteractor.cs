@@ -169,7 +169,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
             !HeldHasOwnUse())
             return;
 
-        AudioManager.PostEvent("Play_LMB", gameObject);
+        CreatureSong.ActionSound("Play_LMB", gameObject);
         TryInteract();
     }
 

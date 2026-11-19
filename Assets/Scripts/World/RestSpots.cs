@@ -591,8 +591,7 @@ public sealed class RestSpot : Creature
         Block(new Vector3(0f, 0.2f, 0f), new Vector3(0.9f, 0.4f, 0.7f), stone, solid: true, tilt: 3f);
         Block(new Vector3(0f, 0.43f, 0f), new Vector3(1.2f, 0.08f, 0.9f), stone, solid: true, tilt: 2f);
         // The new-kind glyph: a small slowly turning diamond.
-        GameObject m = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        Destroy(m.GetComponent<Collider>());
+        GameObject m = VisualPrimitive.Create(PrimitiveType.Cube);
         m.name = "New Rest Marker";
         m.transform.SetParent(transform, false);
         m.transform.localPosition = new Vector3(0f, 1.6f, 0f);

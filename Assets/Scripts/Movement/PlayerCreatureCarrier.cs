@@ -197,7 +197,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
                 bool shouldThrow = IsChargingThrow;
                 float charge = ThrowCharge01;
                 CancelRightMouse();
-                if (shouldThrow) { thrower.Throw(charge); AudioManager.PostEvent("Play_Drop", gameObject); }
+                if (shouldThrow) { thrower.Throw(charge); CreatureSong.ActionSound("Play_Drop", gameObject); }
                 else Drop();
             }
             else if (!held) CancelRightMouse();
@@ -366,7 +366,7 @@ private void FitCarryPoint(Creature creature)
             return;
         }
         CarriedCreature = creature;
-        AudioManager.PostEvent("Play_PickUp", gameObject);
+        CreatureSong.ActionSound("Play_PickUp", gameObject);
         CancelRightMouse();
         if (creature is TentacleCreature tentacle && TryGetComponent<TentacleTether>(out var tether)) tether.AdoptBalloons(tentacle);
         // Start where the hand took it and bring it in from there.
@@ -514,7 +514,7 @@ private void FitCarryPoint(Creature creature)
         if (TentacleLockedForRide) return;
         Creature dropped = CarriedCreature;
         Release();
-        if (dropped != null) AudioManager.PostEvent("Play_Drop", gameObject);
+        if (dropped != null) CreatureSong.ActionSound("Play_Drop", gameObject);
         if (dropped == null || carryCamera == null) return;
 
         Rigidbody body = dropped.GetComponent<Rigidbody>();

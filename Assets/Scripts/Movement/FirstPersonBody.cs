@@ -781,9 +781,8 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private static Transform Part(PrimitiveType type, string partName, Transform parent, Material material, Vector3 scale, bool viewOnly)
     {
-        GameObject part = GameObject.CreatePrimitive(type);
+        GameObject part = VisualPrimitive.Create(type);
         part.name = partName;
-        DestroyImmediate(part.GetComponent<Collider>());
         part.transform.SetParent(parent, false);
         part.transform.localScale = scale;
         var renderer = part.GetComponent<MeshRenderer>();

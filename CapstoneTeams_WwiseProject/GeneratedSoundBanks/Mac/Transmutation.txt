@@ -1,5 +1,13 @@
 Event	ID	Name			Wwise Object Path	Notes
 	283731184	Play_Tutorial			\Default Work Unit\Play_Tutorial	
+	729569016	Play_Song_A3			\Default Work Unit\Play_Song_A3	
+	746346605	Play_Song_B3			\Default Work Unit\Play_Song_B3	
+	751390632	Play_Song_Fs3			\Default Work Unit\Play_Song_Fs3	
+	763124165	Play_Song_C4			\Default Work Unit\Play_Song_C4	
+	779901872	Play_Song_D4			\Default Work Unit\Play_Song_D4	
+	796679459	Play_Song_E4			\Default Work Unit\Play_Song_E4	
+	796679460	Play_Song_E3			\Default Work Unit\Play_Song_E3	
+	830234638	Play_Song_G3			\Default Work Unit\Play_Song_G3	
 	1110411331	Play_Footstep_Right			\Default Work Unit\Play_Footstep_Right	
 	1169957417	Play_Climb_Reach			\Default Work Unit\Play_Climb_Reach	
 	1532331005	Play_BubblePop			\Default Work Unit\Play_BubblePop	
@@ -37,10 +45,13 @@ Game Parameter	ID	Name			Wwise Object Path	Notes
 	4238026883	BGM_glim			\Default Work Unit\BGM_glim	
 
 In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
+	3085112	Song_D4	.cache\D0\{D0E14775-950E-CDFA-A07C-258B5DD06CE4}.wem		\Containers\Default Work Unit\SFX\Song_D4		220596
 	11987434	Drop	.cache\9C\{9C017071-B9D6-F281-C5AB-FABF30D696C9}.wem		\Containers\Default Work Unit\SFX\Drop		220596
 	12357768	tunnel_glim	.cache\E6\{E61DC268-FEA5-8A6E-6E9D-026ADE5FCB95}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\tunnel_glim		403543
+	51672418	Song_A3	.cache\C4\{C41A0015-C5C1-863A-F6BC-79DC22017440}.wem		\Containers\Default Work Unit\SFX\Song_A3		220596
 	55465272	tunnel_bell	.cache\C3\{C3F574B1-0517-6E0F-F587-DD529C01B4BC}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\tunnel_bell		375571
 	95100673	basic_test	.cache\21\{21CDDAED-218E-71D2-824D-C49641294AB1}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\basic_test		704890
+	114883503	Song_E3	.cache\BA\{BA013C38-12CB-0759-1048-25C2EAADD07D}.wem		\Containers\Default Work Unit\SFX\Song_E3		220596
 	115744844	climb	.cache\50\{50FE24C9-FB07-65A8-0E49-5C11D9F1AD25}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\climb		992749
 	117650681	flowers_bubbles	.cache\C0\{C0C143B5-6F90-0904-ED51-E99FFBD7B747}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\flowers_bubbles		667981
 	121921526	intro_loop	.cache\AB\{AB605B60-CDEE-13EF-8F06-9B30AF7EC3D3}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Outro\intro_loop		293122
@@ -48,12 +59,15 @@ In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	226587581	intro_5	.cache\60\{60DC7F2D-3C26-05D4-D11D-57B321D484B9}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_5		226416
 	277055219	intro_3	.cache\51\{517A945F-A4B8-8AAE-9947-B98B5B75A4E3}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_3		159821
 	306202188	intro_1	.cache\65\{65F03AB4-A8BF-36B3-1ED7-E181B79BB075}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_1		83026
+	316013940	Song_B3	.cache\3A\{3AFED7B9-E850-62E7-53B0-F80B76C21E37}.wem		\Containers\Default Work Unit\SFX\Song_B3		220596
 	352086038	BubblePop	.cache\39\{399C02EC-05CE-B5B3-226A-BC4D0F9E9A85}.wem		\Containers\Default Work Unit\SFX\BubblePop		220596
 	427461893	hungry_cave	.cache\4D\{4DB74638-1757-9802-C5A1-BE4630F89D4E}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\hungry_cave		742105
+	445693686	Song_Fs3	.cache\C2\{C2FBA575-3D10-9BFC-73EB-242BD02477CB}.wem		\Containers\Default Work Unit\SFX\Song_Fs3		220596
 	453822448	intro_4	.cache\AF\{AF8499BE-F1CB-11DA-91DF-960242B79F0C}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_4		228832
 	454687851	left_D	.cache\F0\{F02073ED-9FC1-DEC1-54F1-6AAB1DEF58EC}.wem		\Containers\Default Work Unit\Footstep_Left\left_D		220596
 	468006233	cave	.cache\92\{9295C487-969C-749D-5FB3-84120D66798E}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\cave		845958
 	481382044	right_E	.cache\A5\{A589C8EF-0FDE-AE55-C563-250AA6C13764}.wem		\Containers\Default Work Unit\Footstep_Right\right_E		220596
+	522326831	Song_C4	.cache\B3\{B310BDC5-1FE0-EE07-7B34-77F9FD420DC3}.wem		\Containers\Default Work Unit\SFX\Song_C4		220596
 	557442941	PickUp	.cache\80\{809E59EA-E327-0511-923A-6F8019F07C0B}.wem		\Containers\Default Work Unit\SFX\PickUp		220596
 	575148561	Crate_G	.cache\A7\{A74B0F80-41DD-BE10-2A83-44377A66E697}.wem		\Containers\Default Work Unit\SFX\Crate_G		247052
 	585933015	Crate_B	.cache\A7\{A745686E-271F-4D55-3035-AD7BF8AC251B}.wem		\Containers\Default Work Unit\SFX\Crate_B		247052
@@ -68,5 +82,7 @@ In Memory Audio	ID	Name	Audio source file		Wwise Object Path	Notes	Data Size
 	773018024	timespider	.cache\F2\{F246CF5A-582E-E5AA-0328-374EAA404961}.wem		\Containers\Default Work Unit\BGM\basic\basic_test\timespider		835020
 	849763107	TentacleNear	.cache\69\{6912AAC5-C6C9-9027-5EA1-AFA8858483FC}.wem		\Containers\Default Work Unit\SFX\TentacleNear		733556
 	1017687414	intro_2	.cache\22\{227E6133-CADA-9152-460B-47542797FB75}.wem		\Containers\Default Work Unit\Tutorial\Tutorial_Stems\intro_2		175103
+	1019235382	Song_E4	.cache\3B\{3BEA8776-A09F-D004-57CA-A2E2AC873A63}.wem		\Containers\Default Work Unit\SFX\Song_E4		220596
 	1052475880	Crate_D	.cache\D0\{D0AE8086-FBA6-0C7F-77A1-8B6B6AF83693}.wem		\Containers\Default Work Unit\SFX\Crate_D		247052
+	1063203631	Song_G3	.cache\4C\{4CFF1AB5-33BA-A0A0-E746-31D0847B0FBE}.wem		\Containers\Default Work Unit\SFX\Song_G3		220596
 

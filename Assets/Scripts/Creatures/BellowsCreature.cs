@@ -147,9 +147,8 @@ public sealed class BellowsCreature : Creature
             Transform l = Part("Leg " + i, leg, boneMaterial);
             legs.Add(l);
         }
-        var ember = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        var ember = VisualPrimitive.Create(PrimitiveType.Sphere);
         ember.name = "Ember";
-        Destroy(ember.GetComponent<Collider>());
         ember.transform.SetParent(look, false);
         ember.GetComponent<Renderer>().sharedMaterial = coreMaterial;
         core = ember.transform;

@@ -86,8 +86,7 @@ public sealed class BatonNotePop : MonoBehaviour
 
     private Transform Part(PrimitiveType type, Vector3 local, Vector3 scale)
     {
-        var go = GameObject.CreatePrimitive(type);
-        Destroy(go.GetComponent<Collider>());
+        var go = VisualPrimitive.Create(type);
         go.transform.SetParent(glyph, false);
         go.transform.localPosition = local;
         go.transform.localScale = scale;

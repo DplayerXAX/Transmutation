@@ -106,8 +106,7 @@ public sealed class ConductorBaton : MonoBehaviour
         Shader haloShader = Shader.Find("Capstone/Cave/LightVolume");
         if (haloShader != null)
         {
-            var ballObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            Destroy(ballObject.GetComponent<Collider>());
+            var ballObject = VisualPrimitive.Create(PrimitiveType.Sphere);
             ballObject.name = "Tip light";
             ballObject.transform.SetParent(tip, false);
             // The tip is 2.4 cm wide; the light reaches about 0.7 m.
@@ -459,8 +458,7 @@ public sealed class ConductorBaton : MonoBehaviour
 
     private static GameObject Part(PrimitiveType type, Transform parent, Vector3 local, Vector3 scale, Material material)
     {
-        var go = GameObject.CreatePrimitive(type);
-        Destroy(go.GetComponent<Collider>());
+        var go = VisualPrimitive.Create(type);
         go.transform.SetParent(parent, false);
         go.transform.localPosition = local;
         go.transform.localScale = scale;

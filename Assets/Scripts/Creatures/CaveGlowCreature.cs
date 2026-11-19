@@ -295,8 +295,7 @@ public abstract class CaveGlowCreature : Creature
 
     protected static GameObject Part(PrimitiveType type, Transform parent, Vector3 local, Vector3 scale, Material material)
     {
-        var go = GameObject.CreatePrimitive(type);
-        Destroy(go.GetComponent<Collider>());
+        var go = VisualPrimitive.Create(type);
         go.transform.SetParent(parent, false);
         go.transform.localPosition = local;
         go.transform.localScale = scale;

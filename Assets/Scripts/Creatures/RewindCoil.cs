@@ -192,9 +192,8 @@ public sealed class RewindCoil : Creature
         float[] chambers = { 2.3f * Mathf.PI, 2.95f * Mathf.PI, 3.5f * Mathf.PI, 1.8f * Mathf.PI, 3.85f * Mathf.PI };
         for (int i = 0; i < maxBeads; i++)
         {
-            var bead = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var bead = VisualPrimitive.Create(PrimitiveType.Sphere);
             bead.name = "Bead " + i;
-            Destroy(bead.GetComponent<Collider>());
             bead.transform.SetParent(shell, false);
             float theta = chambers[i % chambers.Length];
             bead.transform.localPosition = SpiralPoint(theta);
@@ -214,9 +213,8 @@ public sealed class RewindCoil : Creature
         clock.localRotation = Quaternion.Euler(22f, -14f, 0f);
         for (int i = 0; i < 12; i++)
         {
-            var tick = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var tick = VisualPrimitive.Create(PrimitiveType.Sphere);
             tick.name = "Tick " + i;
-            Destroy(tick.GetComponent<Collider>());
             tick.transform.SetParent(clock, false);
             float a = Mathf.PI * 0.5f - i / 12f * Mathf.PI * 2f;
             tick.transform.localPosition = new Vector3(Mathf.Cos(a), Mathf.Sin(a), 0f) * tickRadius;

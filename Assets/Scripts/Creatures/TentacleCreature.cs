@@ -603,6 +603,17 @@ public sealed class TentacleCreature : Creature
 
     protected override void TickCreature(float deltaTime)
     {
+        // Far off or out of view, the creature runs every few frames with the time added up: the same motion, a
+        // fraction of the cost. Anything the player is doing with it runs every frame.
+        bool busy = IsCarried || IsPetted || Suspended || PinnedCount > 0 || holding || ExternalMovement;
+        ViewInfo(out bool seen, out float distance);
+        int stride = busy ? 1 : seen ? (distance < 30f ? 1 : distance < 60f ? 2 : 4) : (distance < 25f ? 1 : 4);
+        pendingTime += deltaTime;
+        if (!busy && ++skippedFrames < stride) return;
+        deltaTime = Mathf.Min(pendingTime, 0.25f);
+        pendingTime = 0f;
+        skippedFrames = 0;
+
         if (wasCarried && !IsCarried) home = transform.position; // Wander around where it was dropped.
         wasCarried = IsCarried;
         UpdateHunt(deltaTime);
@@ -614,32 +625,32 @@ public sealed class TentacleCreature : Creature
         limbSize = Mathf.MoveTowards(limbSize, IsCarried ? backScale : 1f, deltaTime * 2f);
         UpdateTentacles(deltaTime);
         UpdateBodyVisual(deltaTime);
-        // The skin is the costly part: rebuilt every frame up close, every few frames far off, not at all
-        // while it is out of view (it catches up the moment it is seen again).
-        // The ring shader state only matters while the skin is drawn, so it follows the same view/distance budget.
-        if (SkinWorthUpdating()) { UpdateMembrane(); UpdateShaderState(deltaTime); }
+        // The skin (the costly part) and its ring shader follow the same budget; out of view they wait, and catch
+        // up the moment the creature is seen again.
+        if (busy || seen) { UpdateMembrane(); UpdateShaderState(deltaTime); }
     }
 
     private static readonly Plane[] ViewPlanes = new Plane[6];
     private static int viewPlanesFrame = -1;
     private static Camera viewCamera;
+    private float pendingTime;
+    private int skippedFrames = -1;
 
-    private bool SkinWorthUpdating()
+    private void ViewInfo(out bool seen, out float distance)
     {
-        if (IsCarried || IsPetted || Suspended || PinnedCount > 0) return true;
+        if (skippedFrames < 0) skippedFrames = seed & 3; // spread the creatures over different frames
         if (viewPlanesFrame != Time.frameCount)
         {
             viewPlanesFrame = Time.frameCount;
             if (viewCamera == null) viewCamera = Camera.main;
             if (viewCamera != null) GeometryUtility.CalculateFrustumPlanes(viewCamera, ViewPlanes);
         }
-        if (viewCamera == null) return true;
+        seen = true; distance = 0f;
+        if (viewCamera == null) return;
         Vector3 centre = transform.position;
         float extent = (reach + bodyRadius) * 1.5f * Mathf.Max(0.1f, transform.lossyScale.x);
-        if (!GeometryUtility.TestPlanesAABB(ViewPlanes, new Bounds(centre, Vector3.one * (extent * 2f)))) return false;
-        float distance = Vector3.Distance(viewCamera.transform.position, centre);
-        int every = distance < 30f ? 1 : distance < 60f ? 2 : 4;
-        return (Time.frameCount + (seed & 3)) % every == 0;
+        seen = GeometryUtility.TestPlanesAABB(ViewPlanes, new Bounds(centre, Vector3.one * (extent * 2f)));
+        distance = Vector3.Distance(viewCamera.transform.position, centre);
     }
 
     /// <summary>Feeds the line shader its ring centre and how busy the creature is.</summary>
@@ -1315,9 +1326,8 @@ public sealed class TentacleCreature : Creature
 
     private Transform CreatePart(PrimitiveType type, string partName, Transform parent, Material material, Color fallbackColor)
     {
-        GameObject part = GameObject.CreatePrimitive(type);
+        GameObject part = VisualPrimitive.Create(type);
         part.name = partName;
-        DestroyImmediate(part.GetComponent<Collider>());
         part.transform.SetParent(parent, false);
 
         var renderer = part.GetComponent<MeshRenderer>();
