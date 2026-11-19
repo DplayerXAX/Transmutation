@@ -4,6 +4,12 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombatTarget
 {
+    public static PlayerCreatureStats EnsureFor(SmoothFirstPersonController controller)
+    {
+        if(controller==null)return null;
+        var stats=controller.GetComponent<PlayerCreatureStats>();
+        return stats!=null?stats:controller.gameObject.AddComponent<PlayerCreatureStats>();
+    }
     [Tooltip("Current emitted brightness. Effects change this number directly.")]
     [Min(0f)] [SerializeField] private float luminosity;
     [SerializeField] private Vector3 emissionOffset = Vector3.up * 0.5f;

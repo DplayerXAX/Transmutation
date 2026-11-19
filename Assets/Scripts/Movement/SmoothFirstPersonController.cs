@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 /// PlayerCam, MoveCamera and Sliding scripts, merged into one component.
 /// </summary>
 [DisallowMultipleComponent]
-[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Rigidbody), typeof(PlayerCreatureStats))]
 public sealed class SmoothFirstPersonController : MonoBehaviour
 {
     public enum MovementState
@@ -237,6 +237,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             cameraHolder = transform.parent.Find("CameraHolder");
         if (cameraHolder != null)
             playerCamera = cameraHolder.GetComponentInChildren<Camera>();
+    }
+
+    private void Awake()
+    {
+        // RequireComponent does not repair already-authored scenes/prefabs.
+        PlayerCreatureStats.EnsureFor(this);
     }
 
     private void Start()

@@ -65,6 +65,7 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
 
         if (interactionCamera == null)
             interactionCamera = Camera.main;
+        PlayerCreatureStats.EnsureFor(carrier != null ? carrier.PlayerController : GetComponentInParent<SmoothFirstPersonController>());
     }
 
     private void Update()

@@ -60,7 +60,7 @@ public sealed class PlayerCreatureCarrier : MonoBehaviour
     public float FullThrowHoldTime => fullThrowHoldTime;
     public Vector3 CatchPosition => carryPoint != null ? carryPoint.position : transform.position;
     public bool CanRetrieve(Creature creature) => creature != null && creature.isActiveAndEnabled &&
-        !creature.IsDead && !creature.IsConsumptionPending && !creature.IsCarried && !creature.IsBubbleCaptured &&
+        !creature.IsConsumptionPending && !creature.IsCarried && !creature.IsBubbleCaptured &&
         !BoneChild.IsCradled(creature) && !(creature.TryGetComponent<WebCapture>(out var web) && web.IsCaptured) &&
         creature.CanBeCarried && !ReflectionSpotlight.IsFrozen(creature) &&
         string.IsNullOrEmpty(creature.PickupActionPrompt) &&

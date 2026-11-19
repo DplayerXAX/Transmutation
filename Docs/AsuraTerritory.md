@@ -1,3 +1,5 @@
+Current detailed guide: [Asura battlefield README](AsuraBattlefield.README.md). This file also retains historical prototype notes.
+
 ## Combat and replenishment revision — November 18
 
 This section supersedes the historical prototype settings below.
@@ -65,4 +67,5 @@ A roughly 33-second smoke check verified default-off, on/off toggling, Game-view
 Connected friendly coverage now grants colony members 60m detection and 75m retention, configured by Territory Detection Range on the AsuraTerritory component. The existing 1.5x breach multiplier applies afterward (90m/112.5m during a breach). Outside coverage the creature's normal 20m/25m ranges apply. Acquisition and attack line-of-sight checks and attack reach remain intact.
 
 The manager caches coverage on members using its existing surface lookup and coverage union, twice per second and on network refresh. Fighters do not scan for linkages. Territory searches use the shared spatial index at a 0.5-second interval and only while targetless. A larger radius still increases candidate/raycast work; no profiling claim is made. Light runtime validation confirmed 60 -> 20 -> 60 on leaving/re-entering coverage, 0.5s cadence, and 35 targets farther than 25m. Compilation passed and the Editor console reported zero errors.
+
 

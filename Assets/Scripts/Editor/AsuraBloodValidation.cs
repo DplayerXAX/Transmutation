@@ -84,7 +84,8 @@ public static class AsuraBloodValidation
             var motor = melee.GetComponent<AsuraMotor>(); motor.SetIntent(Vector3.forward * 3f, Vector3.forward);
             typeof(AsuraMotor).GetMethod("FixedUpdate", Private).Invoke(motor, null);
             Check(!(bool)typeof(AsuraMotor).GetField("steering", Private).GetValue(motor), "motor recognizes player collision as a target body instead of bypassing it as terrain");
-            Check(strike.Release(melee, stats, null) && stats.CoatHealth == 30f, "authored melee damage reaches coat");
+            Check(strike.Release(melee, stats, null) && stats.CoatHealth >= 25f && stats.CoatHealth <= 35f,
+                "authored melee damage reaches coat within the 25 percent damage variation");
             Set(combat, "target", stats); Set(combat, "<State>k__BackingField", CreatureCombatState.Windup); Set(combat, "windupRemaining", 0f);
             stats.TryApplyBlood(CreaturePolarity.Light); combat.Tick(1f);
             Check(combat.Target == null && combat.Releases == 0 && !combat.Eligible(stats, 20f), "side switch cancels committed Light attack");

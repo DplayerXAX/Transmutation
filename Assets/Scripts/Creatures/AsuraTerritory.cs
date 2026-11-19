@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>Scene-local, bounded population and surface-connected territory. Combat stays with each fighter.</summary>
-public sealed class AsuraTerritory : MonoBehaviour
+public sealed partial class AsuraTerritory : MonoBehaviour
 {
     public AsuraSurfaceMap surfaceMap;
     public AsuraLinkage linkagePrefab;
@@ -31,6 +31,8 @@ public sealed class AsuraTerritory : MonoBehaviour
     [Min(1)] public int localPopulationLimit=5;
     [Range(0,1)] public float quietSpawnChance=0.2f;
     [Range(0,1)] public float expansionSpawnChance=0.35f;
+    [Tooltip("Share of spawn attempts that prioritize safe vine surfaces. Falls back to other terrain if none fit.")]
+    [Range(0,1)] public float vineSpawnChance=0.35f;
     [Min(0)] public int initialPopulation=24;
     public LayerMask groundLayers=1<<7;
     public bool Ready {get; private set;}
@@ -72,6 +74,7 @@ public sealed class AsuraTerritory : MonoBehaviour
         homes.AddRange(GetComponentsInChildren<AsuraHome>());nodes.AddRange(GetComponentsInChildren<AsuraLinkage>());
         members.AddRange(GetComponentsInChildren<AsuraTerritoryMember>(true));
         foreach(var node in nodes)Prepare(node);
+        InitializeSites();
         RefreshFighters();RefreshConnections();Ready=true;
         // Alternate sides to avoid giving the first colony all contested spawn positions.
         if(members.Count==0)for(int i=0;i<initialPopulation;i++)foreach(var home in homes){TrySpawn(home,true);RefreshFighters();}
@@ -81,7 +84,9 @@ public sealed class AsuraTerritory : MonoBehaviour
         if(node.Permanent)node.home=(AsuraHome)node;
         node.surfaceIndex=surfaceMap.Nearest(node.transform.position);
         node.distances=surfaceMap.Distances(node.surfaceIndex,Mathf.Max(maximumLinkDistance,influenceRadius));node.patch.Clear();
-        foreach(var entry in node.distances)if(entry.Value<=influenceRadius)node.patch.Add(entry.Key);
+        node.vinePatch.Clear();
+        foreach(var entry in node.distances)if(entry.Value<=influenceRadius)
+        {node.patch.Add(entry.Key);if(surfaceMap.surfaces[entry.Key].vine)node.vinePatch.Add(entry.Key);}
         if(node.home!=null)node.SetResolvedPolarity(node.home.Polarity);
     }
     private void RefreshFighters()
@@ -122,6 +127,7 @@ public sealed class AsuraTerritory : MonoBehaviour
         }
         // Collapse disconnects descendants before this tick's spawning.
         RefreshConnections();
+        if(fixedCaptureSites){UpdateCaptures(dt);UpdateMarchOrders();}
         foreach(var home in homes)
         {
             if(!home.SimulationEnabled)continue;
@@ -129,7 +135,7 @@ public sealed class AsuraTerritory : MonoBehaviour
             for(int attempt=0;attempt<2 && home.budget>=1 && home.Living<home.populationCap;attempt++)
             {if(TrySpawn(home,false))home.budget-=1;else {home.budget=Mathf.Min(home.budget,1);break;}}
             home.expansionClock+=dt;
-            if(home.expansionClock>=4){home.expansionClock=0;TryExpand(home);}
+            if(home.expansionClock>=4){home.expansionClock=0;if(!fixedCaptureSites)TryExpand(home);}
         }
     }
     public bool CanLink(AsuraLinkage a,AsuraLinkage b)=>a.distances!=null && a.distances.TryGetValue(b.surfaceIndex,out float d) && d<=Mathf.Min(maximumLinkDistance,2*influenceRadius);
@@ -183,6 +189,7 @@ public sealed class AsuraTerritory : MonoBehaviour
     }
     public bool TryExpand(AsuraHome home)
     {
+        if(fixedCaptureSites)return false;
         if(nodes.Count(n=>n.home==home)>=maximumNodesPerHome || nodes.Any(n=>n.home==home && n.state==AsuraLinkState.Forming))return false;
         var owned=CoveredSurfaces(home);
         int best=-1;float bestScore=float.NegativeInfinity;
@@ -221,6 +228,7 @@ public sealed class AsuraTerritory : MonoBehaviour
     }
     private int ExpansionSite(AsuraHome home)
     {
+        if(fixedCaptureSites)return -1;
         if(nodes.Count(n=>n.home==home)>=maximumNodesPerHome)return -1;
         if(expansionSites.TryGetValue(home,out int existing) && siteExpires.TryGetValue(home,out float expiry) && Time.time<expiry && !nodes.Any(n=>Vector3.Distance(n.transform.position,surfaceMap.surfaces[existing].position)<minimumLinkDistance))return existing;
         if(nextSiteSearch.TryGetValue(home,out float next) && Time.time<next)return -1;
@@ -245,12 +253,18 @@ public sealed class AsuraTerritory : MonoBehaviour
         float bodyHeight=prefab is GeneralAsura?3.3f:2.6f;
         var available=nodes.Where(n=>n.home==home && n.Connected && n.patch.Count>0).ToArray();if(available.Length==0)return false;
         bool quiet=Random.value<(initial?0.65f:quietSpawnChance);
+        bool preferVines=Random.value<vineSpawnChance;
+        var vineNodes=preferVines?available.Where(n=>n.vinePatch.Count>0).ToArray():System.Array.Empty<AsuraLinkage>();
         int expansionSite=!initial && Random.value<expansionSpawnChance?ExpansionSite(home):-1;
         float bestScore=float.NegativeInfinity;int best=-1;
         for(int attempt=0;attempt<70;attempt++)
         {
-            var node=available[Random.Range(0,available.Length)];if(Random.value>node.SpawnWeight)continue;
-            int index=node.patch[Random.Range(0,node.patch.Count)];Vector3 p=surfaceMap.surfaces[index].position;
+            // Give the first half of the search to vines, then keep a safe ground fallback.
+            bool vineSearch=preferVines && vineNodes.Length>0 && attempt<35;
+            var candidates=vineSearch?vineNodes:available;
+            var node=candidates[Random.Range(0,candidates.Length)];if(Random.value>node.SpawnWeight)continue;
+            var patch=vineSearch?node.vinePatch:node.patch;
+            int index=patch[Random.Range(0,patch.Count)];Vector3 p=surfaceMap.surfaces[index].position;
             if(!surfaceMap.bounds.Contains(p) || nodes.Any(n=>(n.transform.position-p).sqrMagnitude<25))continue;
             int density=0;bool safe=true;float nearestEnemy=float.PositiveInfinity;
             foreach(var f in fighters)
@@ -266,7 +280,10 @@ public sealed class AsuraTerritory : MonoBehaviour
             // A broad engagement band, not a race to the one closest opposing beacon.
             float frontCost=float.IsPositiveInfinity(nearestEnemy)?Mathf.Max(0,EnemyDistance(home,p)-influenceRadius)*0.12f:Mathf.Abs(nearestEnemy-18)*0.18f;
             float score=-density*12+(expansionSite>=0?-Vector3.Distance(p,surfaceMap.surfaces[expansionSite].position)*1.5f:quiet?Random.value*15:-frontCost)+Random.value*10;
-            if(score>bestScore){bestScore=score;best=index;}
+            bool preferred=preferVines && surfaceMap.surfaces[index].vine;
+            bool bestPreferred=preferVines && best>=0 && surfaceMap.surfaces[best].vine;
+            if(best<0 || (preferred && !bestPreferred) || (preferred==bestPreferred && score>bestScore))
+            {bestScore=score;best=index;}
         }
         if(best<0){FailedSpawns++;return false;}
         Vector3 position=surfaceMap.surfaces[best].position+Vector3.up*0.15f;
@@ -310,8 +327,9 @@ public sealed class AsuraTerritory : MonoBehaviour
     public void RemoveNode(AsuraLinkage node)
     {
         if(node==null || node.Permanent)return;
+        NeutralizeSite(node);
         node.Connected=false;node.state=AsuraLinkState.Collapsing;nodes.Remove(node);parents.Remove(node);tendrils.Remove(node);Collapsed++;
-        node.Die();Destroy(node.gameObject,1);
+        node.Die();node.gameObject.SetActive(false);Destroy(node.gameObject);
     }
     private void OnDrawGizmosSelected()
     {

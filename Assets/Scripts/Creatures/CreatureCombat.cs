@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum CreatureCombatState { Idle, Approach, Windup, Release, Recovery }
+public enum CreatureCombatState { Idle, Approach, Windup, Release, Recovery, March }
 
 [DisallowMultipleComponent]
 public sealed class CreatureCombat : MonoBehaviour
@@ -64,7 +64,12 @@ public sealed class CreatureCombat : MonoBehaviour
                 Target = candidate; best = distance;
             }
         }
-        if (Target == null) { motor?.Stop(); SetState(CreatureCombatState.Idle); return; }
+        if (Target == null)
+        {
+            if(AsuraTerritoryMember.TryMarch(owner,motor,moveSpeed))SetState(CreatureCombatState.March);
+            else {motor?.Stop();SetState(CreatureCombatState.Idle);}
+            return;
+        }
         Vector3 delta = Target.AimPosition - owner.AimPosition;
         Vector3 aimOrigin = muzzle != null ? muzzle.position : owner.AimPosition;
         bool visible = CreatureSpatialQuery.Visible(owner, Target, aimOrigin, ref hits);

@@ -53,7 +53,7 @@ public sealed class RollingAsura : Creature
                 if (d < best && CreatureSpatialQuery.Visible(this, candidate, AimPosition, ref hits)) { best = d; target = candidate; }
             }
         }
-        if (target == null) { motor.Stop(); return; }
+        if (target == null) { if(!AsuraTerritoryMember.TryMarch(this,motor,speed))motor.Stop(); return; }
         Vector3 delta = target.AimPosition - AimPosition;
         motor.SetIntent(delta.normalized * speed * AsuraBreachMomentum.Speed(this), delta);
         if (CreatureSpatialQuery.TryGetSolid(target, out var solid) && CreatureSpatialQuery.TryGetSolid(this, out var own))

@@ -24,6 +24,7 @@ public class AsuraLinkage : Creature
     protected override bool KeepCorpseStationary=>true;
     internal Dictionary<int,float> distances;
     internal readonly List<int> patch=new List<int>();
+    internal readonly List<int> vinePatch=new List<int>();
     private Renderer[] visuals;
     private MaterialPropertyBlock tint;
     protected override void InitializeCreature()

@@ -167,7 +167,8 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private void BuildBloodCoat()
     {
-        bloodStats = controller != null ? controller.GetComponent<PlayerCreatureStats>() : null;
+        bloodStats = PlayerCreatureStats.EnsureFor(controller);
+        if (bloodCoatMaterial == null) bloodCoatMaterial = Resources.Load<Material>("AsuraBloodCoat");
         if (bloodStats == null || bloodCoatMaterial == null) return;
         bloodMaterialInstance = new Material(bloodCoatMaterial) { name = "Player blood shell", hideFlags = HideFlags.DontSave };
         bloodMaterialInstance.SetFloat("_Gap", bloodCoatGap);
