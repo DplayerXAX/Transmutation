@@ -82,7 +82,8 @@ public sealed class CreatureThrower : MonoBehaviour
     {
         // A little above where the view points, so a level look still lobs it.
         Vector3 dir = (view.transform.forward + Vector3.up * 0.18f).normalized;
-        return dir * Mathf.Lerp(minimumThrowSpeed, throwSpeed, Mathf.Clamp01(charge01));
+        Vector3 inherited = carrier != null && carrier.TryGetComponent<MovementFrameMember>(out var member) ? member.PointVelocity : Vector3.zero;
+        return inherited + dir * Mathf.Lerp(minimumThrowSpeed, throwSpeed, Mathf.Clamp01(charge01));
     }
 
     /// <summary>Existing callers launch at maximum strength.</summary>
@@ -106,11 +107,12 @@ public sealed class CreatureThrower : MonoBehaviour
         Vector3 start = StartPoint();
         Vector3 velocity = LaunchVelocity(charge01);
         creature.PrepareForThrow(carrier);
+        if (creature.TryGetComponent<MovementFrameMember>(out var frameMember)) frameMember.ReleaseForThrow();
         if (creature == null || carrier.CarriedCreature != creature || !creature.isActiveAndEnabled) return;
         carrier.Release();
         if (creature.IsCarried) return;
         creature.transform.position = start;
-        bool previousSimulation = creature.SimulationEnabled;
+        bool previousSimulation = creature.SimulationPermitted;
         // It flies by itself: its own walking, floating and physics pause until it lands.
         creature.SetSimulationEnabled(false);
         var body = creature.GetComponent<Rigidbody>();

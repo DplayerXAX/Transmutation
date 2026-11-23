@@ -144,6 +144,8 @@ public enum FoodTag
     protected virtual void OnCaptureStarted() { }
     internal void NotifyCaptureStarted() => OnCaptureStarted();
     protected virtual void OnSimulationChanged() { }
+    internal void NotifyOptimizationChanged() => OnSimulationChanged();
+    internal virtual void TransportFrameCaches(MovingFrame frame) { }
 
     [Header("Food and Diet")]
     [Tooltip("What this creature counts as when another creature checks its diet. Multiple tags can be selected.")]
@@ -341,7 +343,9 @@ public enum FoodTag
     }
 
     /// <summary>Whether this creature currently runs its simulation logic.</summary>
-    public bool SimulationEnabled => simulationEnabled && !isDead;
+    public bool SimulationEnabled => simulationEnabled && !isDead && CreatureSimulation.Allows(this);
+    /// <summary>Semantic permission without distance/source optimization. Used by scheduling policy.</summary>
+    public bool SimulationPermitted => simulationEnabled && !isDead;
 
     /// <summary>Heat currently stored by this creature.</summary>
     public float Heat => heat;
@@ -497,6 +501,20 @@ public enum FoodTag
             movementBody.linearVelocity = velocity;
     }
 
+    /// <summary>World-oriented autonomous velocity relative to the current habitat. Fixed-step frame
+    /// transport is removed before motors and restored afterwards; Update writers retain the restored term.</summary>
+    protected void SetLocomotionVelocity(Vector3 relativeVelocity)
+    {
+        Vector3 transport = TryGetComponent<MovementFrameMember>(out var member) ? member.AppliedVelocity : Vector3.zero;
+        SetCreatureVelocity(relativeVelocity + transport);
+    }
+
+    protected void SetHorizontalLocomotionVelocity(Vector3 relativeVelocity)
+    {
+        Vector3 transport = TryGetComponent<MovementFrameMember>(out var member) ? member.AppliedVelocity : Vector3.zero;
+        SetCreatureHorizontalVelocity(relativeVelocity + transport);
+    }
+
     protected void FaceCreature(Quaternion rotation)
     {
         if (!IsCarried && !IsBubbleCaptured) transform.rotation = rotation;
@@ -504,6 +522,7 @@ public enum FoodTag
 
     protected virtual void OnDisable()
     {
+        CreatureSimulation.Remove(this);
         CreatureRegistry.Unregister(this);
         LuminosityQuery.Unregister(this);
         if (ReflectionPhysics.SwitchingWorldRoots) return;

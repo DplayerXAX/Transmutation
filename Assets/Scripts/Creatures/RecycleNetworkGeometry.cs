@@ -259,6 +259,17 @@ public sealed class RecycleNetworkGeometry : MonoBehaviour
             list.Add(index);
         }
     }
+    internal void TransportFrameCaches(MovingFrame frame)
+    {
+        foreach (var node in nodes)
+        {
+            node.point = frame.TransformStep(node.point);
+            node.normal = frame.RotationStep * node.normal;
+            node.heading = frame.RotationStep * node.heading;
+        }
+        cells.Clear(); profiles.Clear();
+        for (int i = 0; i < nodes.Count; i++) if (nodes[i].valid) Index(i);
+    }
 
     public bool TryContact(Collider target, out Vector3 contact)
     {

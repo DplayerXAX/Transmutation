@@ -254,8 +254,8 @@ public sealed class FirstPersonBody : MonoBehaviour
         float deltaTime = Time.deltaTime;
         Transform view = viewCamera.transform;
 
-        Vector3 velocity = body != null ? body.linearVelocity : Vector3.zero;
-        float speed = new Vector2(velocity.x, velocity.z).magnitude;
+        Vector3 velocity = controller.LocomotionVelocity;
+        float speed = controller.WalkingAnimationActive ? new Vector2(velocity.x, velocity.z).magnitude : 0f;
         bool grounded = controller.Grounded;
         bool climbing = climber != null && climber.IsClimbing;
         if (grounded && !climbing && !controller.WearingSkateShoes)

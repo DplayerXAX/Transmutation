@@ -21,9 +21,8 @@ public sealed class SeaAngelCreature : Creature
     public override bool CanBeCaptured => materialized;
     public override bool CanBeConsumed => materialized;
     static readonly Unity.Profiling.ProfilerMarker swimMarker = new("SeaAngel.SwimAndFins");
-    internal bool SchoolAwake;
-    internal float SleepAfter;
-    internal bool Available => !materialized && !IsDead && SimulationEnabled && ReservedBy == null && Time.time >= freeAt;
+    internal bool SchoolAwake => CreatureSimulation.Allows(this);
+    internal bool Available => !materialized && !IsDead && SimulationPermitted && ReservedBy == null && Time.time >= freeAt;
     internal MeshFilter[] Parts;
     internal MaterialPropertyBlock[] Colors;
     Renderer[] surfaces;
@@ -39,6 +38,7 @@ public sealed class SeaAngelCreature : Creature
         using (swimMarker.Auto()) base.Update();
     }
     Vector3 home;
+    internal override void TransportFrameCaches(MovingFrame frame) => home = frame.TransformStep(home);
     float clock, freeAt, flapPhase;
     float currentSpeed;
     float struggleStroke;
@@ -76,7 +76,7 @@ public sealed class SeaAngelCreature : Creature
     }
     public bool TryReserve(FishingPoleCreature pole)
     {
-        if (materialized || IsDead || !SimulationEnabled || ReservedBy != null || Time.time < freeAt) return false;
+        if (materialized || IsDead || !SimulationPermitted || ReservedBy != null || Time.time < freeAt) return false;
         DimensionalSchool.For(this).Wake(this);
         ReservedBy = pole; return true;
     }
@@ -97,7 +97,7 @@ public sealed class SeaAngelCreature : Creature
         currentSpeed = Mathf.MoveTowards(currentSpeed, desiredSpeed, dt * acceleration);
         float step = Mathf.Min(currentSpeed * dt, Mathf.Max(0, distance - stopDistance));
         if (!materialized) transform.position += transform.forward * step;
-        else SetCreatureVelocity(transform.forward * (dt > 0 ? step / dt : 0));
+        else SetLocomotionVelocity(transform.forward * (dt > 0 ? step / dt : 0));
     }
     public void SetStruggleAnticipation(Vector3 direction, float amount, float dt)
     {

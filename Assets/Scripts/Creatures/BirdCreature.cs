@@ -70,7 +70,7 @@ public sealed class BirdCreature : Creature
         body.interpolation = RigidbodyInterpolation.Interpolate;
         body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         SetFlightSeed(GetInstanceID());
-        SetCreatureVelocity(lastHeadingWS * CruiseSpeed);
+        SetLocomotionVelocity(lastHeadingWS * CruiseSpeed);
     }
 
     protected override void OnEnable()
@@ -81,6 +81,9 @@ public sealed class BirdCreature : Creature
 
     private void EnsureRegistered()
     {
+        // Scene objects can receive OnEnable before their scene finishes loading.
+        // TickCreature retries once the scene is ready.
+        if (!gameObject.scene.IsValid() || !gameObject.scene.isLoaded) return;
         if (manager != null && manager.gameObject.scene == gameObject.scene) return;
         if (manager != null) manager.Unregister(this);
         manager = BirdFlockManager.GetOrCreate(gameObject.scene, transform.position);
@@ -262,7 +265,7 @@ public sealed class BirdCreature : Creature
     internal void ApplyFlightVelocity(Vector3 velocityWS, float deltaTime)
     {
         if (!IsFlying) return;
-        SetCreatureVelocity(velocityWS);
+        SetLocomotionVelocity(velocityWS);
         if (velocityWS.sqrMagnitude < 0.0001f) return;
         lastHeadingWS = velocityWS.normalized;
         Vector3 up = Mathf.Abs(Vector3.Dot(lastHeadingWS, Vector3.up)) > 0.98f ? Vector3.forward : Vector3.up;

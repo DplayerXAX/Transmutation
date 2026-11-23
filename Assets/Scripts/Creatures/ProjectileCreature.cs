@@ -48,7 +48,8 @@ public abstract class ProjectileCreature : Creature
         SetResolvedPolarity(CreaturePolarity.None);
         SetFlightState(ProjectileFlightState.Flying);
         Body.isKinematic = false; Body.useGravity = false; Body.linearDamping = 0f;
-        Body.linearVelocity = velocity;
+        Vector3 inherited = emitter != null && emitter.TryGetComponent<MovementFrameMember>(out var frameMember) ? frameMember.PointVelocity : Vector3.zero;
+        Body.linearVelocity = velocity + inherited;
         Protect(emitter != null ? emitter.gameObject : null); Protect(player);
     }
     private void Protect(GameObject root)

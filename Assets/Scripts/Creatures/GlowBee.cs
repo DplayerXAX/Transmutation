@@ -146,7 +146,7 @@ public sealed class GlowBee : Creature
         if (desired.sqrMagnitude > 0.1f && ReflectionPhysics.SphereCast(body.position, 0.16f, desired.normalized,
                 out RaycastHit hit, 0.75f, colony.SceneryLayers, QueryTriggerInteraction.Ignore))
             desired = Vector3.ProjectOnPlane(desired, hit.normal) + hit.normal * 0.6f + Vector3.up * 0.8f;
-        SetCreatureVelocity(Vector3.MoveTowards(body.linearVelocity, desired, 10f * Time.fixedDeltaTime));
+        SetLocomotionVelocity(Vector3.MoveTowards(body.linearVelocity, desired, 10f * Time.fixedDeltaTime));
         if (desired.sqrMagnitude > 0.05f)
             body.MoveRotation(Quaternion.Slerp(body.rotation, Quaternion.LookRotation(desired), Time.fixedDeltaTime * 6f));
     }

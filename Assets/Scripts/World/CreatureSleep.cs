@@ -50,7 +50,7 @@ public sealed class CreatureSleep : MonoBehaviour
             creatures.Clear();
             if (allKinds)
             {
-                foreach (Creature c in FindObjectsByType<Creature>(FindObjectsSortMode.None)) if (Sleepable(c)) creatures.Add(c);
+                foreach (Creature c in CreatureRegistry.All) if (Sleepable(c)) creatures.Add(c);
             }
             else creatures.AddRange(FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None));
         }
@@ -66,12 +66,12 @@ public sealed class CreatureSleep : MonoBehaviour
             if (!sleeping.Contains(creature))
             {
                 if (busy || distance <= beyond || !creature.SimulationEnabled) continue;
-                creature.SetSimulationEnabled(false);
+                CreatureSimulation.DistanceDormant(creature, this, true);
                 sleeping.Add(creature);
             }
             else if (busy || distance < within)
             {
-                creature.SetSimulationEnabled(true);
+                CreatureSimulation.DistanceDormant(creature, this, false);
                 sleeping.Remove(creature);
             }
         }
@@ -80,7 +80,7 @@ public sealed class CreatureSleep : MonoBehaviour
 
     private void OnDisable()
     {
-        foreach (var creature in sleeping) if (creature != null) creature.SetSimulationEnabled(true);
+        foreach (var creature in sleeping) if (creature != null) CreatureSimulation.DistanceDormant(creature, this, false);
         sleeping.Clear();
     }
 }

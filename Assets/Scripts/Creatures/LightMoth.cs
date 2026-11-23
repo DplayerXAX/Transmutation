@@ -99,7 +99,7 @@ public sealed class LightMoth : Creature
         if (!SimulationEnabled || IsCarried || IsBubbleCaptured || body.isKinematic ||
             (TryGetComponent<WebCapture>(out var web) && web.IsCaptured)) return;
         Vector3 desired = FlashBlindness.IsBlinded(this) ? Vector3.zero : Vector3.ClampMagnitude((destination - body.position) * 2f, flightSpeed);
-        SetCreatureVelocity(Vector3.MoveTowards(body.linearVelocity, desired, Time.fixedDeltaTime * 8f));
+        SetLocomotionVelocity(Vector3.MoveTowards(body.linearVelocity, desired, Time.fixedDeltaTime * 8f));
         if (desired.sqrMagnitude > 0.05f) body.MoveRotation(Quaternion.Slerp(body.rotation, Quaternion.LookRotation(desired), Time.fixedDeltaTime * 5f));
     }
 }

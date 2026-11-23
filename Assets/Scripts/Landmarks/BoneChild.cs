@@ -145,6 +145,13 @@ public sealed class BoneChild : MonoBehaviour
         trail.Clear();nextGroundCheck=0;
         orbitRadius=Mathf.Max(8f,new Vector2(position.x-mother.x,position.z-mother.z).magnitude);
     }
+    internal void TransportFrameCaches(MovingFrame frame)
+    {
+        mother = frame.TransformStep(mother); rest = frame.TransformStep(rest); head = frame.TransformStep(head);
+        headDir = frame.RotationStep * headDir;
+        restYaw = Mathf.Repeat(restYaw + Mathf.DeltaAngle(0, frame.RotationStep.eulerAngles.y), 360);
+        for (int i = 0; i < trail.Count; i++) trail[i] = frame.TransformStep(trail[i]);
+    }
 
     private void Build(int seed, Material bone, Material skin, float yaw)
     {

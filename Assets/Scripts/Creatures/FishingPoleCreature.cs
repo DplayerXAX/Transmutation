@@ -53,6 +53,20 @@ public sealed class FishingPoleCreature : Creature
     float wait, chargeTime, flightTime, flightDuration, reelStartDistance, swimPhase, swimDecisionTimer, stalledTime, bestCatchDistance;
     int chargeStartedFrame;
     Vector3 castStart, castDestination, reelForward, previousCatchPoint;
+    MovingFrame castFrame;
+    Vector3 lastFramePosition;
+    Quaternion lastFrameRotation;
+    void FollowCastFrame()
+    {
+        if (!castFrame) return;
+        Quaternion rotation = castFrame.transform.rotation * Quaternion.Inverse(lastFrameRotation);
+        Vector3 position = castFrame.transform.position;
+        castStart = position + rotation * (castStart - lastFramePosition);
+        castDestination = position + rotation * (castDestination - lastFramePosition);
+        LurePosition = position + rotation * (LurePosition - lastFramePosition);
+        reelForward = rotation * reelForward;
+        lastFramePosition = position; lastFrameRotation = castFrame.transform.rotation;
+    }
     bool hasCatchPoint;
     Vector2 swimmingPull, desiredSwimmingPull;
     readonly FishingLoad load = new FishingLoad();
@@ -126,6 +140,8 @@ public sealed class FishingPoleCreature : Creature
             distance = Mathf.Min(distance, Mathf.Max(.1f, h.distance - .25f));
         }
         castDestination = origin + direction * distance;
+        castFrame = Carrier.TryGetComponent<MovementFrameMember>(out var frameMember) ? frameMember.Frame : null;
+        if (castFrame) { lastFramePosition = castFrame.transform.position; lastFrameRotation = castFrame.transform.rotation; }
         castStart = transform.TransformPoint(new Vector3(0, .03f, .94f));
         LurePosition = castStart; State = FishingState.Casting; flightTime = 0; nextBaitQuery = 0;
         flightDuration = Mathf.Lerp(.22f, .45f, charge);
@@ -134,6 +150,7 @@ public sealed class FishingPoleCreature : Creature
     protected override void TickCreature(float dt)
     {
         if (State == FishingState.Idle) return;
+        FollowCastFrame();
         if (!IsCarried || Incompatible || (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)) { CancelFishing(); return; }
         if (dt <= 0) return;
         if (State == FishingState.Charging)

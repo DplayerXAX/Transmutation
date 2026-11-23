@@ -195,7 +195,7 @@ public sealed class CisternSnail : Creature
         seekTimer -= deltaTime;
         if (seekTimer <= 0f) { seekTimer = 0.5f; ChooseGoal(); }
         Vector3 to = goal - transform.position; to.y = 0f;
-        if (!hasGoal || to.magnitude < 0.4f) { SetCreatureHorizontalVelocity(Vector3.zero); return; }
+        if (!hasGoal || to.magnitude < 0.4f) { SetHorizontalLocomotionVelocity(Vector3.zero); return; }
         Vector3 direction = to.normalized;
         Quaternion facing = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(direction, Vector3.up), turnSpeed * deltaTime);
         FaceCreature(facing);
@@ -203,7 +203,7 @@ public sealed class CisternSnail : Creature
         float ahead = Mathf.Clamp01(Vector3.Dot(transform.forward, direction));
         crawlPhase += deltaTime * 3f;
         float pulse = 0.75f + 0.25f * Mathf.Sin(crawlPhase);
-        SetCreatureHorizontalVelocity(transform.forward * crawlSpeed * ahead * pulse);
+        SetHorizontalLocomotionVelocity(transform.forward * crawlSpeed * ahead * pulse);
     }
 
     private void ChooseGoal()

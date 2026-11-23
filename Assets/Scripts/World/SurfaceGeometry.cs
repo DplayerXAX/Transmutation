@@ -88,7 +88,8 @@ public static class SurfaceGeometry
     }
 
     public static bool IsTerrain(Collider support) => support != null &&
-        support.TryGetComponent<ProceduralWorldChunk>(out var chunk) && chunk.Owner != null && chunk.Owner.OwnsCollider(support);
+        ((support.TryGetComponent<ProceduralWorldChunk>(out var chunk) && chunk.Owner != null && chunk.Owner.OwnsCollider(support)) ||
+         (support is MeshCollider && support.TryGetComponent<IslandTerrainSurface>(out _)));
 
     public static void Invalidate(ProceduralWorld world, Bounds bounds)
     {

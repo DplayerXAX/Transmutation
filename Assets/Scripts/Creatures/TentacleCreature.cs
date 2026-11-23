@@ -327,6 +327,21 @@ public sealed class TentacleCreature : Creature
     private Vector3 bodyStretch = Vector3.one;
     private Vector3 home;
     private Vector3 wanderTarget;
+    internal override void TransportFrameCaches(MovingFrame frame)
+    {
+        home = frame.TransformStep(home); wanderTarget = frame.TransformStep(wanderTarget);
+        if (tentacles == null) return;
+        foreach (var arm in tentacles)
+        {
+            if (arm.holdCollider && arm.holdCollider.transform.IsChildOf(frame.transform))
+            {
+                arm.hold = frame.TransformStep(arm.hold); arm.foot = frame.TransformStep(arm.foot);
+                arm.stepFrom = frame.TransformStep(arm.stepFrom); arm.stepTo = frame.TransformStep(arm.stepTo);
+                arm.holdNormal = frame.RotationStep * arm.holdNormal;
+                arm.stepNormal = frame.RotationStep * arm.stepNormal;
+            }
+        }
+    }
     private float pauseTimer;
     private bool wasCarried;
 

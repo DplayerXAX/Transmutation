@@ -33,5 +33,11 @@ SubShader {
  #pragma fragment honey
  ENDHLSL
  }
+ Pass { Name "VisibleBody" Tags { "LightMode"="UniversalForward" }
+ HLSLPROGRAM
+ #pragma vertex vert
+ #pragma fragment honey
+ ENDHLSL
+ }
 }
 }

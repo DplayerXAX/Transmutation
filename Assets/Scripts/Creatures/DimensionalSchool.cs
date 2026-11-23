@@ -6,11 +6,12 @@ public sealed class DimensionalSchool : MonoBehaviour
 {
     static readonly Unity.Profiling.ProfilerMarker activationMarker = new("SeaAngel.Activation");
     static readonly Dictionary<int, DimensionalSchool> scenes = new();
-    readonly Dictionary<Vector3Int, HashSet<SeaAngelCreature>> cells = new();
-    readonly Dictionary<SeaAngelCreature, Vector3Int> locations = new();
+    readonly Dictionary<(int frame, Vector3Int cell), HashSet<SeaAngelCreature>> cells = new();
+    readonly Dictionary<SeaAngelCreature, (int frame, Vector3Int cell)> locations = new();
     readonly HashSet<SeaAngelCreature> newlyPlaced = new();
     internal void Register(SeaAngelCreature fish)
     {
+        CreatureSimulation.SourceDriven(fish, true);
         Reindex(fish);
         newlyPlaced.Add(fish);
     }
@@ -49,7 +50,9 @@ public sealed class DimensionalSchool : MonoBehaviour
     void OnDestroy() { if (scenes.TryGetValue(sceneKey, out var current) && current == this) scenes.Remove(sceneKey); }
     public void Reindex(SeaAngelCreature fish)
     {
-        var key = Vector3Int.FloorToInt(fish.transform.position / CellSize);
+        var frame = fish.TryGetComponent<MovementFrameMember>(out var member) ? member.Frame : null;
+        Vector3 point = frame ? frame.transform.InverseTransformPoint(fish.transform.position) : fish.transform.position;
+        var key = (frame ? frame.GetInstanceID() : 0, Vector3Int.FloorToInt(point / CellSize));
         if (locations.TryGetValue(fish, out var old))
         {
             if (old == key) return;
@@ -59,7 +62,7 @@ public sealed class DimensionalSchool : MonoBehaviour
         if (!cells.TryGetValue(key, out var bucket)) cells.Add(key, bucket = new());
         bucket.Add(fish);
     }
-    void RemoveCell(SeaAngelCreature fish, Vector3Int key)
+    void RemoveCell(SeaAngelCreature fish, (int frame, Vector3Int cell) key)
     {
         var bucket = cells[key]; bucket.Remove(fish);
         if (bucket.Count == 0) cells.Remove(key);
@@ -69,24 +72,32 @@ public sealed class DimensionalSchool : MonoBehaviour
         PhysicalFish.Remove(fish);
         newlyPlaced.Remove(fish);
         if (locations.Remove(fish, out var key)) RemoveCell(fish, key);
-        AwakeFish.Remove(fish); fish.SchoolAwake = false;
+        AwakeFish.Remove(fish); CreatureSimulation.SourceDriven(fish, false);
     }
     internal void Wake(SeaAngelCreature fish)
     {
-        AwakeFish.Add(fish); fish.SchoolAwake = true; fish.SleepAfter = Time.time + sleepDelay;
+        AwakeFish.Add(fish); CreatureSimulation.Wake(fish, sleepDelay);
     }
     void Query(Vector3 center, float radius)
     {
         nearby.Clear();
+        QueryFrame(center, radius, null);
+        foreach (var frame in MovingFrame.Active)
+            if (frame.gameObject.scene == gameObject.scene) QueryFrame(center, radius, frame);
+    }
+    void QueryFrame(Vector3 worldCenter, float radius, MovingFrame frame)
+    {
+        Vector3 center = frame ? frame.transform.InverseTransformPoint(worldCenter) : worldCenter;
+        int frameId = frame ? frame.GetInstanceID() : 0;
         var extent = Vector3.one * radius;
         var lo = Vector3Int.FloorToInt((center - extent) / CellSize);
         var hi = Vector3Int.FloorToInt((center + extent) / CellSize);
         for (int z=lo.z; z<=hi.z; z++)
         for (int y=lo.y; y<=hi.y; y++)
         for (int x=lo.x; x<=hi.x; x++)
-            if (cells.TryGetValue(new Vector3Int(x,y,z), out var bucket))
+            if (cells.TryGetValue((frameId, new Vector3Int(x,y,z)), out var bucket))
                 foreach (var fish in bucket)
-                    if ((fish.transform.position-center).sqrMagnitude <= radius*radius) nearby.Add(fish);
+                    if ((fish.transform.position-worldCenter).sqrMagnitude <= radius*radius) nearby.Add(fish);
     }
     void WakeAround(Vector3 center, float radius)
     {
@@ -116,7 +127,11 @@ public sealed class DimensionalSchool : MonoBehaviour
             foreach (var p in FindObjectsByType<PlayerCreatureCarrier>(FindObjectsSortMode.None))
                 if (p.gameObject.scene == gameObject.scene) { Player = p; break; }
         FinishPlacement();
-        foreach (var fish in AwakeFish) Reindex(fish);
+        foreach (var fish in AwakeFish)
+        {
+            Reindex(fish);
+            if (fish.ReservedBy != null) CreatureSimulation.Wake(fish, sleepDelay);
+        }
         if (Player)
         {
             var pos = Player.transform.position;
@@ -131,7 +146,7 @@ public sealed class DimensionalSchool : MonoBehaviour
         }
         retire.Clear();
         foreach (var fish in AwakeFish)
-            if (fish.ReservedBy == null && Time.time >= fish.SleepAfter) retire.Add(fish);
-        foreach (var fish in retire) { AwakeFish.Remove(fish); fish.SchoolAwake = false; }
+            if (fish.ReservedBy == null && !CreatureSimulation.Allows(fish)) retire.Add(fish);
+        foreach (var fish in retire) AwakeFish.Remove(fish);
     }
 }

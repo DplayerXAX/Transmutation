@@ -160,7 +160,7 @@ public sealed class BirdFlockManager : MonoBehaviour
                     octree.Query(positionsWS[i], bird.SearchRadius, neighbors);
                     CandidateChecks += octree.LastCandidateChecks;
                     nextVelocitiesWS[i] = bird.CalculateFlightVelocity(i, positionsWS, velocitiesWS, neighbors,
-                        BoundaryDirection(positionsWS[i]), boundaryWeight, simulationTime, deltaTime,
+                        BoundaryDirection(positionsWS[i], bird), boundaryWeight, simulationTime, deltaTime,
                         bird.FoodDirection(positionsWS[i], foods, foodPositionsWS));
                 }
             }
@@ -168,8 +168,15 @@ public sealed class BirdFlockManager : MonoBehaviour
         }
     }
 
-    private Vector3 BoundaryDirection(Vector3 positionWS)
+    private Vector3 BoundaryDirection(Vector3 positionWS, BirdCreature bird = null)
     {
+        if (bird && bird.TryGetComponent<MovementFrameMember>(out var member) && member.Frame)
+        {
+            var frame = member.Frame;
+            var bounds = new Bounds(frame.habitatCenter, frame.habitatSize - Vector3.one * 8);
+            Vector3 local = frame.transform.InverseTransformPoint(positionWS);
+            return frame.transform.TransformVector(bounds.ClosestPoint(local) - local);
+        }
         Vector3 margin = Vector3.Min(Vector3.one * boundaryMargin, skyBounds.extents * 0.9f);
         Vector3 minimum = skyBounds.min + margin, maximum = skyBounds.max - margin;
         Vector3 inside = new Vector3(Mathf.Clamp(positionWS.x, minimum.x, maximum.x),

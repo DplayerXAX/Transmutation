@@ -228,6 +228,12 @@ public sealed class CompostCreature : Creature
         // The root is an ecological location, not a physics object that another system can push.
         if (Application.isPlaying) transform.SetPositionAndRotation(rootedPosition, rootedRotation);
     }
+    internal override void TransportFrameCaches(MovingFrame frame)
+    {
+        rootedPosition = frame.TransformStep(rootedPosition);
+        rootedRotation = frame.RotationStep * rootedRotation;
+        if (geometry != null) geometry.TransportFrameCaches(frame);
+    }
     protected override void OnEnable() { base.OnEnable(); ProceduralWorld.AnyTerrainChanged += TerrainChanged; }
     void TerrainChanged(ProceduralWorld changed, Bounds bounds)
     {

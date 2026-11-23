@@ -154,6 +154,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public bool Climbing => climbing;
     public bool Restricted => restricted;
     public MovementState State => state;
+    public Vector3 LocomotionVelocity => rb != null ? rb.linearVelocity - rideVelocity : Vector3.zero;
+    public bool WalkingAnimationActive => grounded && !BubbleMovementBlocked && FishingInputOwner == null &&
+        !restricted && !WearingSkateShoes && (horizontalInput * horizontalInput + verticalInput * verticalInput > .01f) &&
+        (state == MovementState.Walking || state == MovementState.Sprinting || state == MovementState.Crouching);
     public float CurrentVelocity => currentVelocity;
     public Camera PlayerCamera => playerCamera;
     public LayerMask GroundLayers => whatIsGround;
@@ -225,6 +229,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private IRideSurface rideSurface;
     private RaycastHit rideGround;
     private Vector3 rideVelocity;
+    private MovementFrameMember islandMember;
 
     private void Reset()
     {
@@ -457,6 +462,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     {
         rideSurface = null;
         rideVelocity = Vector3.zero;
+        if (islandMember == null) islandMember = GetComponent<MovementFrameMember>();
+        if (islandMember != null && islandMember.Frame != null && rb != null && !rb.isKinematic)
+            rideVelocity = islandMember.Frame.VelocityAt(rb.position);
         if (rb == null || rb.isKinematic || climbing || restricted || wallRunning ||
             (BubbleMovementBlocked && FishingInputOwner == null) || IsFishingBlockedExternally ||
             (skateShoes != null && skateShoes.SuppressGrounding) ||
@@ -476,6 +484,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         rideGround = ground;
         grounded = true;
         rideVelocity = surface.VelocityAt(rb.position);
+        if (islandMember != null && islandMember.Frame != null && !ownJumpRising)
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, rideVelocity.y, rb.linearVelocity.z);
     }
 
     private Vector3 GetGroundCheckOrigin()
@@ -918,7 +928,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (Flung || ImpulseMotion) return;
         if (skateShoes != null && skateShoes.CanDrive) return;
         // The walking limit applies relative to a moving back, including its turn at this contact point.
-        if (rideSurface != null)
+        if (rideSurface != null || (islandMember != null && islandMember.Frame != null))
         {
             Vector3 relative = rb.linearVelocity - rideVelocity;
             Vector3 flat = new Vector3(relative.x, 0f, relative.z);
@@ -948,7 +958,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (rb.isKinematic)
             return;
         exitingSlope = true;
-        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, rideVelocity.y, rb.linearVelocity.z);
         rb.AddForce(transform.up * jumpForce * Mathf.Max(0f, JumpMultiplier), ForceMode.Impulse);
         ownJumpRising = true;
     }
