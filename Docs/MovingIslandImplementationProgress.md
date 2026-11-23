@@ -4,6 +4,20 @@ Baseline revision: `56577cd29007af906268e66bebc640d14d0dae72`. Existing planning
 
 ## Current work
 
+**Latest checkpoint (2026-11-23): representative smoothness layer completed, then the next shared optimization phase implemented.** Passive kinematic transport uses physics poses and interpolation; collider-free sea-angel flight and free kinematic tentacle presentation use consistent rendered-frame timing. Asura gait requires locomotion intent. Goo's separately reproduced shallow-angle full-force impact now passes with a 6 m/s species threshold. See [smoothness research and measurements](MovingIslandSmoothnessResearch.md).
+
+`CreatureSimulationScheduler` now clocks both distance and fish source relevance. `CreatureSleep` uses lifecycle registration, staggered half-second deadlines, and a default budget of 32 candidate visits per render frame. Carrying and fishing reservations own immediate activity handles; semantic capture/freeze permission retains priority. Player-centered fish wake queries are coalesced. A saved `Creature Distance Relevance` policy is installed in Scene-Fishing. See [implementation, profiling limits, and remaining work](CreatureSimulationImplementation.md).
+
+Verified: passive kinematic/dynamic fixtures at requested 30/60/120 FPS, active sea-angel flight at those caps, idle/walk/stop Asura gait, one free/pinned tentacle, 32 shared impact checks, actual goo drops/full-force throws on static ground and the island, and a 512-fixture scheduler lifecycle/activity/budget check. The full transport/fishing regression also passed after scheduler migration: five-second drift was 0.0091 m for the player and below 0.00005 m for the dormant fish over 14.73 m of island travel. An earlier attempt used an age-dead pole after a long profiling session; restarting Play Mode supplied a live fixture and passed. Tests should begin in a fresh Play session.
+
+A final lifecycle run also passed additive-scene isolation/unload with outstanding activity-handle disposal. Across 512 passive fixtures it measured peak 16 checks/frame (budget 32), and relevance mean/max 34.6/194.8 microseconds over 228 frames. A separate uninterrupted ten-second populated-island baseline recorded 1,384 frames with 30–32 registered creatures, including eight sea angels. Relevance mean/p95 was .004/.009 ms; Main Thread mean/p95 was 7.214/8.935 ms; Physics.Simulate mean was .085 ms; whole-Editor-frame GC averaged 77,520 bytes. The implementation report records limits and reproducible sampling instructions. These are current Editor observations, not a matched before/after or allocation attribution.
+
+This completes the prototype's representative smoothness gate and first shared relevance optimization. It does **not** complete every speculative optimization phase: matched larger mixed-population profiling on target hardware, central behavior ticking, generalized safe physics suspension, unusual ability adapters, and state-only unloading remain separate measured/conditional work. No whole-game speedup or all-creature correctness claim is made.
+
+Final handoff: compilation and whitespace checks passed; current Console errors and warnings are zero. Scene-Fishing is stopped and clean, with one island, one saved distance policy, its manual test population active, and zero test probes. The temporary impact-speed diagnostic was removed from production throw code after investigation. Earlier failing assertions remain historical test attempts, not current unresolved runtime errors. No unrelated prefab/build-setting changes were included in this work.
+
+### Prior execution history
+
 Latest user-directed refresh: restored authored sea-angel proportions and its translucent rim shader; walking animation now requires locomotion state plus movement input; added rolling baked mesh terrain and a saved manual test population (Asuras of both polarities, chainsaw, tentacles, birds, flowers, recycle, goo, shroom, egg, fuel bubble, and a runtime bone dragon). See the prototype guide's refresh section. Gait/terrain/population checks passed; bird scene-start registration was fixed after exposing an early-OnEnable race. Recycle growth on the mesh patch was observed at 34.6 m while its root stayed at local (-12, 3.6, 14).
 
 Final refresh verification: compilation passed; the gait/terrain probe passed again after the bird startup fix; all five birds registered and one bone dragon spawned. Current runtime console error count was zero. Left the saved Scene-Fishing stopped with the manual test group present and no probe saved into the scene.
@@ -27,11 +41,19 @@ Scope update: the user explicitly replaced exhaustive creature testing with a co
 
 ## Next checkpoint
 
-**Next priority: creature motion smoothness and presentation review, before the remaining full simulation scheduler migration and optimization.** The first playable prototype is functional, but the user observes visible shaking across inhabitants. Earlier drift and functional tests do not establish smooth rendering. Follow the new work layer below before expanding optimization. Do not restart exhaustive creature testing: the user explicitly chose code review plus representative behavior checks.
+**Smoothness pass 1, after subsequent authorization to continue:** researched Unity's moving-platform sample and interpolation contract, Catlike Coding's support-relative controller, Epic's based-movement pose history, and fixed-step/render interpolation architecture. See [research, chosen boundaries, and before/after measurements](MovingIslandSmoothnessResearch.md).
 
-## User-reported issues — recorded, not fixed
+An isolated passive kinematic passenger showed roughly 4–5 cm maximum render-local steps with nearly zero physical local movement. Replacing ordinary teleport-style transport with physics-pose-based MovePosition/MoveRotation and matching interpolation reduced those rendered steps to approximately 0.00001 m maximum in this fixture at requested 30/60/120 FPS caps. The dynamic fixture stayed materially unchanged; no Rigidbody motor acceleration, forces, solver settings, or timestep were changed. Previous interpolation is restored when frame ownership ends. Active Update-based root writers and procedural limbs remain separate timing work; this is not a claim that all creature jitter is fixed.
 
-Reported 2026-11-23 after manual play. These observations are not yet independently reproduced or diagnosed; this checkpoint update changes documentation only.
+Asura's reported idle gait now has a targeted presentation fix: motor-owned locomotion intent/grounding/ownership gates gait, and support-relative speed supplies stride distance. The dedicated probe passed passive transport, intentional walking, and stopping. Goo tuning was still queued at this earlier checkpoint; its subsequent result is recorded above.
+
+Smoothness pass 1 regression: compilation succeeded and the full representative moving-island probe passed after the change (sleep/wake/reservation, ground and flying motion, attachment, catch/retrieval, throw, jump, mesh collision, exit/reentry, reset). Five-second local drift was 0.0110 m for the player and 0.0001 m for the sleeping fish. One initial throw assertion encountered the legitimately dropped pole; the test now removes that obstacle from its corridor rather than changing gameplay collision. The successful run had zero current Console errors. Stopped Play Mode without saving test fixtures or runtime population changes.
+
+**Original priority order, now executed through the representative smoothness gate and first scheduler phase:** creature motion smoothness and presentation review preceded further optimization. Earlier drift and functional tests did not establish smooth rendering. The work layer below records that investigation sequence. Do not restart exhaustive creature testing: the user explicitly chose code review plus representative behavior checks.
+
+## Original user-reported issues
+
+Reported 2026-11-23 after manual play. This table preserves the initial observations and investigation scope; the latest checkpoint above records the subsequent diagnoses, fixes, and remaining limits.
 
 | Issue | Observation / requested outcome | Investigation boundary |
 | --- | --- | --- |
@@ -39,7 +61,7 @@ Reported 2026-11-23 after manual play. These observations are not yet independen
 | Goo full-force throw / break sensitivity | User corrected the initial report: goo **does break normally** on impacts. Full-force throws appear less reliable, and the user would prefer goo to break more easily. | Compare ordinary drop, gentle throw, and full-force throw; inspect scripted throw handoff, impact dispatch, closing speed and threshold. Determine whether the strong-throw case misses an impact or fails a threshold before tuning sensitivity. Preserve the request to lower the practical break threshold; do not classify this as universally broken collision. |
 | General visible shaking / jitter | Inhabitants appear to shake while riding. Gameplay is otherwise working fairly well. Improve visible stability across movement patterns. | Distinguish physical contact oscillation, frame-transport error, procedural animation jitter, and a mismatch between camera/render/physics sampling. Low net drift alone does not prove this is fixed. |
 
-The user explicitly requested **no fixes yet** for these reports. The work below is the next proposed implementation layer, not work already completed or authorization to silently begin fixes during this documentation task.
+The original report requested **no fixes yet**, and that checkpoint-update task changed documentation only. The subsequent request to continue, with research before motor changes, authorized the measured first pass recorded above. The list preserves the original observations; unresolved entries and the remaining work below must not be treated as already completed.
 
 ## New work layer: smooth creature motion before optimization
 

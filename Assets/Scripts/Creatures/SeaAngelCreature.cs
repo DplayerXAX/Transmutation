@@ -39,10 +39,13 @@ public sealed class SeaAngelCreature : Creature
     }
     Vector3 home;
     internal override void TransportFrameCaches(MovingFrame frame) => home = frame.TransformStep(home);
+    internal void TransportFlightHome(Vector3 previousPosition, Quaternion previousRotation, Vector3 position, Quaternion rotation)
+        => home = position + rotation * (Quaternion.Inverse(previousRotation) * (home - previousPosition));
     float clock, freeAt, flapPhase;
     float currentSpeed;
     float struggleStroke;
     Material[] ownedMaterials;
+    CreatureSimulation.ActivityRequest reservationActivity;
     public void Configure(float length, int seed) { bodyLength = length; appearanceSeed = seed; }
     protected override void InitializeCreature()
     {
@@ -78,11 +81,13 @@ public sealed class SeaAngelCreature : Creature
     {
         if (materialized || IsDead || !SimulationPermitted || ReservedBy != null || Time.time < freeAt) return false;
         DimensionalSchool.For(this).Wake(this);
+        reservationActivity?.Dispose(); reservationActivity=CreatureSimulation.KeepActive(this,pole);
         ReservedBy = pole; return true;
     }
     public void ReleaseReservation(FishingPoleCreature pole)
     {
         if (ReservedBy != pole) return;
+        reservationActivity?.Dispose();reservationActivity=null;
         ReservedBy = null; struggleStroke = 0; home = transform.position; freeAt = Time.time + 1;
     }
     /// <summary>Turn before accelerating; the fish's own movement always follows its nose.</summary>

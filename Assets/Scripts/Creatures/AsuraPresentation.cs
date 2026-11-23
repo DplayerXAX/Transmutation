@@ -7,6 +7,7 @@ public sealed class AsuraPresentation : MonoBehaviour
     [SerializeField] private Color lightColor = AsuraBloodPalette.Light;
     [SerializeField] private Color darkColor = AsuraBloodPalette.Dark;
     private Creature creature;
+    private AsuraMotor motor;
     private CreatureCombat combat;
     private ProjectileCreature projectile;
     private Renderer[] renderers;
@@ -16,7 +17,7 @@ public sealed class AsuraPresentation : MonoBehaviour
     private Quaternion[] footRotations;
     private Transform organ;
     private Vector3 organPosition;
-    private Vector3 basePosition, baseScale, lastPosition;
+    private Vector3 basePosition, baseScale;
     private Quaternion baseRotation;
     private float stride, release;
     private CreatureCombatState state;
@@ -24,11 +25,11 @@ public sealed class AsuraPresentation : MonoBehaviour
     private void Awake()
     {
         creature = GetComponent<Creature>(); combat = GetComponent<CreatureCombat>(); projectile = GetComponent<ProjectileCreature>();
+        motor = GetComponent<AsuraMotor>();
         if (visual == null) visual = transform.Find("Visual");
         // Never animate a physics root as a visual fallback.
         if (visual == null) { enabled = false; return; }
         basePosition = visual.localPosition; baseRotation = visual.localRotation; baseScale = visual.localScale;
-        lastPosition = transform.position;
         renderers = System.Array.FindAll(GetComponentsInChildren<Renderer>(), r => r.sharedMaterial != null && !r.sharedMaterial.name.Contains("Eyes"));
         properties = new MaterialPropertyBlock();
         feet = System.Array.FindAll(visual.GetComponentsInChildren<Transform>(), t => t.name == "Foot");
@@ -52,9 +53,8 @@ public sealed class AsuraPresentation : MonoBehaviour
     private void Update()
     {
         if (visual == null) return;
-        float distance = Vector3.ProjectOnPlane(transform.position - lastPosition, Vector3.up).magnitude;
-        lastPosition = transform.position;
-        bool moving = creature.SimulationEnabled && !creature.IsCarried && !creature.IsBubbleCaptured && !creature.IsDead;
+        float distance = motor != null ? Vector3.ProjectOnPlane(motor.RelativeLocomotionVelocity, Vector3.up).magnitude * Time.deltaTime : 0f;
+        bool moving = motor != null && motor.Locomoting && creature.SimulationEnabled && !creature.IsCarried && !creature.IsBubbleCaptured && !creature.IsDead;
         if (moving) stride += Mathf.Min(distance, 0.2f) * 10f / Mathf.Max(0.5f, transform.lossyScale.x);
         release = Mathf.Max(0f, release - Time.deltaTime);
         float jab = release / 0.16f;

@@ -22,6 +22,9 @@ public sealed class AsuraMotor : MonoBehaviour
     private int sidestepSign=1;
     private RaycastHit[] hits = new RaycastHit[16];
     public bool Grounded { get; private set; }
+    public bool Locomoting => OwnsMovement && Grounded && intent.sqrMagnitude > .01f && Time.time >= pushedUntil;
+    public Vector3 RelativeLocomotionVelocity => body == null ? Vector3.zero : body.linearVelocity -
+        (TryGetComponent<MovementFrameMember>(out var member) ? member.AppliedVelocity : Vector3.zero);
     public Vector3 GroundNormal {get;private set;}=Vector3.up;
     public bool OwnsMovement => owner != null && !owner.IsDead && owner.SimulationEnabled && !owner.IsCarried &&
         !owner.IsBubbleCaptured && !owner.IsConsumptionPending && body != null && !body.isKinematic;

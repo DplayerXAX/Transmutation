@@ -27,6 +27,8 @@ public sealed class MovingFrame : MonoBehaviour, IRideSurface
     public float Speed => speed;
     public Vector3 PlannedPosition => toPosition;
     public Quaternion PlannedRotation => toRotation;
+    public Pose PreviousPhysicsPose => new(fromPosition,fromRotation);
+    public Pose PlannedPhysicsPose => new(toPosition,toRotation);
     public bool Supports(Collider candidate) => candidate == deck || System.Array.IndexOf(terrainSurfaces, candidate) >= 0;
     public Vector3 VelocityAt(Vector3 point)
     {

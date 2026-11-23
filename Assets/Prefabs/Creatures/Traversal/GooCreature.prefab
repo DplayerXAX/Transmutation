@@ -210,3 +210,4 @@ MonoBehaviour:
   affectionFade: 0.05
   blob: {fileID: 4239405748722241425}
   idleWobble: 0.035
+  splashImpactSpeed: 6

@@ -84,6 +84,9 @@ public sealed class MovingIslandPlayModeProbe : MonoBehaviour
         while (pole.State == FishingState.Landing && Time.time < until) yield return null;
         Check(pole.State == FishingState.Idle, "retrieval releases fishing movement lock");
         carrier.Release();
+        // Keep the dropped pole out of the throw corridor: an immediate legitimate hit
+        // ends scripted flight and is not evidence of habitat ownership stealing it.
+        pole.gameObject.SetActive(false);
         Check(carrier.TryCarryFromInteraction(squirrel), "carry walking creature");
         var thrower = carrier.GetComponent<CreatureThrower>() ?? carrier.gameObject.AddComponent<CreatureThrower>();
         thrower.Throw(.4f);

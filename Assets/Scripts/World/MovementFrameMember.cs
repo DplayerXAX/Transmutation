@@ -12,6 +12,12 @@ public sealed class MovementFrameMember : MonoBehaviour
     SmoothFirstPersonController player;
     Vector3 appliedVelocity;
     float noEntryUntil;
+    bool ownsInterpolation;
+    RigidbodyInterpolation previousInterpolation;
+    Vector3 renderedFramePosition;
+    Quaternion renderedFrameRotation;
+    bool RenderDrivenFlight => creature is SeaAngelCreature angel && !angel.Materialized;
+    bool RenderDrivenMotion => RenderDrivenFlight || (creature is TentacleCreature tentacle && !tentacle.IsDead && body && body.isKinematic);
     public Vector3 LastTransport { get; private set; }
     /// <summary>Already-applied transport, for locomotion writers running in Update after physics.</summary>
     public Vector3 AppliedVelocity => appliedVelocity;
@@ -19,6 +25,7 @@ public sealed class MovementFrameMember : MonoBehaviour
         CreatureThrower.IsFlying(creature) || creature is Boomerang boomerang && boomerang.InFlight ||
         creature is ProjectileCreature projectile && projectile.FlightState == ProjectileFlightState.Flying ||
         creature is SkateGecko gecko && gecko.Ridden ||
+        creature is TentacleCreature tentacle && (tentacle.ExternalMovement || tentacle.Suspended) ||
         (creature.TryGetComponent<WebCapture>(out var web) && web.IsCaptured));
     void Awake() { body = GetComponent<Rigidbody>(); creature = GetComponent<Creature>(); player = GetComponent<SmoothFirstPersonController>(); }
     public void Join(MovingFrame frame)
@@ -26,6 +33,16 @@ public sealed class MovementFrameMember : MonoBehaviour
         if (Frame == frame) return;
         Leave(); Frame = frame;
         if (Frame) Frame.Members.Add(this);
+        if (Frame)
+        {
+            renderedFramePosition=Frame.transform.position; renderedFrameRotation=Frame.transform.rotation;
+        }
+        if (Frame && body && body.isKinematic)
+        {
+            previousInterpolation = body.interpolation;
+            body.interpolation = RenderDrivenMotion ? RigidbodyInterpolation.None : RigidbodyInterpolation.Interpolate;
+            ownsInterpolation = true;
+        }
         // First subtract the existing frame velocity before the motor runs: entering changes
         // coordinates without adding an instantaneous world-velocity impulse.
         if (Frame && body && !body.isKinematic && !player) appliedVelocity = Frame.VelocityAt(body.position);
@@ -34,6 +51,8 @@ public sealed class MovementFrameMember : MonoBehaviour
     public void Leave()
     {
         bool changed = Frame != null;
+        if (ownsInterpolation && body) body.interpolation = previousInterpolation;
+        ownsInterpolation = false;
         if (Frame) Frame.Members.Remove(this);
         Frame = null; appliedVelocity = Vector3.zero;
         if (changed && creature is SeaAngelCreature fish && fish.isActiveAndEnabled) DimensionalSchool.Existing(fish)?.Reindex(fish);
@@ -53,6 +72,22 @@ public sealed class MovementFrameMember : MonoBehaviour
             if (!body.isKinematic) { body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero; }
         }
         appliedVelocity = Vector3.zero;
+        renderedFramePosition=frame.PlannedPosition; renderedFrameRotation=frame.PlannedRotation;
+    }
+    void Update()
+    {
+        if (!Frame || ExternalMotion) return;
+        if (!RenderDrivenMotion) return;
+        // Intangible flight has no physical collider. Its autonomous pose is authored in
+        // Update, so transport it in that same rendered frame, even while its AI sleeps.
+        Vector3 position=Frame.transform.position; Quaternion rotation=Frame.transform.rotation;
+        Quaternion delta=rotation*Quaternion.Inverse(renderedFrameRotation);
+        var motion=new FramePoseDelta(new Pose(renderedFramePosition,renderedFrameRotation),new Pose(position,rotation));
+        if (creature is SeaAngelCreature fish) fish.TransportFlightHome(renderedFramePosition,renderedFrameRotation,position,rotation);
+        if (creature is TentacleCreature tentacle) tentacle.TransportRenderedCaches(Frame,motion);
+        transform.SetPositionAndRotation(position+delta*(transform.position-renderedFramePosition),delta*transform.rotation);
+        if (body && body.isKinematic) { body.position=transform.position; body.rotation=transform.rotation; }
+        renderedFramePosition=position; renderedFrameRotation=rotation;
     }
     void OnDisable() => Leave();
     void FixedUpdate()
@@ -80,13 +115,16 @@ public sealed class MovementFrameMember : MonoBehaviour
     public void TransportKinematic()
     {
         LastTransport = Vector3.zero;
-        if (!Frame || ExternalMotion || player || (body && !body.isKinematic)) return;
-        Vector3 before = transform.position, after = Frame.TransformStep(before);
+        if (!Frame || ExternalMotion || player || RenderDrivenMotion || (body && !body.isKinematic)) return;
+        // Rigidbody poses belong to simulation time. Transform may be the previous,
+        // interpolated render pose and must not feed the next physics target.
+        Vector3 before = body ? body.position : transform.position, after = Frame.TransformStep(before);
+        Quaternion rotation = Frame.RotationStep * (body ? body.rotation : transform.rotation);
         LastTransport = after - before;
         if (creature) creature.TransportFrameCaches(Frame);
         if (TryGetComponent<BoneChild>(out var bone)) bone.TransportFrameCaches(Frame);
-        transform.SetPositionAndRotation(after, Frame.RotationStep * transform.rotation);
-        if (body) { body.position = after; body.rotation = transform.rotation; }
+        if (body) { body.MovePosition(after); body.MoveRotation(rotation); }
+        else transform.SetPositionAndRotation(after, rotation);
     }
     public void CommitStep()
     {

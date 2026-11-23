@@ -60,7 +60,7 @@ public enum FoodTag
     [Header("Impact")]
     [Tooltip("Minimum closing speed into a solid surface that triggers ReceiveImpact (m/s).")]
     [Min(0f)] [SerializeField] private float minimumImpactSpeed = 15.6f;
-    public float MinimumImpactSpeed => Mathf.Max(0f, minimumImpactSpeed);
+    public virtual float MinimumImpactSpeed => Mathf.Max(0f, minimumImpactSpeed);
 
     internal bool CanReceiveImpact(CreatureImpact impact) => isActiveAndEnabled && !IsDead && !consumptionPending &&
         !IsCarried && !IsBubbleCaptured && !BoneChild.IsCradled(this) &&
@@ -390,6 +390,7 @@ public enum FoodTag
     private bool releaseGravity;
     private RigidbodyConstraints releaseConstraints;
     private CollisionDetectionMode releaseCollisionMode;
+    private CreatureSimulation.ActivityRequest carryActivity;
 
     /// <summary>Claims movement without pausing the creature's other behavior.</summary>
     public bool TryBeginCarry(PlayerCreatureCarrier carrier, Transform target)
@@ -419,6 +420,7 @@ public enum FoodTag
         releaseConstraints = movementBody.constraints;
         releaseCollisionMode = movementBody.collisionDetectionMode;
         Carrier = carrier;
+        carryActivity?.Dispose();carryActivity=CreatureSimulation.KeepActive(this,carrier);
         movementBody.collisionDetectionMode = CollisionDetectionMode.Discrete;
         movementBody.isKinematic = true;
         movementBody.useGravity = false;
@@ -442,6 +444,7 @@ public enum FoodTag
     {
         if (Carrier != carrier) return;
         Carrier = null;
+        carryActivity?.Dispose();carryActivity=null;
         if (this is TentacleCreature tentacle && carrier.TryGetComponent<TentacleTether>(out var tether)) tether.ParkBalloons(tentacle);
         if (movementBody == null) return;
         if (this is TentacleCreature && !movementBody.isKinematic)

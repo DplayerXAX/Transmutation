@@ -1,8 +1,10 @@
 # Shared creature simulation and optimization plan
 
-Date: 2026-11-23. Status: proposed work, not implemented or profiled.
+Date: 2026-11-23. Status: shared gates and relevance scheduling implemented; representative smoothness and scheduler checks passed. Wider population optimization remains measurement-driven.
 
 Implementation update: the first shared activity gates, fish integration, registry-based distance discovery, and moving-frame transport are implemented in the sea-angel prototype. See [implementation checkpoint](MovingIslandImplementationProgress.md). Population performance and later phases remain unmeasured. The user revised validation to a movement-pattern code review and representative runtime tests; exhaustive per-creature testing is no longer a completion gate.
+
+Subsequent implementation: the representative smoothness gate passed, then shared relevance scheduling, lifecycle-driven staggered distance checks, owned activity handles for carrying/reservations, and coalesced fish wake queries were implemented. A 512-fixture scheduler check passed. See [implementation details and measured limits](CreatureSimulationImplementation.md). Real mixed-population and target-hardware performance, universal physics suspension, and state-only unloading remain conditional future work; per-species behavior ticks have not been globally rewritten.
 
 Related design: [Moving sea-angel island technical review](LevelDesign/MovingSeaAngelIslandTechnicalReview.md).
 
@@ -28,7 +30,7 @@ The two current systems have useful distinct policies: ordinary distance relevan
 | --- | --- |
 | Entity registration and lifecycle cleanup | Which sources activate dimensional fish |
 | Simulation requests, suspension reasons, and effective tier | Fish reservation and catch lifecycle |
-| Scheduling intervals, wake grace, and hysteresis | Swimming, flocking, walking, and combat decisions |
+| Scheduling intervals, wake grace, and hysteresis | Flying, flocking, walking, and combat decisions |
 | Moving-frame membership and effective position | Dimensional visibility and rendering eligibility |
 | Safe physics suspend/resume contract | Species-specific preparation for suspension |
 | Optional common spatial-query backend | Fishing eligibility filters and target selection |
@@ -38,7 +40,7 @@ The two current systems have useful distinct policies: ordinary distance relevan
 
 ## Shared state contract
 
-Each registered creature has a simulation profile, movement frame, motion authority, effective activity state, and a suspension capability. Separate requests for behavior, physics, and presentation where their needs differ. A fish may need reservation queries without continuous swimming; a distant thrown creature may need physics without expensive perception.
+The target contract gives each registered creature a simulation profile, movement frame, motion authority, effective activity state, and a suspension capability. Separate requests for behavior, physics, and presentation where their needs differ. A sea angel may need reservation queries without continuous flight; a distant thrown creature may need physics without expensive perception. Sea angels fly through air; no swimming mechanic is assumed. The current implementation has shared permission/activity gates and frame membership, but does not claim the full multi-tier capability model is implemented.
 
 Use owned request handles for temporary requirements, released on completion, cancellation, death, disable, and scene unload. Examples include FishingReservation, ActiveThrow, Carry, Combat, and proximity/source relevance. Name these by purpose without creating a large universal dependency framework.
 
@@ -71,7 +73,7 @@ A central scheduler that loops over every creature and every source each frame c
 
 ## Incremental work packages
 
-**Priority update after prototype playtesting:** perform the creature motion smoothness/presentation review in the [implementation checkpoint](MovingIslandImplementationProgress.md) before resuming the remaining full scheduler migration and optimization. Investigate observed shaking and idle Asura gait by movement pattern, using representative tests. The goo strong-throw/break-sensitivity report is a separate queued change. These reports are recorded only; no fixes were requested in the checkpoint-update task. Existing functional and net-drift results are not proof of smooth visual motion.
+**Execution update:** the representative smoothness layer preceded shared scheduler implementation. Passive kinematic timing, active sea-angel flight, a free/pinned tentacle, and Asura gait have focused fixes and measurements. Goo sensitivity was separately reproduced and tuned, including actual full-force throws. See the [implementation checkpoint](MovingIslandImplementationProgress.md). Existing functional and net-drift results alone were not used as proof of smooth rendering.
 
 | Phase | Deliverable | Exit condition |
 | --- | --- | --- |
@@ -102,4 +104,4 @@ Required regression cases:
 8. Multiple wake sources and a large simultaneous approach do not cause unbounded frame spikes or missed interactions. Urgent wake takes precedence over routine budget spreading.
 9. Non-migrated species retain their previous behavior, and migrated species are not double-ticked.
 
-No tests or profiler runs have been performed for this proposal. The output of phase A will determine which performance changes are actually necessary; phases B–D establish the shared correctness needed by the moving habitat.
+Current measured results and limits are recorded in [the implementation report](CreatureSimulationImplementation.md). Phases B–D have the prototype's common gate, fish/distance policy integration, frame transport, and representative correctness checks. Phase A has timing/ownership inventory and isolated scheduler measurements, but still needs a matched real-population CPU/physics/GC baseline. Phase E has lifecycle discovery, bounded distance visits, and coalesced player wake queries; central behavior ticking and broader species migration remain conditional on that baseline. Phase F remains optional. Do not label all phases complete or infer an overall frame-rate improvement from scheduler-only measurements.

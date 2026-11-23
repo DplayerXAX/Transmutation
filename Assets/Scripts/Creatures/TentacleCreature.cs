@@ -328,17 +328,19 @@ public sealed class TentacleCreature : Creature
     private Vector3 home;
     private Vector3 wanderTarget;
     internal override void TransportFrameCaches(MovingFrame frame)
+        => TransportRenderedCaches(frame,new FramePoseDelta(frame.PreviousPhysicsPose,frame.PlannedPhysicsPose));
+    internal void TransportRenderedCaches(MovingFrame frame,FramePoseDelta motion)
     {
-        home = frame.TransformStep(home); wanderTarget = frame.TransformStep(wanderTarget);
+        home = motion.Point(home); wanderTarget = motion.Point(wanderTarget);
         if (tentacles == null) return;
         foreach (var arm in tentacles)
         {
             if (arm.holdCollider && arm.holdCollider.transform.IsChildOf(frame.transform))
             {
-                arm.hold = frame.TransformStep(arm.hold); arm.foot = frame.TransformStep(arm.foot);
-                arm.stepFrom = frame.TransformStep(arm.stepFrom); arm.stepTo = frame.TransformStep(arm.stepTo);
-                arm.holdNormal = frame.RotationStep * arm.holdNormal;
-                arm.stepNormal = frame.RotationStep * arm.stepNormal;
+                arm.hold = motion.Point(arm.hold); arm.foot = motion.Point(arm.foot);
+                arm.stepFrom = motion.Point(arm.stepFrom); arm.stepTo = motion.Point(arm.stepTo);
+                arm.holdNormal = motion.Direction(arm.holdNormal);
+                arm.stepNormal = motion.Direction(arm.stepNormal);
             }
         }
     }
@@ -622,7 +624,9 @@ public sealed class TentacleCreature : Creature
         // fraction of the cost. Anything the player is doing with it runs every frame.
         bool busy = IsCarried || IsPetted || Suspended || PinnedCount > 0 || holding || ExternalMovement;
         ViewInfo(out bool seen, out float distance);
-        int stride = busy ? 1 : seen ? (distance < 30f ? 1 : distance < 60f ? 2 : 4) : (distance < 25f ? 1 : 4);
+        // Visible procedural limbs must share the body's presentation cadence. Only
+        // offscreen idle behavior is throttled; do not display a four-frame-old membrane.
+        int stride = busy || seen ? 1 : (distance < 25f ? 1 : 4);
         pendingTime += deltaTime;
         if (!busy && ++skippedFrames < stride) return;
         deltaTime = Mathf.Min(pendingTime, 0.25f);

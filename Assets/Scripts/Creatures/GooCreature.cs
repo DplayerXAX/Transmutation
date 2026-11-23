@@ -12,6 +12,9 @@ public sealed class GooCreature : Creature
     [Range(0f, 0.1f)] [SerializeField] private float idleWobble = 0.035f;
     private Vector3 blobScale;
     private bool usePending;
+    [SerializeField, Min(.1f), Tooltip("Closing speed into a surface needed to splash (m/s). Gentle placement remains safe.")]
+    private float splashImpactSpeed = 6f;
+    public override float MinimumImpactSpeed => Mathf.Min(base.MinimumImpactSpeed, splashImpactSpeed);
 
     public override bool CanBeCarried => !usePending && !IsDead;
     public override bool CanUseWhileCarried => !IsDead;

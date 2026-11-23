@@ -8,7 +8,7 @@ using UnityEngine;
 /// ground-bound kind (goo, flowers, Bellows, spiders, squirrels, shrooms...) sleeps beyond otherSleepBeyond.
 /// Things in flight or in motion are never paused: bubbles, birds, water drops, thrown or carried creatures.
 /// </summary>
-public sealed class CreatureSleep : MonoBehaviour
+public sealed class CreatureSleep : MonoBehaviour, ICreatureRelevancePolicy
 {
     [Tooltip("Tentacle creatures further than this from the player are paused (metres).")]
     [Min(10f)] [SerializeField] private float sleepBeyond = 75f;
@@ -21,10 +21,20 @@ public sealed class CreatureSleep : MonoBehaviour
     [Tooltip("Paused other creatures closer than this wake up again (metres).")]
     [Min(5f)] [SerializeField] private float otherWakeWithin = 70f;
 
-    private readonly List<Creature> creatures = new List<Creature>();
+    sealed class Entry { public Creature creature; public float nextCheck; }
+    [SerializeField, Min(1)] private int checksPerFrame = 32;
+    private readonly List<Entry> creatures = new();
+    private readonly HashSet<Creature> registered = new();
     private readonly HashSet<Creature> sleeping = new HashSet<Creature>();
-    private float nextCheck, nextScan;
+    private int cursor;
+    private float nextPlayerSearch;
     private Transform player;
+    private CreatureSimulationScheduler scheduler;
+    private bool previousAllKinds;
+    public float RelevanceInterval=>0;
+    public int CandidateCount=>creatures.Count;
+    public int ChecksLastFrame {get;private set;}
+    public int ChecksPerFrame=>checksPerFrame;
 
     public int SleepingCount => sleeping.Count;
 
@@ -33,39 +43,73 @@ public sealed class CreatureSleep : MonoBehaviour
         !(c is SeaAngelCreature || c is DimensionStone || c is LeashBubble || c is BirdCreature || c is ErosiveFluidDroplet || c is ProjectileCreature || c is BlastCore ||
           c is GlowBee || c is SquirrelFood || c is GlowHoney);
 
-    private void Update()
+    void OnEnable()
     {
-        if (Time.time < nextCheck) return;
-        nextCheck = Time.time + 0.5f;
+        if(!Application.isPlaying)return;
+        previousAllKinds=allKinds;
+        CreatureRegistry.Added+=Add;CreatureRegistry.Removed+=Remove;
+        foreach(var creature in CreatureRegistry.All)Add(creature);
+        RegisterScheduler();
+    }
+    void Start()=>RegisterScheduler();
+    void RegisterScheduler(){scheduler=CreatureSimulationScheduler.For(gameObject.scene);if(scheduler)scheduler.Register(this,this);}
+    void Add(Creature creature)
+    {
+        if(!creature || creature.gameObject.scene!=gameObject.scene || (!allKinds && !(creature is TentacleCreature)) ||
+            !Sleepable(creature) || !registered.Add(creature))return;
+        creatures.Add(new Entry{creature=creature,nextCheck=Time.time+Mathf.Repeat(Mathf.Abs(creature.GetInstanceID())*.618034f,1)*.5f});
+    }
+    void Remove(Creature creature)
+    {
+        registered.Remove(creature);sleeping.Remove(creature);
+        CreatureSimulation.DistanceDormant(creature,this,false);
+        creatures.RemoveAll(e=>e.creature==creature);
+        if(cursor>=creatures.Count)cursor=0;
+    }
+    public void RefreshRelevance()
+    {
+        ChecksLastFrame=0;
+        if(previousAllKinds!=allKinds)
+        {
+            previousAllKinds=allKinds;
+            foreach(var creature in CreatureRegistry.All)Add(creature);
+        }
         if (player == null)
         {
-            var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
-            if (carrier == null) return;
-            player = carrier.PlayerBody != null ? carrier.PlayerBody.transform : carrier.transform;
+            if(Time.time<nextPlayerSearch)return;
+            nextPlayerSearch=Time.time+1;
+            foreach(var carrier in FindObjectsByType<PlayerCreatureCarrier>(FindObjectsSortMode.None))
+                if(carrier.gameObject.scene==gameObject.scene){player=carrier.PlayerBody?carrier.PlayerBody.transform:carrier.transform;break;}
+            if(!player)return;
         }
-        // Creatures appear during play (the mother's companions, practice sites, spawned flowers); look again now and then.
-        if (Time.time >= nextScan)
+        int visits=Mathf.Min(Mathf.Max(1,checksPerFrame),creatures.Count);
+        for(int visit=0;visit<visits;visit++)
         {
-            nextScan = Time.time + 5f;
-            creatures.Clear();
-            if (allKinds)
-            {
-                foreach (Creature c in CreatureRegistry.All) if (Sleepable(c)) creatures.Add(c);
-            }
-            else creatures.AddRange(FindObjectsByType<TentacleCreature>(FindObjectsSortMode.None));
-        }
-        foreach (var creature in creatures)
-        {
-            if (creature == null || creature.IsDead) continue;
+            if(creatures.Count==0)break;
+            if(cursor>=creatures.Count)cursor=0;
+            var entry=creatures[cursor++];var creature=entry.creature;
+            if (!creature || creature.IsDead || Time.time<entry.nextCheck) continue;
+            entry.nextCheck=Time.time+.5f;ChecksLastFrame++;
+            if(!allKinds && !(creature is TentacleCreature))
+            {CreatureSimulation.DistanceDormant(creature,this,false);sleeping.Remove(creature);continue;}
             bool tentacle = creature is TentacleCreature;
             float beyond = tentacle ? sleepBeyond : otherSleepBeyond, within = tentacle ? wakeWithin : otherWakeWithin;
             float distance = Vector3.Distance(creature.transform.position, player.position);
-            bool busy = creature.IsCarried || creature.IsBubbleCaptured ||
+            bool busy = creature.IsCarried || creature.IsBubbleCaptured || creature.IsPetted || CreatureThrower.IsFlying(creature) ||
+                (creature.TryGetComponent<WebCapture>(out var capture) && capture.IsCaptured) ||
+                (creature.TryGetComponent<CreatureCombat>(out var combat) && combat.Target!=null) ||
                 creature is SquirrelNest nest && nest.IsMoving || creature is Squirrel squirrel && squirrel.IsMigrating ||
-                tentacle && ((TentacleCreature)creature).PinnedCount > 0;
+                tentacle && (((TentacleCreature)creature).PinnedCount > 0 || ((TentacleCreature)creature).Suspended);
+            // Do not freeze autonomous decisions in the middle of an unresolved fall.
+            var rb=creature.GetComponent<Rigidbody>();
+            if(rb && !rb.isKinematic && rb.useGravity)
+            {
+                Vector3 relative=rb.linearVelocity-(creature.TryGetComponent<MovementFrameMember>(out var member)?member.PointVelocity:Vector3.zero);
+                busy|=Mathf.Abs(relative.y)>1f;
+            }
             if (!sleeping.Contains(creature))
             {
-                if (busy || distance <= beyond || !creature.SimulationEnabled) continue;
+                if (busy || distance <= beyond || !creature.SimulationPermitted) continue;
                 CreatureSimulation.DistanceDormant(creature, this, true);
                 sleeping.Add(creature);
             }
@@ -75,12 +119,14 @@ public sealed class CreatureSleep : MonoBehaviour
                 sleeping.Remove(creature);
             }
         }
-        sleeping.RemoveWhere(c => c == null);
     }
 
     private void OnDisable()
     {
+        CreatureRegistry.Added-=Add;CreatureRegistry.Removed-=Remove;
+        if(scheduler)scheduler.Unregister(this);
         foreach (var creature in sleeping) if (creature != null) CreatureSimulation.DistanceDormant(creature, this, false);
         sleeping.Clear();
+        creatures.Clear();registered.Clear();cursor=0;
     }
 }

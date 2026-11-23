@@ -8,6 +8,7 @@ internal static class CreatureRegistry
     private static readonly List<Creature> creatures = new List<Creature>(256);
     private static readonly List<PlayerCreatureStats> players = new List<PlayerCreatureStats>(4);
     internal static int CombatRevision { get; private set; }
+    internal static event System.Action<Creature> Added, Removed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reset()
@@ -32,10 +33,10 @@ internal static class CreatureRegistry
     internal static void Register(Creature creature)
     {
         if (creature != null && !creature.IsConsumptionPending && !creatures.Contains(creature))
-        { creatures.Add(creature); CombatRevision++; }
+        { creatures.Add(creature); CombatRevision++; Added?.Invoke(creature); }
     }
 
-    internal static void Unregister(Creature creature) { if (creatures.Remove(creature)) CombatRevision++; }
+    internal static void Unregister(Creature creature) { if (creatures.Remove(creature)) { CombatRevision++; Removed?.Invoke(creature); } }
     internal static void Register(PlayerCreatureStats player)
     { if (player != null && !players.Contains(player)) { players.Add(player); CombatRevision++; } }
     internal static void Unregister(PlayerCreatureStats player) { if (players.Remove(player)) CombatRevision++; }

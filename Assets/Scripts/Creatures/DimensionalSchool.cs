@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public sealed class DimensionalSchool : MonoBehaviour
+public sealed class DimensionalSchool : MonoBehaviour, ICreatureRelevancePolicy
 {
     static readonly Unity.Profiling.ProfilerMarker activationMarker = new("SeaAngel.Activation");
     static readonly Dictionary<int, DimensionalSchool> scenes = new();
@@ -30,7 +30,12 @@ public sealed class DimensionalSchool : MonoBehaviour
     public int AwakeCount => AwakeFish.Count;
     public int RegisteredCount => locations.Count;
     public PlayerCreatureCarrier Player { get; private set; }
-    float nextRefresh;
+    CreatureSimulationScheduler scheduler;
+    public float RelevanceInterval=>refreshInterval;
+    void Start()=>RegisterScheduler();
+    void OnEnable(){if(Application.isPlaying)RegisterScheduler();}
+    void RegisterScheduler(){scheduler=CreatureSimulationScheduler.For(gameObject.scene);if(scheduler)scheduler.Register(this,this);}
+    void OnDisable(){if(scheduler)scheduler.Unregister(this);}
     int sceneKey;
     const float CellSize = 12;
     public static DimensionalSchool Existing(Component item) =>
@@ -118,10 +123,8 @@ public sealed class DimensionalSchool : MonoBehaviour
         }
         return best != null && best.TryReserve(pole) ? best : null;
     }
-    void Update()
+    public void RefreshRelevance()
     {
-        if (Time.time < nextRefresh) return;
-        nextRefresh = Time.time + refreshInterval;
         using var sample = activationMarker.Auto();
         if (!Player)
             foreach (var p in FindObjectsByType<PlayerCreatureCarrier>(FindObjectsSortMode.None))
@@ -130,16 +133,19 @@ public sealed class DimensionalSchool : MonoBehaviour
         foreach (var fish in AwakeFish)
         {
             Reindex(fish);
-            if (fish.ReservedBy != null) CreatureSimulation.Wake(fish, sleepDelay);
         }
         if (Player)
         {
             var pos = Player.transform.position;
+            float playerWakeRadius=0;
             foreach (var pole in Poles)
                 if (!pole.IsDead && (pole.Carrier == Player || (!pole.IsCarried && Vector3.Distance(pos,pole.transform.position)<=pole.PlayerWakeRange)))
-                    WakeAround(pos,pole.FishWakeRange);
+                    playerWakeRadius=Mathf.Max(playerWakeRadius,pole.FishWakeRange);
             if (Player.TryGetComponent<PlayerHoneyEffects>(out var honey) && honey.HasHoneySight)
-                WakeAround(pos,honey.FishSightRange);
+                playerWakeRadius=Mathf.Max(playerWakeRadius,honey.FishSightRange);
+            // Player-centered activation sources share one query. Visibility still uses
+            // each source's own rules in the renderer.
+            if(playerWakeRadius>0)WakeAround(pos,playerWakeRadius);
             foreach (var stone in Stones)
                 if (!stone.IsDead && Vector3.Distance(pos,stone.transform.position)<=stone.playerRange)
                     WakeAround(stone.transform.position,stone.fishRange);

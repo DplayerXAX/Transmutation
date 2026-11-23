@@ -4,6 +4,20 @@ Implementation started 2026-11-23. Related: [technical review](MovingSeaAngelIsl
 
 ## Play and author
 
+### Measured smoothness pass
+
+The smoothness passes are documented in [the architecture research and measurements](../MovingIslandSmoothnessResearch.md). Ordinary kinematic Rigidbody transport now uses physics poses and MovePosition/MoveRotation with interpolation matching the island; teleport/reset remains separate. The passive test fixture's render-local wobble fell from centimetres to approximately .00001 m maximum. Collider-free sea angels now transport on the same rendered timeline as their autonomous flight. Free kinematic tentacles transport their body and support-owned procedural caches on that timeline; one pinned-arm fixture also measured approximately .00001 m maximum body step and pin error. Dynamic motor forces and acceleration were not retuned. These representative results do not establish every ability or nested rider is smooth.
+
+Asura gait now requires its motor's locomotion intent, grounding, and movement ownership. Transport alone no longer counts as stride distance; relative speed controls stride only when locomotion is permitted. Combat recoil and rolling presentation retain their own behavior.
+
+Goo's impact threshold is now 6 m/s, separate from other species. An actual shallow-angle full-force throw produced a 7.434 m/s normal impact; the earlier threshold rejected the delivered hit. Ordinary drops and full-force scripted throws now pass on static ground and the island, alongside the 32-check shared impact suite.
+
+### Shared relevance optimization
+
+After the representative smoothness gate, distance and fish-source policies moved onto one scene-local relevance scheduler. Distance candidates register through creature lifecycle events and use staggered half-second deadlines, with at most 32 visits per render frame by default. Carrying and reservations acquire immediate owned activity handles; those cannot override semantic capture/freeze permissions. Fish source and visibility rules remain distinct. See [implementation and measured limits](../CreatureSimulationImplementation.md).
+
+The 512-fixture check passed bounded work, lifecycle discovery, independent activity ownership, semantic pause priority, position wake, and policy restart. This is relevance scheduling, not universal freezing or state-only unloading. The full representative moving-island regression also passed after integration. Use fresh Play sessions for the probes so age-limited creatures have not expired.
+
 ### Visual, terrain, and population refresh
 
 The giant now preserves the small sea angel's authored child proportions under one uniform visual scale. The earlier oversized opaque sphere was caused by replacing the authored Head scale with an absolute scale of 100 and applying the deck material to every body part. The giant uses the same Dimensional Angel rim shader with a normal transparent forward pass; the original window/honey passes retain their indices.
@@ -31,10 +45,10 @@ The small sea-angel prefab and meshes remain separate from the giant creature's 
 ## Implemented foundation
 
 - `CreatureSimulation` resolves optimization gates independently from semantic pause permission. `CreatureSleep` supplies distance policy; `DimensionalSchool` supplies dimensional-source policy. Their decisions converge through `Creature.SimulationEnabled`; distance wake cannot undo a capture/throw pause.
-- Shared registry iteration replaces the default distance system's repeated global creature discovery. Existing polling intervals and fish wake grace remain intact. This is a first migration, not the full population/streaming optimization project.
+- Shared registry lifecycle events replace repeated distance discovery. Per-creature distance deadlines retain the half-second cadence while work is distributed across frames; fish source relevance retains its quarter-second cadence and source wake grace. This is a first migration, not the full population/streaming optimization project.
 - `MovingFrame` plans fixed-step platform motion and implements existing `IRideSurface` support. `MovementFrameMember` transports kinematic inhabitants even when their AI is asleep.
 - Dynamic creature motors run between removal of the prior transport velocity and addition of the next point velocity. The player uses its own existing support-relative controller instead of receiving a second transport pass.
-- Fish spatial cells are partitioned by frame; dormant fish do not need world-cell reindexing for every island move. Fish swimming homes and fishing cast endpoints follow frame motion.
+- Fish spatial cells are partitioned by frame; dormant fish do not need world-cell reindexing for every island move. Sea-angel flight homes and fishing cast endpoints follow frame motion.
 - A shared habitat discovers imported creatures. Carrying, capture, and scripted throws retain authority. Throws from the island inherit its point velocity once.
 - Bird flock boundary steering uses the habitat when a bird belongs to an island, while ordinary birds retain the existing world sky bounds.
 
@@ -44,14 +58,14 @@ The user's revised scope is representative testing, not exhaustive per-creature 
 
 | Pattern | Reviewed examples | Prototype coverage / follow-up |
 | --- | --- | --- |
-| Intangible Transform swimming, source dormancy | SeaAngelCreature, DimensionalSchool | Explicit home transport and frame-local cells. Test sleeping transport, reservation, and moving catch. |
+| Intangible Transform flight, source dormancy | SeaAngelCreature, DimensionalSchool | Rendered-frame home transport and frame-local cells. Tested sleeping transport, active flight, reservation, and moving catch. |
 | Dynamic ground velocity motor | SquirrelMotor, AsuraMotor, FireEater | Common velocity transport applies around FixedUpdate motors. Test squirrel walking and stopping; combat/territory systems remain review follow-ups. |
 | Coordinated dynamic flight | BirdCreature, BirdFlockManager | Habitat-relative boundary steering added. Test representative bird flight. Mixed-frame flock velocity interpretation needs later attention. |
 | Destination-driven flight | GlowBee, SkySpider | Velocity/kinematic transport is available, but cached destinations and world-configured managers require future focused debugging. |
 | Rooted or passive inhabitants | FireSource, RecycleFlower, BounceShroom, FireFlower | Kinematic/static transport applies independently of AI. Tested a stationary FireSource. Detached RecycleFlower and hopping shrooms use dynamic behavior and are not equivalent to rooted inhabitants. |
 | Scripted movement owners | CreatureThrower, ProjectileCreature, Boomerang | Explicit ownership exclusions are required. Test representative throw transitions; projectiles must remain world ballistic. |
 | Capture / carrier movement | Creature carry, BubbleCapture, WebCapture | Frame transport yields to these owners. Deeply nested owner chains require later representative tests. |
-| Surface attachment and pinned limbs | CeilingBatBugSurfaceMotor, CeilingBatBugEgg, TentacleCreature | A deck-adhered egg passed the local attachment check. Some other code keeps world anchors. No claim that all limbs and webs follow correctly. Pinned tentacles are the next attachment-focused debug case. |
+| Surface attachment and pinned limbs | CeilingBatBugSurfaceMotor, CeilingBatBugEgg, TentacleCreature | A deck-adhered egg and one free/pinned tentacle passed targeted checks. Some other code keeps world anchors. No claim that all limbs, suspended rigs, or webs follow correctly. |
 | Nested riders | CompostRideSurface, OreColossus, SkateGecko | Existing ride surfaces remain in place. Composition with the island needs a focused follow-up rather than broad assumptions. |
 | Time/history abilities | RewindCoil, boomerang return paths, squirrel remembered territories | Cached world history is not automatically converted by common transport. Explicitly deferred for incremental debugging. |
 

@@ -130,8 +130,8 @@ public static class CreatureImpactValidation
             capture.Release(); Object.DestroyImmediate(captureBubble);
 
             var goo = Goo(new Vector3(6, 2, 0));
-            Check(Mathf.Approximately(goo.MinimumImpactSpeed, 26f * 0.6f), "Goo requires 60 percent of maximum throw speed");
-            Dispatch(goo, Hit(wallCollider, point, Vector3.left, 15.5f));
+            Check(Mathf.Approximately(goo.MinimumImpactSpeed, 6f), "Goo's easier break threshold is six metres per second");
+            Dispatch(goo, Hit(wallCollider, point, Vector3.left, goo.MinimumImpactSpeed-.1f));
             Check(!goo.IsDead && Paint().Length == 0, "impact just below the splash threshold preserves Goo");
             Dispatch(goo, Hit(wallCollider, point, Vector3.left));
             Check(goo.IsDead && Paint().Length == 1, "Goo impact creates paint and consumes the blob");
@@ -197,11 +197,11 @@ public static class CreatureImpactValidation
             until = Time.time + 0.2f;
             while (Time.time < until) yield return null;
             Check(gentleGoo != null && !gentleGoo.IsDead && Paint().Length == 0, "Goo settles gently without bursting");
-            var droppedGoo = Goo(new Vector3(-4, 2f, 20));
+            var droppedGoo = Goo(new Vector3(-4, .5f, 20));
             until = Time.time + 0.8f;
             while (Time.time < until) yield return null;
             Check(droppedGoo != null && !droppedGoo.IsDead && Paint().Length == 0,
-                "short spawn drops do not burst Goo");
+                "gentle half-metre drops below the tuned threshold do not burst Goo");
             var hardDroppedGoo = Goo(new Vector3(-1, 6f, 20));
             until = Time.time + 0.9f;
             while (Time.time < until) yield return null;
