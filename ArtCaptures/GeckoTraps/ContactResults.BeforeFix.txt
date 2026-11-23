@@ -1,0 +1,24 @@
+World source spider: Sky Spider — canyon canopy, (4.72, 3.52, -177.84); flower: Bubble Flower — bird lure 6, (5.70, -3.49, -179.94).
+Temporary default-physics scene, source emitter configurations cloned without changing capture limits or gecko size. Automatic contact callbacks used; no direct TryCapture calls.
+World-configured web scale/radius: 4.20m, 237 strands.
+JOINT web resting contact: body=(5.28, 102.19, -176.59), transform=(5.28, 102.19, -176.59), scale=(1.00, 1.00, 1.00), localAnchor=(-0.12, -0.05, -0.11), worldAnchor=(4.39, 103.08, -176.73), contact=(4.39, 103.08, -176.73), initialSpeed=1.021858E-05.
+PASS web resting contact: webCapture=True, simulation=False, kinematic=False.
+FAIL web resting contact: passive hold drift 14.763m.
+FAIL web resting contact: hold drift 1024182.000m under impulse, position=(1019143.00, 2212.51, -101733.30), speed=1.964, joint=True.
+PASS web resting contact: release restores independent dynamic body and simulation.
+JOINT web 10m/s incoming contact: body=(4.32, 105.31, -176.79), transform=(4.32, 105.31, -176.79), scale=(1.00, 1.00, 1.00), localAnchor=(0.24, -1.38, 0.07), worldAnchor=(4.56, 103.93, -176.72), contact=(4.56, 103.93, -176.72), initialSpeed=1.106148E-10.
+PASS web 10m/s incoming contact: webCapture=True, simulation=False, kinematic=False.
+FAIL web 10m/s incoming contact: passive hold drift 276.017m.
+CONTACT flower projectile meets grounded gecko: collisions=1, triggers=1, body=(24.00, 97.24, -174.00), bubble=(24.00, 97.45, -174.40), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS flower projectile meets grounded gecko: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS flower projectile meets grounded gecko: retained, AI suspended, shell radius 2.12m fits occupant.
+PASS flower projectile meets grounded gecko: pop restores dynamic physics, collision and simulation.
+CONTACT 10m/s grounded gecko meets flower bubble: collisions=1, triggers=1, body=(24.00, 97.24, -175.69), bubble=(24.00, 97.30, -175.29), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS 10m/s grounded gecko meets flower bubble: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS 10m/s grounded gecko meets flower bubble: retained, AI suspended, shell radius 2.21m fits occupant.
+PASS 10m/s grounded gecko meets flower bubble: pop restores dynamic physics, collision and simulation.
+CONTACT initial bubble overlap contact: collisions=1, triggers=1, body=(24.00, 97.45, -177.00), bubble=(24.00, 97.72, -177.41), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS initial bubble overlap contact: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS initial bubble overlap contact: retained, AI suspended, shell radius 2.12m fits occupant.
+PASS initial bubble overlap contact: pop restores dynamic physics, collision and simulation.
+Completed: 3 failed checks. Temporary scene and test geckos cleaned up; authored scene not saved.

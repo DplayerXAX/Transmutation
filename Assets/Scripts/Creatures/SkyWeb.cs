@@ -124,6 +124,8 @@ public sealed class SkyWeb : Creature
             capsule.height = span.magnitude + radius * 2f;
             walkColliders.Add(capsule);
             IgnoreBuilder(capsule);
+            foreach (WebCapture capture in captures)
+                if (capture != null) capture.IgnoreWebCollider(capsule);
         }
     }
 
@@ -192,7 +194,7 @@ public sealed class SkyWeb : Creature
         Vector3 center = transform.position;
         int count = ReflectionPhysics.OverlapSphereNonAlloc(center, MaximumRadius + 2f, overlapBuffer,
             trappingLayers, QueryTriggerInteraction.Ignore);
-        if (count == overlapBuffer.Length)
+        while (count == overlapBuffer.Length)
         {
             // Expand on exceptional dense frames; do not allocate continuously at the same saturation.
             Array.Resize(ref overlapBuffer, overlapBuffer.Length * 2);

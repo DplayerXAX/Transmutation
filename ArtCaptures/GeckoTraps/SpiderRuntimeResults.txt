@@ -1,0 +1,4 @@
+Passed: 48 runtime assertions
+1 web(s): 0.111 ms per physics scan, 0 managed bytes over 200 scans
+3 web(s): 0.301 ms per physics scan, 0 managed bytes over 200 scans
+Geometry: 237 strands, 6 patches, two renderers per web

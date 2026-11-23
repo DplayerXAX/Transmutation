@@ -310,9 +310,9 @@ public static class SkySpiderValidation
         Check(capture != null && capture.OwningWeb == first, "strand contact traps compound body");
         Check(events == 1, "compound body emits one capture event");
         Vector3 capturedPosition = prey.position;
-        prey.AddForce(Vector3.up * 20f, ForceMode.Impulse);
+        Check(prey.isKinematic, "stationary silk pins its captive without a conflicting dynamic joint");
         for (int frame = 0; frame < 5; frame++) yield return null;
-        Check(Vector3.Distance(prey.position, capturedPosition) < 0.15f, "fixed attachment resists physics impulse");
+        Check(Vector3.Distance(prey.position, capturedPosition) < 0.15f, "stationary attachment remains stable");
         Rigidbody gap = Cube(FindGap(first, 81));
         Physics.SyncTransforms();
         for (int frame = 0; frame < 5; frame++) yield return null;

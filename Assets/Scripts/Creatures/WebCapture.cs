@@ -1,6 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>A single body's attachment to stationary silk. Only owns the joint it creates.</summary>
+/// <summary>A single body's stable attachment to stationary silk, with reversible physics ownership.</summary>
 [DisallowMultipleComponent]
 public sealed class WebCapture : MonoBehaviour
 {
@@ -9,10 +10,15 @@ public sealed class WebCapture : MonoBehaviour
     public Vector3 ContactPoint { get; private set; }
     public bool IsCaptured => OwningWeb != null;
 
-    private FixedJoint silkJoint;
     private Creature creature;
     private bool previousSimulation;
+    private bool ownsBodyState;
+    private bool previousKinematic, previousGravity;
+    private CollisionDetectionMode previousCollisionMode;
     private float eligibleAfter;
+    private Collider[] bodyColliders;
+    private readonly HashSet<Collider> ignoredWebColliders = new HashSet<Collider>();
+    private readonly List<(Collider body, Collider silk)> ignoredPairs = new List<(Collider, Collider)>();
 
     public bool CanCapture => !IsCaptured && Time.time >= eligibleAfter;
 
@@ -35,34 +41,62 @@ public sealed class WebCapture : MonoBehaviour
             previousSimulation = creature.SimulationEnabled;
             creature.Died += OnCreatureDied;
             creature.SetSimulationEnabled(false);
+            // Stop riding/other autonomous movement before taking physics ownership.
+            creature.NotifyCaptureStarted();
         }
+        previousKinematic = body.isKinematic;
+        previousGravity = body.useGravity;
+        previousCollisionMode = body.collisionDetectionMode;
+        ownsBodyState = true;
+        bodyColliders = body.GetComponentsInChildren<Collider>(true);
+        foreach (Collider strand in web.GetComponentsInChildren<Collider>(true)) IgnoreWebCollider(strand);
         body.linearVelocity = Vector3.zero;
         body.angularVelocity = Vector3.zero;
-        silkJoint = gameObject.AddComponent<FixedJoint>();
-        silkJoint.autoConfigureConnectedAnchor = false;
-        // Rigidbody pose is authoritative; interpolation can leave Transform a frame behind.
-        Vector3 anchor = Quaternion.Inverse(body.rotation) * (contactPoint - body.position);
-        Vector3 scale = transform.lossyScale;
-        silkJoint.anchor = new Vector3(anchor.x / scale.x, anchor.y / scale.y, anchor.z / scale.z);
-        silkJoint.connectedBody = null;
-        silkJoint.connectedAnchor = contactPoint;
-        silkJoint.breakForce = float.PositiveInfinity;
-        silkJoint.breakTorque = float.PositiveInfinity;
-        if (creature != null) creature.NotifyCaptureStarted();
+        // FixedJoint constraints against the world can fight penetration correction and
+        // frozen rotation axes, projecting a large captive far from its contact point.
+        // A stationary web pins the existing pose without involving that solver loop.
+        body.collisionDetectionMode = CollisionDetectionMode.Discrete;
+        body.isKinematic = true;
+        body.useGravity = false;
         return true;
+    }
+
+    /// <summary>Also called for strands grown after this body was caught.</summary>
+    internal void IgnoreWebCollider(Collider strand)
+    {
+        if (!IsCaptured || strand == null || strand.isTrigger || bodyColliders == null || !ignoredWebColliders.Add(strand)) return;
+        foreach (Collider own in bodyColliders)
+        {
+            if (own == null || !own.enabled || own.isTrigger || own.attachedRigidbody != Body || Physics.GetIgnoreCollision(own, strand)) continue;
+            Physics.IgnoreCollision(own, strand, true);
+            ignoredPairs.Add((own, strand));
+        }
     }
 
     public void Release()
     {
         SkyWeb previousWeb = OwningWeb;
         OwningWeb = null;
-        if (silkJoint != null)
+        foreach (var pair in ignoredPairs)
+            if (pair.body != null && pair.silk != null) Physics.IgnoreCollision(pair.body, pair.silk, false);
+        ignoredPairs.Clear();
+        ignoredWebColliders.Clear();
+        bodyColliders = null;
+        if (ownsBodyState)
         {
-            // Destroy is deferred. Neutralize the attachment immediately before a carry handoff.
-            silkJoint.breakForce = 0f;
-            silkJoint.breakTorque = 0f;
-            Destroy(silkJoint);
-            silkJoint = null;
+            ownsBodyState = false;
+            if (Body != null)
+            {
+                Body.isKinematic = previousKinematic;
+                Body.useGravity = previousGravity;
+                Body.collisionDetectionMode = previousCollisionMode;
+                if (!Body.isKinematic)
+                {
+                    Body.linearVelocity = Vector3.zero;
+                    Body.angularVelocity = Vector3.zero;
+                    Body.WakeUp();
+                }
+            }
         }
         if (creature != null)
         {
@@ -70,7 +104,6 @@ public sealed class WebCapture : MonoBehaviour
             creature.SetSimulationEnabled(previousSimulation);
         }
         creature = null;
-        if (Body != null && !Body.isKinematic) Body.WakeUp();
         eligibleAfter = Time.time + 0.5f;
         if (previousWeb != null) previousWeb.ForgetCapture(this);
     }
