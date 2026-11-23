@@ -7,29 +7,38 @@ public sealed class ErosionDemoControls : MonoBehaviour
     [SerializeField] private Vector3 fixedBrushPosition = new Vector3(-12f, 4f, -8f);
     [SerializeField] private bool brushRelativeToWorld = true;
     private bool digging, emitting = true, menu;
+    // Developer panel: hidden in play, F9 shows it (its Tab menu only works while it is showing).
+    private bool showPanel;
     private SmoothFirstPersonController player;
-    private void Start() { player = FindFirstObjectByType<SmoothFirstPersonController>(); }
+    private void Start() { player = FindFirstObjectByType<SmoothFirstPersonController>(); useGUILayout = false; }
     private void Update()
     {
         var keys = Keyboard.current;
         if (keys != null)
         {
+            if (keys.f9Key.wasPressedThisFrame) { showPanel = !showPanel; useGUILayout = showPanel; if (!showPanel) CloseMenu(); }
             if (keys.f1Key.wasPressedThisFrame) ToggleWater();
             if (keys.f2Key.wasPressedThisFrame) digging = !digging;
             if (keys.f3Key.wasPressedThisFrame) fluid.ClearDroplets();
             if (keys.f4Key.wasPressedThisFrame) Reset();
-            if (keys.tabKey.wasPressedThisFrame)
+            if (showPanel && keys.tabKey.wasPressedThisFrame)
             { menu = !menu; Cursor.lockState = menu ? CursorLockMode.None : CursorLockMode.Locked; Cursor.visible = menu; if (player != null) player.SetFreeze(menu); }
         }
     }
     private void FixedUpdate()
     { if (digging && fluid.World.LayoutReady) fluid.World.Erode(fixedBrushPosition + (brushRelativeToWorld ? fluid.World.transform.position : Vector3.zero), 1.25f, 4f * Time.fixedDeltaTime); }
+    private void CloseMenu()
+    {
+        if (!menu) return;
+        menu = false; Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false;
+        if (player != null) player.SetFreeze(false);
+    }
     private void ToggleWater() { emitting = !emitting; fluid.SetEmitting(emitting); }
     // Also Unity's Reset message, sent when the component is added in the editor before fluid is set.
     private void Reset() { if (fluid == null) return; fluid.ClearDroplets(); fluid.World.ResetErosion(); }
     private void OnGUI()
     {
-        if (fluid == null || fluid.World == null) return;
+        if (!showPanel || fluid == null || fluid.World == null) return;
         GUILayout.BeginArea(new Rect(12, 12, 390, menu ? 400 : 175), GUI.skin.box);
         GUILayout.Label("EROSIVE FLUID PROTOTYPE  |  Tab: controls");
         GUILayout.Label($"Water {fluid.ActiveCount}/{fluid.Capacity}  |  Edited samples {fluid.World.ModifiedSampleCount}");

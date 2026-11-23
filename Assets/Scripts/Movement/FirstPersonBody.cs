@@ -305,10 +305,12 @@ public sealed class FirstPersonBody : MonoBehaviour
             luminosity != null && luminosity.IsAvailableForPerception && controller.enabled ? luminosity.Luminosity : 0f);
         leftArm.webbedHand.UpdateEmission(emission);
         rightArm.webbedHand.UpdateEmission(emission);
+        if (torsoAnatomy != null) torsoAnatomy.UpdateEmission(emission);
         if (showLegs) { leftLeg.webbedHand.UpdateEmission(emission); rightLeg.webbedHand.UpdateEmission(emission); }
         foreach (Renderer part in renderers)
         {
             if (mimicMaterial != null && mimicRenderers.Contains(part)) continue;
+            if (torsoAnatomy != null && torsoAnatomy.OwnsRenderer(part)) continue;
             if (leftArm.webbedHand.OwnsRenderer(part) || rightArm.webbedHand.OwnsRenderer(part) ||
                 (showLegs && (leftLeg.webbedHand.OwnsRenderer(part) || rightLeg.webbedHand.OwnsRenderer(part)))) continue;
             part.GetPropertyBlock(block);
@@ -325,35 +327,33 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     // ---------------- Torso ----------------
 
-    private Transform torso, collar, leftCap, rightCap;
+    private Transform torso;
+    private PlayerTorsoAnatomy torsoAnatomy;
     private Vector3 leftShoulder, rightShoulder;
 
     private void BuildTorso()
     {
-        var torsoRoot = new GameObject("Torso").transform;
-        torsoRoot.SetParent(root, false);
-        leftCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
-        rightCap = Part(PrimitiveType.Sphere, "Shoulder", torsoRoot, jointMaterial, Vector3.one * armThickness * 1.35f, true);
-        leftCap.GetComponent<Renderer>().enabled = false;
-        rightCap.GetComponent<Renderer>().enabled = false;
-        collar = Part(PrimitiveType.Capsule, "Collar", torsoRoot, limbMaterial, new Vector3(armThickness * 1.2f, 0.2f, armThickness * 1.2f), true);
-        torso = Part(PrimitiveType.Capsule, "Spine", torsoRoot, limbMaterial, new Vector3(0.21f, 0.2f, 0.12f), true);
+        torso = new GameObject("Torso - turtle skeleton and human vessels").transform;
+        torso.SetParent(root, false);
+        torsoAnatomy = torso.gameObject.AddComponent<PlayerTorsoAnatomy>();
+        torsoAnatomy.Build(leftArm.webbedHand.Skin, leftArm.webbedHand.Bone, leftArm.webbedHand.Vein);
     }
 
     /// <summary>Joins the two shoulders to each other and, through a slim spine, to the hips.</summary>
     private void PoseTorso()
     {
-        leftCap.position = leftShoulder;
-        rightCap.position = rightShoulder;
-        PlaceSegment(collar, leftShoulder, rightShoulder);
         Transform orientation = controller.Orientation != null ? controller.Orientation : controller.transform;
-        Vector3 neck = (leftShoulder + rightShoulder) * 0.5f - orientation.forward * 0.04f;
-        Vector3 hips = controller.transform.position + Vector3.up * (hipHeight - 0.04f) - orientation.forward * 0.03f;
-        PlaceSegment(torso, neck, hips);
+        // The chest belongs to the body, even when carrying hands follow camera pitch.
+        Vector3 neck = viewCamera.transform.position + Vector3.up * shoulderOffset.y
+            + orientation.forward * (shoulderOffset.z - .04f);
+        Vector3 hips = controller.transform.position + Vector3.up * hipHeight;
         // Keep the flat side of the torso facing forward.
         Vector3 down = hips - neck;
         if (down.sqrMagnitude > 1e-4f)
-            torso.rotation = Quaternion.LookRotation(Vector3.ProjectOnPlane(orientation.forward, down).normalized, -down.normalized);
+        {
+            torso.SetPositionAndRotation(hips, Quaternion.LookRotation(Vector3.ProjectOnPlane(orientation.forward, down).normalized, -down.normalized));
+            torso.localScale = new Vector3(Mathf.Clamp((shoulderOffset.x + shoulderWiden) * 2f / .64f, .8f, 1.3f), down.magnitude, .8f);
+        }
     }
 
     /// <summary>Raised after the arms and legs are posed each frame, for things that must stick to them exactly.</summary>
@@ -782,9 +782,8 @@ public sealed class FirstPersonBody : MonoBehaviour
 
     private static Transform Part(PrimitiveType type, string partName, Transform parent, Material material, Vector3 scale, bool viewOnly)
     {
-        GameObject part = GameObject.CreatePrimitive(type);
+        GameObject part = VisualPrimitive.Create(type);
         part.name = partName;
-        DestroyImmediate(part.GetComponent<Collider>());
         part.transform.SetParent(parent, false);
         part.transform.localScale = scale;
         var renderer = part.GetComponent<MeshRenderer>();

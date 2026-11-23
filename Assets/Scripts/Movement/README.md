@@ -16,6 +16,7 @@ For the exact hierarchy and reference wiring, see [QUICK_SETUP.md](QUICK_SETUP.m
 | `CameraWallGuard` | Keeps the camera out of walls and ceilings. |
 | `PlayerCreatureCarrier` | Picks up and carries a `Creature`. |
 | `PlayerCreatureInteractor` | Left-click interaction with a `Creature`. |
+| `BodyMounts` | Four-slot hotbar: the selected slot is the hand, the mouse wheel switches, the others hang on the body. Dots drawn by `UI/CreatureHotbarHUD`. |
 | `UI/InteractionPromptHUD` | Mouse icon under the crosshair (left/right button lit when usable); text hints optional. |
 
 ## How they connect
@@ -117,10 +118,59 @@ on it to see the words again (for debugging).
 | Riding | aim / release to transfer (with a tentacle) | get off |
 | By a rest spot, hands empty | | sit down / stand up (C also works) |
 
+The mouse wheel switches the hand between four slots (see `BodyMounts` below).
+
 Movement keys (WASD, Space, Shift, Ctrl) are unchanged, including steering a ridden bone creature and the
 tentacle climb assist (Space / Ctrl). The tentacle's old R key is off (`TentacleTether.useReelKey`), C and R no
 longer cancel boarding. Not creature controls, so unchanged: M meditate, E in the reflection space, F6-F8 rest
 spot recording. A tentacle shot that cannot stick flashes the crosshair red (its text is off: `showProblemText`).
+
+### Grip points (`HoldGrip`, `HoldGripTable`)
+
+Everything held in the hand has a grip point (where the hand closes on it) and a rotation in the hand:
+
+- **One thing:** add a `HoldGrip` to it (prefab or scene object): `gripPoint` (its local space) or a child
+  `gripTransform`, `heldEuler` (rotation relative to the view; 0,0,0 = upright, facing forward), `followPitch` (on for
+  tools: tilts with the view; off for creatures: stays upright), `handNudge` (moves the hand point, view space).
+- **A whole type:** `Assets/Resources/HoldGrips.asset` lists every carryable creature type with `gripInBounds` (-1..1 in its
+  visible box: 0,0,0 = middle, 0,-1,0 = bottom, 0,1,0 = top), `heldEuler`, `followPitch`, `handNudge`. Subclasses use their
+  base class's entry. Defaults: flowers by the stem bottom, low in the right corner; small things (eggs, seeds, droplets,
+  honey, fire) on the palm; Glims hang below the hand from the top of the bulb; animals by the middle, upright.
+- **Neither:** the old automatic hold (by the visual middle, pushed out by size); tentacle creatures always go on the back.
+
+The carrier puts the grip point on the hand (`handRest` + `handNudge`, pushed out a little for big things), turns the thing
+to its hand rotation (eased in while it is brought to the hand) and still pulls it back from walls.
+The component wins over the table, so a value can be tried live on one object in Play and then copied into the table.
+
+### Conductor baton (`ConductorBaton` + `BatonItem`, dark caves)
+
+Off by default now: `CreatureSong` (World README) replaced it. Set `DarkTunnels.UseBaton` to bring it back. While the player is facing a creature to play to it, `CreatureSong.ConsumesMouse` keeps the carrier and interactor off the mouse.
+
+A hand-held thing: `BatonItem` is a non-living `Creature` (like `CaveHarvestItem`), so the baton is carried in the hand,
+put down / thrown with RMB, picked up with RMB and put away on a body slot with the mouse wheel like any creature.
+It lives in an extra **tool slot** of the hotbar (`BodyMounts.SetTool`): a diamond a little apart to the right of the four
+dots, reached with the mouse wheel like the others. Selecting it puts the hand's creature away on its body part and brings
+the baton out; leaving it hides the baton. It can never be put down or thrown (RMB never drops a tool). If anything takes it out of the hand while its slot is selected, `BodyMounts` puts it straight back. It is self-lit and unfogged so it stays visible in the dark.
+For now the player has it from the start, tool slot selected (`DarkTunnels.startWithBaton`); with that off it is found in
+the fist of the skeleton in the deepest chamber, which opens only while a Glim is within 3.6 m (walk up to the open hand).
+It is held by its handle through a `HoldGrip` set in `ConductorBaton.Build` (`heldEuler` 74, 10, 0; `handNudge`).
+While it is the thing in the hand (glow creatures within 45 m hear it):
+
+| Input | Does |
+| --- | --- |
+| RMB | next note (E, G, B, D); the tip takes the note's colour (E violet, G gold, B teal, D rose) and the creatures of that note glow a little brighter; the baton is never put down |
+| hold LMB | play the note (it sounds on every beat, Wwise `Play_Crate_<note>`): every creature of that note moves towards the rock under the crosshair, each its own way; every other creature clashes with it and is muted while it sounds (silent, dim, still, unheard); release to stop |
+
+Changing note pops a small glowing note off the tip (`BatonNotePop`, as many heads as the note's mesa crystals). The hand and arm take part, a little behind the baton (`PlayerCreatureCarrier.HeldViewOffset`): lifted while playing, bobbing on the beat, following the aim, a flick on a note change.
+A thin vibrating thread runs from the tip to the crosshair point while playing. In the hand the baton is drawn in the visible right hand (`FirstPersonBody.HandAnchor`) right after the arm is posed (`FirstPersonBody.LimbsPosed`), so looking up or down never separates them.
+
+### Mouse lock after leaving the window (`UI/CursorRelock`)
+
+Boots itself in every scene. While the first-person player is walking (its controller enabled), the game wants the
+mouse locked: on regaining window focus, and on any click into the game while the mouse is loose (alt-tab, Escape in
+the editor), it locks and hides it again (letting go first, so the editor really takes it back). The reflection space
+turns the walking controller off and the main menu has no player, so their free mouse is left alone; showcase scenes
+with their own mouse menus are skipped.
 
 ## Carry and interaction
 
@@ -138,6 +188,25 @@ spot recording. A tentacle shot that cannot stick flashes the crosshair red (its
   (the `TentacleCreature` climb assist uses this).
 - `Creature.TryHandleCarriedRightMouse` can consume RMB for a species-specific ability; the tentacle
   uses this while riding. `Creature.PrepareForThrow` clears species-specific attachments before flight.
+
+**BodyMounts** (four-slot hotbar, no text)
+
+Four slots; the selected slot is the hand.
+- **Right click** picks up as before: the creature goes into the selected slot. Putting down or throwing empties it.
+- **Mouse wheel** selects another slot (one notch, `wheelThreshold` with `stepPause` between steps; down moves right, `downMovesRight`). What the hand
+  holds is put away on that slot's body part (left hip, chest, back, right hip, `mounts`), and the creature of the
+  new slot comes into the hand. Ignored while left click is held (dragging uses the wheel). A tentacle creature on
+  the back is never put away, so the selection stays while it is held.
+- **`UI/CreatureHotbarHUD`** (added by BodyMounts) draws four dots along the bottom of the screen: a hollow white
+  ring = empty, a solid black dot with a white rim = holding. A small arrow above slides to the selected one.
+
+Creatures put away (`StowedCreature`) keep living on their body part: they stay in their simulation, owned by the
+carrier like a held creature (so their own movement stops), solid colliders off, triggers (a fire's heat range) on.
+Heat flows between neighbouring parts (`neighbourDistance`, `heatShare`, at most `maxHeatFlow` per second;
+`HeatFlow.Share`). They ride the body with a delayed swing and a little inertia and tuck back while climbing.
+Something that dies or is taken by something else falls off. The fishing pole sleeps while put away; tentacle
+creatures are never put away. In Scene_Daniel and Scene_World BodyMounts is on the Player.
+The earlier Tab view of the player's own body is kept in `Backups/Inventory_v2_TabView/` (outside Assets).
 
 **CreatureThrower**
 

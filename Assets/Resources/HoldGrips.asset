@@ -1,0 +1,225 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bfd8faec31c1467d8c7e3b3d91c0a75a, type: 3}
+  m_Name: HoldGrips
+  m_EditorClassIdentifier: Assembly-CSharp::HoldGripTable
+  entries:
+  - creatureType: AfterglowPod
+    gripInBounds: {x: 0, y: -0.8, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: BirdBones
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: BirdCreature
+    gripInBounds: {x: 0, y: -0.3, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: BlastCore
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: BounceShroom
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: BubbleFlower
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: -6}
+    followPitch: 0
+    handNudge: {x: 0.28, y: -0.32, z: 0.4}
+  - creatureType: CaveHarvestItem
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: CeilingBatBug
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: CeilingBatBugEgg
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: ChameleonCreature
+    gripInBounds: {x: 0, y: -0.2, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: CisternSnail
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: CorruptSeed
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: ErosiveFluidDroplet
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: FireBubble
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: FireEater
+    gripInBounds: {x: 0, y: -0.3, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: FireFlower
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: -6}
+    followPitch: 0
+    handNudge: {x: 0.28, y: -0.32, z: 0.4}
+  - creatureType: FireSource
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: FlashBloom
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: -6}
+    followPitch: 0
+    handNudge: {x: 0.28, y: -0.32, z: 0.4}
+  - creatureType: FuzzCreature
+    gripInBounds: {x: 0, y: -0.7, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GeneralAsura
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: MeleeAsura
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: RangedAsura
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: RollingAsura
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GeodeLarva
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GlimLantern
+    gripInBounds: {x: 0, y: 1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: -0.05, z: 0.05}
+  - creatureType: GlowBee
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GlowHoney
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GlyphDroplet
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: GooCreature
+    gripInBounds: {x: 0, y: -0.8, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: LeafGardenWalker
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: LightMoth
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: MushroomEssence
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: MushroomTree
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: -6}
+    followPitch: 0
+    handNudge: {x: 0.28, y: -0.32, z: 0.4}
+  - creatureType: ProjectileCreature
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: RecycleFlower
+    gripInBounds: {x: 0, y: -0.9, z: 0}
+    heldEuler: {x: 0, y: 0, z: -6}
+    followPitch: 0
+    handNudge: {x: 0.28, y: -0.32, z: 0.4}
+  - creatureType: RestSpot
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: RewindCoil
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: SeaAngelCreature
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: SkySpider
+    gripInBounds: {x: 0, y: 0, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: Squirrel
+    gripInBounds: {x: 0, y: -0.2, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: SquirrelFood
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}
+  - creatureType: SquirrelNest
+    gripInBounds: {x: 0, y: -1, z: 0}
+    heldEuler: {x: 0, y: 0, z: 0}
+    followPitch: 0
+    handNudge: {x: 0, y: 0, z: 0}

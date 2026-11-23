@@ -67,6 +67,24 @@ public sealed class FuzzCreature : Creature
     [Tooltip("Coats of goo it can hold.")]
     [Range(1, 4)] [SerializeField] private int maxGoo = 2;
 
+    [Header("Grown (Pack Beast)")]
+    [Tooltip("A grown-up fuzz: too big to carry, never hangs in a rope, and only follows the player while it is warm " +
+             "(Heat at least Follow Heat). Cold, it sits where it is. FuzzPackBeast on the same object lets it carry things.")]
+    [SerializeField] private bool grown;
+    [Tooltip("Grown only: the Heat it needs to keep following the player.")]
+    [Min(0f)] [SerializeField] private float followHeat = 2f;
+    [Tooltip("Grown only: cold, it walks to a fire within this many metres to warm up (0 = it just sits).")]
+    [Min(0f)] [SerializeField] private float seekFireRadius = 35f;
+    [Tooltip("Grown only: it stays by the fire until its Heat is this many times Follow Heat, then goes back to the player.")]
+    [Min(1f)] [SerializeField] private float warmEnoughFactor = 3f;
+    [Tooltip("Grown only: once warm it walks back to the player from this far (then joins the chain at Notice Radius).")]
+    [Min(0f)] [SerializeField] private float returnRadius = 60f;
+
+    // Grown: the fire it is walking to while cold, and whether it is still warming up there.
+    private FireSource heatGoal;
+    private bool warmingUp;
+    private float nextFireSearch;
+
     [Header("Runtime State (Read Only)")]
     [SerializeField] private int gooCoats;
     [SerializeField] private bool following;
@@ -102,6 +120,15 @@ public sealed class FuzzCreature : Creature
     private const int GooRings = 10, GooSides = 6;
 
     public bool IsFollowing => following;
+    public bool Grown => grown;
+    public float Radius => radius;
+    public float HeatForRed => heatForRed;
+    public float FollowHeat => followHeat;
+    /// <summary>Grown: warm enough to follow. Small ones always are.</summary>
+    public bool WarmEnoughToFollow => !grown || Heat >= followHeat;
+    /// <summary>Current up-down squash of the body (1 = round), so things on its back can ride the hop.</summary>
+    public float Squash => squash;
+    public override bool CanBeCarried => !grown;
     /// <summary>True for the top of a hanging rope.</summary>
     public bool Anchored => Rope.Count > 0 && Rope[0] == this;
     public bool InRope => Rope.Contains(this);
@@ -129,7 +156,7 @@ public sealed class FuzzCreature : Creature
         Rope.Add(this);
         foreach (FuzzCreature f in new List<FuzzCreature>(Chain))
         {
-            if (f == null || f == this || f.IsDead) continue;
+            if (f == null || f == this || f.IsDead || f.grown) continue;
             f.LeaveChain();
             Rope.Add(f);
         }
@@ -317,8 +344,19 @@ public sealed class FuzzCreature : Creature
             // Rope-like follow: stay `spacing` behind whoever is ahead, on the line towards them.
             Vector3 leader = LeaderPosition();
             Vector3 toLeader = Vector3.ProjectOnPlane(leader - position, Vector3.up);
-            float gap = toLeader.magnitude - spacing;
+            float gap = toLeader.magnitude - spacing - LeaderBulk();
             if (gap > 0.05f) desired = toLeader.normalized * Mathf.Min(maxSpeed, gap * 3f);
+        }
+        else if (grown && (warmingUp || !WarmEnoughToFollow))
+        {
+            // Cold: it goes to the nearest fire and sits by it until it is properly warm.
+            desired = SeekHeat(position, deltaTime);
+        }
+        else if (grown && player != null && Vector3.Distance(position, player.position) < returnRadius)
+        {
+            // Warm again but away from the player: it walks back until it joins the chain.
+            Vector3 toPlayer = Vector3.ProjectOnPlane(player.position - position, Vector3.up);
+            if (toPlayer.magnitude > spacing) desired = toPlayer.normalized * maxSpeed * 0.7f;
         }
         else
         {
@@ -394,17 +432,57 @@ public sealed class FuzzCreature : Creature
             LeaveChain();
             return;
         }
-        if (!following && distance < noticeRadius)
+        if (!WarmEnoughToFollow || warmingUp)
+        {
+            if (following) { LeaveChain(); home = transform.position; }
+            chainIndex = -1;
+            return;
+        }
+        // With the creature song on, it joins only after its phrase has been played.
+        bool called = CreatureSong.IsFollowing(this);
+        if (!following && (CreatureSong.Active ? called : distance < noticeRadius))
         {
             Chain.Add(this);
             following = true;
         }
-        else if (following && distance > loseRadius)
+        else if (following && (CreatureSong.Active ? !called : distance > loseRadius))
         {
             LeaveChain();
             home = transform.position;
         }
         chainIndex = following ? Chain.IndexOf(this) : -1;
+    }
+
+    /// <summary>Grown and cold: walk to the nearest burning fire and stay beside it until warm. Returns the walk velocity.</summary>
+    private Vector3 SeekHeat(Vector3 position, float deltaTime)
+    {
+        if (!WarmEnoughToFollow) warmingUp = true;
+        else if (Heat >= followHeat * warmEnoughFactor) { warmingUp = false; heatGoal = null; return Vector3.zero; }
+        if (seekFireRadius <= 0f) return Vector3.zero;
+        nextFireSearch -= deltaTime;
+        if (heatGoal == null || heatGoal.IsDead || heatGoal.IsCarried || heatGoal.Heat <= 0f || nextFireSearch <= 0f)
+        {
+            nextFireSearch = 3f;
+            heatGoal = null;
+            float best = seekFireRadius;
+            foreach (FireSource fire in FindObjectsByType<FireSource>(FindObjectsSortMode.None))
+            {
+                if (fire == null || fire.IsDead || fire.IsCarried || fire.Heat <= 0f || !fire.isActiveAndEnabled) continue;
+                float d = Vector3.Distance(position, fire.transform.position);
+                if (d < best) { best = d; heatGoal = fire; }
+            }
+        }
+        if (heatGoal == null)
+        {
+            // No fire anywhere near: it huddles where it is; once warm enough to follow (petting) it gets up.
+            if (WarmEnoughToFollow) warmingUp = false;
+            return Vector3.zero;
+        }
+        // Close enough to feel its heat (half its radiation range), just clear of its body.
+        Vector3 toFire = Vector3.ProjectOnPlane(heatGoal.transform.position - position, Vector3.up);
+        float stop = Mathf.Max(radius + 1f, heatGoal.RadiationRadius * 0.45f);
+        if (toFire.magnitude <= stop) return Vector3.zero;
+        return toFire.normalized * Mathf.Min(maxSpeed * 0.6f, (toFire.magnitude - stop) * 2f + 0.5f);
     }
 
     private void LeaveChain()
@@ -413,6 +491,14 @@ public sealed class FuzzCreature : Creature
         Chain.Remove(this);
         following = false;
         chainIndex = -1;
+    }
+
+    /// <summary>Extra gap behind a grown one, so a small one never walks into its big body.</summary>
+    private float LeaderBulk()
+    {
+        int index = Chain.IndexOf(this);
+        if (index <= 0 || Chain[index - 1] == null || !Chain[index - 1].grown) return 0f;
+        return Chain[index - 1].radius;
     }
 
     private Vector3 LeaderPosition()

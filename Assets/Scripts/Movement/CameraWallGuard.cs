@@ -71,6 +71,9 @@ public sealed class CameraWallGuard : MonoBehaviour
         float wanted = distance - allowed;
         // Pull in at once so the wall never shows through; let go slowly so the view does not pop.
         pulledBack = wanted > pulledBack ? wanted : Mathf.MoveTowards(pulledBack, wanted, releaseSpeed * Time.deltaTime);
+        // Never more than the way back to the body: after a teleport the old pull (from the old, far-away eye) must not
+        // carry over, or the camera hangs far from the body and the arms and torso stretch out to it.
+        pulledBack = Mathf.Min(pulledBack, distance);
         if (pulledBack > 1e-4f) cameraHolder.position = eye - direction * pulledBack;
     }
 

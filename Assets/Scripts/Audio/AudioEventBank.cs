@@ -33,6 +33,8 @@ public class AudioEventDef
     [Min(0.01f)] public float fadeIn = 1.5f;
     [Tooltip("Music layers: seconds to fade out when the channel is left.")]
     [Min(0.01f)] public float fadeOut = 3f;
+    [Tooltip("Music layers: region music that takes the base track's place (the base fades out as this fades in).")]
+    public bool replacesBase;
     [Tooltip("Synth voice used while no clip is assigned. -1 = silent.")]
     public int placeholderVoice = -1;
 }

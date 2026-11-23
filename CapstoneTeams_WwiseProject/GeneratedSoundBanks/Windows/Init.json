@@ -10,7 +10,7 @@
     "Type": "User",
     "GUID": "{701ECBBD-9C7B-4030-8CDB-749EE5D1C7B9}",
     "Language": "SFX",
-    "Hash": "{34EF7C57-694E-1EA2-DA8E-865C25ED8C24}",
+    "Hash": "{888E8F42-BC04-7D42-4D78-EA33CA1C55CF}",
     "ObjectPath": "Init",
     "ShortName": "Init",
     "Path": "Init.bnk",
@@ -80,16 +80,52 @@
       "GUID": "{FD0B5E54-FFDA-4471-8F77-27DC7547847F}"
      },
      {
+      "Id": "1241966871",
+      "Name": "BGM_island",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_island",
+      "GUID": "{256E7AAE-5B28-45E1-904F-C2466B357AF7}"
+     },
+     {
+      "Id": "1544215172",
+      "Name": "BGM_flowers",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_flowers",
+      "GUID": "{4B1C7467-AD65-46BA-AFA8-8104795DE517}"
+     },
+     {
       "Id": "1599936364",
       "Name": "BGM_timespider",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_timespider",
       "GUID": "{8F06F720-9DAC-4F43-B8C2-C1A25049E173}"
      },
      {
+      "Id": "1858147165",
+      "Name": "BGM_maw",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_maw",
+      "GUID": "{D3167C01-839F-4E3E-8557-1968B3401DD8}"
+     },
+     {
+      "Id": "2940023732",
+      "Name": "BGM_hungrycave",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_hungrycave",
+      "GUID": "{4F37A1BB-7E93-4E34-A356-960FA8D39809}"
+     },
+     {
       "Id": "3397956017",
       "Name": "BGM_bird",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bird",
       "GUID": "{50029BD0-54A0-4825-8C36-84243EF4B481}"
+     },
+     {
+      "Id": "3558075418",
+      "Name": "BGM_basic",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_basic",
+      "GUID": "{207E80F5-8088-4EAF-806C-E992905BD833}"
+     },
+     {
+      "Id": "3700541675",
+      "Name": "BGM_bell",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_bell",
+      "GUID": "{36FE1C92-D8E9-450B-B25B-DFA3871EA56B}"
      },
      {
       "Id": "4101327976",
@@ -126,10 +162,16 @@
       "Name": "Tutorial_5",
       "ObjectPath": "\\Game Parameters\\Default Work Unit\\Tutorial_5",
       "GUID": "{F45F7410-E9F8-4B9D-8A43-CF872791FBA2}"
+     },
+     {
+      "Id": "4238026883",
+      "Name": "BGM_glim",
+      "ObjectPath": "\\Game Parameters\\Default Work Unit\\BGM_glim",
+      "GUID": "{09780652-EC0C-4360-920E-E778B158F857}"
      }
     ]
    }
   ],
-  "FileHash": "{347A93BA-AF16-3717-5F57-BF8875613113}"
+  "FileHash": "{47C0FE5B-D28D-7030-1057-316096358451}"
  }
 }

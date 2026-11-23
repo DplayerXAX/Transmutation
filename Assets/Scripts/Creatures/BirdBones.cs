@@ -32,12 +32,10 @@ public sealed class BirdBones : Creature
             root.AddComponent<Rigidbody>().mass = 0.15f;
             root.AddComponent<BoxCollider>().size = new Vector3(0.45f, 0.2f, 0.7f);
             bones = root.AddComponent<BirdBones>();
-            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject visual = VisualPrimitive.Create(PrimitiveType.Cube);
             visual.name = "Bone Placeholder";
             visual.transform.SetParent(root.transform, false);
             visual.transform.localScale = new Vector3(0.45f, 0.2f, 0.7f);
-            visual.GetComponent<Collider>().enabled = false;
-            Destroy(visual.GetComponent<Collider>());
             if (fallbackMaterial == null)
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit");

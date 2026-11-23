@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -392,6 +392,18 @@ public sealed partial class ProceduralWorld
         mesh.RecalculateBounds();
         return mesh;
     }
+    /// <summary>The inner material for a chunk: the first zone it overlaps, else the world's.</summary>
+    private Material InnerMaterialFor(Vector3Int coord)
+    {
+        Material fallback = innerMaterial != null ? innerMaterial : surfaceMaterial;
+        if (innerMaterialZones == null || innerMaterialZones.Length == 0) return fallback;
+        Vector3 min = transform.position + gridMin + (Vector3)(coord * GridChunkCells) * CellSize;
+        var chunk = new Bounds(min + Vector3.one * ChunkWidth * 0.5f, Vector3.one * ChunkWidth);
+        foreach (InnerMaterialZone zone in innerMaterialZones)
+            if (zone.material != null && zone.bounds.Intersects(chunk)) return zone.material;
+        return fallback;
+    }
+
     private void Apply(ChunkResult result, bool update, Bounds changedBounds)
     {
         ChunkState state = chunks[result.coord];
@@ -405,7 +417,7 @@ public sealed partial class ProceduralWorld
             state.gameObject.transform.SetParent(transform, false);
             state.gameObject.transform.localPosition = gridMin + (Vector3)(result.coord * GridChunkCells) * CellSize;
             state.gameObject.GetComponent<ProceduralWorldChunk>().Initialize(this, result.coord);
-            state.gameObject.GetComponent<MeshRenderer>().sharedMaterials = new[] { surfaceMaterial, innerMaterial != null ? innerMaterial : surfaceMaterial };
+            state.gameObject.GetComponent<MeshRenderer>().sharedMaterials = new[] { surfaceMaterial, InnerMaterialFor(result.coord) };
         }
         Mesh old = state.mesh;
         if (state.gameObject != null)

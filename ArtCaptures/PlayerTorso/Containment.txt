@@ -1,0 +1,3 @@
+PASS: 148459 bone/vessel vertices checked against actual skin triangles from four directions.
+Outside vertices: 0. Minimum axial clearance: 0.0174 m.
+Tapered waist and shallow abdomen; internal anatomy follows the local skin cross section.

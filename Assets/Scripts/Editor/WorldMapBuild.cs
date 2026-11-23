@@ -12,7 +12,7 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// Builds Scene_World (the combined map from Daniel's whiteboard) from a copy of Scene_LeafMap.
 /// Source scenes are never saved. A live Editor rebuild opens Scene_World additively so another dirty scene remains open.
-/// Phase 1: terrain layout (WorldMapTerrain), Goo region + Cistern sky island grafted into the saved terrain, spire and
+/// Phase 1: terrain layout (WorldMapTerrain), Goo region, Cistern sky island and Flame Canyon grafted into the saved terrain, spire and
 /// bone mother moved onto their sinkholes, placeholder forest and ruins, review captures.
 /// </summary>
 public static class WorldMapBuild
@@ -20,7 +20,7 @@ public static class WorldMapBuild
     public const string ScenePath = "Assets/Scenes/Scene_World.unity";
     private const string LeafPath = "Assets/Scenes/Scene_LeafMap.unity";
     private const string GooPath = "Assets/Scenes/Scene_Goo.unity";
-    private const string CisternPath = "Assets/Scenes/Scene_CisternBasin.unity";
+    internal const string CisternPath = "Assets/Scenes/Scene_CisternBasin.unity";
     private const string TerrainPath = "Assets/Terrain/Sculpted/Scene_World_Terrain.asset";
     private const string Folder = "Assets/Generated/WorldMap";
     private const string Captures = "ArtCaptures/WorldMap";
@@ -40,13 +40,16 @@ public static class WorldMapBuild
             Graft(world, GooPath, WorldMapTerrain.GooOffset, WorldMapTerrain.GooLower, WorldMapTerrain.GooUpper, SurfaceGoo, log);
             Vector3 r = new Vector3(WorldMapTerrain.IslandRadius * 1.2f, 0f, WorldMapTerrain.IslandRadius * 1.2f);
             Graft(world, CisternPath, WorldMapTerrain.IslandOffset, new Vector3(-r.x, -76f, -r.z), new Vector3(r.x, 48f, r.z), Island, log);
+            WorldMapFlameCanyon.GraftTerrain(world, log);
             AssetDatabase.SaveAssetIfDirty(world.SculptData);
             PrepareSampler(world);
             Landmarks(scene, world, log);
             Player(scene, world, log);
             Transform root = scene.GetRootGameObjects().First(g => g.name == RootName).transform;
             WorldMapPlaceholders.Build(root, log);
+            WorldMapSilkTrees.Replace(scene, root, log);
             WorldMapImport.All(scene, root, log);
+            WorldMapIslandCrystals.Build(root, world, log);
             WorldMapDress.All(scene, root, log);
             Cameras(root);
             EditorSceneManager.SaveScene(scene);
@@ -170,7 +173,7 @@ public static class WorldMapBuild
         "{\"position\":{\"x\":" + F(at.x) + ",\"y\":" + F(at.y) + "},\"radius\":" + F(radius) + "}";
     private static string F(float v) => v.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 
-    private static void PrepareSampler(ProceduralWorld world)
+    internal static void PrepareSampler(ProceduralWorld world)
     {
         typeof(ProceduralWorld).GetMethod("UseSavedLayout", Private).Invoke(world, null);
         typeof(ProceduralWorld).GetMethod("PrepareGrid", Private).Invoke(world, new object[] { world.SculptData != null ? world.SculptData.Headroom : 0f });
@@ -181,7 +184,7 @@ public static class WorldMapBuild
     /// Resamples a donor scene's saved terrain into the world's saved terrain inside a box (donor space), moved by
     /// offset. mask (donor-space point, base density, donor density) -> density lets a graft become a floating island or a roofed cave.
     /// </summary>
-    private static void Graft(ProceduralWorld target, string donorPath, Vector3 offset, Vector3 lower, Vector3 upper,
+    internal static void Graft(ProceduralWorld target, string donorPath, Vector3 offset, Vector3 lower, Vector3 upper,
         Func<Vector3, float, Func<float>, float> mask, List<string> log)
     {
         Scene own = target.gameObject.scene;
@@ -294,7 +297,7 @@ public static class WorldMapBuild
         return Mathf.Max(Vector2.Distance(at, centre) - width, Mathf.Max(floor - p.y, p.y - floor - arch));
     }
 
-    private static float Island(Vector3 q, float baseValue, Func<float> donor) => Mathf.Max(baseValue, IslandShape(q, donor));
+    internal static float Island(Vector3 q, float baseValue, Func<float> donor) => Mathf.Max(baseValue, IslandShape(q, donor));
     /// <summary>Distance from the island centre (donor x, z) scaled by the outline's wobble: the edge is IslandRadius.</summary>
     public static float IslandRadial(float x, float z)
     {
@@ -306,7 +309,6 @@ public static class WorldMapBuild
     private static float IslandShape(Vector3 q, Func<float> donor)
     {
         float R = WorldMapTerrain.IslandRadius;
-        float a = Mathf.Atan2(q.z, q.x);
         float r = IslandRadial(q.x, q.z);
         if (r > R + 4f || q.y < -43f) return -10f;
         float edge = R - r;
@@ -314,16 +316,9 @@ public static class WorldMapBuild
         // A shallow slab leaves a broad open-air gap above the ground.
         float under = q.y - (-4f - 10f * (1f - s * s));
         float slab = Mathf.Min(edge, under);
-        float hanging = float.MinValue;
-        if (q.y < -10f)
-        {
-            float lumps = 1f + (Mathf.PerlinNoise(a * 2.2f + 9f, q.y * 0.08f + 1f) - 0.5f) * 0.35f;
-            float radiusAt = Mathf.Pow(Mathf.Clamp01((q.y + 42f) / 32f), 0.8f) * R * 0.60f * lumps;
-            hanging = Mathf.Min(radiusAt - r, -10f - q.y + 3f);
-        }
-        if (slab < -3f && hanging < -3f) return Mathf.Max(slab, hanging);
-        float top = slab > -3f ? Mathf.Min(donor(), slab) : slab;
-        return Mathf.Max(top, hanging);
+        // No hanging rock under the slab: the giant ore gem (WorldMapIslandCrystals) makes up the underside.
+        if (slab < -3f) return slab;
+        return Mathf.Min(donor(), slab);
     }
 
     // ---------------- Floating stones up to the crystal island ----------------
@@ -405,7 +400,7 @@ public static class WorldMapBuild
         var mother = FindInScene<BoneKiln>(scene);
         Vector2 s = WorldMapTerrain.SpireSpot, m = WorldMapTerrain.MotherHole;
         spire.transform.position = new Vector3(s.x, WorldMapTerrain.Height(s.x, s.y), s.y);
-        mother.transform.position = new Vector3(m.x, WorldMapTerrain.LedgeTop, m.y);
+        mother.transform.position = new Vector3(m.x, WorldMapTerrain.Height(m.x, m.y), m.y);
         foreach (var (target, index) in new (Object, int)[] { (spire, 0), (mother, 1) })
         {
             var so = new SerializedObject(target);
@@ -414,7 +409,7 @@ public static class WorldMapBuild
             so.ApplyModifiedPropertiesWithoutUndo();
         }
         spire.transform.parent.name = "04 Tower ruins — Hanging Spire";
-        mother.transform.parent.name = "05 Great crack — bone mother wedged in it";
+        mother.transform.parent.name = WorldMapFlameCanyon.MotherGroup;
         log.Add("Spire on sinkhole 0 at " + spire.transform.position + ", mother on sinkhole 1 at " + mother.transform.position);
     }
 
@@ -432,7 +427,7 @@ public static class WorldMapBuild
 
     private const string CameraGroup = "Review cameras — disabled during play";
 
-    private static void Cameras(Transform root)
+    internal static void Cameras(Transform root)
     {
         var old = root.Find(CameraGroup); if (old != null) Object.DestroyImmediate(old.gameObject);
         var group = new GameObject(CameraGroup).transform; group.SetParent(root, false);
@@ -447,13 +442,13 @@ public static class WorldMapBuild
         Cam("01_TopDown", new Vector3(0, 900, 15), new Vector3(0, 0, 15.01f), 30, true, 335);
         Cam("02_Oblique", new Vector3(30, 330, -470), new Vector3(10, 0, 70), 42);
         Cam("03_SpawnView", new Vector3(-173, -7, -105), new Vector3(-157, -6, -98), 70);
-        Cam("04_CrackAndMother", new Vector3(-45, 30, 128), new Vector3(12, -16, 162), 60);
+        Cam("04_FlameCanyonAndMother", new Vector3(-150, 60, 120), new Vector3(0, -20, 162), 60);
         Cam("05_RuinsFromCrack", new Vector3(10, 22, 135), new Vector3(0, 30, 250), 60);
         Cam("06_CaveMouth", new Vector3(8, 52, -218), new Vector3(8, 2, -176), 65);
-        Cam("07_IslandFromFlowers", new Vector3(-150, 40, 20), new Vector3(0, 99, 60), 60);
+        Cam("07_IslandFromFlowers", new Vector3(-150, 40, 20), WorldMapTerrain.IslandOffset + new Vector3(0, 7, 0), 60);
         Cam("08_MushroomBasin", new Vector3(18, 28, 20), new Vector3(125, -29, 40), 65);
         Cam("09_GooCaveInside", new Vector3(4, 2, -175), new Vector3(4, -1, -125), 75);
-        Cam("10_FloatingStones", new Vector3(-250, 110, -10), new Vector3(-150, 55, 65), 75);
+        Cam("10_FloatingStones", new Vector3(-230, 95, -60), new Vector3(-80, 45, 70), 75);
     }
 
     private static void Capture(Scene scene, List<string> log = null)

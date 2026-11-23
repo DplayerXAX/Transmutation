@@ -1,0 +1,2 @@
+Trees: 2501. Triangles 394,117,824 -> 187,107,656 (52.5% reduction).
+Regular canopy width +25%, height +15%; continuous thicker core trunks. Stacked variants: 557 (283 two-scoop, 274 three-scoop); heights +20%. Low-crown squirrel habitat trees retained. Hive mounts, colliders and LOD bounds updated. Original source scene/meshes unchanged.

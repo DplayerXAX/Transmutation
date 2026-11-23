@@ -1,0 +1,3 @@
+PASS habitat 1: 6 squirrels, 6 root-side nests separated by >=28m; 60 sideways foods; configured 72 bees, 12 small trunk-mounted hives and authored nectar sources; exact sampled world ground in a temporary validation scene.
+PASS habitat 2: 6 squirrels, 6 root-side nests separated by >=28m; 60 sideways foods; configured 72 bees, 12 small trunk-mounted hives and authored nectar sources; exact sampled world ground in a temporary validation scene.
+PASS habitat 3: 6 squirrels, 6 root-side nests separated by >=28m; 60 sideways foods; configured 72 bees, 12 small trunk-mounted hives and authored nectar sources; exact sampled world ground in a temporary validation scene.

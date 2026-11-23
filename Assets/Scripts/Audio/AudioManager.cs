@@ -29,6 +29,8 @@ public sealed class AudioManager : MonoBehaviour
     [SerializeField] private string[] wwiseBanks = { "Transmutation" };
     [Tooltip("Posted on Start. Leave empty to start music from code.")]
     [SerializeField] private string startEvent = "PlayBGM";
+    [Tooltip("Wwise Game Parameter (0..100) on the base track; lowered while a region layer that replaces the base plays.")]
+    [SerializeField] private string baseParameter = "BGM_basic";
 
     [Header("Volume (Unity backend)")]
     [Range(0f, 1f)] public float masterVolume = 1f;
@@ -73,6 +75,10 @@ public sealed class AudioManager : MonoBehaviour
     }
 
     private static readonly List<MusicChannel> channels = new List<MusicChannel>();
+    // Conductor baton: one layer played alone (the others duck), and single creatures taken out of the mix.
+    private static string soloLayer;
+    private static readonly HashSet<Creature> mutedCreatures = new HashSet<Creature>();
+    private const float SoloDuck = 0.12f;
 
     private readonly Dictionary<string, AudioClip> placeholders = new Dictionary<string, AudioClip>();
     private readonly Dictionary<string, Layer> layers = new Dictionary<string, Layer>();
@@ -86,6 +92,7 @@ public sealed class AudioManager : MonoBehaviour
     private AudioEventDef baseDef;
     private AudioSource baseSource;
     private bool musicPlaying;
+    private float baseSent = -1f;
     private float beatDuration;
     private float lastBeatTime = -1f;
     private float lastGridHit = -1f;
@@ -105,6 +112,9 @@ public sealed class AudioManager : MonoBehaviour
     private float nextScan;
 
     public AudioEventBank Bank => bank;
+
+    /// <summary>For AudioManagers made at runtime: sets the bank before Start.</summary>
+    public void SetBank(AudioEventBank value) { if (bank == null) bank = value; }
     public bool UsingWwise => useWwise;
 
     private void Awake()
@@ -168,6 +178,17 @@ public sealed class AudioManager : MonoBehaviour
     public static float GetLayerWeight(string layerEvent)
     {
         return Instance != null && Instance.layers.TryGetValue(layerEvent, out Layer layer) ? layer.weight : 0f;
+    }
+
+    /// <summary>Plays one layer alone: it goes fully on, every other layer and the base duck. Null ends the solo.</summary>
+    public static void SoloLayer(string layerEvent) => soloLayer = string.IsNullOrEmpty(layerEvent) ? null : layerEvent;
+    public static string SoloedLayer => soloLayer;
+
+    /// <summary>A muted creature no longer raises its type's layer (others of its type still do).</summary>
+    public static void SetCreatureMuted(Creature creature, bool muted)
+    {
+        if (creature == null) return;
+        if (muted) mutedCreatures.Add(creature); else mutedCreatures.Remove(creature);
     }
 
     public static void RegisterChannel(MusicChannel channel)
@@ -314,6 +335,7 @@ public sealed class AudioManager : MonoBehaviour
         }
         baseDef = null;
         musicPlaying = false;
+        baseSent = -1f;
         lastBeatTime = -1f;
     }
 
@@ -500,7 +522,19 @@ public sealed class AudioManager : MonoBehaviour
 
         baseFade = Mathf.MoveTowards(baseFade, baseFadeTarget, dt / 2f);
         float musicGain = masterVolume * musicVolume * baseFade;
-        if (baseSource != null) baseSource.volume = baseDef.volume * musicGain;
+
+        // Region music replaces the base track instead of adding to it.
+        float replaced = 0f;
+        foreach (Layer l in layers.Values)
+            if (l.def.replacesBase) replaced = Mathf.Max(replaced, l.weight);
+        bool solo = soloLayer != null && layers.ContainsKey(soloLayer);
+        float baseWeight = solo ? SoloDuck : 1f - replaced;
+        if (baseSource != null) baseSource.volume = baseDef.volume * Mathf.Sin(baseWeight * Mathf.PI * 0.5f) * musicGain;
+        if (useWwise && !string.IsNullOrEmpty(baseParameter) && Mathf.Abs(baseWeight - baseSent) > 0.002f)
+        {
+            baseSent = baseWeight;
+            AkUnitySoundEngine.SetRTPCValue(baseParameter, baseWeight * 100f);
+        }
 
         foreach (Layer l in layers.Values) l.target = 0f;
 
@@ -511,7 +545,7 @@ public sealed class AudioManager : MonoBehaviour
                 Raise(ch.layerEvent, ch.Weight(p));
             foreach (CreatureEmitter e in creatures)
             {
-                if (e.creature == null || !e.creature.isActiveAndEnabled) continue;
+                if (e.creature == null || !e.creature.isActiveAndEnabled || mutedCreatures.Contains(e.creature)) continue;
                 float d = Vector3.Distance(p, e.creature.transform.position);
                 Raise(e.channel.layerEvent, Falloff(d, e.channel.innerRadius, e.channel.outerRadius));
             }
@@ -520,6 +554,7 @@ public sealed class AudioManager : MonoBehaviour
         foreach (Layer l in layers.Values)
         {
             float target = l.forced >= 0f ? l.forced : l.target;
+            if (solo) target = l.def.name == soloLayer ? 1f : Mathf.Min(target, SoloDuck);
             float time = target > l.weight ? l.def.fadeIn : l.def.fadeOut;
             l.weight = Mathf.MoveTowards(l.weight, target, dt / time);
 

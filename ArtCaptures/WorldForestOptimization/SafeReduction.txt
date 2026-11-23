@@ -1,0 +1,2 @@
+Restored crown geometry and all original surface attributes. Resampled 13035 intact capped ribbon paths; retained all 8 vertices of every kept cross section and both end caps.
+Instanced triangles: 47,537,632 -> 17,023,056. Position averaging and cross-strand welding removed. Materials unchanged.

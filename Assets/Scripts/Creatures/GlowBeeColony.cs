@@ -339,14 +339,11 @@ public sealed class GlowBeeColony : MonoBehaviour
 
     private static Renderer Part(Transform parent, string label, Vector3 position, Vector3 scale, Material material)
     {
-        GameObject part = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject part = VisualPrimitive.Create(PrimitiveType.Sphere);
         part.name = label;
         part.transform.SetParent(parent, false);
         part.transform.localPosition = position;
         part.transform.localScale = scale;
-        var collider = part.GetComponent<Collider>();
-        collider.enabled = false;
-        Destroy(collider);
         var renderer = part.GetComponent<Renderer>();
         renderer.sharedMaterial = material;
         return renderer;

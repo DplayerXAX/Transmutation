@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// A Bubble produced by FireFlower.
@@ -21,6 +21,9 @@ public sealed class FireBubble : LeashBubble
 
     [Tooltip("World-space Y height at which this Bubble stops rising and begins falling under gravity.")]
     [SerializeField] private float fallStartWorldY = 10f;
+
+    /// <summary>World-space Y at which the bubble stops rising (a region below sea level moves it down with its floor).</summary>
+    public float FallStartWorldY { get => fallStartWorldY; set => fallStartWorldY = value; }
 
     [Tooltip("Maximum horizontal distance from the Bubble's central upward path.")]
     [Min(0f)]

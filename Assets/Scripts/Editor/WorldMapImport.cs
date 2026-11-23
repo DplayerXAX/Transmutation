@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -20,6 +20,7 @@ public static class WorldMapImport
         Goo(scene, root, log);
         Mushrooms(scene, root, log);
         Island(scene, root, log);
+        WorldMapFlameCanyon.ImportContent(scene, root, log);
         SpawnCave(scene, root, log);
         RecycleSites(scene, root, log);
         RestSites(scene, root, log);

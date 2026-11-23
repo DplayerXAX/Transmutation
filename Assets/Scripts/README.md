@@ -4,10 +4,10 @@ One README per game system. Start here.
 
 | System | README | Covers |
 | --- | --- | --- |
-| Player | [Movement/README.md](Movement/README.md) | Movement, camera, wall guard, hand climbing, procedural body, carrying, interaction, prompt HUD |
-| Creatures | [Creatures/README.md](Creatures/README.md) | `Creature` base, fire cycle (Source, Flower, Bubble, Eater), Fuzz, Tentacle, Ore Colossus and Geode Larva, Droplet Choir (water beads that write glyphs; test scene `Scene_Droplets`) |
+| Player | [Movement/README.md](Movement/README.md) | Movement, camera, wall guard, hand climbing, procedural body, carrying, four-slot hotbar inventory (mouse wheel, `BodyMounts`), interaction, prompt HUD, conductor baton (`ConductorBaton`), mouse relock (`CursorRelock`) |
+| Creatures | [Creatures/README.md](Creatures/README.md) | `Creature` base, fire cycle (Source, Flower, Bubble, Eater), Fuzz (and the grown pack beast), Tentacle, Rewind Coil (time save point), Ore Colossus and Geode Larva, Droplet Choir (water beads that write glyphs; test scene `Scene_Droplets`), cave glow creatures (Glim Lantern, Lure Maw, Bell Snail, Tone Crate) |
 | World generation | [MarchingCubes/README.md](MarchingCubes/README.md) | `ProceduralWorld` (surface, caves, inner world), `MarchingCubesVolume`, density shapes |
-| World look and sky | [World/README.md](World/README.md) | `WorldDecorator`, `CaveHarvest`, `TerrainLinesLit` and decor shaders, skyboxes |
+| World look and sky | [World/README.md](World/README.md) | `WorldDecorator`, `CaveHarvest`, `TerrainLinesLit` and decor shaders, skyboxes, dark caves under the crack and strange water (`DarkTunnels`, `StrangeWater`) |
 | Meditation | [Meditation/README.md](Meditation/README.md) | M key meditation, reflection space, drawing on steles, creature journal and casts |
 | Landmarks | [Landmarks/README.md](Landmarks/README.md) | Hanging Spire, seeds, inscriptions, glyphs on steles |
 | Basin test level | [BasinLevel/README.md](BasinLevel/README.md) | Small basin, two towers, three creature routes, creature regrowth |
@@ -66,10 +66,22 @@ Creatures
 ## Other folders
 
 - `UI/` — `InteractionPromptHUD` (described in the Player README).
+  `LoadingVeil` boots itself in any scene with a ProceduralWorld: a wordless black veil (ring of 24 dots + a filling
+  line) that covers the world while terrain chunks, Hanging Spire / Bone Kiln builds, FloraPatch tiles and
+  SettleWhenGroundReady objects finish, then fades out (max 30 s; logs when it lifts). It cannot cover the editor freeze before the first
+  Play frame (script reload + scene reload), which happens before any game code can draw.
 - `Animation/` — `SkinnedMeshAnimator`, blend-shape ping-pong for modelled creatures.
 - `Dev/` — `ClimbTestDriver`, automated climbing test (editor started with `-climbTest`, see `Editor/ClimbTestLauncher`).
+  `HitchProbe` runs by itself in editor play: every frame over 33 ms goes to `Logs/HitchLog.txt` with the player position and the slow engine phases (scripts, physics, GC, instantiate, render).
+  `Editor/PerfCapture` (no menu): write `run` to `Temp/Perf.request` with the scene open; the editor presses Play, times
+  the enter-Play freeze, profiles startup / idle / walking / walking with the Game view maximised, exits Play and writes
+  `Logs/PerfReport.txt` (EditorLoop = editor-only cost, PlayerLoop = the game). Creature.Update is split per species
+  in the Profiler as "Creature tick: <type>".
+  `Editor/StallCapture` (no menu): write `x y z seconds` to `Temp/Stall.request`; the editor plays with the player at that point, notes what is awake every 20 s, profiles when frames stay slow and writes `Logs/StallReport.txt`.
+  `StartupTimeline` runs by itself in editor play: `Logs/StartupTimeline.txt` lists every log message and milestone
+  (scene objects awake, first frame, terrain complete, loading veil gone) with its time since the scene began loading.
 - `RenderingTests/` — experiments: dither renderer feature, photo capture, sphere post-process volume.
-- `Utilities/` — `DestroyAfterSeconds`, `Emitter` (spawn and launch a prefab), `XRotator`.
+- `Utilities/` — `VisualPrimitive` (display-only primitive with no collider; use it instead of CreatePrimitive plus destroying the collider, which costs about 5 ms each in Scene_World), `DestroyAfterSeconds`, `Emitter` (spawn and launch a prefab), `XRotator`.
 
 ## Habitat block (art bible reference)
 

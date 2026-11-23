@@ -34,7 +34,9 @@ Shader "Capstone/Landmarks/BoneComb"
             #pragma target 3.0
             #pragma vertex Vert
             #pragma fragment Frag
+            #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ShaderVariablesFunctions.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Body;
@@ -63,6 +65,7 @@ Shader "Capstone/Landmarks/BoneComb"
                 float3 positionWS : TEXCOORD0;
                 float3 normalWS : TEXCOORD1;
                 float2 uv : TEXCOORD2;
+                float fogFactor : TEXCOORD3;
             };
 
             Varyings Vert(Attributes input)
@@ -72,6 +75,7 @@ Shader "Capstone/Landmarks/BoneComb"
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.positionCS = TransformWorldToHClip(output.positionWS);
                 output.uv = input.uv;
+                output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -104,7 +108,9 @@ Shader "Capstone/Landmarks/BoneComb"
 
                 // Heat (from the kiln) warms the glow.
                 colour += _GlowColor.rgb * _GlowStrength * rim;
-                return half4(colour, alpha);
+                // Premultiplied: fog fades what this adds, so far away in the dark it is simply gone.
+                float seen = ComputeFogIntensity(InitializeInputDataFog(float4(input.positionWS, 1.0), input.fogFactor));
+                return half4(lerp(unity_FogColor.rgb * alpha, colour, seen), alpha * lerp(1.0, seen, 1.0 - saturate(dot(unity_FogColor.rgb, 1.0))));
             }
             ENDHLSL
         }

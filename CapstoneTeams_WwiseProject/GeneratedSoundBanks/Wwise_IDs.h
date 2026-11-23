@@ -15,12 +15,25 @@ namespace AK
     {
         static const AkUniqueID PLAY_BUBBLEPOP = 1532331005U;
         static const AkUniqueID PLAY_CLIMB_REACH = 1169957417U;
+        static const AkUniqueID PLAY_CRATE_B = 2552967964U;
+        static const AkUniqueID PLAY_CRATE_D = 2552967962U;
+        static const AkUniqueID PLAY_CRATE_E = 2552967963U;
+        static const AkUniqueID PLAY_CRATE_G = 2552967961U;
+        static const AkUniqueID PLAY_CRATE_THUMP = 2282554232U;
         static const AkUniqueID PLAY_DROP = 2007351433U;
         static const AkUniqueID PLAY_FOOTSTEP_LEFT = 2837114212U;
         static const AkUniqueID PLAY_FOOTSTEP_RIGHT = 1110411331U;
         static const AkUniqueID PLAY_LMB = 2490201179U;
         static const AkUniqueID PLAY_PICKUP = 3860455926U;
         static const AkUniqueID PLAY_SHOOTTENTACLE = 2973966097U;
+        static const AkUniqueID PLAY_SONG_A3 = 729569016U;
+        static const AkUniqueID PLAY_SONG_B3 = 746346605U;
+        static const AkUniqueID PLAY_SONG_C4 = 763124165U;
+        static const AkUniqueID PLAY_SONG_D4 = 779901872U;
+        static const AkUniqueID PLAY_SONG_E3 = 796679460U;
+        static const AkUniqueID PLAY_SONG_E4 = 796679459U;
+        static const AkUniqueID PLAY_SONG_FS3 = 751390632U;
+        static const AkUniqueID PLAY_SONG_G3 = 830234638U;
         static const AkUniqueID PLAY_TENTACLENEAR = 3181405346U;
         static const AkUniqueID PLAY_TUTORIAL = 283731184U;
         static const AkUniqueID PLAYBGM = 2542411811U;
@@ -28,12 +41,19 @@ namespace AK
 
     namespace GAME_PARAMETERS
     {
+        static const AkUniqueID BGM_BASIC = 3558075418U;
+        static const AkUniqueID BGM_BELL = 3700541675U;
         static const AkUniqueID BGM_BIRD = 3397956017U;
         static const AkUniqueID BGM_CAVE = 861516679U;
         static const AkUniqueID BGM_CLIMB = 224820983U;
+        static const AkUniqueID BGM_FLOWERS = 1544215172U;
         static const AkUniqueID BGM_FLUID = 840600496U;
         static const AkUniqueID BGM_FUZZY = 721355700U;
+        static const AkUniqueID BGM_GLIM = 4238026883U;
+        static const AkUniqueID BGM_HUNGRYCAVE = 2940023732U;
+        static const AkUniqueID BGM_ISLAND = 1241966871U;
         static const AkUniqueID BGM_LANDMARK = 4101327976U;
+        static const AkUniqueID BGM_MAW = 1858147165U;
         static const AkUniqueID BGM_TIMESPIDER = 1599936364U;
         static const AkUniqueID TUTORIAL_1 = 4230282115U;
         static const AkUniqueID TUTORIAL_2 = 4230282112U;

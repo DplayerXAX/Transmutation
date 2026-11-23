@@ -1,0 +1,5 @@
+PASS: four anatomical render layers; 152174 finite vertices, normals and vessel motion UVs.
+Shared limb skin and flowing pink vessel materials; blue bone variant at 72% opacity.
+User drawing: broad scalloped dorsal axis, seven paired fine ribs and a thin shield frame; two continuous Y-shaped front wings with a central opening and tapered lower prongs.
+Aortic arch/descending aorta, vena cava, neck/subclavian, renal, iliac and intercostal branches.
+No torso physics colliders; existing arm and leg IK ownership retained.

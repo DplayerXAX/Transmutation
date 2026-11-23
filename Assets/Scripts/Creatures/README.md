@@ -248,6 +248,18 @@ player (static `Chain` list); each one follows the one in front, joined by a sag
 chain past `loseRadius`. Body is a procedural lumpy mesh; fur is stacked shells drawn by the `StickyFur`
 shader (`furShells`).
 
+**Pack beast (grown fuzz)** — a `FuzzCreature` with **Grown** ticked plus `FuzzPackBeast`. Radius 1 m, too big to
+carry, never part of a rope, and it only follows while `Heat >= followHeat` (2). It cools slowly (`coolRate` 0.05).
+Cold, its fur turns black, it leaves the chain and walks to the nearest burning `FireSource` within
+`seekFireRadius` (35 m), sits at about half its radiation range until `Heat >= followHeat * warmEnoughFactor` (6),
+then walks back to the player (within `returnRadius` 60 m) and joins the chain again. No fire near: it huddles where
+it is; petting (LMB) warms it a little (up to 2 x followHeat), enough to get it up.
+`FuzzPackBeast` can still carry up to five creatures in its fur (`Load`, heat evens out with them), but since the
+inventory became a hotbar there is no player control for loading it. In Scene_Daniel:
+`Pack Beast (Grown Fuzz)` beside the spawn and `FireSource (pack beast warms here)` 16 m away (radiation 6/s, so
+its warmth reaches 6 m and it lasts about 11 minutes). A small fuzz following behind the beast keeps an extra gap
+of the beast's radius.
+
 **TentacleCreature** — an abstract octopus: primitive bones wrapped in a translucent membrane rebuilt every
 frame. Tentacles reach for and stick to nearby surfaces and step when stretched. It wanders and floats on
 them. **While carried**, if at least `minGripsToClimb` tentacles hold a surface, the player can climb:
@@ -294,6 +306,9 @@ a game's area title, fixed to the screen but made of real creatures: the choir b
 built in the choir's local space, so turning the view moves it with no lag. Creature count comes from the
 glyph's stroke length (spacing 0.045 m, 6 cm beads, flowing into solid strokes); writes in ~2.4 s, holds `hold`
 seconds. Title creatures have no active collider and cannot be carried.
+When a screen title scatters, its creatures fly off the screen (each along its own exit direction, mostly up
+and out) and only fade once they are outside the view; the spare creatures the glyph did not need leave the
+same way while it is being written. A safety net fades any straggler 6 s after the title has gone.
 `DropletChoir.Summon(groundPoint, key, source, material, count, height, hover, hold)` makes a one-off choir:
 its creatures condense out of the air (staggered fade-in), write the key once, the unneeded ones dissolve, the
 glyph holds, scatters, everything evaporates and the object removes itself.
@@ -302,6 +317,61 @@ a key is space-separated tokens, e.g. `flower grow _`; `~id` = flipped (opposite
 height bar, and place marks `_` (bar under = land), `^` (bar over = under the ground), `U` (bowl = hollow).
 Region titles (constants on `PlanetGlyphSource`): flower field `flower grow _`, cave `~door ^`, mushroom basin
 `shroom shroom U`, tower `spire@0.95 _`. `World/RegionTitles` summons them (see World README).
+
+**Rewind Coil** (`RewindCoil.cs`, time / blue) — a small, deformed glass ammonite (log-spiral tube whose last whorl peels
+away from the coil, leaning out of its plane, swelling into beads of chambers with a twisting three-lobed section and a
+bell-flared mouth; BoneComb glass, BoneMarble septa and lip, four feelers) with a tilted ring of 12 ticks round its whorl and up to 3 glowing beads in
+its chambers. All built in code at Play. It is a portable save point:
+- LMB (carried or on the ground) **marks**: it sheds a ghost copy of its shell on the spot (the echo) and pays out a
+  blue thread along the way it travels (samples every 0.3 m; body centre of the carrier while held, its own position
+  + `playerLift` on the ground; thinned past `maxSamples`; a jump > `breakJump` such as a respawn breaks it). The
+  ticks count the seconds.
+- LMB again while **carried** rewinds the player: kinematic + restricted, reeled back along the thread (16 m/s,
+  0.9-5 s, smoothstep), view eased back to the recorded look, 30 speed lines streaming along the thread on narrowing orbits (gathering towards the mark); ends on the mark, lifted
+  out of anything solid, then restores physics. Costs one bead. Refused (shudder) with no bead, while riding, in a
+  bubble or seated.
+- LMB again on the **ground** calls only the coil home along its thread (no bead).
+- Beads regrow by themselves (`beadRegrowSeconds` 45) and at once from heat: free fire bubbles and fire sources
+  touching it lose heat (`heatPerBead` 10). Chain: fire source > fire bubble > coil > player.
+Placed: Scene_Daniel by the spawn, Scene_World in the spawn chamber and on 6 route stones of the sky-island climb
+("Rewind Coil (Sky Stone 1-6)"). Placed ones hold still (`HoldUntilGround`) until a short down-ray finds ground.
+Test: `-climbTestRewind` in `ClimbTestDriver` (mark, walk 5.5 s, rewind, then a thrown coil called home, fire beads).
+
+Rewind Coil, tied thread (2026-11-15): a mark ties the thread to the player who made it (one coil at a time), so the
+coil can be set down or left behind; the thread then runs shell > mark > path > player. Rewind = LMB while holding it,
+LMB on it, or the **middle mouse button** from anywhere while it is not held. A rewind pops any bubble holding the player
+(at the start, on the way and at the end), the coil cannot be bubble-captured while reeling, and a coil clicked inside a
+bubble frees itself first. The old "coil alone goes home" only remains for marks made without a player.
+
+Rewind Coil, habit (2026-11-16, `Restless`): left alone on the ground with the camera within `restlessRange` (60 m), every
+`restSeconds` (9-22 s) it has a fit: marks its own spot (echo + thread, no player tie), makes `fitHops` (3-5) quick
+zigzag hops (`hopSpeed` 4-6.5 m/s, each turning 40-140 degrees from the last, only from the ground), then reels itself
+home along its thread. No bead cost. A click or pickup during a fit drops its own thread (a click then marks for the
+player). `restless` switches it off.
+
+### Tunnel glow creatures (dark caves, 2026-11-16)
+
+Four species live in the dark caves under the crack of Scene_World (`World/DarkTunnels.cs` places them).
+They share `CaveGlowCreature`: the only lights down there (unfogged `Capstone/Cave/Glow` / `GlowHalo` shaders in
+`Assets/Shaders/Cave/Resources`, plus one shadowless point light each), and a **voice**: each one is heard by the
+others within `voiceReach` metres (2.5 times as far while the conductor baton plays it alone, not at all while muted).
+Each species is also mapped to its own music layer in the event bank (`BGM_glim`, `BGM_maw`, `BGM_bell`).
+Each one has a **note** (`CaveNote` E, G, B, D, set by DarkTunnels: Glims E or B, snails G, the Maw D, each mesa its own); the baton moves the creatures of the note it plays and mutes the rest. Movement is slow eased following, checked against the terrain (`Fly` slides along rock, `Crawl` sticks to surfaces
+and wraps over edges); a blocked step is not taken, so they hold still instead of clipping.
+
+| Creature | Body (what it can do) | Chain | Baton guide |
+| --- | --- | --- | --- |
+| `GlimLantern` (cyan) | small floating bulb, black fins, trailing threads: a lamp that flies | drifts to Bell Snails and circles their shells; flees the Maw's voice; eaten by the Maw, buds again from a snail after `regrowSeconds` | flies straight to the crosshair at the distance it was picked at |
+| `LureMaw` (magenta) | long black crawler, lit mouth and teeth, glowing lure on a stalk | hunts by ear: crawls to the loudest Glim it hears (`hearing` x their reach), eats one in reach, rests `restSeconds`; its voice scares Glims and shuts snails | crawls over floors (not walls) to the rock the crosshair points at |
+| `BellSnail` (amber) | coiled glowing shell on a slow foot: a lantern on the wall | marks the way; Glims feed round it; shuts its shell (light out) while it hears the Maw | creeps along walls and ceilings towards the crosshair point |
+| (2026-11-18) | creatures answer the baton much faster (Glim 7, Maw 5, snail 2.6 m/s, mesa kick 9 m/s); mesas now vary in size, and heavy ones need Note Seeds of their note | | |
+| (notes) | every species has a note in `Assets/Resources/CreatureNotes.asset` (`CreatureNoteTable`): E drifting and glowing things, G growing things and grazers, B stone, water and slow bodies, D fire and hunters; mesas keep their own | changing note shows a small note over nearby creatures of that note, of any species; while a note plays, other species in reach drop out of the music | only cave glow creatures walk to the crosshair so far |
+| (guiding) | `CaveGlowCreature.GuidedTarget`: when the way is blocked or a guided creature stops making progress, it searches a route (Glims through open air; snails and the Maw along rock with their own `Crawl` rules, at most one search a frame, 700 points). No route: it goes as near as it can and waits | | |
+| `ToneCrate` = **Tone Mesa** (its note's colour) | huge flat-topped lump of living rock (generated mesa mesh about 7 x 4.5 x 7 m with strata ledges, the terrain's own material, on the ground layer with a mesh collider: walk on it, climb it with both hands), lying over the holes into the floor tunnels; 1-4 glowing crystals in each side show its note | never turns; its note slides it in a straight line along the axis nearest the crosshair, with inertia, until it hits rock and thumps; the thump brings the Lure Maw to look, shuts Bell Snails, scatters Glims | slides towards the crosshair point (one push per note, on the beat); `Play_Crate_<note>` / `Play_Crate_Thump` |
+
+A Glim can be carried (RMB) as a lantern: it widens the sight in the tunnels and opens the skeleton's fist that holds
+the conductor baton (see Movement README). Playing a Glim alone calls the Maw from far away; muting a Glim hides it
+from the Maw; muting the Maw stops it and lets the snails open.
 
 **CaveHarvestItem** (in `Scripts/World`) — fruit and flowers. Not alive; uses `Creature` only so pickup,
 prompts and carry work.
@@ -436,3 +506,5 @@ farther away. A player/camera is supplied by the museum level, not by this prefa
 **Tools > Creatures > Validate Squirrel Museum Display (Play Mode)** verifies variant inheritance,
 relocated placement, the two-squirrel population, local anchor isolation and capped periodic food.
 **Create Squirrel Museum Display Prefab** rebuilds a missing asset without overwriting an existing one.
+
+Every living creature is now played with the body's controls in Scene_World: see "Creature song" in the World README. Its role (melody, accompaniment, drums) and how it follows are in `Resources/CreatureNotes.asset`.

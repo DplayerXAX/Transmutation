@@ -131,6 +131,7 @@ Shader "Capstone/World/TerrainLinesLit"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/Shaders/World/LineWorldLighting.hlsl"
+            #include "Assets/Shaders/World/CaveReveal.hlsl"
 
             struct Attributes
             {
@@ -292,7 +293,15 @@ Shader "Capstone/World/TerrainLinesLit"
                 color = lerp(color, lineColor, TerrainLines(input.positionWS, normalWS) * detail);
 
                 color = LineWorldHaze(color, input.positionWS, _HazeColor, _HazeStart, _HazeEnd);
-                color = MixFog(color, input.fogFactor);
+                // Cave reveal lights uncover the rock round a glowing creature from the fog (CaveReveal.hlsl).
+                half reveal; half3 revealTint;
+                CaveReveal(input.positionWS, normalWS, reveal, revealTint);
+                half3 fogged = MixFog(color, input.fogFactor);
+                // Inside a reveal light the surface keeps its own look, cut out of the fog like a stencil.
+                color = lerp(fogged, color * revealTint, reveal);
+                // A trace of screen noise so the long dim gradient has no visible steps.
+                // (Scaled with the colour, so it vanishes with the light and leaves no edge of its own.)
+                color *= 1.0 + (frac(52.9829189 * frac(dot(input.positionCS.xy, float2(0.06711056, 0.00583715)))) - 0.5) * 0.06 * saturate(reveal * 4.0);
                 return half4(color, 1.0);
             }
             ENDHLSL

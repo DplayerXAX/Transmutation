@@ -195,6 +195,12 @@ public sealed class ClimbTestDriver : MonoBehaviour
             Quit();
             yield break;
         }
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestRewind") >= 0)
+        {
+            yield return CheckRewindCoil();
+            Quit();
+            yield break;
+        }
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-climbTestBellows2") >= 0)
         {
             yield return CheckBellowsTwo();
@@ -740,6 +746,152 @@ public sealed class ClimbTestDriver : MonoBehaviour
     }
 
     /// <summary>The Bellows: drinks heat, swells, pushes a box with its stream, floats when over-full, puffs when carried.</summary>
+    /// <summary>Rewind Coil: mark, walk away with it, rewind to the mark; then call a dropped one home.</summary>
+    private IEnumerator CheckRewindCoil()
+    {
+        Time.timeScale = 1f;
+        foreach (RewindCoil placed in FindObjectsByType<RewindCoil>(FindObjectsSortMode.None))
+            Log($"Placed coil '{placed.name}' at {placed.transform.position}, {Vector3.Distance(placed.transform.position, body.position):0.0} m from the player, ground below {(Physics.Raycast(placed.transform.position, Vector3.down, out RaycastHit below, 5f, ~0, QueryTriggerInteraction.Ignore) ? below.distance.ToString("0.00") + " m (" + below.collider.name + ")" : "none")}, kinematic {placed.GetComponent<Rigidbody>().isKinematic}, sleeping {placed.GetComponent<Rigidbody>().IsSleeping()}, gravity {placed.GetComponent<Rigidbody>().useGravity}, sim {placed.SimulationEnabled}, settle {placed.GetComponent<SettleWhenGroundReady>() != null}");
+        GameObject skyCoil = GameObject.Find("Rewind Coil (Sky Stone 3)");
+        if (skyCoil != null && framesPath != null)
+        {
+            yield return new WaitForSeconds(2f);
+            Log($"    sky coil 3 after 2 s at {skyCoil.transform.position}");
+            ShotOf(skyCoil.transform.position, "coil_sky_stone.png");
+        }
+        Vector3 flat = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;
+        var go = new GameObject("Test Rewind Coil");
+        go.transform.SetPositionAndRotation(body.position + flat * 2f, Quaternion.LookRotation(flat));
+        go.AddComponent<Rigidbody>();
+        go.AddComponent<SphereCollider>();
+        var coil = go.AddComponent<RewindCoil>();
+        yield return new WaitForSeconds(1.5f);
+        Log($"Rewind Coil: at {go.transform.position}, beads {coil.Beads}");
+        if (framesPath != null) ShotOf(go.transform.position, "coil_idle.png");
+        if (framesPath != null) Shot(go.transform.position + go.transform.right * 0.9f + Vector3.up * 0.3f + flat * 0.4f, go.transform.position, "coil_close.png");
+
+        // Its own habit: mark, dart about, reel itself home.
+        typeof(RewindCoil).GetField("restLeft", Private).SetValue(coil, 0.5f);
+        Vector3 home = coil.transform.position;
+        float fitStart = Time.time, farthest = 0f, travelled = 0f;
+        Vector3 lastAt = home;
+        bool fitSeen = false, fitShot = false;
+        while (Time.time - fitStart < 14f)
+        {
+            yield return null;
+            if (coil.Fitting) fitSeen = true;
+            else if (fitSeen && !coil.Rewinding) break;
+            travelled += Vector3.Distance(coil.transform.position, lastAt); lastAt = coil.transform.position;
+            farthest = Mathf.Max(farthest, Vector3.Distance(coil.transform.position, home));
+            if (!fitShot && fitSeen && Time.time - fitStart > 2.2f && framesPath != null)
+            { Shot(home + Vector3.up * 3f - flat * 5f, Vector3.Lerp(home, coil.transform.position, 0.5f), "coil_fit.png"); fitShot = true; }
+        }
+        Log($"    own fit just ended: {Vector3.Distance(coil.transform.position, home):0.00} m from home, speed {coil.GetComponent<Rigidbody>().linearVelocity.magnitude:0.00}, mark was {Vector3.Distance(coil.MarkPosition, home):0.00} m from home");
+        yield return new WaitForSeconds(0.6f);
+        Log($"    own fit: seen {fitSeen}, lasted {Time.time - fitStart - 0.6f:0.0} s, moved {travelled:0.0} m in all, farthest {farthest:0.0} m from home, ended {Vector3.Distance(coil.transform.position, home):0.00} m from home, kinematic {coil.GetComponent<Rigidbody>().isKinematic}, recording {coil.Recording}");
+        typeof(RewindCoil).GetField("restless", Private).SetValue(coil, false);
+
+        var carrier = FindFirstObjectByType<PlayerCreatureCarrier>();
+        typeof(PlayerCreatureCarrier).GetMethod("BeginCarry", Private).Invoke(carrier, new object[] { coil });
+        yield return new WaitForSeconds(1f);
+        Log($"    carried {coil.IsCarried}");
+        float yaw0 = controller.LookYaw;
+        coil.ReceiveInteraction(new CreatureInteraction(controller.gameObject, coil.transform.position, Camera.main.transform.forward));
+        Vector3 mark = coil.MarkPosition;
+        Log($"    marked {coil.Recording} at {mark}");
+        // Walk forward, turn, walk on.
+        controller.ScriptedMove = new Vector2(0f, 1f);
+        yield return new WaitForSeconds(3f);
+        controller.SetLook(controller.LookYaw + 80f, 10f);
+        yield return new WaitForSeconds(2.5f);
+        controller.ScriptedMove = Vector2.zero;
+        yield return new WaitForSeconds(0.5f);
+        Log($"    walked: {Vector3.Distance(body.position, mark):0.0} m from the mark, thread {coil.ThreadLength:0.0} m, beads {coil.Beads}");
+        if (framesPath != null) Shot(body.position + Vector3.up * 4f - flat * 3f + Vector3.Cross(Vector3.up, flat) * 6f, Vector3.Lerp(body.position, mark, 0.5f), "coil_thread.png");
+        if (framesPath != null) Save(Camera.main, Path.Combine(framesPath, "coil_firstperson_before.png"));
+        bool started = coil.Rewind();
+        Log($"    rewind started {started}");
+        float t0 = Time.time;
+        bool shot = false;
+        while (coil.Rewinding && Time.time - t0 < 8f)
+        {
+            if (!shot && Time.time - t0 > 0.6f && framesPath != null) { Save(Camera.main, Path.Combine(framesPath, "coil_rewinding.png")); shot = true; }
+            yield return null;
+        }
+        yield return new WaitForSeconds(0.3f);
+        Log($"    rewound in {Time.time - t0:0.0} s: {Vector3.Distance(body.position, mark):0.00} m from the mark, yaw off by {Mathf.DeltaAngle(controller.LookYaw, yaw0):0.0}, kinematic {body.isKinematic}, restricted {controller.Restricted}, beads {coil.Beads}, recording {coil.Recording}");
+        yield return new WaitForSeconds(1f);
+        Log($"    1 s later: {Vector3.Distance(body.position, mark):0.00} m from the mark, grounded {controller.Grounded}");
+
+        // Left behind: mark it on the ground, walk away empty-handed, rewind without holding it.
+        carrier.Release();
+        yield return new WaitForSeconds(1.5f);
+        coil.ReceiveInteraction(new CreatureInteraction(controller.gameObject, coil.transform.position, flat));
+        Vector3 groundMark = coil.MarkPosition;
+        controller.ScriptedMove = new Vector2(0f, 1f);
+        yield return new WaitForSeconds(3f);
+        controller.ScriptedMove = Vector2.zero;
+        yield return new WaitForSeconds(0.3f);
+        Log($"    left behind: tied {coil.TiedToPlayer}, carried {coil.IsCarried}, player {Vector3.Distance(body.position, groundMark):0.0} m from the mark, coil {Vector3.Distance(coil.transform.position, body.position):0.0} m away, thread {coil.ThreadLength:0.0} m");
+        started = coil.Rewind();
+        t0 = Time.time;
+        while (coil.Rewinding && Time.time - t0 < 8f) yield return null;
+        yield return new WaitForSeconds(0.3f);
+        Log($"    rewound without holding (started {started}): {Vector3.Distance(body.position, groundMark):0.00} m from the mark, kinematic {body.isKinematic}, restricted {controller.Restricted}, beads {coil.Beads}");
+
+        // Inside a bubble: rewinding bursts out of it and leaves the player free.
+        typeof(RewindCoil).GetField("beadCharge", Private).SetValue(coil, 3f);
+        var bubbleFlower = FindFirstObjectByType<TrappingBubble>();
+        yield return new WaitForSeconds(0.6f);
+        coil.ReceiveInteraction(new CreatureInteraction(controller.gameObject, coil.transform.position, flat));
+        Vector3 bubbleMark = coil.MarkPosition;
+        controller.ScriptedMove = new Vector2(0f, 1f);
+        yield return new WaitForSeconds(1.5f);
+        controller.ScriptedMove = Vector2.zero;
+        if (bubbleFlower != null)
+        {
+            TrappingBubble bubble = Instantiate(bubbleFlower, body.position, Quaternion.identity);
+            bubble.gameObject.SetActive(true);
+            float wait = Time.time;
+            var capture = controller.GetComponent<BubbleCapture>();
+            while (Time.time - wait < 3f && (capture == null || !capture.IsCaptured)) { yield return null; capture = controller.GetComponent<BubbleCapture>(); }
+            Log($"    in a bubble: captured {(capture != null && capture.IsCaptured)}, kinematic {body.isKinematic}, movement blocked {controller.BubbleMovementBlocked}");
+            yield return new WaitForSeconds(1f);
+            started = coil.Rewind();
+            t0 = Time.time;
+            while (coil.Rewinding && Time.time - t0 < 8f) yield return null;
+            yield return new WaitForSeconds(0.5f);
+            capture = controller.GetComponent<BubbleCapture>();
+            Log($"    rewound out of the bubble (started {started}): {Vector3.Distance(body.position, bubbleMark):0.00} m from the mark, still captured {(capture != null && capture.IsCaptured)}, kinematic {body.isKinematic}, restricted {controller.Restricted}, movement blocked {controller.BubbleMovementBlocked}, colliders on {controller.GetComponent<Collider>().enabled}");
+            controller.ScriptedMove = new Vector2(0f, 1f);
+            Vector3 before = body.position;
+            yield return new WaitForSeconds(1f);
+            controller.ScriptedMove = Vector2.zero;
+            Log($"    then walked {Vector3.Distance(body.position, before):0.0} m in 1 s");
+        }
+        else Log("    no trapping bubble in the scene to test with");
+
+        // Fire against it makes beads.
+        FireFlower flowerSource = FindFirstObjectByType<FireFlower>();
+        FireBubble prefab = flowerSource != null ? flowerSource.BubblePrefab : null;
+        if (prefab != null)
+        {
+            float before = (float)typeof(RewindCoil).GetField("beadCharge", Private).GetValue(coil);
+            FireBubble fire = Instantiate(prefab, go.transform.position + Vector3.up * 0.5f, Quaternion.identity);
+            fire.gameObject.SetActive(true);
+            fire.SetHeat(30f);
+            for (int k = 0; k < 6 && fire != null; k++)
+            {
+                fire.transform.position = go.transform.position + Vector3.up * 0.45f;
+                var rb = fire.GetComponent<Rigidbody>(); if (rb != null) { rb.position = fire.transform.position; rb.linearVelocity = Vector3.zero; }
+                yield return new WaitForSeconds(0.25f);
+            }
+            float after = (float)typeof(RewindCoil).GetField("beadCharge", Private).GetValue(coil);
+            Log($"    fire bubble beside it 1.5 s: beads {before:0.00} -> {after:0.00}, bubble heat {(fire != null ? fire.Heat : 0f):0.0}");
+            if (fire != null) Destroy(fire.gameObject);
+        }
+    }
+
     private IEnumerator CheckBellows()
     {
         Vector3 flat = Vector3.ProjectOnPlane(Camera.main.transform.forward, Vector3.up).normalized;

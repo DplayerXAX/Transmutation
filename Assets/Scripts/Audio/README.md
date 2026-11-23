@@ -8,7 +8,7 @@ event names, so it doesn't care whether Wwise or Unity audio is playing.
 
 **Tools > Capstone > Audio > Set Up Adaptive Music In Open Scene** (`Editor/AudioSetup.cs`):
 
-- creates or loads the event bank `Assets/Audio/AudioEvents.asset`,
+- creates or loads the event bank `Assets/Audio/Resources/AudioEvents.asset` (in Resources so runtime setup can load it),
 - adds an `AudioManager` object and links the bank,
 - adds a `BGM_landmark` `MusicChannel` to the Hanging Spire, a `CaveMusicChannel` (`BGM_cave`) to the
   `ProceduralWorld`, and `Footsteps` to the player body.
@@ -26,6 +26,8 @@ Other menu items:
 | `AudioEventBank` | ScriptableObject: every event by name, plus creature type → layer mapping. |
 | `MusicChannel` | Makes a layer audible near this object (or inside its `zone` collider). |
 | `CaveMusicChannel` | `MusicChannel` that fades in by depth: on below the surface, fully on under the inner ceiling. |
+| `RegionMusicChannel` | `MusicChannel` for a map region: a cylinder between two heights, fading out over `fadeDistance`. |
+| `SceneAudioBoot` | When Scene_World loads, adds what Scene_Daniel has (see below). |
 | `Footsteps` | Posts a left / right footstep each time a leg in `FirstPersonBody` plants. |
 | `PlaceholderSynth` | Generates simple in-sync loops and blips so the system is audible without real assets. |
 
@@ -43,6 +45,42 @@ The manager rescans for creatures every `creatureScanInterval`, so creatures nee
 
 Current layers: `BGM_fuzzy` (FuzzCreature), `BGM_fluid` (FireEater), `BGM_cave` (underground),
 `BGM_landmark` (Hanging Spire).
+
+## Region music (replaces the base)
+
+A layer with `replacesBase` on is region music: as it fades in, the base track fades out (Wwise Game
+Parameter `BGM_basic` on the `basic_test` track, 100 = full). The other layers keep playing on top.
+In Wwise the region tracks sit in the same 60 s segment as `basic_test` (120 BPM, E minor), so the
+crossfade stays on the beat.
+
+| Layer | Wwise track | Region |
+| --- | --- | --- |
+| `BGM_flowers` | `flowers_bubbles` (among flowers and bubbles) | Flower field |
+| `BGM_hungrycave` | `hungry_cave` (hungry cave) | Cave under the forest |
+| `BGM_island` | `mining_island` (mining island) | Crystal sky mining island |
+
+## Scene_World
+
+Scene_World has no audio objects of its own; `SceneAudioBoot` adds them when it loads, so rebuilding the
+scene does not lose them: an `AkInitializer` (if missing), an `AudioManager` with the bank, an
+`AkAudioListener` on the main camera (if missing), `ClimbMusicChannel` on the spire, `ClimbReachSound`
+on the `HandClimber`, `Footsteps` on the body (if missing), and one `RegionMusicChannel` per region above.
+The flower field and cave use the same shapes as the region titles (`RegionTitles.WorldMapRegions`);
+the island is `WorldMapTerrain.IslandOffset` / `IslandRadius`, from 30 m below it upward.
+
+## Tunnel creature layers and the conductor baton
+
+`BGM_glim`, `BGM_maw`, `BGM_bell` are mapped to `GlimLantern`, `LureMaw`, `BellSnail`. In Wwise they are the tracks
+`tunnel_glim` / `tunnel_maw` / `tunnel_bell` in `basic_test` (Volume RTPC on the Game Parameters of the same names, -6 dB),
+with placeholder stems generated in code (60 s, 120 BPM, E minor pentatonic: high glass bells, a low throbbing E pedal,
+soft kalimba plucks; `Originals/SFX/SFX/tunnel_*.wav`). Replace the wavs with real music and regenerate the bank. The same parts as MIDI (120 BPM, E minor, 30 bars): `Assets/Audio/MIDI/tunnel_glim.mid`, `tunnel_maw.mid`, `tunnel_bell.mid` (the Maw's continuous drone is written as held notes).
+
+Tone Crate notes: Sound SFX `Crate_E/G/B/D/Thump` (Containers > SFX, 3D, Near_30m attenuation; generated placeholder
+knock-and-bell tones E3 G3 B3 D4 and a low thump) with events `Play_Crate_*`, posted on the grid.
+
+The baton uses two calls: `AudioManager.SoloLayer(name)` plays one layer alone (it goes to 1, every other layer and the
+base duck to 0.12; null ends it) and `AudioManager.SetCreatureMuted(creature, true)` takes one creature out of the mix
+(others of its type still count).
 
 ## Code API (`AudioManager`, all static)
 

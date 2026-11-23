@@ -1,0 +1,15 @@
+Camera (-64.00, 32.00, 0.00) forward (1.00, 0.00, 0.00); far=1000; mask=-1
+PlayerObjects/Player; bounds=Center: (-64.00, 32.00, 0.00), Extents: (0.50, 1.00, 0.50); materials=HeatMap [Capstone/Effects/HeatMap]
+TARGET Tensioned silk strands pos=(-34.51, 6.87, -112.67) scale=(0.63, 0.63, 0.63) bounds=Center: (-57.87, 10.04, -120.94), Extents: (1.05, 2.77, 1.05) batched=False enabled=True mesh=Tensioned silk strands vertices=14552; meshbounds=Center: (-19.76, 5.04, -34.12), Extents: (1.17, 4.41, 1.20); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=40.6234
+TARGET Crown membranes pos=(58.11, 6.92, -177.98) scale=(0.63, 0.63, 0.63) bounds=Center: (73.99, 12.76, -159.26), Extents: (1.53, 2.22, 1.62) batched=False enabled=True mesh=Crown membranes vertices=75650; meshbounds=Center: (-19.93, 9.30, -33.58), Extents: (2.09, 3.53, 2.27); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=42.62109
+TARGET Crown membranes pos=(-34.51, 6.87, -112.67) scale=(0.63, 0.63, 0.63) bounds=Center: (-57.73, 12.71, -120.61), Extents: (1.92, 2.22, 1.94) batched=False enabled=True mesh=Crown membranes vertices=75650; meshbounds=Center: (-19.93, 9.30, -33.58), Extents: (2.09, 3.53, 2.27); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=42.62109
+TARGET Tensioned silk strands pos=(79.01, 4.28, -71.95) scale=(0.63, 0.63, 0.63) bounds=Center: (72.59, 7.45, -95.88), Extents: (0.90, 2.77, 0.92) batched=False enabled=True mesh=Tensioned silk strands vertices=14552; meshbounds=Center: (-19.76, 5.04, -34.12), Extents: (1.17, 4.41, 1.20); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=40.6234
+TARGET Crown membranes pos=(79.01, 4.28, -71.95) scale=(0.63, 0.63, 0.63) bounds=Center: (72.39, 10.12, -95.58), Extents: (1.64, 2.22, 1.72) batched=False enabled=True mesh=Crown membranes vertices=75650; meshbounds=Center: (-19.93, 9.30, -33.58), Extents: (2.09, 3.53, 2.27); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=42.62109
+TARGET Tensioned silk strands pos=(58.11, 6.92, -177.98) scale=(0.63, 0.63, 0.63) bounds=Center: (73.94, 10.09, -158.91), Extents: (0.85, 2.77, 0.87) batched=False enabled=True mesh=Tensioned silk strands vertices=14552; meshbounds=Center: (-19.76, 5.04, -34.12), Extents: (1.17, 4.41, 1.20); blockEmpty=True; emission=0
+Nonfinite=0; maxVertex=40.6234
+Fog=True color=RGBA(0.250, 0.300, 0.400, 1.000) density=0.0042

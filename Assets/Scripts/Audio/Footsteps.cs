@@ -27,6 +27,7 @@ public sealed class Footsteps : MonoBehaviour
         // The phase only advances while walking on the ground, so every new index is a real step.
         bool right = (step & 1) == 0;
         lastStep = step;
+        if (CreatureSong.PlayStep(gameObject, gridDivision)) return;
         AudioManager.PostEventOnGrid(right ? rightEvent : leftEvent, gameObject, gridDivision);
     }
 

@@ -463,8 +463,7 @@ public sealed class TentacleTether : MonoBehaviour
             aimLine.widthMultiplier = 0.025f;
             aimLine.material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             aimLine.shadowCastingMode = ShadowCastingMode.Off;
-            GameObject ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Destroy(ring.GetComponent<Collider>());
+            GameObject ring = VisualPrimitive.Create(PrimitiveType.Cylinder);
             ring.name = "Aim Marker";
             ring.transform.localScale = new Vector3(0.35f, 0.01f, 0.35f);
             ring.GetComponent<Renderer>().sharedMaterial = aimLine.material;
@@ -1056,8 +1055,7 @@ public sealed class TentacleTether : MonoBehaviour
 
     private static Transform Part(PrimitiveType type, Transform parent, Material material, float size)
     {
-        GameObject go = GameObject.CreatePrimitive(type);
-        Destroy(go.GetComponent<Collider>());
+        GameObject go = VisualPrimitive.Create(type);
         go.transform.SetParent(parent, false);
         go.transform.localScale = Vector3.one * size;
         var r = go.GetComponent<Renderer>();
