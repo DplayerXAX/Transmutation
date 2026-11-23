@@ -1,0 +1,61 @@
+World source spider: Sky Spider — canyon canopy, (4.66, 3.34, -177.73); flower: Bubble Flower — bird lure 6, (5.70, -3.49, -179.94).
+Temporary default-physics scene, source emitter configurations cloned without changing capture limits or gecko size. Automatic contact callbacks used; no direct TryCapture calls.
+World-configured web scale/radius: 4.20m, 237 strands.
+PIN web resting contact strand 0: body=(4.32, 103.23, -176.79), contact=(4.32, 103.23, -176.79), kinematic=True, gravity=False, mode=Discrete.
+PASS web resting contact strand 0: webCapture=True, simulation=False, kinematic=True.
+PASS web resting contact strand 0: passive hold drift 0.000m.
+PASS web resting contact strand 0: pinned hold drift 0.000m, kinematic=True.
+PASS web resting contact strand 0: silk collision suppression restored on release.
+PASS web resting contact strand 0: release restores independent dynamic body and simulation.
+PIN web 10m/s incoming contact strand 0: body=(4.32, 105.31, -176.79), contact=(4.56, 103.93, -176.72), kinematic=True, gravity=False, mode=Discrete.
+PASS web 10m/s incoming contact strand 0: webCapture=True, simulation=False, kinematic=True.
+PASS web 10m/s incoming contact strand 0: passive hold drift 0.000m.
+PASS web 10m/s incoming contact strand 0: pinned hold drift 0.000m, kinematic=True.
+PASS web 10m/s incoming contact strand 0: silk collision suppression restored on release.
+PASS web 10m/s incoming contact strand 0: release restores independent dynamic body and simulation.
+PIN web resting contact strand 20: body=(3.89, 103.22, -177.38), contact=(4.26, 103.38, -176.85), kinematic=True, gravity=False, mode=Discrete.
+PASS web resting contact strand 20: webCapture=True, simulation=False, kinematic=True.
+PASS web resting contact strand 20: passive hold drift 0.000m.
+PASS web resting contact strand 20: pinned hold drift 0.000m, kinematic=True.
+PASS web resting contact strand 20: silk collision suppression restored on release.
+PASS web resting contact strand 20: release restores independent dynamic body and simulation.
+PIN web 10m/s incoming contact strand 20: body=(3.89, 105.55, -177.38), contact=(3.79, 105.21, -178.78), kinematic=True, gravity=False, mode=Discrete.
+PASS web 10m/s incoming contact strand 20: webCapture=True, simulation=False, kinematic=True.
+PASS web 10m/s incoming contact strand 20: passive hold drift 0.000m.
+PASS web 10m/s incoming contact strand 20: pinned hold drift 0.000m, kinematic=True.
+PASS web 10m/s incoming contact strand 20: silk collision suppression restored on release.
+PASS web 10m/s incoming contact strand 20: release restores independent dynamic body and simulation.
+PIN web resting contact strand 40: body=(5.02, 103.41, -177.29), contact=(4.30, 103.29, -176.81), kinematic=True, gravity=False, mode=Discrete.
+PASS web resting contact strand 40: webCapture=True, simulation=False, kinematic=True.
+PASS web resting contact strand 40: passive hold drift 0.000m.
+PASS web resting contact strand 40: pinned hold drift 0.000m, kinematic=True.
+PASS web resting contact strand 40: silk collision suppression restored on release.
+PASS web resting contact strand 40: release restores independent dynamic body and simulation.
+PIN web 10m/s incoming contact strand 40: body=(5.02, 105.97, -177.29), contact=(5.32, 105.32, -178.51), kinematic=True, gravity=False, mode=Discrete.
+PASS web 10m/s incoming contact strand 40: webCapture=True, simulation=False, kinematic=True.
+PASS web 10m/s incoming contact strand 40: passive hold drift 0.000m.
+PASS web 10m/s incoming contact strand 40: pinned hold drift 0.000m, kinematic=True.
+PASS web 10m/s incoming contact strand 40: silk collision suppression restored on release.
+PASS web 10m/s incoming contact strand 40: release restores independent dynamic body and simulation.
+CONTACT flower projectile meets grounded gecko: collisions=1, triggers=1, body=(24.00, 97.24, -174.00), bubble=(24.00, 97.31, -174.40), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS flower projectile meets grounded gecko: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS flower projectile meets grounded gecko: retained, AI suspended, shell radius 2.12m fits occupant.
+PASS flower projectile meets grounded gecko: pop restores dynamic physics, collision and simulation.
+CONTACT 10m/s grounded gecko meets flower bubble: collisions=1, triggers=1, body=(24.00, 97.24, -175.69), bubble=(24.00, 97.44, -175.29), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS 10m/s grounded gecko meets flower bubble: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS 10m/s grounded gecko meets flower bubble: retained, AI suspended, shell radius 2.09m fits occupant.
+PASS 10m/s grounded gecko meets flower bubble: pop restores dynamic physics, collision and simulation.
+CONTACT initial bubble overlap contact: collisions=1, triggers=1, body=(24.00, 97.45, -177.00), bubble=(24.00, 97.65, -177.40), simulation=False, bubbleSimulation=True, targetLayer=0, bubbleLayer=0.
+PASS initial bubble overlap contact: measured model 3.55m, limit 4.00m; occupied=True, popped=False.
+PASS initial bubble overlap contact: retained, AI suspended, shell radius 2.12m fits occupant.
+PASS initial bubble overlap contact: pop restores dynamic physics, collision and simulation.
+PASS growing web captures body with non-default gravity and collision mode
+PASS newly grown strands respect existing captive collision ownership
+PASS disabling web releases captive and restores exact previous physics flags
+PASS release preserves pre-existing ignores and restores only pairs changed by capture
+PASS duplicate Release does not overwrite a subsequent movement owner
+PASS bubble takeover releases web before recording bubble physics ownership
+PASS popping takeover bubble restores the original free gecko rather than web-pinned state
+PASS: 52 TimeSpider Age hunting checks; warmed pursuit allocated 0 bytes / 500 steps.
+PASS existing general spider runtime suite: Passed: 48 runtime assertions
+Completed: 0 failed checks. Temporary scene and test geckos cleaned up; authored scene not saved.

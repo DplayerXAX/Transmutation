@@ -26,8 +26,10 @@ public sealed class PlayerCreatureInteractor : MonoBehaviour
     [Tooltip("Coat with aimed blood while a held ability owns left click.")]
     [SerializeField] private Key bloodCoatKey = Key.F;
     public string BloodCoatBinding => Keyboard.current != null ? Keyboard.current[bloodCoatKey].displayName : bloodCoatKey.ToString();
-    public PlayerCreatureStats PlayerStats => carrier != null && carrier.PlayerController != null
-        ? carrier.PlayerController.GetComponent<PlayerCreatureStats>() : GetComponentInParent<PlayerCreatureStats>();
+    public SmoothFirstPersonController PlayerController => carrier != null && carrier.PlayerController != null
+        ? carrier.PlayerController : GetComponentInParent<SmoothFirstPersonController>();
+    public PlayerCreatureStats PlayerStats => PlayerController != null
+        ? PlayerController.GetComponent<PlayerCreatureStats>() : GetComponentInParent<PlayerCreatureStats>();
     public bool CanInteractWithBlood(AsuraBlood blood) => isActiveAndEnabled && blood != null &&
         !RestSpotSystem.BlocksInteraction && !MeditationController.BlocksPlayerInput && !ReflectionVisitor.ConsumedClick &&
         !BoneAwakeningCutscene.Playing && !BoneRide.Busy && FindCreature() == blood;

@@ -49,7 +49,7 @@ public static class SkateGeckoValidation
             Set(gecko, "observer", player);
             for (int i = 0; i < 75; i++) { Call(gecko, "FixedUpdate"); physics.Simulate(.02f); }
             float flee = body.linearVelocity.magnitude;
-            Check(flee > 12 && body.position.z > 12, "Gecko should accelerate and flee at skating speed: " + flee);
+            Check(flee >= 9.5f && flee <= 10.5f && body.position.z > 12, "Gecko should accelerate to its current 10 m/s flee speed: " + flee);
             Check(!gecko.TryCatch(player), "Cannot catch gecko remotely.");
             animal.transform.position = new Vector3(0, .26f, 1.5f); body.position = animal.transform.position; body.linearVelocity = Vector3.zero; Physics.SyncTransforms();
             Check(gecko.TryCatch(player) && gecko.Captured, $"Close interaction catches gecko. player={rig.transform.position} gecko={body.position} sees={gecko.Sees(player)} restricted={player.Restricted} bubble={player.BubbleMovementBlocked}");
@@ -111,7 +111,20 @@ public static class SkateGeckoValidation
                 }
                 Check(true, "Full-speed pursuit remains within map edge/corner without recovery teleport."); Object.DestroyImmediate(wild);
             }
-            File.WriteAllText("ArtCaptures/SquirrelForest/GeckoChecks.txt", $"PASS: {checks} isolated physics and interaction checks. Flee={flee:F2} m/s, cruise={cruise:F2} m/s.\nSight occlusion, close catch, mount, coast, separate airborne bodies, sharp-turn separation, momentum and gravity checked.\n");
+            var incline = Make("Inclined contact regression"); incline.layer = 7;
+            incline.transform.SetPositionAndRotation(new Vector3(30,.5f,0),Quaternion.Euler(0,0,30));
+            var inclineCollider = incline.AddComponent<BoxCollider>(); inclineCollider.size = new Vector3(10,.2f,10);
+            var slopeAnimal = Make("Slope gecko"); slopeAnimal.transform.position = new Vector3(30,.86f,0);
+            var slopeGecko = slopeAnimal.AddComponent<SkateGecko>(); var slopeBody = slopeAnimal.GetComponent<Rigidbody>();
+            Set(slopeGecko,"captured",true); slopeBody.linearVelocity = Vector3.down * 4;
+            Physics.SyncTransforms();
+            for(int i=0;i<25;i++) Call(slopeGecko,"FixedUpdate");
+            Check(slopeBody.linearVelocity.magnitude <= 4.01f,"Inclined contact must not amplify falling velocity without new forces.");
+            Physics.IgnoreCollision(slopeAnimal.GetComponent<Collider>(),inclineCollider,true);
+            var groundArgs = new object[] { default(RaycastHit) };
+            Check(!(bool)typeof(SkateGecko).GetMethod("Ground",Private).Invoke(slopeGecko,groundArgs),"Ignored rescue silk/surfaces cannot supply grounding.");
+            Physics.IgnoreCollision(slopeAnimal.GetComponent<Collider>(),inclineCollider,false);
+            File.WriteAllText("ArtCaptures/SquirrelForest/GeckoChecks.txt", $"PASS: {checks} isolated physics and interaction checks. Flee={flee:F2} m/s, cruise={cruise:F2} m/s.\nSight occlusion, close catch, mount, coast, separate airborne bodies, sharp-turn separation, momentum and gravity checked.\nInclined contact energy and ignored-surface grounding regressions checked.\n");
             File.AppendAllText("ArtCaptures/SquirrelForest/GeckoChecks.txt", "Eight full-speed boundary/corner pursuits: six seconds each, body stays inside the 128 m map; zero recovery teleports.\n");
         }
         catch (Exception e) { File.WriteAllText("ArtCaptures/SquirrelForest/GeckoChecks.txt", $"FAIL after {checks}: {e}"); Debug.LogException(e); }

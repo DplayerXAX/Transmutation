@@ -145,7 +145,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void Update()
     {
-        if (BoneRide.Mount != null) return;
+        if (BoneRide.Mount != null || (controller != null && controller.RidingGecko)) return;
         if (controller != null && controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || orientation == null)
@@ -192,7 +192,7 @@ public sealed class AdvancedFirstPersonTraversal : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (BoneRide.Mount != null) return;
+        if (BoneRide.Mount != null || (controller != null && controller.RidingGecko)) return;
         if (controller == null || controller.BubbleMovementBlocked) return;
         if (controller.WallRunning)
             WallRunningMovement();

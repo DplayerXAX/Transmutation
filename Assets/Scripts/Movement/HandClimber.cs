@@ -348,7 +348,7 @@ public sealed class HandClimber : MonoBehaviour
             TryLipPull();
             return;
         }
-        if (BoneRide.Mount != null) { canStartClimb = false; return; }
+        if (BoneRide.Mount != null || (controller != null && controller.RidingGecko)) { canStartClimb = false; return; }
         if (controller == null || body == null || controller.BubbleMovementBlocked) return;
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null && ScriptedInput == null) return;
@@ -448,7 +448,7 @@ public sealed class HandClimber : MonoBehaviour
     {
 
         if (!GooAllowsClimbing && !lipOnly) { StopForGooDepletion(); return; }
-        if (BoneRide.Mount != null || !climbing || mantling || body == null) return;
+        if (BoneRide.Mount != null || (controller != null && controller.RidingGecko) || !climbing || mantling || body == null) return;
         // Eased pull: the body speeds up and settles instead of sliding at a constant speed.
         float scale = SpeedScale();
         Vector3 next = Vector3.SmoothDamp(body.position, bodyTarget, ref bodyVelocity,
@@ -1121,7 +1121,7 @@ public sealed class HandClimber : MonoBehaviour
     /// </summary>
     private void TryLipPull()
     {
-        if (climbing || mantling || controller == null || body == null || controller.BubbleMovementBlocked || BoneRide.Mount != null) return;
+        if (climbing || mantling || controller == null || body == null || controller.RidingGecko || controller.BubbleMovementBlocked || BoneRide.Mount != null) return;
         Keyboard keyboard = Keyboard.current;
         float vertical = ScriptedInput?.y ?? (keyboard != null && keyboard[upKey].isPressed ? 1f : 0f);
         regrabTimer = Mathf.Max(0f, regrabTimer - Time.deltaTime);

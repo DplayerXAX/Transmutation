@@ -53,8 +53,22 @@ public sealed class SkateGecko : Creature
             foreach (var player in FindObjectsByType<SmoothFirstPersonController>(FindObjectsSortMode.None))
                 if (player.gameObject.scene == gameObject.scene) { observer = player; break; }
     }
-    bool Ground(out RaycastHit hit) => gameObject.scene.GetPhysicsScene().Raycast(body.position + Vector3.up * .25f,
-        Vector3.down, out hit, .65f, groundMask, QueryTriggerInteraction.Ignore);
+    bool Ground(out RaycastHit hit)
+    {
+        hit = default;
+        int count = gameObject.scene.GetPhysicsScene().Raycast(body.position + Vector3.up * .25f,
+            Vector3.down, obstacles, .65f, groundMask, QueryTriggerInteraction.Ignore);
+        if (count == obstacles.Length) return false;
+        float closest = float.PositiveInfinity;
+        for (int i = 0; i < count; i++)
+        {
+            var candidate = obstacles[i];
+            if (candidate.distance >= closest || candidate.normal.y < .65f ||
+                candidate.collider.attachedRigidbody == body || Physics.GetIgnoreCollision(shape, candidate.collider)) continue;
+            closest = candidate.distance; hit = candidate;
+        }
+        return hit.collider != null;
+    }
 
     float EdgeLookahead(float speed) => speed * speed / (2f * Mathf.Max(1, edgeBrakeAcceleration)) + speed * .25f + edgeMargin + 1.4f;
 
@@ -154,23 +168,33 @@ public sealed class SkateGecko : Creature
         if (!captured && !SupportedCorridor(velocity, EdgeLookahead(velocity.magnitude)))
             velocity = Vector3.MoveTowards(Vector3.ProjectOnPlane(body.linearVelocity, ground.normal), Vector3.zero,
                 edgeBrakeAcceleration * Time.fixedDeltaTime);
-        body.linearVelocity = velocity + Vector3.up * Mathf.Min(0, body.linearVelocity.y);
+        // Keep the normal component once. Adding world-down velocity to an inclined
+        // tangent counted the same falling velocity twice on rounded silk/steep ground.
+        body.linearVelocity = velocity + ground.normal * Mathf.Min(0, Vector3.Dot(body.linearVelocity, ground.normal));
         if (velocity.sqrMagnitude > .3f) body.MoveRotation(Quaternion.LookRotation(velocity.normalized, Vector3.up));
     }
     public override void ReceiveInteraction(CreatureInteraction interaction)
     {
         var player = interaction.Source != null ? interaction.Source.GetComponentInParent<SmoothFirstPersonController>() : null;
+        // The camera/interactor can be a sibling of the player's physics body.
+        if (player == null && interaction.Source != null)
+            player = interaction.Source.GetComponentInParent<PlayerCreatureInteractor>()?.PlayerController;
         if (TryCatch(player)) LandmarkToast.Show("Gecko caught! Click again to ride. WASD steer, reverse input brakes, K steps off. Sharp turns in the air separate you.");
         else if (captured) TryMount(player);
     }
     public bool TryCatch(SmoothFirstPersonController player)
     {
-        if (captured || !Available(player) || !Sees(player)) return false;
+        var web = GetComponent<WebCapture>();
+        if (captured || !Available(player, web != null && web.HoldsActiveCreature) || !Sees(player)) return false;
+        if (web != null && web.IsCaptured)
+        {
+            web.ReleaseForRescue();
+        }
         captured = true; panicUntil = 0;
         body.linearVelocity = Vector3.zero;
         return true;
     }
-    bool Available(SmoothFirstPersonController player) => !IsDead && SimulationEnabled && !IsBubbleCaptured && !IsCarried &&
+    bool Available(SmoothFirstPersonController player, bool heldByWeb = false) => !IsDead && (SimulationEnabled || heldByWeb) && !IsBubbleCaptured && !IsCarried &&
         player != null && player.isActiveAndEnabled && player.gameObject.scene == gameObject.scene && !player.Restricted && !player.BubbleMovementBlocked &&
         !player.Climbing && !player.WallRunning && !BoneRide.Busy && !BoneAwakeningCutscene.Playing &&
         Vector3.Distance(shape.ClosestPoint(player.transform.position), player.transform.position) <= catchDistance;
@@ -202,20 +226,25 @@ public sealed class SkateGecko : Creature
         {
             FollowRider(); airborne = true; body.isKinematic = false;
             body.linearVelocity = rider.Body.linearVelocity;
-            launchDirection = input.sqrMagnitude > .1f ? input.normalized : Vector3.ProjectOnPlane(body.linearVelocity, Vector3.up).normalized;
+            Vector3 momentum = Vector3.ProjectOnPlane(body.linearVelocity, Vector3.up);
+            // Tiny contact corrections at mount time have no meaningful travel direction.
+            // Normalizing them could turn a forward push into a false sharp airborne turn.
+            launchDirection = input.sqrMagnitude > .1f ? input.normalized : momentum.sqrMagnitude > .1f
+                ? momentum.normalized : (rider.Orientation != null ? rider.Orientation.forward : rider.transform.forward);
         }
         if (airborne)
         {
-            if (Vector3.ProjectOnPlane(body.position - rider.transform.position, Vector3.up).magnitude > 1.2f)
+            if (supported)
+            {
+                if (Vector3.ProjectOnPlane(body.position - rider.Body.position, Vector3.up).magnitude > .9f)
+                { Dismount(); return false; }
+                airborne = false; body.linearVelocity = Vector3.zero; body.isKinematic = true; FollowRider();
+                return true;
+            }
+            if (Vector3.ProjectOnPlane(body.position - rider.Body.position, Vector3.up).magnitude > 1.2f)
             { Dismount(); return false; }
             if (input.sqrMagnitude > .1f && launchDirection.sqrMagnitude > .1f && Vector3.Angle(input, launchDirection) >= airborneTurnAngle)
             { Dismount(); return false; }
-            if (supported)
-            {
-                if (Vector3.ProjectOnPlane(body.position - rider.transform.position, Vector3.up).magnitude > .9f)
-                { Dismount(); return false; }
-                airborne = false; body.linearVelocity = Vector3.zero; body.isKinematic = true; FollowRider();
-            }
         }
         return true;
     }

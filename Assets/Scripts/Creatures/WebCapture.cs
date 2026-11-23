@@ -9,6 +9,7 @@ public sealed class WebCapture : MonoBehaviour
     public SkyWeb OwningWeb { get; private set; }
     public Vector3 ContactPoint { get; private set; }
     public bool IsCaptured => OwningWeb != null;
+    internal bool HoldsActiveCreature => IsCaptured && previousSimulation;
 
     private Creature creature;
     private bool previousSimulation;
@@ -19,6 +20,8 @@ public sealed class WebCapture : MonoBehaviour
     private Collider[] bodyColliders;
     private readonly HashSet<Collider> ignoredWebColliders = new HashSet<Collider>();
     private readonly List<(Collider body, Collider silk)> ignoredPairs = new List<(Collider, Collider)>();
+    private readonly List<(Collider body, Collider silk)> rescuePairs = new List<(Collider, Collider)>();
+    private float restoreRescueAfter;
 
     public bool CanCapture => !IsCaptured && Time.time >= eligibleAfter;
 
@@ -32,6 +35,7 @@ public sealed class WebCapture : MonoBehaviour
         Creature target = body.GetComponentInParent<Creature>();
         if (target != null && (!target.CanBeCaptured || target.IsDead || target.IsCarried ||
             (target.TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim))) return false;
+        RestoreRescueCollisions();
         creature = target;
         Body = body;
         ContactPoint = contactPoint;
@@ -108,7 +112,42 @@ public sealed class WebCapture : MonoBehaviour
         if (previousWeb != null) previousWeb.ForgetCapture(this);
     }
 
-    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots) Release(); }
-    private void OnDestroy() => Release();
+    /// <summary>Let a rescued animal fall clear instead of being expelled by overlapping silk.</summary>
+    internal void ReleaseForRescue()
+    {
+        if (!IsCaptured) return;
+        rescuePairs.AddRange(ignoredPairs);
+        Release();
+        foreach (var pair in rescuePairs)
+            if (pair.body != null && pair.silk != null) Physics.IgnoreCollision(pair.body, pair.silk, true);
+        restoreRescueAfter = Time.time + 5f;
+        DelayCapture(5f);
+    }
+
+    private void FixedUpdate()
+    {
+        if (rescuePairs.Count == 0 || Time.time < restoreRescueAfter) return;
+        for (int i = rescuePairs.Count - 1; i >= 0; i--)
+        {
+            var pair = rescuePairs[i];
+            if (pair.body != null && pair.silk != null)
+            {
+                if (pair.body.enabled && pair.silk.enabled && Physics.ComputePenetration(
+                    pair.body, pair.body.transform.position, pair.body.transform.rotation,
+                    pair.silk, pair.silk.transform.position, pair.silk.transform.rotation, out _, out _)) continue;
+                Physics.IgnoreCollision(pair.body, pair.silk, false);
+            }
+            rescuePairs.RemoveAt(i);
+        }
+    }
+
+    private void RestoreRescueCollisions()
+    {
+        foreach (var pair in rescuePairs)
+            if (pair.body != null && pair.silk != null) Physics.IgnoreCollision(pair.body, pair.silk, false);
+        rescuePairs.Clear();
+    }
+    private void OnDisable() { if (!ReflectionPhysics.SwitchingWorldRoots) { Release(); RestoreRescueCollisions(); } }
+    private void OnDestroy() { Release(); RestoreRescueCollisions(); }
     private void OnCreatureDied(Creature dead) => Release();
 }

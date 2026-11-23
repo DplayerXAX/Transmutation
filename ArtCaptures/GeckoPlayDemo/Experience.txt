@@ -1,0 +1,82 @@
+Assisted live Play Mode demonstration: real player controller, queued W/Shift keyboard state, SetLook assisted aim, TryInteract crosshair click entry point. No direct gecko TryCatch or bubble TryCapture calls. Temporary raised platform separates the demonstration from other creatures; normal sizes/speeds/capture rules retained.
+HAND long chase: initial centre distance 7.04m, final 13.22m, max gecko speed 9.98m/s, caught=False, player=7.50m/s.
+HAND pre-click: sees=True, distance=1.00, sim=True, restricted=False, bubbleBlocked=False, climbing=False, wallrunning=False, boneBusy=False, cutscene=False, sourcePlayer=True.
+Crosshair click: TEMP demo gecko
+HAND close interception: caught=True, grounded=True.
+HAND mount accepted immediately: pos=(4.00, 100.24, -176.00), player=(4.00, 101.48, -176.24), drive=True, state=Walking.
+HAND MOUNT: ridden=True, tame=True, grounded=True.
+PASS HAND crosshair mount
+HAND GLIDE: ridden=True, speed=8.93m/s.
+PASS HAND sustained forward riding
+HAND brake input: S=False, W=False, controllerVertical=-1, grounded=True, airborne=False, drive=True.
+HAND BRAKE: ridden=True, speed=0.00m/s.
+PASS HAND ground braking
+HAND DISMOUNT: independent=True, tame=True.
+PASS HAND dismount restores independent board
+HAND REMOUNT: ridden=True.
+PASS HAND crosshair remount
+HAND JUMP: ridden=True, airborne=True.
+PASS HAND straight jump stays mounted
+PASS HAND straight landing resumes supported riding
+PASS HAND can jump again after landing
+HAND turn input: D=False, controllerHorizontal=1, grounded=False, airborne=False.
+HAND AIR TURN: separated=True, playerFlung=True.
+PASS HAND abrupt air turn separates rider and board
+WEB builder parked away from test contact to isolate silk rescue from predator contact/feeding.
+WEB incoming actual collision: trapped=True, autonomous=False.
+Crosshair click: no creature
+WEB distant click leaves captive unchanged: trapped=True, tame=False.
+WEB two-second drift=0.0000m.
+Crosshair click: TEMP demo gecko
+WEB player click while pinned: caught=True; autonomous=True; freed=True; remainingWebCaptives=0.
+WEB staged player beside rescued animal for mount; animal pose/velocity and original web preserved.
+WEB mount accepted immediately: pos=(14.53, 100.24, -177.83), player=(14.70, 101.00, -179.31), drive=True, state=Walking.
+WEB MOUNT: ridden=True, tame=True, grounded=True.
+PASS WEB crosshair mount
+WEB GLIDE: ridden=True, speed=8.93m/s.
+PASS WEB sustained forward riding
+WEB ride ownership: freeOfWeb=True, autonomous=True.
+WEB brake input: S=False, W=False, controllerVertical=-1, grounded=True, airborne=False, drive=True.
+WEB BRAKE: ridden=True, speed=0.76m/s.
+PASS WEB ground braking
+WEB DISMOUNT: independent=True, tame=True.
+PASS WEB dismount restores independent board
+WEB REMOUNT: ridden=True.
+PASS WEB crosshair remount
+WEB JUMP: ridden=True, airborne=True.
+PASS WEB straight jump stays mounted
+PASS WEB straight landing resumes supported riding
+PASS WEB can jump again after landing
+WEB turn input: D=False, controllerHorizontal=1, grounded=False, airborne=False.
+WEB AIR TURN: separated=True, playerFlung=True.
+PASS WEB abrupt air turn separates rider and board
+PASS WEB rescue collision grace expires without leaving ignored pairs
+WEB after separation: webbedAgain=False; original silk collision override ended=True. A detached board may legitimately be caught again.
+BUBBLE picked up normal flower: requested=True, held=True.
+Crosshair click: TEMP demo gecko
+BUBBLE real held-flower aimed shot: emitted=True, trapped=True, handTamed=False.
+Crosshair click: MeadowBubble(Clone)
+BUBBLE crosshair pop: popped=True, animalReleased=True.
+BUBBLE follow-up catch within one second: handTamed=True, airborne=0.24m above floor.
+BUBBLE mount accepted immediately: pos=(-9.41, 100.24, -174.25), player=(-9.73, 101.17, -173.93), drive=False, state=Sprinting.
+BUBBLE mount accepted immediately: pos=(-9.74, 100.24, -173.58), player=(-9.39, 101.00, -173.87), drive=False, state=Walking.
+BUBBLE mount accepted immediately: pos=(-8.84, 100.24, -174.10), player=(-8.94, 101.25, -174.06), drive=True, state=Walking.
+BUBBLE MOUNT: ridden=True, tame=True, grounded=True.
+PASS BUBBLE crosshair mount
+BUBBLE GLIDE: ridden=True, speed=8.93m/s.
+PASS BUBBLE sustained forward riding
+BUBBLE brake input: S=False, W=False, controllerVertical=-1, grounded=True, airborne=False, drive=True.
+BUBBLE BRAKE: ridden=True, speed=0.51m/s.
+PASS BUBBLE ground braking
+BUBBLE DISMOUNT: independent=True, tame=True.
+PASS BUBBLE dismount restores independent board
+BUBBLE REMOUNT: ridden=True.
+PASS BUBBLE crosshair remount
+BUBBLE JUMP: ridden=True, airborne=True.
+PASS BUBBLE straight jump stays mounted
+PASS BUBBLE straight landing resumes supported riding
+PASS BUBBLE can jump again after landing
+BUBBLE turn input: D=False, controllerHorizontal=1, grounded=False, airborne=False.
+BUBBLE AIR TURN: separated=True, playerFlung=True.
+PASS BUBBLE abrupt air turn separates rider and board
+Demo finished; exiting Play Mode removes temporary actors and restores the authored scene. No scene saved.

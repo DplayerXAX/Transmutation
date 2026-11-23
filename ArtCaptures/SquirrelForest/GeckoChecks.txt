@@ -1,3 +1,4 @@
-PASS: 29 isolated physics and interaction checks. Flee=16.98 m/s, cruise=17.00 m/s.
+PASS: 31 isolated physics and interaction checks. Flee=9.98 m/s, cruise=17.00 m/s.
 Sight occlusion, close catch, mount, coast, separate airborne bodies, sharp-turn separation, momentum and gravity checked.
+Inclined contact energy and ignored-surface grounding regressions checked.
 Eight full-speed boundary/corner pursuits: six seconds each, body stays inside the 128 m map; zero recovery teleports.

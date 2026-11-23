@@ -48,7 +48,15 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [SerializeField] private float groundDrag = 4f;
     private PlayerSkateShoes skateShoes;
     public bool WearingSkateShoes => skateShoes != null && skateShoes.Equipped;
-    public bool RidingGecko => skateShoes != null && skateShoes.Gecko != null;
+    public bool RidingGecko
+    {
+        get
+        {
+            // Mounting can add the drive after Start, before the next movement step.
+            if (skateShoes == null) skateShoes = GetComponent<PlayerSkateShoes>();
+            return skateShoes != null && skateShoes.Gecko != null;
+        }
+    }
 
     [Header("Jumping — FullMovement Values")]
     [SerializeField] private float jumpForce = 12f;
@@ -328,6 +336,9 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             return;
         }
         if (BubbleMovementBlocked) return;
+        // Rising ends at the apex even when riding skips the extra-gravity pass.
+        // Otherwise a previous jump can permanently suppress skate support/braking.
+        if (rb.linearVelocity.y <= 0f) ownJumpRising = false;
         UpdateRideSupport();
         if (chainsaw != null)
         {
@@ -474,9 +485,12 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
 
     private Vector3 GetGroundCheckOrigin()
     {
+        bool ridingGecko = RidingGecko;
         float feetY = -playerHeight * 0.5f + groundCheckHalfExtents.y + groundCheckOriginYOffset;
-        if (skateShoes != null && skateShoes.Gecko != null) feetY -= SkateGecko.RideHeight;
-        return (chainsaw != null ? rb.position : transform.position) + Vector3.up * feetY;
+        if (ridingGecko) feetY -= SkateGecko.RideHeight;
+        // Interpolation can leave the rendered transform behind the mount's height
+        // change; test the current physics pose so mounting is not mistaken for a jump.
+        return (chainsaw != null || ridingGecko ? rb.position : transform.position) + Vector3.up * feetY;
     }
 
     private bool CastChainsawGround(out RaycastHit hit)
@@ -509,8 +523,11 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         if (WearingSkateShoes)
         {
             // Start clear of the uphill edge instead of starting the thin walking box inside a ramp.
-            if (ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * 0.4f, 0.2f,
-                Vector3.down, out hit, 0.25f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore)) return true;
+            // A mounted player's offset foot probe can be below the floor while the
+            // body settles. Lift clear of that overlap before sweeping back down.
+            float lift = RidingGecko ? .85f : .4f;
+            if (ReflectionPhysics.SphereCast(GetGroundCheckOrigin() + Vector3.up * lift, 0.2f,
+                Vector3.down, out hit, lift - .15f + groundCheckDistance, whatIsGround, QueryTriggerInteraction.Ignore)) return true;
             // Keep the ordinary solid-surface fallback for rocks and bones on other layers.
         }
         if (ReflectionPhysics.BoxCast(GetGroundCheckOrigin(), groundCheckHalfExtents, Vector3.down, out hit, Quaternion.identity,
