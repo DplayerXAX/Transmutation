@@ -7,14 +7,16 @@ using UnityEngine;
 public sealed class MovingFrame : MonoBehaviour, IRideSurface
 {
     public IslandFlightPath route;
-    [Min(0)] public float cruiseSpeed = 3;
-    [Min(.01f)] public float acceleration = .6f;
+    [Min(0)] public float cruiseSpeed = 9;
+    [Min(.01f)] public float acceleration = 1.8f;
     public bool paused;
     public Vector3 habitatCenter = new(0, 11, 0);
     public Vector3 habitatSize = new(72, 38, 96);
     [Min(0)] public float exitMargin = 2;
     public Collider deck;
     public Collider[] terrainSurfaces = new Collider[0];
+    [Tooltip("Draw the habitat volume (everything inside, flyers included, moves with the frame) in the Scene and Game views. Green: entry box. Yellow: release box (entry plus exit margin).")]
+    public bool showHabitat;
     public static readonly List<MovingFrame> Active = new();
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetRegistry() => Active.Clear();
@@ -42,6 +44,14 @@ public sealed class MovingFrame : MonoBehaviour, IRideSurface
     }
     public Vector3 TransformStep(Vector3 point) => toPosition + toRotation * (Quaternion.Inverse(fromRotation) * (point - fromPosition));
     public Quaternion RotationStep => toRotation * Quaternion.Inverse(fromRotation);
+    /// <summary>
+    /// During Update/LateUpdate: where a point that rides on the newest physics pose is drawn this
+    /// frame. The frame Rigidbody interpolates, so it is rendered between its last two physics
+    /// poses; caches transported with TransformStep are on the newest one and must be mapped here
+    /// before they are written to a visible Transform.
+    /// </summary>
+    public Vector3 RenderedPoint(Vector3 physicsPoint) => transform.position + transform.rotation * (Quaternion.Inverse(toRotation) * (physicsPoint - toPosition));
+    public Quaternion RenderedRotation(Quaternion physicsRotation) => transform.rotation * Quaternion.Inverse(toRotation) * physicsRotation;
     void Awake()
     {
         body = GetComponent<Rigidbody>(); body.isKinematic = true; body.useGravity = false;
@@ -101,9 +111,60 @@ public sealed class MovingFrame : MonoBehaviour, IRideSurface
     {
         foreach (var member in Members) if (member) member.CommitStep();
     }
-    void OnDrawGizmosSelected()
+    void OnDrawGizmos() { if (showHabitat) DrawHabitatGizmos(); }
+    void OnDrawGizmosSelected() { if (!showHabitat) DrawHabitatGizmos(); }
+    void DrawHabitatGizmos()
     {
         Gizmos.matrix = transform.localToWorldMatrix; Gizmos.color = new Color(.2f, 1, .6f, .5f);
         Gizmos.DrawWireCube(habitatCenter, habitatSize);
+        if (exitMargin > 0) { Gizmos.color = new Color(1, .85f, .2f, .35f); Gizmos.DrawWireCube(habitatCenter, habitatSize + Vector3.one * exitMargin * 2); }
+    }
+    [ContextMenu("Toggle Habitat Display")]
+    void ToggleHabitat() => showHabitat = !showHabitat;
+
+    // Game-view display: line renderers parented to the frame, so they follow its rendered pose.
+    LineRenderer entryLines, releaseLines;
+    Vector3 shownSize; float shownMargin; Vector3 shownCenter;
+    void LateUpdate()
+    {
+        if (!showHabitat)
+        {
+            if (entryLines) { entryLines.enabled = false; releaseLines.enabled = false; }
+            return;
+        }
+        if (!entryLines)
+        {
+            var shader = Shader.Find("Sprites/Default");
+            if (!shader) return;
+            var material = new Material(shader);
+            entryLines = CreateLines("Habitat Entry (debug)", material, new Color(.2f, 1, .6f, .8f));
+            releaseLines = CreateLines("Habitat Release (debug)", material, new Color(1, .85f, .2f, .6f));
+            shownSize = -Vector3.one;
+        }
+        entryLines.enabled = true; releaseLines.enabled = exitMargin > 0;
+        if (shownSize == habitatSize && shownMargin == exitMargin && shownCenter == habitatCenter) return;
+        shownSize = habitatSize; shownMargin = exitMargin; shownCenter = habitatCenter;
+        TraceBox(entryLines, habitatCenter, habitatSize);
+        TraceBox(releaseLines, habitatCenter, habitatSize + Vector3.one * exitMargin * 2);
+    }
+    LineRenderer CreateLines(string label, Material material, Color color)
+    {
+        var child = new GameObject(label) { hideFlags = HideFlags.DontSave };
+        child.transform.SetParent(transform, false);
+        var lines = child.AddComponent<LineRenderer>();
+        lines.useWorldSpace = false; lines.loop = false; lines.sharedMaterial = material;
+        lines.startColor = lines.endColor = color; lines.widthMultiplier = .15f;
+        lines.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; lines.receiveShadows = false;
+        return lines;
+    }
+    static void TraceBox(LineRenderer lines, Vector3 center, Vector3 size)
+    {
+        Vector3 e = size * .5f;
+        Vector3 P(float x, float y, float z) => center + Vector3.Scale(e, new Vector3(x, y, z));
+        Vector3 b0 = P(-1, -1, -1), b1 = P(1, -1, -1), b2 = P(1, -1, 1), b3 = P(-1, -1, 1);
+        Vector3 t0 = P(-1, 1, -1), t1 = P(1, 1, -1), t2 = P(1, 1, 1), t3 = P(-1, 1, 1);
+        // One path covering all 12 edges (some retraced).
+        var path = new[] { b0, b1, b2, b3, b0, t0, t1, b1, t1, t2, b2, t2, t3, b3, t3, t0 };
+        lines.positionCount = path.Length; lines.SetPositions(path);
     }
 }

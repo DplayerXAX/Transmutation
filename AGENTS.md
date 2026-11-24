@@ -18,3 +18,10 @@
 - Preserve Unity `.meta` files, GUIDs, serialized references, and unrelated work. Implement game behavior in owned source/assets, not `Library/`, `Temp/`, generated project files, or vendor integrations.
 - For creature changes, preserve carry/capture/throw ownership, lifecycle cleanup, and semantic pauses versus optimization dormancy. Put species-specific rules in their owning feature.
 - Run relevant checks in proportion to the change, using the feature's existing validation when suitable. Report what actually ran and what remains unverified. Documentation-only changes need no Unity run.
+
+## Driving the Unity Editor
+
+- The project uses Unity 6000.3.6f1 and has the Pipeline package (`com.unity.pipeline`), so a running Editor can be driven live with the `unity` CLI. Prefer the CLI (`unity command ...`) over the Unity MCP server when you have a shell.
+- Run `unity status --project-path "C:\Users\yoyom\Desktop\GitProjects\Transmutation"` first and look for state `ready`. Pass that same `--project-path` on every Editor command, since other Unity projects may be open at the same time.
+- If the Editor won't connect, check `unity status` for Safe Mode (C# compile errors) before anything else. Report timeouts or failed connections instead of falling back to hand-editing scene, prefab, or asset YAML.
+- The scene-edit rule above still applies to live Editor commands: don't modify or save `*.unity` scenes unless explicitly requested. Entering Play mode, reading the console, and inspecting the hierarchy are fine.

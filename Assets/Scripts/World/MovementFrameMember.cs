@@ -13,11 +13,19 @@ public sealed class MovementFrameMember : MonoBehaviour
     Vector3 appliedVelocity;
     float noEntryUntil;
     bool ownsInterpolation;
-    RigidbodyInterpolation previousInterpolation;
+    RigidbodyInterpolation previousInterpolation, ownedInterpolation;
     Vector3 renderedFramePosition;
     Quaternion renderedFrameRotation;
     bool RenderDrivenFlight => creature is SeaAngelCreature angel && !angel.Materialized;
     bool RenderDrivenMotion => RenderDrivenFlight || (creature is TentacleCreature tentacle && !tentacle.IsDead && body && body.isKinematic);
+    /// <summary>No Rigidbody (rooted flowers and similar): nothing interpolates it, so it must follow the rendered frame.</summary>
+    bool TransformOnly => !body && !player;
+    /// <summary>Members whose visible pose follows the frame's rendered (interpolated) pose in Update, not physics steps.</summary>
+    bool RenderTimeline => RenderDrivenMotion || TransformOnly;
+    /// <summary>Interpolation the body had before joining, while this member owns it (diagnostics).</summary>
+    public RigidbodyInterpolation? OriginalInterpolation => ownsInterpolation ? previousInterpolation : (RigidbodyInterpolation?)null;
+    /// <summary>Interpolation this member set on joining, while it owns it (diagnostics).</summary>
+    public RigidbodyInterpolation? OwnedInterpolation => ownsInterpolation ? ownedInterpolation : (RigidbodyInterpolation?)null;
     public Vector3 LastTransport { get; private set; }
     /// <summary>Already-applied transport, for locomotion writers running in Update after physics.</summary>
     public Vector3 AppliedVelocity => appliedVelocity;
@@ -32,17 +40,15 @@ public sealed class MovementFrameMember : MonoBehaviour
     {
         if (Frame == frame) return;
         Leave(); Frame = frame;
+        // Carry can add a Rigidbody to a previously body-less creature; pick it up on rejoin.
+        if (!body) body = GetComponent<Rigidbody>();
         if (Frame) Frame.Members.Add(this);
         if (Frame)
         {
             renderedFramePosition=Frame.transform.position; renderedFrameRotation=Frame.transform.rotation;
         }
-        if (Frame && body && body.isKinematic)
-        {
-            previousInterpolation = body.interpolation;
-            body.interpolation = RenderDrivenMotion ? RigidbodyInterpolation.None : RigidbodyInterpolation.Interpolate;
-            ownsInterpolation = true;
-        }
+        SyncInterpolation();
+        wasRenderTimeline = RenderTimeline;
         // First subtract the existing frame velocity before the motor runs: entering changes
         // coordinates without adding an instantaneous world-velocity impulse.
         if (Frame && body && !body.isKinematic && !player) appliedVelocity = Frame.VelocityAt(body.position);
@@ -51,11 +57,47 @@ public sealed class MovementFrameMember : MonoBehaviour
     public void Leave()
     {
         bool changed = Frame != null;
-        if (ownsInterpolation && body) body.interpolation = previousInterpolation;
+        // Restore only if nothing else (carry, capture) has changed the setting in the meantime.
+        if (ownsInterpolation && body && body.interpolation == ownedInterpolation) body.interpolation = previousInterpolation;
         ownsInterpolation = false;
         if (Frame) Frame.Members.Remove(this);
         Frame = null; appliedVelocity = Vector3.zero;
         if (changed && creature is SeaAngelCreature fish && fish.isActiveAndEnabled) DimensionalSchool.Existing(fish)?.Reindex(fish);
+    }
+    /// <summary>
+    /// The frame renders one physics step behind (Rigidbody interpolation). Every physics passenger
+    /// must render on that same delayed timeline, or it is drawn up to one step (speed x
+    /// fixedDeltaTime) ahead of the deck and visibly saws back and forth on it. Render-driven
+    /// members (intangible flight, live kinematic tentacles) author their pose in Update and need
+    /// interpolation off. Members change mode without rejoining (a tentacle dies, a sea angel
+    /// materializes), so this is re-evaluated every physics step, not only on Join.
+    /// </summary>
+    void SyncInterpolation()
+    {
+        if (!Frame || !body || player) return;
+        if (!ownsInterpolation) { previousInterpolation = body.interpolation; ownsInterpolation = true; }
+        // Something else (a creature's own state change) chose a setting since: restore that one on leaving.
+        else if (body.interpolation != ownedInterpolation) previousInterpolation = body.interpolation;
+        ownedInterpolation = RenderDrivenMotion ? RigidbodyInterpolation.None : RigidbodyInterpolation.Interpolate;
+        body.interpolation = ownedInterpolation;
+    }
+    bool wasRenderTimeline;
+    /// <summary>
+    /// A render-timeline member's Transform (and kinematic body) holds its drawn pose, which trails
+    /// the frame's newest physics pose by up to one step. When it starts simulating (death turns a
+    /// live tentacle into a falling corpse), carry that pose onto the physics timeline first;
+    /// otherwise the new dynamic body starts embedded in, or hovering behind, the moving deck.
+    /// </summary>
+    void EnterPhysicsTimeline()
+    {
+        if (!Frame || !body || transform.IsChildOf(Frame.transform)) return;
+        // Called from BeginStep, before the frame plans this step: the last planned pose is where its body is now.
+        Pose physics = Frame.PlannedPhysicsPose;
+        Quaternion delta = physics.rotation * Quaternion.Inverse(renderedFrameRotation);
+        Vector3 point = physics.position + delta * (transform.position - renderedFramePosition);
+        Quaternion rotation = delta * transform.rotation;
+        transform.SetPositionAndRotation(point, rotation);
+        body.position = point; body.rotation = rotation;
     }
     public void ReleaseForThrow() { Leave(); noEntryUntil = Time.time + .5f; }
     public void TeleportStep(MovingFrame frame)
@@ -76,17 +118,23 @@ public sealed class MovementFrameMember : MonoBehaviour
     }
     void Update()
     {
-        if (!Frame || ExternalMotion) return;
-        if (!RenderDrivenMotion) return;
-        // Intangible flight has no physical collider. Its autonomous pose is authored in
-        // Update, so transport it in that same rendered frame, even while its AI sleeps.
+        if (!Frame) return;
+        // Frame.transform is the interpolated pose being rendered this frame.
         Vector3 position=Frame.transform.position; Quaternion rotation=Frame.transform.rotation;
-        Quaternion delta=rotation*Quaternion.Inverse(renderedFrameRotation);
-        var motion=new FramePoseDelta(new Pose(renderedFramePosition,renderedFrameRotation),new Pose(position,rotation));
-        if (creature is SeaAngelCreature fish) fish.TransportFlightHome(renderedFramePosition,renderedFrameRotation,position,rotation);
-        if (creature is TentacleCreature tentacle) tentacle.TransportRenderedCaches(Frame,motion);
-        transform.SetPositionAndRotation(position+delta*(transform.position-renderedFramePosition),delta*transform.rotation);
-        if (body && body.isKinematic) { body.position=transform.position; body.rotation=transform.rotation; }
+        // A child of the frame already moves with it; transporting it again would double the motion.
+        if (!ExternalMotion && RenderTimeline && !transform.IsChildOf(Frame.transform))
+        {
+            // Intangible flight and body-less inhabitants are not interpolated by physics. Their
+            // visible pose is authored in Update, so transport it in that same rendered frame,
+            // even while their AI sleeps.
+            Quaternion delta=rotation*Quaternion.Inverse(renderedFrameRotation);
+            var motion=new FramePoseDelta(new Pose(renderedFramePosition,renderedFrameRotation),new Pose(position,rotation));
+            if (creature is SeaAngelCreature fish) fish.TransportFlightHome(renderedFramePosition,renderedFrameRotation,position,rotation);
+            if (creature is TentacleCreature tentacle) tentacle.TransportRenderedCaches(Frame,motion);
+            transform.SetPositionAndRotation(position+delta*(transform.position-renderedFramePosition),delta*transform.rotation);
+            if (body && body.isKinematic) { body.position=transform.position; body.rotation=transform.rotation; }
+        }
+        // Always track the rendered pose, so a member that switches timeline does not jump.
         renderedFramePosition=position; renderedFrameRotation=rotation;
     }
     void OnDisable() => Leave();
@@ -102,6 +150,10 @@ public sealed class MovementFrameMember : MonoBehaviour
     public void BeginStep()
     {
         if (ExternalMotion) return;
+        bool renderTimeline = RenderTimeline;
+        if (wasRenderTimeline && !renderTimeline) EnterPhysicsTimeline();
+        wasRenderTimeline = renderTimeline;
+        SyncInterpolation();
         if (body && !body.isKinematic && !player) body.linearVelocity -= appliedVelocity;
         appliedVelocity = Vector3.zero;
         if (body && !body.isKinematic && !player && creature && !creature.SimulationEnabled && Frame &&
@@ -116,6 +168,13 @@ public sealed class MovementFrameMember : MonoBehaviour
     {
         LastTransport = Vector3.zero;
         if (!Frame || ExternalMotion || player || RenderDrivenMotion || (body && !body.isKinematic)) return;
+        if (TransformOnly)
+        {
+            // Logic caches stay on the physics timeline; the visible pose moves in Update.
+            if (creature) creature.TransportFrameCaches(Frame);
+            if (TryGetComponent<BoneChild>(out var cachedBone)) cachedBone.TransportFrameCaches(Frame);
+            return;
+        }
         // Rigidbody poses belong to simulation time. Transform may be the previous,
         // interpolated render pose and must not feed the next physics target.
         Vector3 before = body ? body.position : transform.position, after = Frame.TransformStep(before);

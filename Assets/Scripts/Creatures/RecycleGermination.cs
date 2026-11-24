@@ -36,8 +36,9 @@ public sealed class RecycleGermination : MonoBehaviour
             (flower.TryGetComponent<CompostAbsorption>(out var claim) && claim.HasClaim) ||
             !SurfaceGeometry.IsTerrain(anchor.Support) || anchor.Support.gameObject.scene != gameObject.scene ||
             !anchor.Resolve(out Vector3 p, out Vector3 n) || n.y < 0.35f) return false;
-        var world = anchor.Support.GetComponent<ProceduralWorldChunk>().Owner;
-        if (world == null || !world.IsRegionReady(p, 0.5f)) return false;
+        // Island terrain (IslandTerrainSurface) is also terrain, but has no procedural world to stream in.
+        var chunk = anchor.Support.GetComponent<ProceduralWorldChunk>();
+        if (chunk != null && (chunk.Owner == null || !chunk.Owner.IsRegionReady(p, 0.5f))) return false;
         flower.SeedReserved = true;
         var staging = new GameObject("Recycle germination staging"); staging.SetActive(false);
         SceneManager.MoveGameObjectToScene(staging, gameObject.scene);
@@ -47,6 +48,14 @@ public sealed class RecycleGermination : MonoBehaviour
             colony = Instantiate(flower.SeedPrefab, p, Quaternion.identity, staging.transform);
             colony.InitializeSeed(anchor);
             colony.transform.SetParent(null, true);
+            // Rooted colonies are not adopted by habitat volumes (they cannot be captured), so one
+            // grown on a moving island joins it explicitly; otherwise the island flies on without it.
+            var frame = anchor.Support.GetComponentInParent<MovingFrame>();
+            if (frame != null)
+            {
+                if (!colony.TryGetComponent<MovementFrameMember>(out var member)) member = colony.gameObject.AddComponent<MovementFrameMember>();
+                member.Join(frame);
+            }
             flower.gameObject.SetActive(false); Destroy(flower.gameObject);
             return true;
         }

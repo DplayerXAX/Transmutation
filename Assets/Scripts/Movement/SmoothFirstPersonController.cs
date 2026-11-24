@@ -124,6 +124,10 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     [Tooltip("The Camera component on PlayerCamera.")]
     [SerializeField] private Camera playerCamera;
 
+    [Header("Moving Frames")]
+    [Tooltip("While inside a MovingFrame (the flying island), the view yaw turns with the frame's heading.")]
+    [SerializeField] private bool turnWithMovingFrame = true;
+
     [Header("Camera — Input System Equivalent")]
     [Tooltip("Degrees per mouse-delta unit. This is not comparable to the old Input Manager value of 400.")]
     [SerializeField] private float sensitivityX = 0.12f;
@@ -230,6 +234,8 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     private RaycastHit rideGround;
     private Vector3 rideVelocity;
     private MovementFrameMember islandMember;
+    private MovingFrame yawFrame;
+    private float yawFrameHeading;
 
     private void Reset()
     {
@@ -321,6 +327,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             // Fishing owns the keys, not the Rigidbody. Keep passive physics and
             // normal grounded stopping alive when a bite interrupts a walk.
             GroundCheck();
+            InheritRideAcceleration();
             if (grounded && Time.time >= groundBrakingResumesAt) impulseAirborne = false;
             if (!rb.isKinematic)
             {
@@ -340,6 +347,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         }
         if (BubbleMovementBlocked) return;
         UpdateRideSupport();
+        InheritRideAcceleration();
         if (chainsaw != null)
         {
             StepChainsaw();
@@ -456,6 +464,28 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         }
         grounded = CastGround(out _);
         UpdateRideSupport();
+    }
+
+    private object lastRideOwner;
+    private Vector3 lastRideVelocity;
+    /// <summary>
+    /// When the thing carrying the player (a moving frame it is inside, or a ride surface under it) changes
+    /// speed or direction between physics steps, the player changes with it at once, as dynamic creatures
+    /// on a frame do. Otherwise that change reads as the player's own relative motion, which ground braking
+    /// (a few metres per second per second) can only remove over several steps: on the moving island's far
+    /// edges, where turning moves the deck sideways fastest, that lag was a visible sideways shake.
+    /// Horizontal only: grounded riders already take the support's vertical speed in UpdateRideSupport.
+    /// </summary>
+    private void InheritRideAcceleration()
+    {
+        object owner = islandMember != null && islandMember.Frame != null ? islandMember.Frame : rideSurface;
+        if (owner != null && ReferenceEquals(owner, lastRideOwner) && rb != null && !rb.isKinematic)
+        {
+            Vector3 change = rideVelocity - lastRideVelocity;
+            rb.linearVelocity += new Vector3(change.x, 0f, change.z);
+        }
+        lastRideOwner = owner;
+        lastRideVelocity = rideVelocity;
     }
 
     private void UpdateRideSupport()
@@ -620,8 +650,33 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
                (keyboard[negative].isPressed ? 1f : 0f);
     }
 
+    /// <summary>
+    /// Turns the view with the frame's rendered heading, so riders keep facing the same way
+    /// relative to the deck while it banks around a turn. Position already follows through the
+    /// frame's point velocity. Uses the rendered (interpolated) pose, the same timeline the
+    /// camera draws on.
+    /// </summary>
+    private void FollowFrameYaw()
+    {
+        if (islandMember == null) islandMember = GetComponent<MovementFrameMember>();
+        MovingFrame frame = turnWithMovingFrame && islandMember != null ? islandMember.Frame : null;
+        if (frame == null) { yawFrame = null; return; }
+        Vector3 forward = Vector3.ProjectOnPlane(frame.transform.forward, Vector3.up);
+        if (forward.sqrMagnitude < 1e-6f) return;
+        float heading = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+        if (frame == yawFrame)
+        {
+            float delta = Mathf.DeltaAngle(yawFrameHeading, heading);
+            yRotation += delta;
+            sawHeading += delta;
+        }
+        yawFrame = frame;
+        yawFrameHeading = heading;
+    }
+
     private void ReadCameraInput()
     {
+        FollowFrameYaw();
         if (Mouse.current == null || orientation == null || cameraHolder == null)
             return;
 

@@ -720,8 +720,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MovingFrame
   route: {fileID: 0}
-  cruiseSpeed: 3
-  acceleration: 0.6
+  cruiseSpeed: 9
+  acceleration: 1.8
   paused: 0
   habitatCenter: {x: 0, y: 11, z: 0}
   habitatSize: {x: 72, y: 38, z: 96}

@@ -335,15 +335,18 @@ public sealed class TentacleCreature : Creature
         if (tentacles == null) return;
         foreach (var arm in tentacles)
         {
-            if (arm.holdCollider && arm.holdCollider.transform.IsChildOf(frame.transform))
-            {
-                arm.hold = motion.Point(arm.hold); arm.foot = motion.Point(arm.foot);
-                arm.stepFrom = motion.Point(arm.stepFrom); arm.stepTo = motion.Point(arm.stepTo);
-                arm.holdNormal = motion.Direction(arm.holdNormal);
-                arm.stepNormal = motion.Direction(arm.stepNormal);
-            }
+            // Shot arms follow their own pin (a fixed point or an anchor transform).
+            if (arm.pinned) continue;
+            bool holdRides = Rides(arm.holdCollider, frame);
+            if (holdRides) { arm.hold = motion.Point(arm.hold); arm.holdNormal = motion.Direction(arm.holdNormal); }
+            if (Rides(arm.stepCollider, frame)) { arm.stepTo = motion.Point(arm.stepTo); arm.stepNormal = motion.Direction(arm.stepNormal); }
+            // A free arm (drifting, coiling, wrapping) eases towards a point beside the body, which the frame just
+            // moved. Left in place, it trails the body by speed / 8 (over a metre at 9 m/s) and the bones and skin
+            // tear away from it. Only a foot planted on ground that is not part of the frame stays put.
+            if (holdRides || !arm.planted) { arm.foot = motion.Point(arm.foot); arm.stepFrom = motion.Point(arm.stepFrom); }
         }
     }
+    static bool Rides(Collider surface, MovingFrame frame) => surface != null && (surface.transform.IsChildOf(frame.transform) || frame.Supports(surface));
     private float pauseTimer;
     private bool wasCarried;
 

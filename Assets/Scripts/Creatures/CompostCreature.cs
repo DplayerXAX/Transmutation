@@ -108,6 +108,8 @@ public sealed class CompostCreature : Creature
     {
         if (!SimulationEnabled || !isActiveAndEnabled || dt <= 0f) return;
         if (geometry == null) return;
+        // Strand vertices and attached flowers are placed relative to this transform below: put it on the drawn pose first.
+        ApplyRootedPose();
         if (!geometry.Ready)
         {
             if (Time.time < retryAfter) return;
@@ -226,7 +228,21 @@ public sealed class CompostCreature : Creature
     void LateUpdate()
     {
         // The root is an ecological location, not a physics object that another system can push.
-        if (Application.isPlaying) transform.SetPositionAndRotation(rootedPosition, rootedRotation);
+        if (Application.isPlaying) ApplyRootedPose();
+    }
+    MovementFrameMember frameMember;
+    /// <summary>
+    /// rootedPosition follows a moving frame on its physics steps (TransportFrameCaches). The frame is
+    /// drawn interpolated, up to one step behind, so map the root onto the drawn frame. Writing the
+    /// physics pose here put the colony, its child flowers and its strand mesh ahead of the ground
+    /// by up to speed x fixedDeltaTime, a different amount every frame.
+    /// </summary>
+    void ApplyRootedPose()
+    {
+        if (frameMember == null) TryGetComponent(out frameMember);
+        MovingFrame frame = frameMember != null && !frameMember.ExternalMotion ? frameMember.Frame : null;
+        if (frame != null) transform.SetPositionAndRotation(frame.RenderedPoint(rootedPosition), frame.RenderedRotation(rootedRotation));
+        else transform.SetPositionAndRotation(rootedPosition, rootedRotation);
     }
     internal override void TransportFrameCaches(MovingFrame frame)
     {

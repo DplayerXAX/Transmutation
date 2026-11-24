@@ -53,7 +53,7 @@ Flowers are child creatures from creation. Picking up a mature flower detaches o
 
 Held LMB targets a creature within 5 metres with solid occlusion. Corpses briefly jolt and shrink into consumption. Living targets receive a harmless jolt and are not consumed. Detached feeding funds only that flower's Goo production.
 
-First detachment starts a continuous 120-second lifetime, including time spent dropped. Colour fades as remaining life decreases. Feeding and picking it up again do not reset the timer. An eligible dead flower touching upward-facing terrain germinates once into a new colony with 16 metres of starting growth, no free flower and no stored points. A consumed or already-claimed flower cannot also seed.
+First detachment starts a continuous 120-second lifetime, including time spent dropped. Colour fades as remaining life decreases. Feeding and picking it up again do not reset the timer. An eligible dead flower touching upward-facing terrain germinates once into a new colony with 16 metres of starting growth, no free flower and no stored points. A consumed or already-claimed flower cannot also seed. On a moving island (`MovingFrame`), a colony that germinates there joins the island. Rooted colonies on a frame are drawn from the island's rendered pose, so the network, its flowers and its strands stay still on the moving deck.
 
 ## Setup and focused checks
 

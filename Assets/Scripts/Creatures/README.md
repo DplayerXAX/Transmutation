@@ -265,7 +265,9 @@ of the beast's radius.
 **TentacleCreature** — an abstract octopus: primitive bones wrapped in a translucent membrane rebuilt every
 frame. Tentacles reach for and stick to nearby surfaces and step when stretched. It wanders and floats on
 them. **While carried**, if at least `minGripsToClimb` tentacles hold a surface, the player can climb:
-**Space** up, **Ctrl** down (shown through `CarriedPrompt`).
+**Space** up, **Ctrl** down (shown through `CarriedPrompt`). On a moving island, a living tentacle is moved
+from the island's drawn pose, free arms included. When it dies, the corpse switches to the island's physics pose and
+interpolation (see [moving-island smoothness](../../../Docs/MovingIslandSmoothnessResearch.md)).
 
 **Droplet Choir** (`DropletChoir` + `GlyphDroplet`, glyph shapes in `DropletGlyphs`) — a cloud of small floating
 water beads that every 12-20 s (after 5 s when the player is within 10 m) gathers in the air and *writes* a glyph,

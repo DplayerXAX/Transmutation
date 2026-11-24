@@ -76,7 +76,10 @@ public sealed class CeilingBatBugEgg : Creature
         if (adhered && support != null)
         {
             surfaceNormal = support.TransformDirection(localSupportNormal).normalized;
-            body.MovePosition(support.TransformPoint(localSupportPoint) + surfaceNormal * 0.15f);
+            // On a moving frame, MovementFrameMember already carried the body rigidly with its support this physics
+            // step. The support Transform read here can still hold the interpolated drawn pose, so a second target
+            // from it put the egg up to a step off the surface (visible as a small shake).
+            if (!RidesWithSupport()) body.MovePosition(support.TransformPoint(localSupportPoint) + surfaceNormal * 0.15f);
             return;
         }
         if (adhered) { adhered = false; SetMovementPhysics(false, true); }
@@ -89,6 +92,8 @@ public sealed class CeilingBatBugEgg : Creature
             if (IsReady) TryHatch();
         }
     }
+    private bool RidesWithSupport() => TryGetComponent<MovementFrameMember>(out var member) && member.Frame != null &&
+        !member.ExternalMotion && support.IsChildOf(member.Frame.transform);
     private bool TrySurface(Vector3 from, Vector3 direction, float distance, out RaycastHit nearest)
     {
         nearest = default; float best = float.PositiveInfinity;
