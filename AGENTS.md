@@ -4,7 +4,7 @@
 
 - Use context already available. Read [project context](Docs/PROJECT_CONTEXT.md) when you need orientation, then the affected creature/system README and owning code/assets. Use the [systems index](Assets/Scripts/README.md) to locate them if needed.
 - Read additional documents only when the task depends on them. Do not read every Markdown file, follow every link, or reread unchanged guidance before each command. Recheck when scope changes, files change, or relevant context is missing.
-- Consult the [design guide](Docs/DESIGN_GUIDE.md) when making design choices. It is a draft for the owner to edit; proposed pillars are not approved restrictions. Local READMEs and code/assets describe current behavior; the older Google design document may be stale. Flag meaningful disagreements rather than guessing intended design.
+- Consult the [design guide](Docs/DESIGN_GUIDE.md) when making design choices. Follow owner-confirmed rules; supporting draft proposals are not approved restrictions. Local READMEs and code/assets describe current behavior; the older Google design document may be stale. Flag meaningful disagreements rather than guessing intended design.
 
 ## Keep local READMEs useful
 

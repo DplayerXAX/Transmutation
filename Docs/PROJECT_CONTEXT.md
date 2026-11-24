@@ -6,7 +6,7 @@ Repository orientation reviewed **2026-11-23**. Consult this map when needed; in
 
 **Transmutation** is a Unity first-person game project with carrying/throwing, climbing, creature-assisted traversal, ecological relationships, combat experiments, procedural terrain, and a Mind Palace/reflection journal. Multiple scenes explore different systems; a working prototype is not necessarily integrated into the main game or included in a build.
 
-Local READMEs describe current feature behavior; inspect code, prefab/scene overrides and runtime setup for actual values. An implementation discrepancy is not automatically intended design. The older Google design document is not well updated and is historical background. The [design guide](DESIGN_GUIDE.md) is a draft for the owner to edit; this overview does not establish game pillars or restrictions.
+Local READMEs describe current feature behavior; inspect code, prefab/scene overrides and runtime setup for actual values. An implementation discrepancy is not automatically intended design. The older Google design document is not well updated and is historical background. The [design guide](DESIGN_GUIDE.md) records owner-confirmed intent/rules and supporting draft proposals; this overview does not establish additional pillars or restrictions.
 
 Some internal identifiers still use **Capstone**, including Unity's product setting and `Tools > Capstone` menus.
 
