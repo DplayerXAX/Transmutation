@@ -3,9 +3,11 @@
 Interactive creatures and passive carryable items derive from `Creature`.
 Shaders for them are in `Assets/Shaders/Creatures`.
 
-The editable design reference is the **Creature Wiki** tab and its creature entries in
-[Transmutation Design Docs](https://docs.google.com/document/d/17oOwAjg1onIAHYJW-9AEE0JaH0u00GqgwTtQK19nS0Y/edit?tab=t.2eknj3ryt44y).
-This README describes the code contract; the wiki describes behavior and player-facing uses.
+Use this README, the individual local creature guides, and the owning code/prefabs for current behavior and player-facing uses. The owner has confirmed that the older **Creature Wiki** in
+[Transmutation Design Docs](https://docs.google.com/document/d/17oOwAjg1onIAHYJW-9AEE0JaH0u00GqgwTtQK19nS0Y/edit?tab=t.2eknj3ryt44y)
+is not well updated; treat it as background and check its claims against local implementation.
+
+**Maintenance:** when changing a creature, keep its local guide accurate. If none covers it, create a concise `<CreatureName>README.md` here (or `README.md` in its own folder) and add a link in this index. Cover relevant behavior/controls, setup, verification and limits; related creatures can share a guide. See [AGENTS.md](../../../AGENTS.md).
 
 ## Creature (base class)
 

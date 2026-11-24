@@ -2,6 +2,10 @@
 
 One README per game system. Start here.
 
+For optional project-wide orientation, see [project context](../../Docs/PROJECT_CONTEXT.md). AI working rules are in [AGENTS.md](../../AGENTS.md). Use only the entries relevant to the task; this index is not a required reading list.
+
+**Maintenance:** when adding or changing a creature/system, update its local README. If none covers it, create one and link it from this index or the [creature index](Creatures/README.md). A related creature family can share a guide; individual helper scripts do not each need a README.
+
 | System | README | Covers |
 | --- | --- | --- |
 | Player | [Movement/README.md](Movement/README.md) | Movement, camera, wall guard, hand climbing, procedural body, carrying, four-slot hotbar inventory (mouse wheel, `BodyMounts`), interaction, prompt HUD, conductor baton (`ConductorBaton`), mouse relock (`CursorRelock`) |
@@ -15,6 +19,7 @@ One README per game system. Start here.
 | Exhibition | [Exhibition/README.md](Exhibition/README.md) | `Scene_Exhibition`, one stall and sign per creature and feature |
 | Habitat block | (section below) | `Scene_ArtReference`, small floating diorama with the game's elements together, art bible reference |
 | Audio | [Audio/README.md](Audio/README.md) | `AudioManager`, adaptive music layers, Wwise and Unity backends, footsteps |
+| Erosive fluid | [Fluid/README.md](Fluid/README.md) | Fluid sources/droplets, procedural terrain erosion, creature contact and setup |
 | Grass | [../Grass/README.md](../Grass/README.md) | GPU compute grass on Unity Terrain |
 
 ## Tools > Capstone menu
