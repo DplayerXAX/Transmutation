@@ -25,6 +25,9 @@ is added to `Creature`. The occupant is not scaled or parented under the bubble.
 and collider states. It releases silk before taking ownership. Captured occupants cannot be carried or
 recaptured. Carried creatures, trapping bubbles, silk, the firing flower, and a briefly protected shooter
 are excluded. The player's held creature stays usable while the player is trapped.
+The occupant follows the bubble's simulated position on each physics step and is drawn from the bubble's
+drawn (interpolated) position in `LateUpdate`, so it stays still inside the shell rather than sliding by
+the bubble's speed × the physics step.
 
 While trapped, **Space escapes** and launches the player approximately **4 m upward**. Camera look,
 pickup/drop, and interaction remain available; walking, ordinary jumping, crouching and traversal are

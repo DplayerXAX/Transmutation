@@ -168,7 +168,11 @@ public sealed class TentacleCreature : Creature
     public Vector3 UncarriedScale => bodyInitialized ? restScale : transform.localScale;
     // Skin and bones are laid out in world space, so the carried size is applied to them by hand (1 = normal).
     private float limbSize = 1f;
-    private bool throwPoseAttached;
+    // The arm and skin pose is laid out in world space while the creature simulates. Whenever it does not (thrown,
+    // caught in a bubble, frozen, dormant or dead) nothing re-lays it, so the pose is parented to the body and moves
+    // with it; otherwise a bubble or the moving island carries the body away from its own skeleton and skin.
+    private bool poseAttached;
+    private bool thrownPose;
     /// <summary>Thrown with arms still stuck: they stay stuck until the creature is picked up again.</summary>
     public bool ArmsKeptFromThrow { get; private set; }
     public void ForgetThrownArms() => ArmsKeptFromThrow = false;
@@ -193,13 +197,16 @@ public sealed class TentacleCreature : Creature
         transform.localScale = restScale;
         limbSize = 1f;
         LayoutThrowPose();
-        // The procedural skin uses world-space vertices. Attach the finished pose during flight,
-        // when simulation is paused, so it travels with the body without rebuilding it.
-        if (tentacleRoot != null)
-        {
-            tentacleRoot.SetParent(transform, true);
-            throwPoseAttached = true;
-        }
+        // Attach the finished pose during flight, when simulation is paused, so it travels with the body.
+        AttachPose();
+        thrownPose = poseAttached;
+    }
+
+    private void AttachPose()
+    {
+        if (poseAttached || tentacleRoot == null) return;
+        tentacleRoot.SetParent(transform, true);
+        poseAttached = true;
     }
 
     // The exhibit freezes before the first update, so build the initial arm and skin pose now.
@@ -219,16 +226,38 @@ public sealed class TentacleCreature : Creature
 
     protected override void OnSimulationChanged()
     {
-        if (!throwPoseAttached || (!SimulationEnabled && !IsDead)) return;
-        throwPoseAttached = false;
+        if (!SimulationEnabled) { AttachPose(); return; } // Also covers death: a corpse never resumes.
+        if (!poseAttached) return;
+        poseAttached = false;
+        bool thrown = thrownPose;
+        thrownPose = false;
         if (tentacleRoot == null) return;
-        // Resume normal world-space authoring after landing, recapture, or death.
+        // Resume normal world-space authoring after landing, release from a bubble, or waking up. The root started
+        // at the world origin, so its pose now is how far the body moved meanwhile.
+        bool moved = tentacleRoot.position.sqrMagnitude > 1e-6f || Quaternion.Angle(tentacleRoot.rotation, Quaternion.identity) > 0.01f;
         tentacleRoot.SetParent(null, false);
         tentacleRoot.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
         tentacleRoot.localScale = Vector3.one;
-        LayoutThrowPose();
+        // The arms' remembered footholds stayed where the body was: let them go and reach again.
+        if (moved || thrown) LayoutThrowPose();
+        else UpdateMembrane();
         // Landed with two arms still stuck: it hangs between them, as if set down.
-        if (ArmsKeptFromThrow && SimulationEnabled && TentacleTether.Instance != null) TentacleTether.Instance.SettleThrown(this);
+        if (thrown && ArmsKeptFromThrow && TentacleTether.Instance != null) TentacleTether.Instance.SettleThrown(this);
+    }
+
+    // The ring shader measures from the creature centre in world space; keep it on the body while the pose is
+    // carried along unsimulated (the corpse falling or riding the island, a bubble floating off with it).
+    private void LateUpdate()
+    {
+        if (!poseAttached || partRenderers.Count == 0) return;
+        propertyBlock ??= new MaterialPropertyBlock();
+        foreach (Renderer part in partRenderers)
+        {
+            if (part == null) continue;
+            part.GetPropertyBlock(propertyBlock);
+            propertyBlock.SetVector(CenterId, transform.position);
+            part.SetPropertyBlock(propertyBlock);
+        }
     }
 
     public override string CarriedPrompt
@@ -617,7 +646,7 @@ public sealed class TentacleCreature : Creature
         plantedTentacles = 0;
         OnDisableHook();
         // These meshes were authored in world space. Preserve their pose, then move with the corpse.
-        if (tentacleRoot != null) tentacleRoot.SetParent(transform, true);
+        AttachPose();
         if (TentacleTether.Instance != null) TentacleTether.Instance.ReleaseCreature(this);
     }
 
@@ -1564,6 +1593,12 @@ public sealed class TentacleCreature : Creature
             membraneVertices[start + tubeVertexCount - 1] = ringCentres[membraneRings - 1] + tangent * tipSkinRadius;
         }
 
+        // Built in world space; a pose rebuilt while attached to the body (a throw or exhibit pose) is stored relative to it.
+        if (tentacleRoot != null && !tentacleRoot.localToWorldMatrix.isIdentity)
+        {
+            Matrix4x4 toRoot = tentacleRoot.worldToLocalMatrix;
+            for (int i = 0; i < membraneVertices.Length; i++) membraneVertices[i] = toRoot.MultiplyPoint3x4(membraneVertices[i]);
+        }
         membraneMesh.vertices = membraneVertices;
         membraneMesh.RecalculateNormals();
         membraneMesh.RecalculateBounds();

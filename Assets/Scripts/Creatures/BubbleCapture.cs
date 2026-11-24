@@ -100,6 +100,15 @@ public sealed class BubbleCapture : MonoBehaviour
             Escape();
     }
 
+    // Follow places the occupant from the bubble's simulated position each physics step, but the bubble's shell is
+    // drawn interpolated (up to one step behind). Draw the occupant from the drawn bubble too, or it slides inside
+    // the shell by the bubble's speed x the physics step (more on the moving island). The next step's Follow
+    // writes the simulated position again before physics runs.
+    private void LateUpdate()
+    {
+        if (IsCaptured) transform.position = OwningBubble.transform.position + pivotOffset;
+    }
+
     public void Escape()
     {
         if (player == null || !IsCaptured) return;

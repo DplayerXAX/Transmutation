@@ -268,6 +268,10 @@ them. **While carried**, if at least `minGripsToClimb` tentacles hold a surface,
 **Space** up, **Ctrl** down (shown through `CarriedPrompt`). On a moving island, a living tentacle is moved
 from the island's drawn pose, free arms included. When it dies, the corpse switches to the island's physics pose and
 interpolation (see [moving-island smoothness](../../../Docs/MovingIslandSmoothnessResearch.md)).
+Bones and skin are laid out in world space only while it simulates. Whenever it does not (thrown, caught in a bubble,
+frozen, distance-dormant or dead), the whole pose is parented to the body so it moves with it, and the ring shader's
+world-space `_Center` keeps following the body. When simulation resumes after the body moved, the arms let go and
+reach again.
 
 **Droplet Choir** (`DropletChoir` + `GlyphDroplet`, glyph shapes in `DropletGlyphs`) — a cloud of small floating
 water beads that every 12-20 s (after 5 s when the player is within 10 m) gathers in the air and *writes* a glyph,
