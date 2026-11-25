@@ -86,11 +86,13 @@ public sealed class IslandJitterSurvey : MonoBehaviour
                 if (member.TryGetComponent<TentacleCreature>(out var tentacle)) SampleTentacle(tracks, detach, deck, tentacle);
             }
             if (Camera.main) Sample(tracks, deck, Camera.main.transform, "Main Camera");
+            SampleLoose(deck);
         }
+        var all = tracks.Values.Concat(retired).Concat(loose.Values).ToList();
         var report = new StringBuilder();
-        report.AppendLine($"[IslandJitter] {seconds:0}s, island speed {frame.Speed:0.00} m/s, height range {maxY - minY:0.00} m, fixed dt {Time.fixedDeltaTime:0.000}s, {tracks.Count} tracks");
+        report.AppendLine($"[IslandJitter] {seconds:0}s, island speed {frame.Speed:0.00} m/s, height range {maxY - minY:0.00} m, fixed dt {Time.fixedDeltaTime:0.000}s, {all.Count} tracks");
         report.AppendLine("Worst per-frame jitter in the deck's drawn space (max / RMS, metres):");
-        foreach (var t in tracks.Values.Where(t => t.n >= 3).OrderByDescending(t => t.max).Take(listed))
+        foreach (var t in all.Where(t => t.n >= 3).OrderByDescending(t => t.max).Take(listed))
             report.AppendLine(Line(t));
         if (playerPhysics.n >= 3) report.AppendLine(Line(playerPhysics));
         if (contacts) report.AppendLine(ContactReport());
@@ -191,6 +193,29 @@ public sealed class IslandJitterSurvey : MonoBehaviour
           $"rideVelocity vs deck: max {stepRecorder.rideErrMax:0.000}, RMS {Mathf.Sqrt((float)(stepRecorder.rideErrSum / stepRecorder.steps)):0.000}"
         : "";
     string ContactReport() => contacts ? $"Player contacts: {contacts.steps} callbacks, {contacts.tilted} tilted floor normals (steepest normal.y {contacts.steepest:0.000} on {contacts.worstWith}), max sideways impulse {contacts.sideImpulse:0.000} N·s, surfaces: {string.Join(", ", contacts.surfaces)}" : "";
+
+    // Things that leave the frame while moving on their own: creatures in throw flight, bubble occupants and their
+    // bubbles. Each stretch gets its own track, since a gap between stretches would read as a jump.
+    readonly Dictionary<Transform, Track> loose = new();
+    readonly List<Track> retired = new();
+    readonly HashSet<Transform> looseNow = new();
+    static readonly System.Reflection.FieldInfo FlightsField = typeof(CreatureThrower).GetField("flights", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    void SampleLoose(Transform deck)
+    {
+        looseNow.Clear();
+        if (CreatureThrower.Instance && FlightsField?.GetValue(CreatureThrower.Instance) is System.Collections.IList flights)
+            foreach (var flight in flights)
+                if (flight.GetType().GetField("creature").GetValue(flight) is Creature c && c) { looseNow.Add(c.transform); Sample(loose, deck, c.transform, c.name + " (thrown, in flight)"); }
+        foreach (var capture in FindObjectsByType<BubbleCapture>(FindObjectsSortMode.None))
+        {
+            if (!capture.IsCaptured) continue;
+            looseNow.Add(capture.transform); Sample(loose, deck, capture.transform, capture.name + " (inside bubble)");
+            looseNow.Add(capture.OwningBubble.transform); Sample(loose, deck, capture.OwningBubble.transform, capture.OwningBubble.name + " (occupied)");
+        }
+        if (Camera.main && looseNow.Count > 0) { looseNow.Add(Camera.main.transform); Sample(loose, deck, Camera.main.transform, "Main Camera (while something is loose)"); }
+        foreach (var key in loose.Keys.ToList())
+            if (!looseNow.Contains(key)) { retired.Add(loose[key]); loose.Remove(key); }
+    }
 
     /// <summary>Jumps larger than this are listed individually with the time and state.</summary>
     public static float eventThreshold = .3f;

@@ -193,9 +193,19 @@ public sealed class TrappingBubble : LeashBubble
         if (body == null) InitializeCreature();
         Vector3 previousPosition = body.position;
         // Move the shell to the occupant, rather than teleporting the occupant to the approaching projectile.
-        body.position = bounds.center;
-        transform.position = bounds.center;
-        if (!capture.Attach(this)) { body.position = previousPosition; transform.position = previousPosition; return false; }
+        // Bounds are measured from the drawn pose; an interpolated occupant is simulated up to a step ahead of it
+        // (a step of island travel when riding), so centre the shell on its simulated pose or the capture hops back.
+        Vector3 centre = bounds.center;
+        bool interpolated = target.TryGetComponent<Rigidbody>(out var occupantBody) && occupantBody.interpolation != RigidbodyInterpolation.None;
+        if (interpolated) centre += occupantBody.position - target.transform.position;
+        // Until its next step sets the bubble's own velocity, carry on with the occupant's (which Attach zeroes), so
+        // the occupant's first drawn frames continue its motion (BubbleCapture draws from this velocity).
+        Vector3 occupantVelocity = interpolated && !occupantBody.isKinematic ? occupantBody.linearVelocity : body.linearVelocity;
+        Vector3 previousVelocity = body.linearVelocity;
+        body.position = centre;
+        transform.position = centre;
+        body.linearVelocity = occupantVelocity;
+        if (!capture.Attach(this)) { body.position = previousPosition; transform.position = previousPosition; body.linearVelocity = previousVelocity; return false; }
         Occupant = capture;
         launchVelocity = Vector3.zero;
         SetRadius(Mathf.Max(initialDiameter * 0.5f, bounds.extents.magnitude + fittingPadding));

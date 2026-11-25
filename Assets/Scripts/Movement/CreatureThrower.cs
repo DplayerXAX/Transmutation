@@ -32,6 +32,8 @@ public sealed class CreatureThrower : MonoBehaviour
     {
         public Creature creature;
         public Vector3 position, velocity;
+        // Position at the previous physics step, for drawing between steps.
+        public Vector3 previous;
         public float time;
         public bool previousSimulation, previousKinematic;
         public CollisionDetectionMode previousCollisionMode;
@@ -59,6 +61,18 @@ public sealed class CreatureThrower : MonoBehaviour
     {
         throwSpeed = Mathf.Max(1f, throwSpeed);
         minimumThrowSpeed = Mathf.Clamp(minimumThrowSpeed, 0f, throwSpeed);
+    }
+
+    // The flight advances on the physics step, so drawing it at the newest step made thrown things move in 20 ms
+    // jumps whenever frames come faster than steps. Draw between the last two steps instead, the same one-step-
+    // behind timing as Rigidbody interpolation (which the player and camera use). Each step's FixedUpdate writes
+    // the simulated position back before physics and the hit sweep run.
+    private void Update()
+    {
+        if (flights.Count == 0) return;
+        float alpha = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
+        foreach (Flight f in flights)
+            if (f.creature != null) f.creature.transform.position = Vector3.LerpUnclamped(f.previous, f.position, alpha);
     }
 
     private void LateUpdate()
@@ -125,7 +139,7 @@ public sealed class CreatureThrower : MonoBehaviour
             body.position = start;
         }
         LastHit = null;
-        flights.Add(new Flight { creature = creature, position = start, velocity = velocity,
+        flights.Add(new Flight { creature = creature, position = start, previous = start, velocity = velocity,
             previousSimulation = previousSimulation, previousKinematic = previousKinematic, previousCollisionMode = previousCollisionMode });
     }
 
@@ -212,6 +226,7 @@ public sealed class CreatureThrower : MonoBehaviour
                 CreatureImpactRelay.Dispatch(struck, incoming);
                 continue;
             }
+            f.previous = f.position;
             f.position = next;
             f.creature.transform.position = next;
             var body = f.creature.GetComponent<Rigidbody>();

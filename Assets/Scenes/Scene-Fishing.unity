@@ -3709,7 +3709,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8109ad689e2d0f74b91959ba32fe030b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CreatureSleep
   sleepBeyond: 75
   wakeWithin: 60
@@ -3889,6 +3889,8 @@ MonoBehaviour:
   - {fileID: 5828286}
   - {fileID: 596741731}
   samplesPerSegment: 48
+  verticalAmplitude: 12
+  verticalCycles: 1
 --- !u!4 &1622308435
 Transform:
   m_ObjectHideFlags: 0
@@ -5102,6 +5104,10 @@ PrefabInstance:
       propertyPath: route
       value: 
       objectReference: {fileID: 1622308434}
+    - target: {fileID: 122831155489838090, guid: adfbfa4cd95bfa841b7e6e658b3d7f62, type: 3}
+      propertyPath: showHabitat
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5194719332966776373, guid: adfbfa4cd95bfa841b7e6e658b3d7f62, type: 3}
       propertyPath: m_Name
       value: Giant Sea Angel Island

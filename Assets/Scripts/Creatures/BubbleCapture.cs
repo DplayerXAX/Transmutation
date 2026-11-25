@@ -21,6 +21,7 @@ public sealed class BubbleCapture : MonoBehaviour
     private Creature creature;
     private SmoothFirstPersonController player;
     private Vector3 pivotOffset;
+    private Rigidbody bubbleBody;
     private bool previousSimulation;
     private float eligibleAfter;
     private int escapeFrame = -1;
@@ -44,7 +45,9 @@ public sealed class BubbleCapture : MonoBehaviour
             if (CreatureBounds.BelongsTo(web.transform, transform) && web.IsCaptured) web.Release();
         if (player != null) player.BeginBubbleMovementLock();
         OwningBubble = bubble;
-        pivotOffset = transform.position - bubble.transform.position;
+        bubbleBody = bubble.GetComponent<Rigidbody>();
+        // From the simulated pose (the bubble was just placed on it), not the interpolated drawn one.
+        pivotOffset = (TryGetComponent<Rigidbody>(out var ownBody) ? ownBody.position : transform.position) - bubble.transform.position;
         if (creature != null)
         {
             previousSimulation = creature.SimulationEnabled;
@@ -94,19 +97,27 @@ public sealed class BubbleCapture : MonoBehaviour
         }
     }
 
+    // Follow places the occupant from the bubble's simulated position each physics step, but the bubble's shell is
+    // drawn interpolated (up to one step behind). Draw the occupant on that same clock, or it slides inside the
+    // shell by the bubble's speed x the physics step and a trapped player's camera shakes with it. The pose comes
+    // from the bubble's simulated position and velocity rather than its interpolated transform, which swings
+    // between the old and new spot for a frame after the capture teleports the shell onto the occupant.
+    // Runs in Update at order -200, before the player controller moves its camera to the body; the next step's
+    // Follow writes the simulated position again before physics runs.
     private void Update()
     {
+        if (IsCaptured)
+        {
+            Vector3 centre = OwningBubble.transform.position;
+            if (bubbleBody != null && bubbleBody.interpolation != RigidbodyInterpolation.None)
+            {
+                float behind = 1f - Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
+                centre = bubbleBody.position - bubbleBody.linearVelocity * (behind * Time.fixedDeltaTime);
+            }
+            transform.position = centre + pivotOffset;
+        }
         if (player != null && IsCaptured && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
             Escape();
-    }
-
-    // Follow places the occupant from the bubble's simulated position each physics step, but the bubble's shell is
-    // drawn interpolated (up to one step behind). Draw the occupant from the drawn bubble too, or it slides inside
-    // the shell by the bubble's speed x the physics step (more on the moving island). The next step's Follow
-    // writes the simulated position again before physics runs.
-    private void LateUpdate()
-    {
-        if (IsCaptured) transform.position = OwningBubble.transform.position + pivotOffset;
     }
 
     public void Escape()
