@@ -158,7 +158,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
     public bool Climbing => climbing;
     public bool Restricted => restricted;
     public MovementState State => state;
-    public Vector3 LocomotionVelocity => rb != null ? rb.linearVelocity - rideVelocity : Vector3.zero;
+    public Vector3 LocomotionVelocity => rb != null ? rb.linearVelocity - rideVelocity - windVelocity : Vector3.zero;
     public bool WalkingAnimationActive => grounded && !BubbleMovementBlocked && FishingInputOwner == null &&
         !restricted && !WearingSkateShoes && (horizontalInput * horizontalInput + verticalInput * verticalInput > .01f) &&
         (state == MovementState.Walking || state == MovementState.Sprinting || state == MovementState.Crouching);
@@ -284,7 +284,56 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
         skateShoes = GetComponent<PlayerSkateShoes>();
     }
 
+    // ---- Wind (Physics/Wind/README). The body moves at own velocity + windVelocity. Every movement step
+    // strips the wind first, so steering, braking, speed limits and jumps only ever see the player's own
+    // motion, then puts it back. Against a wind wall, the along-wind result is ownSpeed - windSpeed.
+    private Vector3 windVelocity;
+    private float windGrip;
+    private PlayerCreatureStats windStats;
+    /// <summary>Wind currently carrying the player (world space).</summary>
+    public Vector3 WindVelocity => windVelocity;
+
+    private bool WindBlocked => rb == null || rb.isKinematic || chainsaw != null || climbing || wallRunning ||
+        restricted || freeze || BoneRide.Busy || bubbleMovementLocked || (bubbleCapture != null && bubbleCapture.BlocksPlayerMovement);
+
+    private Vector3 StripWind()
+    {
+        Vector3 wind = windVelocity;
+        if (wind != Vector3.zero && rb != null && !rb.isKinematic) rb.linearVelocity -= wind;
+        return wind;
+    }
+
+    private void RestoreWind(Vector3 wind)
+    {
+        if (WindBlocked) { windVelocity = Vector3.zero; return; }
+        windVelocity = wind;
+        if (wind != Vector3.zero) rb.linearVelocity += wind;
+    }
+
+    private void StepWind(Vector3 previous)
+    {
+        if (WindBlocked || (WindArea.Active.Count == 0 && previous == Vector3.zero)) { windVelocity = Vector3.zero; return; }
+        if (windStats == null) windStats = PlayerCreatureStats.EnsureFor(this);
+        float resistance = windStats != null ? windStats.WindResistance : 0f;
+        Vector3 next = WindField.StepOffset(previous, rb.worldCenterOfMass, resistance, ref windGrip, Time.fixedDeltaTime, out _);
+        RestoreWind(next);
+    }
+
     private void Update()
+    {
+        Vector3 wind = StripWind();
+        try { UpdateMovement(); }
+        finally { RestoreWind(wind); }
+    }
+
+    private void FixedUpdate()
+    {
+        Vector3 wind = StripWind();
+        try { FixedUpdateMovement(); }
+        finally { StepWind(wind); }
+    }
+
+    private void UpdateMovement()
     {
         ValidateChainsaw();
         if (BubbleMovementBlocked)
@@ -319,7 +368,7 @@ public sealed class SmoothFirstPersonController : MonoBehaviour
             StopSlide();
     }
 
-    private void FixedUpdate()
+    private void FixedUpdateMovement()
     {
         ValidateChainsaw();
         if (FishingInputOwner != null && !IsFishingBlockedExternally)

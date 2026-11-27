@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>Player stats and temporary Asura coat, outside the creature lifecycle.</summary>
 [DisallowMultipleComponent]
-public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombatTarget
+public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombatTarget, IWindResistant
 {
     public static PlayerCreatureStats EnsureFor(SmoothFirstPersonController controller)
     {
@@ -13,6 +13,9 @@ public sealed class PlayerCreatureStats : MonoBehaviour, ICreatureStats, ICombat
     [Tooltip("Current emitted brightness. Effects change this number directly.")]
     [Min(0f)] [SerializeField] private float luminosity;
     [SerializeField] private Vector3 emissionOffset = Vector3.up * 0.5f;
+    [Tooltip("Share of wind the player ignores: 0 = carried fully, 1 = immune. Effects may change it.")]
+    [Range(0f, 1f)] [SerializeField] private float windResistance;
+    public float WindResistance { get => windResistance; set => windResistance = Mathf.Clamp01(value); }
 
     public Transform StatRoot => transform;
     public Vector3 EmissionPosition => transform.TransformPoint(emissionOffset);

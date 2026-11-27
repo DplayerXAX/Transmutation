@@ -162,8 +162,14 @@ public sealed class CreatureThrower : MonoBehaviour
         }
     }
 
-    internal static bool IsFlying(Creature creature) => Instance != null && creature != null &&
-        Instance.flights.Exists(flight => flight.creature == creature);
+    internal static bool IsFlying(Creature creature)
+    {
+        if (Instance == null || creature == null) return false;
+        // A plain loop: wind and transport ask this every physics step, so avoid a closure allocation.
+        var list = Instance.flights;
+        for (int i = 0; i < list.Count; i++) if (list[i].creature == creature) return true;
+        return false;
+    }
 
     private void FixedUpdate()
     {
@@ -180,6 +186,9 @@ public sealed class CreatureThrower : MonoBehaviour
             // Snatched out of the air by a bone child passing close: the child has it now.
             if (BoneChild.IsCradled(f.creature)) { f.creature.SetSimulationEnabled(true); flights.Remove(f); continue; }
             f.time += dt;
+            // Wind bends the throw like any passive body: along-wind speed is pulled up to the wind's.
+            if (WindArea.Active.Count > 0)
+                f.velocity = WindField.PullPassive(f.velocity, f.position, f.creature.WindResistance, dt);
             Vector3 next = f.position + f.velocity * dt + Vector3.down * (0.5f * throwGravity * dt * dt);
             f.velocity += Vector3.down * throwGravity * dt;
             Vector3 step = next - f.position;

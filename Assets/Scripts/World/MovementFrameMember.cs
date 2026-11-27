@@ -29,7 +29,9 @@ public sealed class MovementFrameMember : MonoBehaviour
     public Vector3 LastTransport { get; private set; }
     /// <summary>Already-applied transport, for locomotion writers running in Update after physics.</summary>
     public Vector3 AppliedVelocity => appliedVelocity;
-    public bool ExternalMotion => creature && (creature.IsCarried || creature.IsBubbleCaptured ||
+    public bool ExternalMotion => IsExternallyMoved(creature);
+    /// <summary>Carry, capture, throw and species flights own this creature's motion (shared with wind).</summary>
+    public static bool IsExternallyMoved(Creature creature) => creature && (creature.IsCarried || creature.IsBubbleCaptured ||
         CreatureThrower.IsFlying(creature) || creature is Boomerang boomerang && boomerang.InFlight ||
         creature is ProjectileCreature projectile && projectile.FlightState == ProjectileFlightState.Flying ||
         creature is SkateGecko gecko && gecko.Ridden ||

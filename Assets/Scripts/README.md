@@ -20,6 +20,7 @@ For optional project-wide orientation, see [project context](../../Docs/PROJECT_
 | Habitat block | (section below) | `Scene_ArtReference`, small floating diorama with the game's elements together, art bible reference |
 | Audio | [Audio/README.md](Audio/README.md) | `AudioManager`, adaptive music layers, Wwise and Unity backends, footsteps |
 | Erosive fluid | [Fluid/README.md](Fluid/README.md) | Fluid sources/droplets, procedural terrain erosion, creature contact and setup |
+| Wind | [Physics/Wind/README.md](Physics/Wind/README.md) | `WindArea` (wind walls, breezes), shared wind rule, per-creature/player wind resistance, streak particles and shader, `WindWall` prefab |
 | Grass | [../Grass/README.md](../Grass/README.md) | GPU compute grass on Unity Terrain |
 
 ## Tools > Capstone menu

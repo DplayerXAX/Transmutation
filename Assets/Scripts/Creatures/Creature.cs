@@ -37,7 +37,7 @@ public readonly struct CreatureInteraction
 /// or separate components rather than being added to this base class.
 /// </summary>
 [DisallowMultipleComponent]
-public abstract class Creature : MonoBehaviour, ICreatureStats, ICombatTarget
+public abstract class Creature : MonoBehaviour, ICreatureStats, ICombatTarget, IWindResistant
 {
     /// <summary>Lets collision consumers discover newly spawned or reactivated creatures immediately.</summary>
     public static event System.Action<Creature> Activated;
@@ -73,6 +73,12 @@ public enum FoodTag
 
     /// <summary>A scripted throw hit a surface; movement ownership has already been restored.</summary>
     public virtual void ReceiveThrownImpact(CreatureImpact impact) => CreatureImpactRelay.Dispatch(this, impact);
+
+    [Header("Wind")]
+    [Tooltip("Share of wind this creature ignores: 0 = carried fully, 1 = immune (see Physics/Wind/README).")]
+    [Range(0f, 1f)] [SerializeField] private float windResistance;
+    /// <summary>Species may override (rooted or anchored creatures return 1).</summary>
+    public virtual float WindResistance => windResistance;
 
     [Header("Health and Polarity")]
     [Min(0.01f)] [SerializeField] private float maxHealth = 100f;
@@ -481,10 +487,34 @@ public enum FoodTag
         movementBody.useGravity = useGravity;
     }
 
+    private WindBody windBody;
+    private float lastFullLocomotionWrite = float.MinValue, lastHorizontalLocomotionWrite = float.MinValue;
+
+    /// <summary>Wind velocity the motor adds on top of its own (zero outside wind).</summary>
+    protected Vector3 WindOffset
+    {
+        get
+        {
+            if (windBody == null && (WindArea.Active.Count == 0 || !TryGetComponent(out windBody))) return Vector3.zero;
+            return windBody.Offset;
+        }
+    }
+
+    /// <summary>Whether a motor wrote locomotion recently, so the motor (not WindBody) carries the wind.</summary>
+    internal bool WroteLocomotionWithin(float seconds, out bool horizontalOnly)
+    {
+        float now = Time.time;
+        bool full = now - lastFullLocomotionWrite <= seconds;
+        horizontalOnly = !full && now - lastHorizontalLocomotionWrite <= seconds;
+        return full || horizontalOnly;
+    }
+
     // Existing autonomous movement stays unchanged when free. Carry ownership is checked here.
     protected void MoveCreature(Vector3 displacement)
     {
-        if (!IsCarried && !IsBubbleCaptured) transform.position += displacement;
+        if (IsCarried || IsBubbleCaptured) return;
+        lastFullLocomotionWrite = Time.time;
+        transform.position += displacement + WindOffset * Time.deltaTime;
     }
 
     protected void SetCreatureHorizontalVelocity(Vector3 velocity)
@@ -492,7 +522,11 @@ public enum FoodTag
         if (IsCarried || IsBubbleCaptured) return;
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody != null && !movementBody.isKinematic)
-            movementBody.linearVelocity = new Vector3(velocity.x, movementBody.linearVelocity.y, velocity.z);
+        {
+            lastHorizontalLocomotionWrite = Time.time;
+            Vector3 wind = WindOffset;
+            movementBody.linearVelocity = new Vector3(velocity.x + wind.x, movementBody.linearVelocity.y, velocity.z + wind.z);
+        }
     }
 
     /// <summary>Full world-space flight velocity. Carry movement always retains ownership.</summary>
@@ -501,7 +535,10 @@ public enum FoodTag
         if (IsCarried || IsBubbleCaptured) return;
         if (movementBody == null) movementBody = GetComponent<Rigidbody>();
         if (movementBody != null && !movementBody.isKinematic)
-            movementBody.linearVelocity = velocity;
+        {
+            lastFullLocomotionWrite = Time.time;
+            movementBody.linearVelocity = velocity + WindOffset;
+        }
     }
 
     /// <summary>World-oriented autonomous velocity relative to the current habitat. Fixed-step frame

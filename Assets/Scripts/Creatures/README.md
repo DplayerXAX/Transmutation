@@ -14,6 +14,9 @@ is not well updated; treat it as background and check its claims against local i
 `Creature.cs` holds only what all creatures share:
 
 - **Identity:** `creatureName` (shown in prompts and the meditation journal).
+- **Wind:** `windResistance` (0 = carried fully, 1 = immune; virtual `WindResistance`). The velocity helpers
+  (`SetCreatureVelocity`, `SetLocomotionVelocity`, `SetCreatureHorizontalVelocity`, `MoveCreature`) add the
+  current wind offset, so motors feel `WindArea` wind without extra code. See [Wind](../Physics/Wind/README.md).
 - **Lifecycle:** subclasses override `InitializeCreature()` (instead of Awake) and `TickCreature(dt)`
   (called each frame while simulation runs). `SetSimulationEnabled` pauses logic and Age;
   it does not freeze the Rigidbody. Bird Hunger follows this simulation clock too.
